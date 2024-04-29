@@ -32,6 +32,7 @@ bifrost-xcm-interface = { workspace = true }
 bifrost-vtoken-minting = { workspace = true }
 bifrost-asset-registry = { workspace = true }
 bifrost-parachain-staking = { workspace = true }
+bifrost-stable-pool = { workspace = true }
 
 [dev-dependencies]
 hex = "0.4.3"
@@ -72,6 +73,7 @@ std = [
     "bifrost-asset-registry/std",
     "bifrost-parachain-staking/std",
     "orml-xtokens/std",
+    "bifrost-stable-pool/std",
 ]
 
 runtime-benchmarks = [

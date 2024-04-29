@@ -22,6 +22,7 @@
 use crate::*;
 use frame_benchmarking::v2::*;
 use frame_support::assert_ok;
+use sp_runtime::traits::UniqueSaturatedFrom;
 
 const DELEGATOR1: MultiLocation =
 	MultiLocation { parents: 1, interior: X1(AccountId32 { network: None, id: [1u8; 32] }) };
@@ -52,14 +53,33 @@ pub fn init_bond<T: Config>(origin: <T as frame_system::Config>::RuntimeOrigin) 
 	set_mins_and_maxs::<T>(origin.clone());
 	DelegatorsMultilocation2Index::<T>::insert(KSM, DELEGATOR1, 0);
 
+	let fee_source_location = Pallet::<T>::account_32_to_local_location(
+		Pallet::<T>::account_id_to_account_32(whitelisted_caller()).unwrap(),
+	)
+	.unwrap();
+	FeeSources::<T>::insert(KSM, (fee_source_location, BalanceOf::<T>::from(4100000000u32)));
+
+	assert_ok!(<T as Config>::MultiCurrency::deposit(
+		KSM,
+		&whitelisted_caller(),
+		BalanceOf::<T>::unique_saturated_from(100_000_000_000_000u128),
+	));
+
 	T::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
 		KSM,
 		XcmOperationType::Bond,
-		Some((Weight::from_parts(4000000000, 100000), 4000000000u32.into())),
+		Some((Weight::from_parts(4000000000, 100000), 0u32.into())),
 	)
 	.unwrap();
 
-	assert_ok!(Pallet::<T>::bond(origin, KSM, Box::new(DELEGATOR1), 10u32.into(), None, None));
+	assert_ok!(Pallet::<T>::bond(
+		origin,
+		KSM,
+		Box::new(DELEGATOR1),
+		10u32.into(),
+		None,
+		Some((100.into(), 100u32.into()))
+	));
 }
 
 pub fn init_ongoing_time<T: Config>(origin: <T as frame_system::Config>::RuntimeOrigin) {
@@ -104,10 +124,22 @@ mod benchmarks {
 		set_mins_and_maxs::<T>(origin.clone());
 		DelegatorsMultilocation2Index::<T>::insert(KSM, DELEGATOR1, 0);
 
+		let fee_source_location = Pallet::<T>::account_32_to_local_location(
+			Pallet::<T>::account_id_to_account_32(whitelisted_caller()).unwrap(),
+		)
+		.unwrap();
+		FeeSources::<T>::insert(KSM, (fee_source_location, BalanceOf::<T>::from(4100000000u32)));
+
+		assert_ok!(<T as Config>::MultiCurrency::deposit(
+			KSM,
+			&whitelisted_caller(),
+			BalanceOf::<T>::unique_saturated_from(100_000_000_000_000u128),
+		));
+
 		T::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
 			KSM,
 			XcmOperationType::Bond,
-			Some((Weight::from_parts(4000000000, 100000), 4000000000u32.into())),
+			Some((Weight::from_parts(4000000000, 100000), 0u32.into())),
 		)?;
 
 		#[extrinsic_call]
@@ -117,7 +149,7 @@ mod benchmarks {
 			Box::new(DELEGATOR1),
 			10u32.into(),
 			None,
-			None,
+			Some((100.into(), 100u32.into())),
 		);
 
 		Ok(())
@@ -132,7 +164,7 @@ mod benchmarks {
 		T::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
 			KSM,
 			XcmOperationType::BondExtra,
-			Some((Weight::from_parts(4000000000, 100000), 4000000000u32.into())),
+			Some((Weight::from_parts(4000000000, 100000), 0u32.into())),
 		)?;
 
 		#[extrinsic_call]
@@ -142,7 +174,7 @@ mod benchmarks {
 			Box::new(DELEGATOR1),
 			None,
 			10u32.into(),
-			None,
+			Some((100.into(), 100u32.into())),
 		);
 
 		Ok(())
@@ -158,7 +190,7 @@ mod benchmarks {
 		T::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
 			KSM,
 			XcmOperationType::Unbond,
-			Some((Weight::from_parts(4000000000, 100000), 4000000000u32.into())),
+			Some((Weight::from_parts(4000000000, 100000), 0u32.into())),
 		)?;
 
 		#[extrinsic_call]
@@ -168,7 +200,7 @@ mod benchmarks {
 			Box::new(DELEGATOR1),
 			None,
 			0u32.into(),
-			None,
+			Some((100.into(), 100u32.into())),
 		);
 
 		Ok(())
@@ -184,11 +216,16 @@ mod benchmarks {
 		T::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
 			KSM,
 			XcmOperationType::Unbond,
-			Some((Weight::from_parts(4000000000, 100000), 4000000000u32.into())),
+			Some((Weight::from_parts(4000000000, 100000), 0u32.into())),
 		)?;
 
 		#[extrinsic_call]
-		_(origin as <T as frame_system::Config>::RuntimeOrigin, KSM, Box::new(DELEGATOR1), None);
+		_(
+			origin as <T as frame_system::Config>::RuntimeOrigin,
+			KSM,
+			Box::new(DELEGATOR1),
+			Some((100.into(), 100u32.into())),
+		);
 
 		Ok(())
 	}
@@ -203,7 +240,7 @@ mod benchmarks {
 		T::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
 			KSM,
 			XcmOperationType::Rebond,
-			Some((Weight::from_parts(4000000000, 100000), 4000000000u32.into())),
+			Some((Weight::from_parts(4000000000, 100000), 0u32.into())),
 		)?;
 
 		#[extrinsic_call]
@@ -213,7 +250,7 @@ mod benchmarks {
 			Box::new(DELEGATOR1),
 			None,
 			Some(0u32.into()),
-			None,
+			Some((100.into(), 100u32.into())),
 		);
 
 		Ok(())
@@ -229,7 +266,7 @@ mod benchmarks {
 		T::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
 			KSM,
 			XcmOperationType::Delegate,
-			Some((Weight::from_parts(4000000000, 100000), 4000000000u32.into())),
+			Some((Weight::from_parts(4000000000, 100000), 0u32.into())),
 		)?;
 
 		#[extrinsic_call]
@@ -238,7 +275,7 @@ mod benchmarks {
 			KSM,
 			Box::new(DELEGATOR1),
 			vec![DELEGATOR1],
-			None,
+			Some((100.into(), 100u32.into())),
 		);
 
 		Ok(())
@@ -258,7 +295,7 @@ mod benchmarks {
 		T::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
 			KSM,
 			XcmOperationType::Delegate,
-			Some((Weight::from_parts(4000000000, 100000), 4000000000u32.into())),
+			Some((Weight::from_parts(4000000000, 100000), 0u32.into())),
 		)?;
 
 		#[extrinsic_call]
@@ -267,7 +304,7 @@ mod benchmarks {
 			KSM,
 			Box::new(DELEGATOR1),
 			vec![DELEGATOR1],
-			None,
+			Some((100.into(), 100u32.into())),
 		);
 
 		Ok(())
@@ -283,7 +320,7 @@ mod benchmarks {
 		T::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
 			KSM,
 			XcmOperationType::Delegate,
-			Some((Weight::from_parts(4000000000, 100000), 4000000000u32.into())),
+			Some((Weight::from_parts(4000000000, 100000), 0u32.into())),
 		)?;
 
 		#[extrinsic_call]
@@ -292,7 +329,7 @@ mod benchmarks {
 			KSM,
 			Box::new(DELEGATOR1),
 			Some(vec![DELEGATOR1]),
-			None,
+			Some((100.into(), 100u32.into())),
 		);
 
 		Ok(())
@@ -304,10 +341,22 @@ mod benchmarks {
 			.map_err(|_| BenchmarkError::Weightless)?;
 		DelegatorsMultilocation2Index::<T>::insert(KSM, DELEGATOR1, 0);
 
+		let fee_source_location = Pallet::<T>::account_32_to_local_location(
+			Pallet::<T>::account_id_to_account_32(whitelisted_caller()).unwrap(),
+		)
+		.unwrap();
+		FeeSources::<T>::insert(KSM, (fee_source_location, BalanceOf::<T>::from(4100000000u32)));
+
+		assert_ok!(<T as Config>::MultiCurrency::deposit(
+			KSM,
+			&whitelisted_caller(),
+			BalanceOf::<T>::unique_saturated_from(100_000_000_000_000u128),
+		));
+
 		T::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
 			KSM,
 			XcmOperationType::Payout,
-			Some((Weight::from_parts(4000000000, 100000), 4000000000u32.into())),
+			Some((Weight::from_parts(4000000000, 100000), 0u32.into())),
 		)?;
 
 		#[extrinsic_call]
@@ -317,7 +366,7 @@ mod benchmarks {
 			Box::new(DELEGATOR1),
 			Box::new(DELEGATOR1),
 			Some(TimeUnit::Era(0)),
-			None,
+			Some((100.into(), 100u32.into())),
 		);
 
 		Ok(())
@@ -330,10 +379,22 @@ mod benchmarks {
 		set_mins_and_maxs::<T>(origin.clone());
 		DelegatorsMultilocation2Index::<T>::insert(KSM, DELEGATOR1, 0);
 
+		let fee_source_location = Pallet::<T>::account_32_to_local_location(
+			Pallet::<T>::account_id_to_account_32(whitelisted_caller()).unwrap(),
+		)
+		.unwrap();
+		FeeSources::<T>::insert(KSM, (fee_source_location, BalanceOf::<T>::from(4100000000u32)));
+
+		assert_ok!(<T as Config>::MultiCurrency::deposit(
+			KSM,
+			&whitelisted_caller(),
+			BalanceOf::<T>::unique_saturated_from(100_000_000_000_000u128),
+		));
+
 		T::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
 			KSM,
 			XcmOperationType::Liquidize,
-			Some((Weight::from_parts(4000000000, 100000), 4000000000u32.into())),
+			Some((Weight::from_parts(4000000000, 100000), 0u32.into())),
 		)?;
 
 		#[extrinsic_call]
@@ -344,7 +405,7 @@ mod benchmarks {
 			Some(TimeUnit::SlashingSpan(0)),
 			None,
 			None,
-			None,
+			Some((100.into(), 100u32.into())),
 		);
 
 		Ok(())
@@ -360,11 +421,16 @@ mod benchmarks {
 		T::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
 			KSM,
 			XcmOperationType::Chill,
-			Some((Weight::from_parts(4000000000, 100000), 4000000000u32.into())),
+			Some((Weight::from_parts(4000000000, 100000), 0u32.into())),
 		)?;
 
 		#[extrinsic_call]
-		_(origin as <T as frame_system::Config>::RuntimeOrigin, KSM, Box::new(DELEGATOR1), None);
+		_(
+			origin as <T as frame_system::Config>::RuntimeOrigin,
+			KSM,
+			Box::new(DELEGATOR1),
+			Some((100.into(), 100u32.into())),
+		);
 
 		Ok(())
 	}
@@ -376,10 +442,22 @@ mod benchmarks {
 		set_mins_and_maxs::<T>(origin.clone());
 		DelegatorsMultilocation2Index::<T>::insert(KSM, DELEGATOR1, 0);
 
+		let fee_source_location = Pallet::<T>::account_32_to_local_location(
+			Pallet::<T>::account_id_to_account_32(whitelisted_caller()).unwrap(),
+		)
+		.unwrap();
+		FeeSources::<T>::insert(KSM, (fee_source_location, BalanceOf::<T>::from(4100000000u32)));
+
+		assert_ok!(<T as Config>::MultiCurrency::deposit(
+			KSM,
+			&whitelisted_caller(),
+			BalanceOf::<T>::unique_saturated_from(100_000_000_000_000u128),
+		));
+
 		T::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
 			KSM,
 			XcmOperationType::TransferBack,
-			Some((Weight::from_parts(4000000000, 100000), 4000000000u32.into())),
+			Some((Weight::from_parts(4000000000, 100000), 0u32.into())),
 		)?;
 
 		let (_, exit_account) = <T as Config>::VtokenMinting::get_entrance_and_exit_accounts();
@@ -393,7 +471,7 @@ mod benchmarks {
 			Box::new(DELEGATOR1),
 			Box::new(to),
 			10u32.into(),
-			None,
+			Some((100.into(), 100u32.into())),
 		);
 
 		Ok(())
@@ -406,10 +484,22 @@ mod benchmarks {
 		set_mins_and_maxs::<T>(origin.clone());
 		DelegatorsMultilocation2Index::<T>::insert(KSM, DELEGATOR1, 0);
 
+		let fee_source_location = Pallet::<T>::account_32_to_local_location(
+			Pallet::<T>::account_id_to_account_32(whitelisted_caller()).unwrap(),
+		)
+		.unwrap();
+		FeeSources::<T>::insert(KSM, (fee_source_location, BalanceOf::<T>::from(4100000000u32)));
+
+		assert_ok!(<T as Config>::MultiCurrency::deposit(
+			KSM,
+			&whitelisted_caller(),
+			BalanceOf::<T>::unique_saturated_from(100_000_000_000_000u128),
+		));
+
 		T::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
 			KSM,
 			XcmOperationType::TransferTo,
-			Some((Weight::from_parts(4000000000, 100000), 4000000000u32.into())),
+			Some((Weight::from_parts(4000000000, 100000), 0u32.into())),
 		)?;
 
 		let (entrance_account, _) = <T as Config>::VtokenMinting::get_entrance_and_exit_accounts();
@@ -434,10 +524,22 @@ mod benchmarks {
 			.map_err(|_| BenchmarkError::Weightless)?;
 		DelegatorsMultilocation2Index::<T>::insert(PHA, DELEGATOR1, 0);
 
+		let fee_source_location = Pallet::<T>::account_32_to_local_location(
+			Pallet::<T>::account_id_to_account_32(whitelisted_caller()).unwrap(),
+		)
+		.unwrap();
+		FeeSources::<T>::insert(PHA, (fee_source_location, BalanceOf::<T>::from(4100000000u32)));
+
+		assert_ok!(<T as Config>::MultiCurrency::deposit(
+			PHA,
+			&whitelisted_caller(),
+			BalanceOf::<T>::unique_saturated_from(100_000_000_000_000u128),
+		));
+
 		T::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
 			PHA,
 			XcmOperationType::ConvertAsset,
-			Some((Weight::from_parts(4000000000, 100000), 4000000000u32.into())),
+			Some((Weight::from_parts(4000000000, 100000), 0u32.into())),
 		)?;
 
 		DelegatorLedgers::<T>::insert(
@@ -461,7 +563,7 @@ mod benchmarks {
 			Box::new(DELEGATOR1),
 			10u32.into(),
 			true,
-			None,
+			Some((100.into(), 100u32.into())),
 		);
 
 		Ok(())
@@ -515,7 +617,7 @@ mod benchmarks {
 			.map_err(|_| BenchmarkError::Weightless)?;
 		init_ongoing_time::<T>(origin.clone());
 
-		let (_, exit_account) = T::VtokenMinting::get_entrance_and_exit_accounts();
+		let (_, exit_account) = <T as Config>::VtokenMinting::get_entrance_and_exit_accounts();
 		orml_tokens::Pallet::<T>::deposit(
 			KSM,
 			&exit_account,
@@ -541,12 +643,12 @@ mod benchmarks {
 
 		DelegatorsMultilocation2Index::<T>::insert(KSM, DELEGATOR1, 0);
 
-		FeeSources::<T>::insert(KSM, (from, BalanceOf::<T>::from(1000u32)));
+		FeeSources::<T>::insert(KSM, (from, BalanceOf::<T>::from(4100000000u32)));
 
 		T::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
 			KSM,
 			XcmOperationType::TransferTo,
-			Some((Weight::from_parts(4000000000, 100000), 4000000000u32.into())),
+			Some((Weight::from_parts(4000000000, 100000), 0u32.into())),
 		)?;
 
 		#[extrinsic_call]
@@ -859,7 +961,7 @@ mod benchmarks {
 		T::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
 			KSM,
 			XcmOperationType::Delegate,
-			Some((Weight::from_parts(4000000000, 100000), 4000000000u32.into())),
+			Some((Weight::from_parts(4000000000, 100000), 0u32.into())),
 		)?;
 
 		assert_ok!(Pallet::<T>::delegate(
@@ -867,7 +969,7 @@ mod benchmarks {
 			KSM,
 			Box::new(DELEGATOR1),
 			vec![DELEGATOR1],
-			None
+			Some((100.into(), 100u32.into()))
 		));
 		ValidatorsByDelegatorXcmUpdateQueue::<T>::insert(
 			1u64,
@@ -898,7 +1000,7 @@ mod benchmarks {
 		T::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
 			KSM,
 			XcmOperationType::Delegate,
-			Some((Weight::from_parts(4000000000, 100000), 4000000000u32.into())),
+			Some((Weight::from_parts(4000000000, 100000), 0u32.into())),
 		)?;
 
 		assert_ok!(Pallet::<T>::delegate(
@@ -906,7 +1008,7 @@ mod benchmarks {
 			KSM,
 			Box::new(DELEGATOR1),
 			vec![DELEGATOR1],
-			None
+			Some((100.into(), 100u32.into()))
 		));
 		ValidatorsByDelegatorXcmUpdateQueue::<T>::insert(
 			1u64,
@@ -977,6 +1079,28 @@ mod benchmarks {
 
 		#[extrinsic_call]
 		_(origin as <T as frame_system::Config>::RuntimeOrigin, KSM, Box::new(DELEGATOR1));
+
+		Ok(())
+	}
+
+	#[benchmark]
+	fn clean_outdated_validator_boost_list() -> Result<(), BenchmarkError> {
+		let origin = <T as Config>::ControlOrigin::try_successful_origin()
+			.map_err(|_| BenchmarkError::Weightless)?;
+		set_mins_and_maxs::<T>(origin.clone());
+
+		frame_system::Pallet::<T>::set_block_number(1u32.into());
+
+		assert_ok!(Pallet::<T>::add_to_validator_boost_list(
+			origin.clone() as <T as frame_system::Config>::RuntimeOrigin,
+			KSM,
+			Box::new(DELEGATOR1)
+		));
+
+		frame_system::Pallet::<T>::set_block_number((1 + SIX_MONTHS).into());
+
+		#[extrinsic_call]
+		_(origin as <T as frame_system::Config>::RuntimeOrigin, KSM, 1u8);
 
 		Ok(())
 	}

@@ -403,6 +403,7 @@ parameter_types! {
 	pub const MaxTypeEntryPerBlock: u32 = 10;
 	pub const MaxRefundPerBlock: u32 = 10;
 	pub const MaxLengthLimit: u32 = 100;
+	pub BifrostTreasuryAccount: AccountId = PalletId(*b"bf/trsry").into_account_truncating();
 }
 
 impl QueryResponseManager<QueryId, MultiLocation, u64, RuntimeCall> for () {
@@ -467,6 +468,9 @@ impl Config for Runtime {
 	type MaxLengthLimit = MaxLengthLimit;
 	type XcmWeightAndFeeHandler = XcmDestWeightAndFee;
 	type ChannelCommission = ();
+	type StablePoolHandler = ();
+	type AssetIdMaps = AssetIdMaps<Runtime>;
+	type TreasuryAccount = BifrostTreasuryAccount;
 }
 
 pub struct XcmDestWeightAndFee;

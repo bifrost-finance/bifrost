@@ -21,9 +21,10 @@ use crate::{
 		ParachainStakingLedgerUpdateEntry, ParachainStakingLedgerUpdateOperation, TIMEOUT_BLOCKS,
 	},
 	traits::QueryResponseManager,
-	vec, BalanceOf, BlockNumberFor, BoundedVec, Box, Config, CurrencyDelays, DelegationsOccupied,
-	DelegatorLatestTuneRecord, DelegatorLedgerXcmUpdateQueue, DelegatorLedgers, DelegatorNextIndex,
-	DelegatorsIndex2Multilocation, DelegatorsMultilocation2Index, Encode, Event, FeeSources,
+	vec, AccountIdOf, BalanceOf, BlockNumberFor, BoundedVec, Box, Config, CurrencyDelays,
+	DelegationsOccupied, DelegatorLatestTuneRecord, DelegatorLedgerXcmUpdateQueue,
+	DelegatorLedgers, DelegatorNextIndex, DelegatorsIndex2Multilocation,
+	DelegatorsMultilocation2Index, Encode, Event, FeeSources,
 	Junction::{AccountId32, Parachain},
 	Junctions::X1,
 	Ledger, LedgerUpdateEntry, MinimumsAndMaximums, MultiLocation, Pallet, TimeUnit, Validators,
@@ -35,7 +36,7 @@ use orml_traits::{MultiCurrency, XcmTransfer};
 use polkadot_parachain_primitives::primitives::Sibling;
 use sp_core::{Get, U256};
 use sp_runtime::{
-	traits::{AccountIdConversion, UniqueSaturatedFrom, UniqueSaturatedInto},
+	traits::{AccountIdConversion, CheckedAdd, UniqueSaturatedFrom, UniqueSaturatedInto},
 	DispatchResult, Saturating,
 };
 use xcm::{opaque::v3::Instruction, v3::prelude::*, VersionedMultiLocation};
@@ -628,5 +629,31 @@ impl<T: Config> Pallet<T> {
 		};
 
 		Ok(Some(unlock_time_unit))
+	}
+
+	pub(crate) fn get_transfer_to_added_amount_and_supplement(
+		from: AccountIdOf<T>,
+		amount: BalanceOf<T>,
+		currency_id: CurrencyId,
+	) -> Result<BalanceOf<T>, Error<T>> {
+		// get transfer_to extra fee
+		let (_weight, supplementary_fee) = T::XcmWeightAndFeeHandler::get_operation_weight_and_fee(
+			currency_id,
+			XcmOperationType::TransferTo,
+		)
+		.ok_or(Error::<T>::WeightAndFeeNotExists)?;
+
+		// transfer supplementary_fee from treasury to "from" account
+		// get fee source first
+		let (source_location, _reserved_fee) =
+			FeeSources::<T>::get(currency_id).ok_or(Error::<T>::FeeSourceNotExist)?;
+		let source_account = Self::native_multilocation_to_account(&source_location)?;
+
+		// transfer supplementary_fee from treasury to "from" account
+		T::MultiCurrency::transfer(currency_id, &source_account, &from, supplementary_fee)
+			.map_err(|_| Error::<T>::Unexpected)?;
+		let added_amount = amount.checked_add(&supplementary_fee).ok_or(Error::<T>::OverFlow)?;
+
+		Ok(added_amount)
 	}
 }

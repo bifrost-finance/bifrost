@@ -31,16 +31,20 @@ pub use crate::{
 	Junction::AccountId32,
 	Junctions::X1,
 };
+use bifrost_asset_registry::AssetMetadata;
 use bifrost_parachain_staking::ParachainStakingInterface;
 use bifrost_primitives::{
 	currency::{BNC, KSM, MANTA, MOVR, PHA},
 	traits::XcmDestWeightAndFeeHandler,
-	CurrencyId, CurrencyIdExt, DerivativeAccountHandler, DerivativeIndex, SlpHostingFeeProvider,
-	SlpOperator, TimeUnit, VtokenMintingOperator, XcmOperationType, ASTR, DOT, FIL, GLMR,
+	CurrencyId, CurrencyIdExt, CurrencyIdMapping, DerivativeAccountHandler, DerivativeIndex,
+	SlpHostingFeeProvider, SlpOperator, TimeUnit, VtokenMintingOperator, XcmOperationType, ASTR,
+	DOT, FIL, GLMR,
 };
+use bifrost_stable_pool::traits::StablePoolHandler;
 use cumulus_primitives_core::{relay_chain::HashT, ParaId};
 use frame_support::{pallet_prelude::*, traits::Contains, weights::Weight};
 use frame_system::{
+	ensure_signed,
 	pallet_prelude::{BlockNumberFor, OriginFor},
 	RawOrigin,
 };
@@ -49,7 +53,7 @@ pub use primitives::Ledger;
 use sp_arithmetic::{per_things::Permill, traits::Zero};
 use sp_core::{bounded::BoundedVec, H160};
 use sp_io::hashing::blake2_256;
-use sp_runtime::traits::{CheckedAdd, CheckedSub, Convert, TrailingZeroInput};
+use sp_runtime::traits::{CheckedAdd, CheckedSub, Convert, TrailingZeroInput, UniqueSaturatedFrom};
 use sp_std::{boxed::Box, vec, vec::Vec};
 pub use weights::WeightInfo;
 use xcm::{
@@ -87,6 +91,7 @@ pub type CurrencyIdOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<
 	<T as frame_system::Config>::AccountId,
 >>::CurrencyId;
 const SIX_MONTHS: u32 = 5 * 60 * 24 * 180;
+const ITERATE_LENGTH: usize = 100;
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -164,6 +169,22 @@ pub mod pallet {
 			BalanceOf<Self>,
 			AccountIdOf<Self>,
 		>;
+
+		type StablePoolHandler: StablePoolHandler<
+			Balance = BalanceOf<Self>,
+			AccountId = AccountIdOf<Self>,
+			CurrencyId = CurrencyId,
+		>;
+
+		// asset registry to get asset metadata
+		type AssetIdMaps: CurrencyIdMapping<
+			CurrencyId,
+			MultiLocation,
+			AssetMetadata<BalanceOf<Self>>,
+		>;
+
+		#[pallet::constant]
+		type TreasuryAccount: Get<Self::AccountId>;
 	}
 
 	#[pallet::error]
@@ -246,6 +267,11 @@ pub mod pallet {
 		ExceedMaxLengthLimit,
 		/// Transfer to failed
 		TransferToError,
+		StablePoolNotFound,
+		StablePoolTokenIndexNotFound,
+		ExceedLimit,
+		InvalidPageNumber,
+		NoMoreValidatorBoostListForCurrency,
 	}
 
 	#[pallet::event]
@@ -499,6 +525,14 @@ pub mod pallet {
 		RemovedFromBoostList {
 			currency_id: CurrencyId,
 			who: MultiLocation,
+		},
+		OutdatedValidatorBoostListCleaned {
+			currency_id: CurrencyId,
+			page: u8,
+			// already removed num
+			remove_num: u32,
+			// still to iterate num
+			num_left: u32,
 		},
 	}
 
@@ -2354,6 +2388,115 @@ pub mod pallet {
 						});
 					}
 				}
+			});
+
+			Ok(())
+		}
+
+		#[pallet::call_index(47)]
+		#[pallet::weight(<T as Config>::WeightInfo::convert_treasury_vtoken())]
+		pub fn convert_treasury_vtoken(
+			origin: OriginFor<T>,
+			vtoken: CurrencyId,
+			amount: BalanceOf<T>,
+		) -> DispatchResult {
+			T::ControlOrigin::ensure_origin(origin)?;
+			ensure!(amount > Zero::zero(), Error::<T>::AmountZero);
+
+			let token = vtoken.to_token().map_err(|_| Error::<T>::NotSupportedCurrencyId)?;
+			let (pool_id, _, _) = T::StablePoolHandler::get_pool_id(&vtoken, &token)
+				.ok_or(Error::<T>::StablePoolNotFound)?;
+
+			let vtoken_index = T::StablePoolHandler::get_pool_token_index(pool_id, vtoken)
+				.ok_or(Error::<T>::StablePoolTokenIndexNotFound)?;
+			let token_index = T::StablePoolHandler::get_pool_token_index(pool_id, token)
+				.ok_or(Error::<T>::StablePoolTokenIndexNotFound)?;
+
+			// ensure swap balance not exceed a 10 unit
+			let metadata = T::AssetIdMaps::get_currency_metadata(token)
+				.ok_or(Error::<T>::NotSupportedCurrencyId)?;
+			let decimals = metadata.decimals;
+
+			// 10 * 10^decimals
+			let max_amount: u128 =
+				10u128.pow(decimals.into()).checked_mul(10).ok_or(Error::<T>::OverFlow)?;
+			ensure!(
+				amount <= BalanceOf::<T>::unique_saturated_from(max_amount),
+				Error::<T>::ExceedLimit
+			);
+
+			// swap vtoken from treasury account for token
+			let treasury = T::TreasuryAccount::get();
+			T::StablePoolHandler::swap(
+				&treasury,
+				pool_id,
+				vtoken_index,
+				token_index,
+				amount,
+				Zero::zero(),
+			)
+		}
+
+		#[pallet::call_index(48)]
+		#[pallet::weight(<T as Config>::WeightInfo::clean_outdated_validator_boost_list())]
+		pub fn clean_outdated_validator_boost_list(
+			origin: OriginFor<T>,
+			token: CurrencyId,
+			// start from 1
+			page: u8,
+		) -> DispatchResult {
+			ensure_signed(origin)?;
+			let page = page as usize;
+			ensure!(page > 0, Error::<T>::InvalidPageNumber);
+
+			let validator_boost_list_len = ValidatorBoostList::<T>::decode_len(token)
+				.ok_or(Error::<T>::NoMoreValidatorBoostListForCurrency)?;
+
+			let previous_count = (page - 1) * ITERATE_LENGTH;
+			ensure!(
+				validator_boost_list_len > previous_count,
+				Error::<T>::NoMoreValidatorBoostListForCurrency
+			);
+
+			// calculate next page number left
+			let num_left = if validator_boost_list_len > (previous_count + ITERATE_LENGTH) {
+				validator_boost_list_len - previous_count - ITERATE_LENGTH
+			} else {
+				0
+			};
+
+			let current_block_number = <frame_system::Pallet<T>>::block_number();
+			let mut remove_num = 0;
+			// for each validator in the validator boost list, if the due block number is less than
+			// or equal to the current block number, remove it
+			ValidatorBoostList::<T>::mutate(token, |validator_boost_list_op| {
+				if let Some(ref mut validator_boost_list) = validator_boost_list_op {
+					let mut remove_index = vec![];
+					for (index, (_validator, due_block_number)) in validator_boost_list
+						.iter()
+						.skip(previous_count)
+						.take(ITERATE_LENGTH)
+						.enumerate()
+					{
+						if *due_block_number <= current_block_number {
+							remove_index.push(index + previous_count);
+						}
+					}
+
+					// remove from the end to the start
+					for index in remove_index.iter().rev() {
+						validator_boost_list.remove(*index);
+						remove_num += 1;
+					}
+				}
+			});
+
+			// Deposit event.
+			Pallet::<T>::deposit_event(Event::OutdatedValidatorBoostListCleaned {
+				currency_id: token,
+				page: page as u8,
+				remove_num,
+				num_left: num_left as u32,
 			});
 
 			Ok(())
