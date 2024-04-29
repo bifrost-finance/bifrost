@@ -323,6 +323,7 @@ parameter_types! {
 	pub const OraclePalletId: PalletId = PalletId(*b"bf/oracl");
 	pub const StableAssetPalletId: PalletId = PalletId(*b"bf/stabl");
 	pub const CommissionPalletId: PalletId = PalletId(*b"bf/comms");
+	pub const CloudsPalletId: PalletId = PalletId(*b"bf/cloud");
 }
 
 impl frame_system::Config for Runtime {
@@ -1646,6 +1647,15 @@ impl bifrost_channel_commission::Config for Runtime {
 	type NameLengthLimit = NameLengthLimit;
 }
 
+impl bifrost_clouds_convert::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type MultiCurrency = Currencies;
+	type CloudsPalletId = CloudsPalletId;
+	type VeMinting = VeMinting;
+	type WeightInfo = weights::bifrost_clouds_convert::BifrostWeight<Runtime>;
+	type LockedBlocks = MaxBlock;
+}
+
 // Below is the implementation of tokens manipulation functions other than native token.
 pub struct LocalAssetAdaptor<Local>(PhantomData<Local>);
 
@@ -1830,6 +1840,7 @@ construct_runtime! {
 		OracleMembership: pallet_membership::<Instance3> = 134,
 		LeverageStaking: leverage_staking = 135,
 		ChannelCommission: bifrost_channel_commission = 136,
+		CloudsConvert: bifrost_clouds_convert = 137,
 	}
 }
 
