@@ -1880,14 +1880,12 @@ pub mod pallet {
 			// get the percentage of the veBNC balance of the minter to the total veBNC amount and
 			// get the square root of the percentage
 			let percentage = Permill::from_rational(minter_vebnc_balance, vebnc_total_issuance);
-			// let percentage_u32 = percentage.deconstruct() as u32;
-			// let percentage_f64: f64 = percentage_u32 as f64 / 1000000.0;
-			// let sqrt_percentage: f64 = percentage_f64.sqrt();
-			let a = FixedU128::from_inner(percentage * 1_000_000_000_000u128).sqrt();
-			// .ok_or(Error::<T>::CalculationOverflow)?;
-			let percentage = Permill::from_rational(a.into_inner(), 1_000_000_000_000u128.into());
-			// let percentage = Permill::from_float(sqrt_percentage);
-
+			let sqrt_percentage =
+				FixedU128::from_inner(percentage * 1_000_000_000_000_000_000u128).sqrt();
+			let percentage = Permill::from_rational(
+				sqrt_percentage.into_inner(),
+				1_000_000_000_000_000_000u128.into(),
+			);
 			// get the total issuance of the vtoken
 			let vtoken_total_issuance = T::MultiCurrency::total_issuance(vtoken_id);
 
