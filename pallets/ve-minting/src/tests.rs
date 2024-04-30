@@ -401,3 +401,45 @@ fn redeem_unlock_should_work() {
 		assert_eq!(VeMinting::balance_of(&BOB, Some(System::block_number())), Ok(0));
 	});
 }
+
+#[test]
+fn refresh_should_work() {
+	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
+		asset_registry();
+		System::set_block_number(System::block_number() + 20);
+
+		assert_ok!(VeMinting::set_config(RuntimeOrigin::root(), Some(0), Some(7 * 86400 / 12)));
+		assert_ok!(VeMinting::set_markup_coefficient(
+			RuntimeOrigin::root(),
+			VBNC,
+			1_000.into(),
+			10_000_000_000_000.into()
+		));
+		assert_ok!(VeMinting::deposit_markup(RuntimeOrigin::signed(BOB), VBNC, 10_000_000_000_000));
+		assert_eq!(VeMinting::balance_of(&BOB, Some(System::block_number())), Ok(0));
+		assert_ok!(VeMinting::create_lock_inner(
+			&BOB,
+			10_000_000_000_000,
+			System::block_number() + 365 * 86400 / 12,
+		));
+		assert_ok!(VeMinting::set_markup_coefficient(
+			RuntimeOrigin::root(),
+			VBNC,
+			2_000.into(),
+			10_000_000_000_000.into()
+		));
+		assert_ok!(VeMinting::refresh_inner(RuntimeOrigin::signed(BOB), VBNC));
+		assert_eq!(
+			UserPointHistory::<Runtime>::get(POSITIONID0, U256::one()),
+			Point { bias: 2518061148680, slope: 960806, block: 20, amount: 10100000000000 }
+		);
+		assert_eq!(
+			UserPointHistory::<Runtime>::get(POSITIONID0, U256::from(2)),
+			Point { bias: 2542992628820, slope: 970319, block: 20, amount: 10200000000000 }
+		);
+		assert_eq!(Locked::<Runtime>::get(POSITIONID0).amount, 10_000_000_000_000);
+		assert_eq!(VeMinting::balance_of(&BOB, Some(System::block_number())), Ok(17828977886460));
+		assert_ok!(VeMinting::redeem_unlock(RuntimeOrigin::signed(BOB), 0));
+		assert_eq!(VeMinting::balance_of(&BOB, Some(System::block_number())), Ok(0));
+	});
+}

@@ -483,4 +483,44 @@ impl<T: frame_system::Config> bifrost_ve_minting::WeightInfo for BifrostWeight<T
 			.saturating_add(T::DbWeight::get().reads(122))
 			.saturating_add(T::DbWeight::get().writes(120))
 	}
+	/// Storage: `VeMinting::MarkupCoefficient` (r:1 w:0)
+	/// Proof: `VeMinting::MarkupCoefficient` (`max_values`: None, `max_size`: None, mode: `Measured`)
+	/// Storage: `System::Number` (r:1 w:0)
+	/// Proof: `System::Number` (`max_values`: Some(1), `max_size`: Some(4), added: 499, mode: `MaxEncodedLen`)
+	/// Storage: `VeMinting::LockedTokens` (r:2 w:1)
+	/// Proof: `VeMinting::LockedTokens` (`max_values`: None, `max_size`: None, mode: `Measured`)
+	/// Storage: `VeMinting::UserMarkupInfos` (r:1 w:1)
+	/// Proof: `VeMinting::UserMarkupInfos` (`max_values`: None, `max_size`: None, mode: `Measured`)
+	/// Storage: `VeMinting::UserPositions` (r:1 w:0)
+	/// Proof: `VeMinting::UserPositions` (`max_values`: None, `max_size`: None, mode: `Measured`)
+	/// Storage: `VeMinting::Locked` (r:1 w:0)
+	/// Proof: `VeMinting::Locked` (`max_values`: None, `max_size`: None, mode: `Measured`)
+	/// Storage: `VeMinting::IncentiveConfigs` (r:1 w:1)
+	/// Proof: `VeMinting::IncentiveConfigs` (`max_values`: None, `max_size`: None, mode: `Measured`)
+	/// Storage: `VeMinting::Epoch` (r:1 w:1)
+	/// Proof: `VeMinting::Epoch` (`max_values`: Some(1), `max_size`: None, mode: `Measured`)
+	/// Storage: `VeMinting::PointHistory` (r:1 w:1)
+	/// Proof: `VeMinting::PointHistory` (`max_values`: None, `max_size`: None, mode: `Measured`)
+	/// Storage: `VeMinting::UserPointEpoch` (r:1 w:1)
+	/// Proof: `VeMinting::UserPointEpoch` (`max_values`: None, `max_size`: None, mode: `Measured`)
+	/// Storage: `VeMinting::UserPointHistory` (r:1 w:1)
+	/// Proof: `VeMinting::UserPointHistory` (`max_values`: None, `max_size`: None, mode: `Measured`)
+	/// Storage: `VeMinting::Rewards` (r:1 w:1)
+	/// Proof: `VeMinting::Rewards` (`max_values`: None, `max_size`: None, mode: `Measured`)
+	/// Storage: `VeMinting::UserRewardPerTokenPaid` (r:1 w:1)
+	/// Proof: `VeMinting::UserRewardPerTokenPaid` (`max_values`: None, `max_size`: None, mode: `Measured`)
+	/// Storage: `VeMinting::SlopeChanges` (r:1 w:1)
+	/// Proof: `VeMinting::SlopeChanges` (`max_values`: None, `max_size`: None, mode: `Measured`)
+	/// Storage: `VeMinting::Supply` (r:1 w:0)
+	/// Proof: `VeMinting::Supply` (`max_values`: Some(1), `max_size`: None, mode: `Measured`)
+	fn refresh() -> Weight {
+		// Proof Size summary in bytes:
+		//  Measured:  `1687`
+		//  Estimated: `7627`
+		// Minimum execution time: 129_204_000 picoseconds.
+		Weight::from_parts(130_316_000, 0)
+			.saturating_add(Weight::from_parts(0, 7627))
+			.saturating_add(T::DbWeight::get().reads(16))
+			.saturating_add(T::DbWeight::get().writes(10))
+	}
 }
