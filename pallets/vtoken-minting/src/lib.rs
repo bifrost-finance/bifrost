@@ -45,7 +45,7 @@ use frame_support::{
 		traits::{
 			AccountIdConversion, CheckedAdd, CheckedSub, Saturating, UniqueSaturatedInto, Zero,
 		},
-		ArithmeticError, DispatchError, FixedPointNumber, FixedU128, Permill, SaturatedConversion,
+		ArithmeticError, DispatchError, FixedU128, Permill, SaturatedConversion,
 	},
 	traits::LockIdentifier,
 	transactional, BoundedVec, PalletId,

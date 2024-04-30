@@ -22,7 +22,7 @@
 
 use crate::{mock::*, *};
 use bifrost_ve_minting::VeMintingInterface;
-use frame_support::{assert_err, assert_noop, assert_ok};
+use frame_support::{assert_err, assert_ok};
 
 #[test]
 fn claim() {

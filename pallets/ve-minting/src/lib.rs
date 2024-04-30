@@ -151,6 +151,8 @@ pub mod pallet {
 		IncentiveSet { rewards_duration: BlockNumberFor<T> },
 		RewardAdded { rewards: Vec<(CurrencyIdOf<T>, BalanceOf<T>)> },
 		Rewarded { addr: AccountIdOf<T>, rewards: Vec<(CurrencyIdOf<T>, BalanceOf<T>)> },
+		AllRefreshed { asset_id: CurrencyIdOf<T> },
+		PartiallyRefreshed { asset_id: CurrencyIdOf<T> },
 	}
 
 	#[pallet::error]
@@ -672,7 +674,7 @@ pub mod pallet {
 			)?;
 
 			Self::deposit_event(Event::Minted {
-				addr: addr.clone(),
+				addr,
 				value,
 				end: _locked.end,
 				now: current_block_number,
@@ -918,12 +920,11 @@ pub mod pallet {
 			asset_id: CurrencyIdOf<T>,
 		) -> DispatchResult {
 			let addr = ensure_signed(origin)?;
-			let markup_coefficient =
-				MarkupCoefficient::<T>::get(asset_id).ok_or(Error::<T>::ArgumentsError)?; // Ensure it is the correct token type.
+			let _ = MarkupCoefficient::<T>::get(asset_id).ok_or(Error::<T>::ArgumentsError)?; // Ensure it is the correct token type.
 
 			let mut user_markup_info = UserMarkupInfos::<T>::get(&addr).unwrap_or_default();
 
-			let mut locked_token =
+			let locked_token =
 				LockedTokens::<T>::get(&asset_id, &addr).ok_or(Error::<T>::LockNotExist)?;
 			Self::update_markup_info(
 				&addr,
@@ -1028,6 +1029,12 @@ pub mod pallet {
 
 					refresh_count += 1;
 				}
+			}
+
+			if all_refreshed {
+				Self::deposit_event(Event::AllRefreshed { asset_id });
+			} else {
+				Self::deposit_event(Event::PartiallyRefreshed { asset_id });
 			}
 			Ok(())
 		}

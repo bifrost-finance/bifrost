@@ -17,7 +17,6 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 use bifrost_primitives::PoolId;
-use orml_traits::rewards;
 
 // Ensure we're `no_std` when compiling for Wasm.
 use crate::*;
@@ -498,12 +497,12 @@ where
 		Ok(())
 	}
 
-	fn set_incentive(pool_id: PoolId, rewards_duration: Option<BlockNumber>) {}
+	fn set_incentive(_pool_id: PoolId, _rewards_duration: Option<BlockNumber>) {}
 	fn add_reward(
-		addr: &AccountId,
-		conf: &mut IncentiveConfig<CurrencyId, Balance, BlockNumber, AccountId>,
-		rewards: &Vec<(CurrencyId, Balance)>,
-		remaining: Balance,
+		_addr: &AccountId,
+		_conf: &mut IncentiveConfig<CurrencyId, Balance, BlockNumber, AccountId>,
+		_rewards: &Vec<(CurrencyId, Balance)>,
+		_remaining: Balance,
 	) -> DispatchResult {
 		Ok(())
 	}
