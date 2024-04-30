@@ -46,7 +46,7 @@ benchmarks! {
 			let commission_token = CurrencyId::Token2(i);
 			assert_ok!(ChannelCommission::<T>::set_commission_tokens(
 				origin.clone(),
-				vtoken, commission_token
+				vtoken, Some(commission_token)
 			));
 		}
 
@@ -89,7 +89,7 @@ benchmarks! {
 
 		assert_ok!(ChannelCommission::<T>::set_commission_tokens(
 			origin.clone(),
-			vtoken, commission_token
+			vtoken, Some(commission_token)
 		));
 
 		assert_ok!(ChannelCommission::<T>::register_channel(
@@ -103,7 +103,7 @@ benchmarks! {
 		let commission_token = CurrencyId::Token2(0);
 		let vtoken = CurrencyId::VToken2(0);
 
-	}: _<T::RuntimeOrigin>(origin.clone(), vtoken, commission_token)
+	}: _<T::RuntimeOrigin>(origin.clone(), vtoken, Some(commission_token))
 
 	claim_commissions {
 		let test_account: T::AccountId = account("seed",1,1);
@@ -117,7 +117,7 @@ benchmarks! {
 
 		assert_ok!(ChannelCommission::<T>::set_commission_tokens(
 			origin.clone(),
-			vtoken, commission_token
+			vtoken, Some(commission_token)
 		));
 
 		assert_ok!(ChannelCommission::<T>::register_channel(
@@ -153,7 +153,7 @@ benchmarks! {
 			// set_commission_tokens
 			assert_ok!(ChannelCommission::<T>::set_commission_tokens(
 				origin.clone(),
-				vtoken, commission_token
+				vtoken, Some(commission_token)
 			));
 
 			let old_amount: BalanceOf<T> = 9000u128.unique_saturated_into();
@@ -202,7 +202,7 @@ benchmarks! {
 		// set_commission_tokens
 		assert_ok!(ChannelCommission::<T>::set_commission_tokens(
 			origin.clone(),
-			vtoken_set, CurrencyId::Token2(0)
+			vtoken_set, Some(CurrencyId::Token2(0))
 		));
 
 		// register channels

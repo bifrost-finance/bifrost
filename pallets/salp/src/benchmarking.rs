@@ -470,7 +470,7 @@ mod benchmarks {
 			None
 		));
 		#[extrinsic_call]
-		_(RawOrigin::Root, 0, KSM, 1_000_000_000u32.into())
+		_(RawOrigin::Signed(caller), 0, KSM, 1_000_000_000u32.into())
 	}
 
 	#[benchmark]

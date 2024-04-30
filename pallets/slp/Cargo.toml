@@ -33,6 +33,7 @@ bifrost-vtoken-minting = { workspace = true }
 bifrost-asset-registry = { workspace = true }
 bifrost-parachain-staking = { workspace = true }
 bifrost-stable-pool = { workspace = true }
+bifrost-stable-asset = { workspace = true }
 
 [dev-dependencies]
 hex = "0.4.3"
