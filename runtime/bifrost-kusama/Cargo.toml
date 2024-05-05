@@ -122,7 +122,6 @@ pallet-evm-chain-id = { workspace = true }
 pallet-evm-precompile-modexp = { workspace = true }
 pallet-evm-precompile-sha3fips = { workspace = true }
 pallet-evm-precompile-simple = { workspace = true }
-pallet-hotfix-sufficients = { workspace = true }
 
 # Bifrost
 bifrost-asset-registry = { workspace = true }
@@ -290,7 +289,6 @@ std = [
     "pallet-evm-precompile-modexp/std",
     "pallet-evm-precompile-sha3fips/std",
     "pallet-evm-precompile-simple/std",
-    "pallet-hotfix-sufficients/std",
 ]
 with-tracing = ["frame-executive/with-tracing"]
 

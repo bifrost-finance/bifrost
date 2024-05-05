@@ -1277,11 +1277,6 @@ impl pallet_base_fee::Config for Runtime {
 	type DefaultElasticity = DefaultElasticity;
 }
 
-impl pallet_hotfix_sufficients::Config for Runtime {
-	type AddressMapping = HashedAddressMapping<BlakeTwo256>;
-	type WeightInfo = pallet_hotfix_sufficients::weights::SubstrateWeight<Self>;
-}
-
 // Bifrost modules start
 
 pub struct ExtraFeeMatcher;
@@ -2141,7 +2136,6 @@ construct_runtime! {
 		BaseFee: pallet_base_fee = 69,
 		// EVMAccounts: pallet_evm_accounts = 68,
 		// DynamicEvmFee: pallet_dynamic_evm_fee = 69,
-		HotfixSufficients: pallet_hotfix_sufficients = 75,
 
 		// Third party modules
 		XTokens: orml_xtokens = 70,
@@ -2877,11 +2871,9 @@ impl_runtime_apis! {
 			use frame_support::traits::StorageInfoTrait;
 
 			use frame_system_benchmarking::Pallet as SystemBench;
-			use pallet_hotfix_sufficients::Pallet as PalletHotfixSufficients;
 
 			let mut list = Vec::<BenchmarkList>::new();
 			list_benchmarks!(list, extra);
-			list_benchmark!(list, extra, pallet_hotfix_sufficients, PalletHotfixSufficients::<Runtime>);
 
 			let storage_info = AllPalletsWithSystem::storage_info();
 			return (list, storage_info)
@@ -2894,7 +2886,6 @@ impl_runtime_apis! {
 			use frame_support::traits::TrackedStorageKey;
 
 			use pallet_evm::Pallet as PalletEvmBench;
-			use pallet_hotfix_sufficients::Pallet as PalletHotfixSufficientsBench;
 
 			impl frame_system_benchmarking::Config for Runtime {}
 
@@ -2915,7 +2906,6 @@ impl_runtime_apis! {
 			let params = (&config, &whitelist);
 
 			add_benchmark!(params, batches, pallet_evm, PalletEvmBench::<Runtime>);
-			add_benchmark!(params, batches, pallet_hotfix_sufficients, PalletHotfixSufficientsBench::<Runtime>);
 
 			if batches.is_empty() { return Err("Benchmark not found for this pallet.".into()) }
 			Ok(batches)

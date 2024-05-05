@@ -1429,7 +1429,6 @@ dependencies = [
  "pallet-evm-precompile-modexp",
  "pallet-evm-precompile-sha3fips",
  "pallet-evm-precompile-simple",
- "pallet-hotfix-sufficients",
  "pallet-identity 4.0.0-dev",
  "pallet-indices 4.0.0-dev",
  "pallet-membership 4.0.0-dev",
@@ -10908,22 +10907,6 @@ dependencies = [
  "sp-session 24.0.0",
  "sp-staking 23.0.0",
  "sp-std 12.0.0",
-]
-
-[[package]]
-name = "pallet-hotfix-sufficients"
-version = "1.0.0"
-source = "git+https://github.com/polkadot-evm/frontier?branch=polkadot-v1.3.0#e262e80f3083ea8df90bd71a827789bef810f6aa"
-dependencies = [
- "frame-benchmarking 4.0.0-dev",
- "frame-support 4.0.0-dev",
- "frame-system 4.0.0-dev",
- "pallet-evm",
- "parity-scale-codec",
- "scale-info",
- "sp-core 21.0.0",
- "sp-runtime 24.0.0",
- "sp-std 8.0.0",
 ]
 
 [[package]]
