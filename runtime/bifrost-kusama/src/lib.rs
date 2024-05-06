@@ -2074,7 +2074,7 @@ pub mod migrations {
 	use super::*;
 
 	/// Unreleased migrations. Add new ones here:
-	pub type Unreleased = ();
+	pub type Unreleased = migration::slpx_migrates_whitelist::UpdateWhitelist;
 }
 
 /// Executive: handles dispatch to the various modules.

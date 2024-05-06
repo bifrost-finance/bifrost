@@ -16,20 +16,19 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-use super::*;
-use bifrost_asset_registry::AssetIdMaps;
-use bifrost_primitives::{
-	AccountId, CurrencyId, CurrencyIdMapping, TokenSymbol, DOT_TOKEN_ID, GLMR_TOKEN_ID,
-};
-pub use bifrost_xcm_interface::traits::{parachains, XcmBaseWeight};
 pub use cumulus_primitives_core::ParaId;
 use frame_support::{
 	ensure,
 	sp_runtime::traits::{CheckedConversion, Convert},
 	traits::{ContainsPair, Get, ProcessMessageError},
 };
+use orml_traits::location::Reserve;
+pub use orml_traits::{location::AbsoluteReserveProvider, parameter_type_with_key, MultiCurrency};
+use pallet_xcm::XcmPassthrough;
 use parity_scale_codec::{Decode, Encode};
 pub use polkadot_parachain_primitives::primitives::Sibling;
+use polkadot_runtime_common::xcm_sender::NoPriceForMessageDelivery;
+use sp_core::bounded::BoundedVec;
 use sp_std::{convert::TryFrom, marker::PhantomData};
 pub use xcm_builder::{
 	AccountId32Aliases, AllowKnownQueryResponses, AllowSubscriptionsFrom,
@@ -38,19 +37,24 @@ pub use xcm_builder::{
 	SiblingParachainAsNative, SiblingParachainConvertsVia, SignedAccountId32AsNative,
 	SignedToAccountId32, SovereignSignedViaLocation, TakeRevenue, TakeWeightCredit,
 };
+use xcm_builder::{
+	DescribeAllTerminal, DescribeFamily, FrameTransactionalProcessor, HashedDescription,
+	TrailingSetTopicAsId,
+};
 use xcm_executor::traits::{MatchesFungible, ShouldExecute};
 
+use bifrost_asset_registry::AssetIdMaps;
 // orml imports
 use bifrost_currencies::BasicCurrencyAdapter;
+use bifrost_primitives::{
+	AccountId, CurrencyId, CurrencyIdMapping, TokenSymbol, DOT_TOKEN_ID, GLMR_TOKEN_ID,
+};
 use bifrost_runtime_common::currency_adapter::{
 	BifrostDropAssets, DepositToAlternative, MultiCurrencyAdapter,
 };
-use orml_traits::location::Reserve;
-pub use orml_traits::{location::AbsoluteReserveProvider, parameter_type_with_key, MultiCurrency};
-use pallet_xcm::XcmPassthrough;
-use polkadot_runtime_common::xcm_sender::NoPriceForMessageDelivery;
-use sp_core::bounded::BoundedVec;
-use xcm_builder::{Account32Hash, FrameTransactionalProcessor, TrailingSetTopicAsId};
+pub use bifrost_xcm_interface::traits::{parachains, XcmBaseWeight};
+
+use super::*;
 
 /// Bifrost Asset Matcher
 pub struct BifrostAssetMatcher<CurrencyId, CurrencyIdConvert>(
@@ -209,8 +213,8 @@ pub type LocationToAccountId = (
 	SiblingParachainConvertsVia<Sibling, AccountId>,
 	// Straight up local `AccountId32` origins just alias directly to `AccountId`.
 	AccountId32Aliases<RelayNetwork, AccountId>,
-	// Derives a private `Account32` by hashing `("multiloc", received multilocation)`
-	Account32Hash<RelayNetwork, AccountId>,
+	// Foreign locations alias into accounts according to a hash of their standard description.
+	HashedDescription<AccountId, DescribeFamily<DescribeAllTerminal>>,
 );
 
 /// This is the type we use to convert an (incoming) XCM origin into a local `RuntimeOrigin`
@@ -736,4 +740,124 @@ impl bifrost_xcm_interface::Config for Runtime {
 	type ParachainId = SelfParaChainId;
 	type CallBackTimeOut = ConstU32<10>;
 	type CurrencyIdConvert = AssetIdMaps<Runtime>;
+}
+
+#[cfg(test)]
+mod tests {
+	use hex_literal::hex;
+	use sp_core::crypto::Ss58Codec;
+	use xcm::{
+		prelude::{AccountId32, AccountKey20, Parachain, X2},
+		v3::{MultiLocation, NetworkId},
+	};
+	use xcm_builder::{DescribeAllTerminal, DescribeFamily};
+	use xcm_executor::traits::ConvertLocation;
+
+	use crate::AccountId;
+
+	#[test]
+	fn test_location_to_account() {
+		let moonbeam_slpx_origin_location = MultiLocation::new(
+			0,
+			X2(
+				Parachain(2004),
+				AccountKey20 {
+					network: None,
+					key: hex!["F1d4797E51a4640a76769A50b57abE7479ADd3d8"].into(),
+				},
+			),
+		);
+		let moonbeam_slpx_derived = xcm_builder::HashedDescription::<
+			AccountId,
+			DescribeFamily<DescribeAllTerminal>,
+		>::convert_location(&moonbeam_slpx_origin_location)
+		.unwrap();
+
+		let moonbeam_receiver_origin_location = MultiLocation::new(
+			0,
+			X2(
+				Parachain(2004),
+				AccountKey20 {
+					network: None,
+					key: hex!["64DC1E8b5E9515dE37b58b4d8629Bf89BcD1F576"].into(),
+				},
+			),
+		);
+		let moonbeam_receiver_derived = xcm_builder::HashedDescription::<
+			AccountId,
+			DescribeFamily<DescribeAllTerminal>,
+		>::convert_location(&moonbeam_receiver_origin_location)
+		.unwrap();
+
+		let moonriver_slpx_origin_location = MultiLocation::new(
+			0,
+			X2(
+				Parachain(2023),
+				AccountKey20 {
+					network: None,
+					key: hex!["6b0A44c64190279f7034b77c13a566E914FE5Ec4"].into(),
+				},
+			),
+		);
+		let moonriver_slpx_derived = xcm_builder::HashedDescription::<
+			AccountId,
+			DescribeFamily<DescribeAllTerminal>,
+		>::convert_location(&moonriver_slpx_origin_location)
+		.unwrap();
+
+		let astar_slpx_origin_location = MultiLocation::new(
+			0,
+			X2(
+				Parachain(2006),
+				AccountId32 {
+					network: Some(NetworkId::Polkadot),
+					id: hex!["b3d19dad606c8f323460d7bb64a147af60923b85d3c853596954c71d2cfe20e3"]
+						.into(),
+				},
+			),
+		);
+		let astar_slpx_derived = xcm_builder::HashedDescription::<
+			AccountId,
+			DescribeFamily<DescribeAllTerminal>,
+		>::convert_location(&astar_slpx_origin_location)
+		.unwrap();
+
+		let astar_receiver_origin_location = MultiLocation::new(
+			0,
+			X2(
+				Parachain(2006),
+				AccountId32 {
+					network: Some(NetworkId::Polkadot),
+					id: hex!["576dee92eedbd7ffe0695569ac7a8db30edd204f2c42f53f14e0e863702c597e"]
+						.into(),
+				},
+			),
+		);
+		let astar_receiver_derived = xcm_builder::HashedDescription::<
+			AccountId,
+			DescribeFamily<DescribeAllTerminal>,
+		>::convert_location(&astar_receiver_origin_location)
+		.unwrap();
+
+		assert_eq!(
+			moonbeam_slpx_derived,
+			AccountId::from_ss58check("dCCU6pkmwQEb29MSigvWjhvnWTtE3GaBqaAdxt4ppW7kUkw").unwrap()
+		);
+		assert_eq!(
+			moonbeam_receiver_derived,
+			AccountId::from_ss58check("fV6ngGNKkM1BUymusAMcZECxNu3fqhSnS4Jhz2RBk4NtZrw").unwrap()
+		);
+		assert_eq!(
+			moonriver_slpx_derived,
+			AccountId::from_ss58check("eVjSno5E5Teibbu3zdaZbBKhsFWU4QjpQXif2YiZ1jFbmEB").unwrap()
+		);
+		assert_eq!(
+			astar_slpx_derived,
+			AccountId::from_ss58check("fErAtK3KrBPZyAtd26DMQAmuAvo8YswQQBhexibCcqh3D1c").unwrap()
+		);
+		assert_eq!(
+			astar_receiver_derived,
+			AccountId::from_ss58check("cG6stm2jXgbreRNGxZEvaUn3jT17fxdFXUa6mwE4bSL1v1L").unwrap()
+		);
+	}
 }

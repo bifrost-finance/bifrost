@@ -30,6 +30,7 @@ pallet-asset-rate = { workspace = true }
 pallet-aura = { workspace = true }
 pallet-authorship = { workspace = true }
 pallet-balances = { workspace = true }
+pallet-bags-list = { workspace = true }
 pallet-bounties = { workspace = true }
 pallet-collective = { workspace = true }
 pallet-conviction-voting = { workspace = true }
@@ -156,6 +157,7 @@ std = [
 	"frame-try-runtime/std",
 	"pallet-aura/std",
 	"pallet-balances/std",
+	"pallet-bags-list/std",
 	"pallet-bounties/std",
 	"pallet-collator-selection/std",
 	"pallet-collective/std",
@@ -294,6 +296,7 @@ try-runtime = [
 	"frame-system/try-runtime",
 	"frame-executive/try-runtime",
 	"pallet-timestamp/try-runtime",
+	"pallet-bags-list/try-runtime",
 	"pallet-indices/try-runtime",
 	"cumulus-pallet-parachain-system/try-runtime",
 	"parachain-info/try-runtime",

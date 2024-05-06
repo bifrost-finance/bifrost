@@ -55,7 +55,7 @@ use pallet_xcm::XcmPassthrough;
 use polkadot_runtime_common::xcm_sender::NoPriceForMessageDelivery;
 use sp_core::bounded::BoundedVec;
 use xcm::v3::prelude::*;
-use xcm_builder::{Account32Hash, FrameTransactionalProcessor, TrailingSetTopicAsId};
+use xcm_builder::{FrameTransactionalProcessor, TrailingSetTopicAsId};
 use xcm_executor::traits::Properties;
 
 /// Bifrost Asset Matcher
@@ -259,9 +259,6 @@ pub type LocationToAccountId = (
 	SiblingParachainConvertsVia<Sibling, AccountId>,
 	// Straight up local `AccountId32` origins just alias directly to `AccountId`.
 	AccountId32Aliases<RelayNetwork, AccountId>,
-	// TODO: Generate remote accounts according to polkadot standards
-	// Derives a private `Account32` by hashing `("multiloc", received multilocation)`
-	Account32Hash<RelayNetwork, AccountId>,
 	// Foreign locations alias into accounts according to a hash of their standard description.
 	HashedDescription<AccountId, DescribeFamily<DescribeAllTerminal>>,
 );
