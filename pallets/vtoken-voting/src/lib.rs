@@ -409,9 +409,8 @@ pub mod pallet {
 							match maybe_info {
 								Some(info) =>
 									if let ReferendumInfo::Ongoing(_) = info {
-										*info = ReferendumInfo::Completed(
-											relay_current_block_number.into(),
-										);
+										*info =
+											ReferendumInfo::Completed(relay_current_block_number);
 									},
 								None => {},
 							}

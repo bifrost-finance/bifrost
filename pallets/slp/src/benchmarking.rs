@@ -20,7 +20,7 @@
 #![cfg(feature = "runtime-benchmarks")]
 
 use crate::*;
-use bifrost_primitives::{DOT, VDOT, VKSM};
+use bifrost_primitives::{DOT, VDOT};
 use frame_benchmarking::v2::*;
 use frame_support::{assert_ok, PalletId};
 use frame_system::RawOrigin as SystemOrigin;

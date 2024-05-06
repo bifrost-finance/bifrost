@@ -16,10 +16,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 use crate::{Pallet, *};
-pub use bifrost_primitives::{
-	AccountId, Balance, CurrencyId, CurrencyIdMapping, SlpOperator, SlpxOperator, TokenSymbol, BNC,
-	GLMR, KSM, VKSM, *,
-};
+pub use bifrost_primitives::{Balance, CurrencyId, KSM, VKSM, *};
 use frame_benchmarking::{account, v2::*};
 use frame_support::assert_ok;
 use frame_system::RawOrigin as SystemOrigin;
