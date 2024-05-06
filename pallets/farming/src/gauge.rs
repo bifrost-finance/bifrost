@@ -45,7 +45,7 @@ pub struct GaugeInfo<BalanceOf: HasCompact, BlockNumberFor, AccountIdOf> {
 #[derive(Clone, Encode, Decode, PartialEq, Eq, RuntimeDebug, TypeInfo)]
 pub struct GaugePoolInfo<BalanceOf: HasCompact, CurrencyIdOf: Ord, AccountIdOf, BlockNumberFor> {
 	pub pid: PoolId,
-	pub token: CurrencyIdOf,
+	// pub token: CurrencyIdOf,
 	pub keeper: AccountIdOf,
 	pub reward_issuer: AccountIdOf,
 	pub rewards: BTreeMap<CurrencyIdOf, (BalanceOf, BalanceOf, BalanceOf)>,
@@ -72,7 +72,6 @@ where
 {
 	pub fn new(
 		pid: PoolId,
-		token: CurrencyIdOf,
 		keeper: AccountIdOf,
 		reward_issuer: AccountIdOf,
 		gauge_basic_rewards: BTreeMap<CurrencyIdOf, BalanceOf>,
@@ -81,7 +80,6 @@ where
 	) -> Self {
 		Self {
 			pid,
-			token,
 			keeper,
 			reward_issuer,
 			rewards: BTreeMap::new(),
@@ -103,16 +101,14 @@ where
 	pub fn create_gauge_pool(
 		pid: PoolId,
 		pool_info: &mut PoolInfo<BalanceOf<T>, CurrencyIdOf<T>, AccountIdOf<T>, BlockNumberFor<T>>,
-		gauge_token: CurrencyIdOf<T>,
+		who: AccountIdOf<T>,
 		gauge_basic_rewards: BTreeMap<CurrencyIdOf<T>, BalanceOf<T>>,
 		max_block: BlockNumberFor<T>,
 	) -> DispatchResult {
-		// let pid = Self::gauge_pool_next_id();
 		pool_info.gauge = Some(pid);
 		let current_block_number = frame_system::Pallet::<T>::block_number();
 		let gauge_pool_info = GaugePoolInfo::new(
 			pid,
-			gauge_token,
 			pool_info.keeper.clone(),
 			pool_info.reward_issuer.clone(),
 			gauge_basic_rewards,
@@ -125,6 +121,8 @@ where
 			*id = id.checked_add(1).ok_or(ArithmeticError::Overflow)?;
 			Ok(())
 		})?;
+
+		T::VeMinting::set_incentive(pid, Some(max_block), Some(who));
 		Ok(())
 	}
 

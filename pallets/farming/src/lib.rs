@@ -387,7 +387,7 @@ pub mod pallet {
 			tokens_proportion: Vec<(CurrencyIdOf<T>, Perbill)>,
 			basic_rewards: Vec<(CurrencyIdOf<T>, BalanceOf<T>)>,
 			gauge_init: Option<(
-				CurrencyIdOf<T>,
+				AccountIdOf<T>,
 				BlockNumberFor<T>,
 				Vec<(CurrencyIdOf<T>, BalanceOf<T>)>,
 			)>,
@@ -422,14 +422,14 @@ pub mod pallet {
 				withdraw_limit_count,
 			);
 
-			if let Some((gauge_token, max_block, gauge_basic_rewards)) = gauge_init {
+			if let Some((who, max_block, gauge_basic_rewards)) = gauge_init {
 				let gauge_basic_rewards_map: BTreeMap<CurrencyIdOf<T>, BalanceOf<T>> =
 					gauge_basic_rewards.into_iter().map(|(k, v)| (k, v)).collect();
 
 				Self::create_gauge_pool(
 					pid,
 					&mut pool_info,
-					gauge_token,
+					who,
 					gauge_basic_rewards_map,
 					max_block,
 				)?;
@@ -669,7 +669,7 @@ pub mod pallet {
 			claim_limit_time: Option<BlockNumberFor<T>>,
 			withdraw_limit_count: Option<u8>,
 			gauge_init: Option<(
-				CurrencyIdOf<T>,
+				AccountIdOf<T>,
 				BlockNumberFor<T>,
 				Vec<(CurrencyIdOf<T>, BalanceOf<T>)>,
 			)>,
@@ -698,14 +698,14 @@ pub mod pallet {
 			if let Some(withdraw_limit_count) = withdraw_limit_count {
 				pool_info.withdraw_limit_count = withdraw_limit_count;
 			};
-			if let Some((gauge_token, max_block, gauge_basic_rewards)) = gauge_init {
+			if let Some((who, max_block, gauge_basic_rewards)) = gauge_init {
 				let gauge_basic_rewards_map: BTreeMap<CurrencyIdOf<T>, BalanceOf<T>> =
 					gauge_basic_rewards.into_iter().map(|(k, v)| (k, v)).collect();
 
 				Self::create_gauge_pool(
 					pid,
 					&mut pool_info,
-					gauge_token,
+					who,
 					gauge_basic_rewards_map,
 					max_block,
 				)?;

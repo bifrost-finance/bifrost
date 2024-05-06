@@ -29,6 +29,7 @@ use crate::{Pallet as Farming, *};
 benchmarks! {
 	on_initialize {}:{Farming::<T>::on_initialize(BlockNumberFor::<T>::from(10u32));}
 	create_farming_pool {
+		let caller: T::AccountId = whitelisted_caller();
 		let token_amount = BalanceOf::<T>::unique_saturated_from(1000u128);
 		let default_currency_id = CurrencyIdOf::<T>::default();
 		let tokens_proportion = vec![(default_currency_id, Perbill::from_percent(100))];
@@ -37,7 +38,7 @@ benchmarks! {
 	}: _(RawOrigin::Root,
 	tokens_proportion.clone(),
 	basic_rewards.clone(),
-	Some((default_currency_id, BlockNumberFor::<T>::from(1000u32), gauge_basic_rewards)),
+	Some((caller.clone(), BlockNumberFor::<T>::from(1000u32), gauge_basic_rewards)),
 	BalanceOf::<T>::unique_saturated_from(0u128),
 	BlockNumberFor::<T>::from(0u32),
 	BlockNumberFor::<T>::from(7u32),
@@ -55,7 +56,7 @@ benchmarks! {
 			RawOrigin::Root.into(),
 			tokens_proportion.clone(),
 			basic_rewards.clone(),
-			Some((default_currency_id, BlockNumberFor::<T>::from(1000u32), gauge_basic_rewards)),
+			Some((caller.clone(), BlockNumberFor::<T>::from(1000u32), gauge_basic_rewards)),
 			BalanceOf::<T>::unique_saturated_from(0u128),
 			BlockNumberFor::<T>::from(0u32),
 			BlockNumberFor::<T>::from(7u32),
@@ -77,7 +78,7 @@ benchmarks! {
 			RawOrigin::Root.into(),
 			tokens_proportion.clone(),
 			basic_rewards.clone(),
-			Some((default_currency_id, BlockNumberFor::<T>::from(1000u32), gauge_basic_rewards)),
+			Some((caller.clone(), BlockNumberFor::<T>::from(1000u32), gauge_basic_rewards)),
 			BalanceOf::<T>::unique_saturated_from(0u128),
 			BlockNumberFor::<T>::from(0u32),
 			BlockNumberFor::<T>::from(7u32),
@@ -100,7 +101,7 @@ benchmarks! {
 			RawOrigin::Root.into(),
 			tokens_proportion.clone(),
 			basic_rewards.clone(),
-			Some((default_currency_id, BlockNumberFor::<T>::from(1000u32), gauge_basic_rewards)),
+			Some((caller.clone(), BlockNumberFor::<T>::from(1000u32), gauge_basic_rewards)),
 			BalanceOf::<T>::unique_saturated_from(0u128),
 			BlockNumberFor::<T>::from(0u32),
 			BlockNumberFor::<T>::from(7u32),
@@ -125,7 +126,7 @@ benchmarks! {
 			RawOrigin::Root.into(),
 			tokens_proportion.clone(),
 			basic_rewards.clone(),
-			Some((default_currency_id, BlockNumberFor::<T>::from(1000u32), gauge_basic_rewards)),
+			Some((caller.clone(), BlockNumberFor::<T>::from(1000u32), gauge_basic_rewards)),
 			BalanceOf::<T>::unique_saturated_from(0u128),
 			BlockNumberFor::<T>::from(0u32),
 			BlockNumberFor::<T>::from(7u32),
@@ -149,7 +150,7 @@ benchmarks! {
 			RawOrigin::Root.into(),
 			tokens_proportion.clone(),
 			basic_rewards.clone(),
-			Some((default_currency_id, BlockNumberFor::<T>::from(1000u32), gauge_basic_rewards)),
+			Some((caller.clone(), BlockNumberFor::<T>::from(1000u32), gauge_basic_rewards)),
 			BalanceOf::<T>::unique_saturated_from(0u128),
 			BlockNumberFor::<T>::from(0u32),
 			BlockNumberFor::<T>::from(7u32),
@@ -174,7 +175,7 @@ benchmarks! {
 			RawOrigin::Root.into(),
 			tokens_proportion.clone(),
 			basic_rewards.clone(),
-			Some((default_currency_id, BlockNumberFor::<T>::from(1000u32), gauge_basic_rewards.clone())),
+			Some((caller.clone(), BlockNumberFor::<T>::from(1000u32), gauge_basic_rewards.clone())),
 			BalanceOf::<T>::unique_saturated_from(0u128),
 			BlockNumberFor::<T>::from(0u32),
 			BlockNumberFor::<T>::from(7u32),
@@ -195,7 +196,7 @@ benchmarks! {
 	Some(BlockNumberFor::<T>::from(7u32)),
 	Some(BlockNumberFor::<T>::from(6u32)),
 	Some(5),
-	Some((default_currency_id, BlockNumberFor::<T>::from(1000u32), gauge_basic_rewards))
+	Some((caller.clone(), BlockNumberFor::<T>::from(1000u32), gauge_basic_rewards))
 	)
 
 	force_retire_pool {
@@ -211,7 +212,7 @@ benchmarks! {
 			RawOrigin::Root.into(),
 			tokens_proportion.clone(),
 			basic_rewards.clone(),
-			Some((default_currency_id, BlockNumberFor::<T>::from(1000u32), gauge_basic_rewards.clone())),
+			Some((caller.clone(), BlockNumberFor::<T>::from(1000u32), gauge_basic_rewards.clone())),
 			BalanceOf::<T>::unique_saturated_from(0u128),
 			BlockNumberFor::<T>::from(0u32),
 			BlockNumberFor::<T>::from(7u32),
@@ -238,7 +239,7 @@ benchmarks! {
 			RawOrigin::Root.into(),
 			tokens_proportion.clone(),
 			basic_rewards.clone(),
-			Some((default_currency_id, BlockNumberFor::<T>::from(1000u32), gauge_basic_rewards.clone())),
+			Some((caller.clone(), BlockNumberFor::<T>::from(1000u32), gauge_basic_rewards.clone())),
 			BalanceOf::<T>::unique_saturated_from(0u128),
 			BlockNumberFor::<T>::from(0u32),
 			BlockNumberFor::<T>::from(7u32),
@@ -248,6 +249,7 @@ benchmarks! {
 	}: _(RawOrigin::Root,pid)
 
 	edit_pool {
+		let caller: T::AccountId = whitelisted_caller();
 		let token_amount = BalanceOf::<T>::unique_saturated_from(1000u128);
 		let default_currency_id = CurrencyIdOf::<T>::default();
 		let tokens_proportion = vec![(default_currency_id, Perbill::from_percent(100))];
@@ -256,7 +258,7 @@ benchmarks! {
 		assert_ok!(Farming::<T>::create_farming_pool(RawOrigin::Root.into(),
 			tokens_proportion.clone(),
 			basic_rewards.clone(),
-			Some((default_currency_id, BlockNumberFor::<T>::from(1000u32), gauge_basic_rewards.clone())),
+			Some((caller.clone(), BlockNumberFor::<T>::from(1000u32), gauge_basic_rewards.clone())),
 			BalanceOf::<T>::unique_saturated_from(0u128),
 			BlockNumberFor::<T>::from(0u32),
 			BlockNumberFor::<T>::from(7u32),
@@ -281,7 +283,7 @@ benchmarks! {
 		assert_ok!(Farming::<T>::create_farming_pool(RawOrigin::Root.into(),
 			tokens_proportion.clone(),
 			basic_rewards.clone(),
-			Some((default_currency_id, BlockNumberFor::<T>::from(1000u32), gauge_basic_rewards)),
+			Some((caller.clone(), BlockNumberFor::<T>::from(1000u32), gauge_basic_rewards)),
 			BalanceOf::<T>::unique_saturated_from(0u128),
 			BlockNumberFor::<T>::from(0u32),
 			BlockNumberFor::<T>::from(7u32),
@@ -303,7 +305,7 @@ benchmarks! {
 			RawOrigin::Root.into(),
 			tokens_proportion.clone(),
 			basic_rewards.clone(),
-			Some((default_currency_id, BlockNumberFor::<T>::from(1000u32), gauge_basic_rewards)),
+			Some((caller.clone(), BlockNumberFor::<T>::from(1000u32), gauge_basic_rewards)),
 			BalanceOf::<T>::unique_saturated_from(0u128),
 			BlockNumberFor::<T>::from(0u32),
 			BlockNumberFor::<T>::from(7u32),
@@ -324,7 +326,7 @@ benchmarks! {
 			RawOrigin::Root.into(),
 			tokens_proportion.clone(),
 			basic_rewards.clone(),
-			Some((default_currency_id, BlockNumberFor::<T>::from(1000u32), gauge_basic_rewards)),
+			Some((caller.clone(), BlockNumberFor::<T>::from(1000u32), gauge_basic_rewards)),
 			BalanceOf::<T>::unique_saturated_from(0u128),
 			BlockNumberFor::<T>::from(0u32),
 			BlockNumberFor::<T>::from(7u32),

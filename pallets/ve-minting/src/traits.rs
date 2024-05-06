@@ -57,7 +57,11 @@ pub trait VeMintingInterface<AccountId, CurrencyId, Balance, BlockNumber> {
 		addr: &AccountId,
 		share_info: Option<(Balance, Balance)>,
 	) -> DispatchResult;
-	fn set_incentive(pool_id: PoolId, rewards_duration: Option<BlockNumber>);
+	fn set_incentive(
+		pool_id: PoolId,
+		rewards_duration: Option<BlockNumber>,
+		controller: Option<AccountId>,
+	);
 	fn add_reward(
 		addr: &AccountId,
 		conf: &mut IncentiveConfig<CurrencyId, Balance, BlockNumber, AccountId>,
@@ -290,13 +294,21 @@ impl<T: Config> VeMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>
 		Self::get_rewards_inner(pool_id, addr, share_info)
 	}
 
-	fn set_incentive(pool_id: PoolId, rewards_duration: Option<BlockNumberFor<T>>) {
+	fn set_incentive(
+		pool_id: PoolId,
+		rewards_duration: Option<BlockNumberFor<T>>,
+		controller: Option<AccountIdOf<T>>,
+	) {
+		let mut incentive_config = Self::incentive_configs(pool_id);
+
 		if let Some(rewards_duration) = rewards_duration {
-			let mut incentive_config = Self::incentive_configs(pool_id);
 			incentive_config.rewards_duration = rewards_duration;
-			IncentiveConfigs::<T>::set(pool_id, incentive_config);
-			Self::deposit_event(Event::IncentiveSet { rewards_duration });
 		};
+		if let Some(controller) = controller {
+			incentive_config.incentive_controller = Some(controller.clone());
+		}
+		IncentiveConfigs::<T>::set(pool_id, incentive_config.clone());
+		Self::deposit_event(Event::IncentiveSet { incentive_config });
 	}
 	fn add_reward(
 		addr: &AccountIdOf<T>,
@@ -348,78 +360,6 @@ impl<T: Config> VeMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>
 		})
 	}
 }
-
-// pub trait Incentive<AccountId, CurrencyId, Balance, BlockNumber> {
-// 	fn set_incentive(pool_id: PoolId, rewards_duration: Option<BlockNumber>);
-// 	fn add_reward(
-// 		addr: &AccountId,
-// 		conf: &mut IncentiveConfig<CurrencyId, Balance, BlockNumber, AccountId>,
-// 		rewards: &Vec<(CurrencyId, Balance)>,
-// 		remaining: Balance,
-// 	) -> DispatchResult;
-// }
-
-// impl<T: Config> Incentive<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>, BlockNumberFor<T>>
-// 	for Pallet<T>
-// {
-// 	fn set_incentive(pool_id: PoolId, rewards_duration: Option<BlockNumberFor<T>>) {
-// 		if let Some(rewards_duration) = rewards_duration {
-// 			let mut incentive_config = Self::incentive_configs(pool_id);
-// 			incentive_config.rewards_duration = rewards_duration;
-// 			IncentiveConfigs::<T>::set(pool_id, incentive_config);
-// 			Self::deposit_event(Event::IncentiveSet { rewards_duration });
-// 		};
-// 	}
-// 	fn add_reward(
-// 		addr: &AccountIdOf<T>,
-// 		conf: &mut IncentiveConfig<
-// 			CurrencyIdOf<T>,
-// 			BalanceOf<T>,
-// 			BlockNumberFor<T>,
-// 			AccountIdOf<T>,
-// 		>,
-// 		rewards: &Vec<(CurrencyIdOf<T>, BalanceOf<T>)>,
-// 		remaining: BalanceOf<T>,
-// 	) -> DispatchResult {
-// 		rewards.iter().try_for_each(|(currency, reward)| -> DispatchResult {
-// 			let mut total_reward: BalanceOf<T> = *reward;
-// 			if remaining != BalanceOf::<T>::zero() {
-// 				let leftover: BalanceOf<T> = conf
-// 					.reward_rate
-// 					.get(currency)
-// 					.unwrap_or(&Zero::zero())
-// 					.checked_mul(&remaining)
-// 					.ok_or(ArithmeticError::Overflow)?;
-// 				total_reward = total_reward.saturating_add(leftover);
-// 			}
-// 			let currency_amount = T::MultiCurrency::free_balance(
-// 				*currency,
-// 				&T::IncentivePalletId::get().into_account_truncating(),
-// 			);
-// 			// Make sure the new reward is less than or equal to the reward owned by the
-// 			// IncentivePalletId
-// 			ensure!(
-// 				total_reward <= currency_amount.saturating_add(*reward),
-// 				Error::<T>::NotEnoughBalance
-// 			);
-// 			let new_reward = total_reward
-// 				.checked_div(T::BlockNumberToBalance::convert(conf.rewards_duration))
-// 				.ok_or(ArithmeticError::Overflow)?;
-// 			conf.reward_rate
-// 				.entry(*currency)
-// 				.and_modify(|total_reward| {
-// 					*total_reward = new_reward;
-// 				})
-// 				.or_insert(new_reward);
-// 			T::MultiCurrency::transfer(
-// 				*currency,
-// 				addr,
-// 				&T::IncentivePalletId::get().into_account_truncating(),
-// 				*reward,
-// 			)
-// 		})
-// 	}
-// }
 
 impl<AccountId, CurrencyId, Balance, BlockNumber>
 	VeMintingInterface<AccountId, CurrencyId, Balance, BlockNumber> for ()
@@ -497,7 +437,12 @@ where
 		Ok(())
 	}
 
-	fn set_incentive(_pool_id: PoolId, _rewards_duration: Option<BlockNumber>) {}
+	fn set_incentive(
+		_pool_id: PoolId,
+		_rewards_duration: Option<BlockNumber>,
+		_controller: Option<AccountId>,
+	) {
+	}
 	fn add_reward(
 		_addr: &AccountId,
 		_conf: &mut IncentiveConfig<CurrencyId, Balance, BlockNumber, AccountId>,

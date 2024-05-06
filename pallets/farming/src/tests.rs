@@ -71,7 +71,6 @@ fn deposit() {
 		gauge_basic_rewards.entry(KSM).or_insert(990_000);
 		let gauge_pool_info2 = GaugePoolInfo {
 			pid,
-			token: KSM,
 			keeper,
 			reward_issuer,
 			rewards: BTreeMap::<
@@ -229,7 +228,7 @@ fn reset() {
 			None,
 			None,
 			None,
-			Some((KSM, 1000, basic_rewards)),
+			Some((CHARLIE, 1000, basic_rewards)),
 		));
 		let keeper: AccountId = <Runtime as Config>::Keeper::get().into_sub_account_truncating(pid);
 		let reward_issuer: AccountId =
@@ -281,7 +280,7 @@ fn init_gauge() -> (PoolId, BalanceOf<Runtime>) {
 		RuntimeOrigin::signed(ALICE),
 		tokens_proportion.clone(),
 		basic_rewards.clone(),
-		Some((KSM, 1000, gauge_basic_rewards.clone())),
+		Some((CHARLIE, 1000, gauge_basic_rewards.clone())),
 		0,
 		0,
 		0,
@@ -294,7 +293,6 @@ fn init_gauge() -> (PoolId, BalanceOf<Runtime>) {
 	assert_ok!(Farming::charge(RuntimeOrigin::signed(BOB), pid, charge_rewards));
 	assert_ok!(Farming::deposit(RuntimeOrigin::signed(ALICE), pid, tokens, Some((100, 100))));
 	assert_ok!(VeMinting::set_config(RuntimeOrigin::signed(ALICE), Some(0), Some(7 * 86400 / 12)));
-	VeMinting::set_incentive(0, Some(7 * 86400 / 12));
 	assert_ok!(VeMinting::notify_rewards(
 		RuntimeOrigin::signed(ALICE),
 		CHARLIE,
@@ -352,7 +350,7 @@ fn create_farming_pool() {
 				RuntimeOrigin::signed(ALICE),
 				tokens_proportion2,
 				basic_rewards.clone(),
-				Some((KSM, 1000, gauge_basic_rewards.clone())),
+				Some((CHARLIE, 1000, gauge_basic_rewards.clone())),
 				2,
 				1,
 				7,
@@ -365,7 +363,7 @@ fn create_farming_pool() {
 			RuntimeOrigin::signed(ALICE),
 			tokens_proportion.clone(),
 			basic_rewards.clone(),
-			Some((KSM, 1000, gauge_basic_rewards.clone())),
+			Some((CHARLIE, 1000, gauge_basic_rewards.clone())),
 			2,
 			1,
 			7,
@@ -376,7 +374,7 @@ fn create_farming_pool() {
 			RuntimeOrigin::signed(ALICE),
 			tokens_proportion.clone(),
 			basic_rewards.clone(),
-			Some((KSM, 1000, gauge_basic_rewards)),
+			Some((CHARLIE, 1000, gauge_basic_rewards)),
 			2,
 			1,
 			7,

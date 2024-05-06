@@ -141,18 +141,54 @@ pub mod pallet {
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
-		ConfigSet { config: VeConfig<BalanceOf<T>, BlockNumberFor<T>> },
-		Minted { addr: u128, value: BalanceOf<T>, end: BlockNumberFor<T>, now: BlockNumberFor<T> },
-		Supply { supply_before: BalanceOf<T>, supply: BalanceOf<T> },
-		LockCreated { addr: AccountIdOf<T>, value: BalanceOf<T>, unlock_time: BlockNumberFor<T> },
-		UnlockTimeIncreased { addr: u128, unlock_time: BlockNumberFor<T> },
-		AmountIncreased { who: AccountIdOf<T>, position: u128, value: BalanceOf<T> },
-		Withdrawn { addr: u128, value: BalanceOf<T> },
-		IncentiveSet { rewards_duration: BlockNumberFor<T> },
-		RewardAdded { rewards: Vec<(CurrencyIdOf<T>, BalanceOf<T>)> },
-		Rewarded { addr: AccountIdOf<T>, rewards: Vec<(CurrencyIdOf<T>, BalanceOf<T>)> },
-		AllRefreshed { asset_id: CurrencyIdOf<T> },
-		PartiallyRefreshed { asset_id: CurrencyIdOf<T> },
+		ConfigSet {
+			config: VeConfig<BalanceOf<T>, BlockNumberFor<T>>,
+		},
+		Minted {
+			addr: u128,
+			value: BalanceOf<T>,
+			end: BlockNumberFor<T>,
+			now: BlockNumberFor<T>,
+		},
+		Supply {
+			supply_before: BalanceOf<T>,
+			supply: BalanceOf<T>,
+		},
+		LockCreated {
+			addr: AccountIdOf<T>,
+			value: BalanceOf<T>,
+			unlock_time: BlockNumberFor<T>,
+		},
+		UnlockTimeIncreased {
+			addr: u128,
+			unlock_time: BlockNumberFor<T>,
+		},
+		AmountIncreased {
+			who: AccountIdOf<T>,
+			position: u128,
+			value: BalanceOf<T>,
+		},
+		Withdrawn {
+			addr: u128,
+			value: BalanceOf<T>,
+		},
+		IncentiveSet {
+			incentive_config:
+				IncentiveConfig<CurrencyIdOf<T>, BalanceOf<T>, BlockNumberFor<T>, AccountIdOf<T>>,
+		},
+		RewardAdded {
+			rewards: Vec<(CurrencyIdOf<T>, BalanceOf<T>)>,
+		},
+		Rewarded {
+			addr: AccountIdOf<T>,
+			rewards: Vec<(CurrencyIdOf<T>, BalanceOf<T>)>,
+		},
+		AllRefreshed {
+			asset_id: CurrencyIdOf<T>,
+		},
+		PartiallyRefreshed {
+			asset_id: CurrencyIdOf<T>,
+		},
 	}
 
 	#[pallet::error]
@@ -386,7 +422,7 @@ pub mod pallet {
 			rewards: Vec<(CurrencyIdOf<T>, BalanceOf<T>)>,
 		) -> DispatchResult {
 			T::ControlOrigin::ensure_origin(origin)?;
-			Self::set_incentive(0, rewards_duration); // for pool0
+			Self::set_incentive(0, rewards_duration, Some(incentive_from.clone())); // for pool0
 			Self::notify_reward_amount(0, &Some(incentive_from), rewards) // for pool0
 		}
 

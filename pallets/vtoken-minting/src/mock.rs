@@ -581,7 +581,12 @@ impl VeMintingInterface<AccountId, CurrencyId, Balance, BlockNumber> for VeMinti
 		Ok(())
 	}
 
-	fn set_incentive(_pool_id: PoolId, _rewards_duration: Option<BlockNumber>) {}
+	fn set_incentive(
+		_pool_id: PoolId,
+		_rewards_duration: Option<BlockNumber>,
+		_incentive_controller: Option<AccountId>,
+	) {
+	}
 	fn add_reward(
 		_addr: &AccountId,
 		_conf: &mut IncentiveConfig<CurrencyId, Balance, BlockNumber, AccountId>,

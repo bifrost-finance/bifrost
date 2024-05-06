@@ -235,7 +235,7 @@ fn init_farming_no_gauge() -> (PoolId, BalanceOf<Runtime>) {
 		RuntimeOrigin::signed(ALICE),
 		tokens_proportion.clone(),
 		basic_rewards.clone(),
-		Some((KSM, 1000, gauge_basic_rewards)),
+		Some((CHARLIE, 1000, gauge_basic_rewards)),
 		0,
 		0,
 		10,
