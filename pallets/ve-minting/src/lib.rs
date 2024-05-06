@@ -48,7 +48,6 @@ use frame_support::{
 use frame_system::pallet_prelude::*;
 pub use incentive::*;
 use orml_traits::{MultiCurrency, MultiLockableCurrency};
-pub use pallet::*;
 use sp_core::{U256, U512};
 use sp_std::{borrow::ToOwned, collections::btree_map::BTreeMap, vec, vec::Vec};
 pub use traits::VeMintingInterface;

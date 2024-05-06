@@ -100,7 +100,7 @@ use frame_support::{
 use frame_system::{EnsureRoot, EnsureRootWithSuccess, EnsureSigned};
 use hex_literal::hex;
 use orml_oracle::{DataFeeder, DataProvider, DataProviderExtended};
-use pallet_identity::simple::IdentityInfo;
+use pallet_identity::legacy::IdentityInfo;
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use polkadot_runtime_common::prod_or_fast;
 
@@ -121,7 +121,7 @@ use governance::{
 // xcm config
 pub mod xcm_config;
 use pallet_xcm::{EnsureResponse, QueryStatus};
-use sp_runtime::traits::IdentityLookup;
+use sp_runtime::traits::{IdentityLookup, Verify};
 use xcm::v3::prelude::*;
 pub use xcm_config::{
 	parachains, AccountId32Aliases, BifrostCurrencyIdConvert, BifrostTreasuryAccount,
@@ -376,6 +376,7 @@ impl frame_system::Config for Runtime {
 	/// Runtime version.
 	type Version = Version;
 	type MaxConsumers = ConstU32<16>;
+	type RuntimeTask = ();
 }
 
 impl pallet_timestamp::Config for Runtime {
@@ -590,9 +591,11 @@ impl pallet_multisig::Config for Runtime {
 }
 
 parameter_types! {
-	// Minimum 4 CENTS/byte
+	// 1 entry, storing 258 bytes on-chain
 	pub BasicDeposit: Balance = deposit::<Runtime>(1, 258);
-	pub FieldDeposit: Balance = deposit::<Runtime>(0, 66);
+	   // Additional bytes adds 0 entries, storing 1 byte on-chain
+	pub ByteDeposit: Balance = deposit::<Runtime>(0, 1);
+	// 1 entry, storing 53 bytes on-chain
 	pub SubAccountDeposit: Balance = deposit::<Runtime>(1, 53);
 	pub const MaxSubAccounts: u32 = 100;
 	pub const MaxAdditionalFields: u32 = 100;
@@ -603,16 +606,21 @@ impl pallet_identity::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type Currency = Balances;
 	type BasicDeposit = BasicDeposit;
-	type FieldDeposit = FieldDeposit;
 	type SubAccountDeposit = SubAccountDeposit;
 	type MaxSubAccounts = MaxSubAccounts;
-	type MaxAdditionalFields = MaxAdditionalFields;
 	type IdentityInformation = IdentityInfo<MaxAdditionalFields>;
 	type MaxRegistrars = MaxRegistrars;
 	type Slashed = Treasury;
 	type ForceOrigin = MoreThanHalfCouncil;
 	type RegistrarOrigin = MoreThanHalfCouncil;
 	type WeightInfo = pallet_identity::weights::SubstrateWeight<Runtime>;
+	type ByteDeposit = ByteDeposit;
+	type OffchainSignature = Signature;
+	type SigningPublicKey = <Signature as Verify>::Signer;
+	type UsernameAuthorityOrigin = EnsureRoot<Self::AccountId>;
+	type PendingUsernameExpiration = ConstU32<{ 7 * DAYS }>;
+	type MaxSuffixLength = ConstU32<7>;
+	type MaxUsernameLength = ConstU32<32>;
 }
 
 parameter_types! {
@@ -985,7 +993,7 @@ parameter_types! {
 }
 
 impl cumulus_pallet_parachain_system::Config for Runtime {
-	type DmpMessageHandler = DmpQueue;
+	type DmpQueue = frame_support::traits::EnqueueWithOrigin<MessageQueue, xcm_config::RelayOrigin>;
 	type RuntimeEvent = RuntimeEvent;
 	type OnSystemEvent = ();
 	type OutboundXcmpMessageSource = XcmpQueue;
@@ -995,6 +1003,7 @@ impl cumulus_pallet_parachain_system::Config for Runtime {
 	type XcmpMessageHandler = XcmpQueue;
 	type CheckAssociatedRelayNumber = RelayNumberStrictlyIncreases;
 	type ConsensusHook = cumulus_pallet_parachain_system::ExpectParentIncluded;
+	type WeightInfo = cumulus_pallet_parachain_system::weights::SubstrateWeight<Runtime>;
 }
 
 impl parachain_info::Config for Runtime {}
@@ -1966,6 +1975,7 @@ construct_runtime! {
 		PolkadotXcm: pallet_xcm = 41,
 		CumulusXcm: cumulus_pallet_xcm = 42,
 		DmpQueue: cumulus_pallet_dmp_queue = 43,
+		MessageQueue: pallet_message_queue = 44,
 
 		// utilities
 		Utility: pallet_utility = 50,
@@ -2074,7 +2084,7 @@ pub mod migrations {
 	use super::*;
 
 	/// Unreleased migrations. Add new ones here:
-	pub type Unreleased = ();
+	pub type Unreleased = cumulus_pallet_xcmp_queue::migration::v4::MigrationToV4<Runtime>;
 }
 
 /// Executive: handles dispatch to the various modules.

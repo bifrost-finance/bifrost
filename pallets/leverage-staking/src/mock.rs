@@ -20,13 +20,12 @@ pub use super::*;
 use crate as leverage_staking;
 use bifrost_asset_registry::AssetIdMaps;
 pub use bifrost_primitives::{
-	currency::*, AccountId, Balance, CurrencyId, CurrencyIdMapping, SlpOperator, SlpxOperator,
-	TokenSymbol, *,
+	currency::*, Balance, CurrencyId, CurrencyIdMapping, SlpOperator, SlpxOperator, TokenSymbol, *,
 };
 use bifrost_runtime_common::milli;
 use frame_support::{
-	ord_parameter_types, parameter_types,
-	traits::{ConstU128, ConstU16, ConstU32, ConstU64, Everything, Nothing},
+	derive_impl, ord_parameter_types, parameter_types,
+	traits::{ConstU128, ConstU32, Everything, Nothing},
 	PalletId,
 };
 use frame_system::{EnsureRoot, EnsureSignedBy};
@@ -35,11 +34,7 @@ use orml_traits::{
 	location::RelativeReserveProvider, parameter_type_with_key, DataFeeder, DataProvider,
 	DataProviderExtended,
 };
-use sp_core::H256;
-use sp_runtime::{
-	traits::{BlakeTwo256, IdentityLookup},
-	BuildStorage, FixedPointNumber,
-};
+use sp_runtime::{traits::IdentityLookup, BuildStorage, FixedPointNumber};
 use std::{
 	cell::RefCell,
 	collections::HashMap,
@@ -75,30 +70,12 @@ frame_support::construct_runtime!(
 	}
 );
 
+#[derive_impl(frame_system::config_preludes::TestDefaultConfig as frame_system::DefaultConfig)]
 impl frame_system::Config for Test {
-	type BaseCallFilter = frame_support::traits::Everything;
-	type BlockWeights = ();
-	type BlockLength = ();
-	type DbWeight = ();
-	type RuntimeOrigin = RuntimeOrigin;
-	type RuntimeCall = RuntimeCall;
-	type Nonce = u32;
 	type Block = Block;
-	type Hash = H256;
-	type Hashing = BlakeTwo256;
 	type AccountId = u128;
 	type Lookup = IdentityLookup<Self::AccountId>;
-	type RuntimeEvent = RuntimeEvent;
-	type BlockHashCount = ConstU64<250>;
-	type Version = ();
-	type PalletInfo = PalletInfo;
 	type AccountData = pallet_balances::AccountData<Balance>;
-	type OnNewAccount = ();
-	type OnKilledAccount = ();
-	type SystemWeightInfo = ();
-	type SS58Prefix = ConstU16<42>;
-	type OnSetCode = ();
-	type MaxConsumers = frame_support::traits::ConstU32<16>;
 }
 
 parameter_types! {
@@ -495,8 +472,6 @@ impl pallet_xcm::Config for Test {
 	type SovereignAccountOf = ();
 	type MaxLockers = ConstU32<8>;
 	type WeightInfo = pallet_xcm::TestWeightInfo; // TODO: config after polkadot impl WeightInfo for ()
-	#[cfg(feature = "runtime-benchmarks")]
-	type ReachableDest = ReachableDest;
 	type AdminOrigin = EnsureSignedBy<One, u128>;
 	type MaxRemoteLockConsumers = ConstU32<0>;
 	type RemoteLockConsumerIdentifier = ();

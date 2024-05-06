@@ -24,7 +24,6 @@ use sc_cli::{
 	ChainSpec, CliConfiguration, DefaultConfigurationValues, ImportParams, KeystoreParams,
 	NetworkParams, Result, SharedParams, SubstrateCli,
 };
-use sc_executor::{sp_wasm_interface::ExtendedHostFunctions, NativeExecutionDispatch};
 use sc_service::config::{BasePath, PrometheusConfig};
 use sp_runtime::traits::AccountIdConversion;
 
@@ -282,14 +281,14 @@ pub fn run() -> Result<()> {
 				});
 			})
 		},
-		Some(Subcommand::ExportGenesisState(cmd)) => {
+		Some(Subcommand::ExportGenesisHead(cmd)) => {
 			let runner = cli.create_runner(cmd)?;
 			let chain_spec = &runner.config().chain_spec;
 
 			with_runtime_or_err!(chain_spec, {
 				return runner.sync_run(|config| {
 					let partials = new_partial(&config, false)?;
-					cmd.run(&*config.chain_spec, &*partials.client)
+					cmd.run(partials.client)
 				});
 			})
 		},
@@ -306,7 +305,7 @@ pub fn run() -> Result<()> {
 			set_default_ss58_version(chain_spec);
 
 			with_runtime_or_err!(chain_spec, {
-				return runner.sync_run(|config| cmd.run::<Block, RuntimeApi, Executor>(config));
+				return runner.sync_run(|config| cmd.run::<Block, RuntimeApi>(config));
 			})
 		},
 		Some(Subcommand::ImportBlocks(cmd)) => {
@@ -372,12 +371,7 @@ pub fn run() -> Result<()> {
 				BenchmarkCmd::Pallet(cmd) =>
 					if cfg!(feature = "runtime-benchmarks") {
 						with_runtime_or_err!(chain_spec, {
-							return runner.sync_run(|config| {
-								cmd.run::<Block, ExtendedHostFunctions<
-									sp_io::SubstrateHostFunctions,
-									<Executor as NativeExecutionDispatch>::ExtendHostFunctions,
-								>>(config)
-							});
+							return runner.sync_run(|config| cmd.run::<Block, ()>(config));
 						})
 					} else {
 						Err("Benchmarking wasn't enabled when building the node. \

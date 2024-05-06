@@ -26,8 +26,8 @@ use bifrost_kusama_runtime::{
 	BlockNumber, CouncilConfig, CouncilMembershipConfig, DefaultBlocksPerRound, DemocracyConfig,
 	IndicesConfig, InflationInfo, OracleMembershipConfig, ParachainInfoConfig,
 	ParachainStakingConfig, PolkadotXcmConfig, Range, RuntimeGenesisConfig, SS58Prefix, SalpConfig,
-	SessionConfig, SystemConfig, TechnicalCommitteeConfig, TechnicalMembershipConfig, TokensConfig,
-	VestingConfig, WASM_BINARY,
+	SessionConfig, TechnicalCommitteeConfig, TechnicalMembershipConfig, TokensConfig,
+	VestingConfig,
 };
 use bifrost_primitives::{CurrencyId, CurrencyId::*, TokenInfo, TokenSymbol, TokenSymbol::*};
 use bifrost_runtime_common::AuraId;
@@ -134,10 +134,7 @@ pub fn bifrost_genesis(
 	oracle_membership: Vec<AccountId>,
 ) -> RuntimeGenesisConfig {
 	RuntimeGenesisConfig {
-		system: SystemConfig {
-			code: WASM_BINARY.expect("WASM binary was not build, please build it!").to_vec(),
-			_config: Default::default(),
-		},
+		system: Default::default(),
 		balances: BalancesConfig { balances },
 		indices: IndicesConfig { indices: vec![] },
 		democracy: DemocracyConfig::default(),
@@ -253,6 +250,7 @@ fn development_config_genesis(id: ParaId) -> RuntimeGenesisConfig {
 }
 
 pub fn development_config() -> Result<ChainSpec, String> {
+	#[allow(deprecated)]
 	Ok(ChainSpec::from_genesis(
 		"Bifrost Development",
 		"dev",
@@ -264,6 +262,7 @@ pub fn development_config() -> Result<ChainSpec, String> {
 		None,
 		Some(bifrost_kusama_properties()),
 		RelayExtensions { relay_chain: "westend-dev".into(), para_id: PARA_ID },
+		bifrost_kusama_runtime::WASM_BINARY.expect("WASM binary was not built, please build it!"),
 	))
 }
 
@@ -390,6 +389,7 @@ fn local_config_genesis(id: ParaId) -> RuntimeGenesisConfig {
 }
 
 pub fn local_testnet_config() -> Result<ChainSpec, String> {
+	#[allow(deprecated)]
 	Ok(ChainSpec::from_genesis(
 		"Bifrost Local Testnet",
 		"bifrost_local_testnet",
@@ -401,6 +401,7 @@ pub fn local_testnet_config() -> Result<ChainSpec, String> {
 		None,
 		Some(bifrost_kusama_properties()),
 		RelayExtensions { relay_chain: "kusama-local".into(), para_id: PARA_ID },
+		bifrost_kusama_runtime::WASM_BINARY.expect("WASM binary was not built, please build it!"),
 	))
 }
 
@@ -489,6 +490,7 @@ fn rococo_testnet_config_genesis(id: ParaId) -> RuntimeGenesisConfig {
 }
 
 pub fn rococo_testnet_config() -> Result<ChainSpec, String> {
+	#[allow(deprecated)]
 	Ok(ChainSpec::from_genesis(
 		"Bifrost K Rococo",
 		"bifrost-k-rococo",
@@ -500,6 +502,7 @@ pub fn rococo_testnet_config() -> Result<ChainSpec, String> {
 		None,
 		Some(bifrost_kusama_properties()),
 		RelayExtensions { relay_chain: "rococo".into(), para_id: 2030 },
+		bifrost_kusama_runtime::WASM_BINARY.expect("WASM binary was not built, please build it!"),
 	))
 }
 
@@ -553,6 +556,7 @@ fn rococo_local_config_genesis(id: ParaId) -> RuntimeGenesisConfig {
 }
 
 pub fn rococo_local_config() -> Result<ChainSpec, String> {
+	#[allow(deprecated)]
 	Ok(ChainSpec::from_genesis(
 		"Bifrost K Rococo Local",
 		"bifrost-k-rococo-local",
@@ -564,10 +568,12 @@ pub fn rococo_local_config() -> Result<ChainSpec, String> {
 		None,
 		Some(bifrost_kusama_properties()),
 		RelayExtensions { relay_chain: "rococo".into(), para_id: 2030 },
+		bifrost_kusama_runtime::WASM_BINARY.expect("WASM binary was not built, please build it!"),
 	))
 }
 
 pub fn chainspec_config() -> ChainSpec {
+	#[allow(deprecated)]
 	ChainSpec::from_genesis(
 		"Bifrost",
 		"bifrost",
@@ -579,6 +585,7 @@ pub fn chainspec_config() -> ChainSpec {
 		None,
 		Some(bifrost_kusama_properties()),
 		RelayExtensions { relay_chain: "kusama".into(), para_id: PARA_ID },
+		bifrost_kusama_runtime::WASM_BINARY.expect("WASM binary was not built, please build it!"),
 	)
 }
 

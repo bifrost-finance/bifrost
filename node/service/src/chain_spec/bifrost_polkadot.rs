@@ -20,8 +20,7 @@ use bifrost_polkadot_runtime::{
 	constants::currency::DOLLARS, AccountId, AssetRegistryConfig, Balance, BalancesConfig,
 	BlockNumber, CollatorSelectionConfig, CouncilMembershipConfig, IndicesConfig,
 	OracleMembershipConfig, ParachainInfoConfig, PolkadotXcmConfig, RuntimeGenesisConfig,
-	SS58Prefix, SalpConfig, SessionConfig, SystemConfig, TechnicalMembershipConfig, TokensConfig,
-	VestingConfig, WASM_BINARY,
+	SS58Prefix, SalpConfig, SessionConfig, TechnicalMembershipConfig, TokensConfig, VestingConfig,
 };
 use bifrost_primitives::{CurrencyId, CurrencyId::*, TokenInfo, TokenSymbol, DOT_TOKEN_ID};
 use bifrost_runtime_common::AuraId;
@@ -87,10 +86,7 @@ pub fn bifrost_polkadot_genesis(
 	oracle_membership: Vec<AccountId>,
 ) -> RuntimeGenesisConfig {
 	RuntimeGenesisConfig {
-		system: SystemConfig {
-			code: WASM_BINARY.expect("WASM binary was not build, please build it!").to_vec(),
-			_config: Default::default(),
-		},
+		system: Default::default(),
 		balances: BalancesConfig { balances },
 		indices: IndicesConfig { indices: vec![] },
 		democracy: Default::default(),
@@ -188,6 +184,7 @@ fn development_config_genesis(id: ParaId) -> RuntimeGenesisConfig {
 }
 
 pub fn development_config() -> Result<ChainSpec, String> {
+	#[allow(deprecated)]
 	Ok(ChainSpec::from_genesis(
 		"Bifrost Polkadot Development",
 		"bifrost_polkadot_dev",
@@ -199,6 +196,7 @@ pub fn development_config() -> Result<ChainSpec, String> {
 		None,
 		Some(bifrost_polkadot_properties()),
 		RelayExtensions { relay_chain: "polkadot-dev".into(), para_id: PARA_ID },
+		bifrost_polkadot_runtime::WASM_BINARY.expect("WASM binary was not built, please build it!"),
 	))
 }
 
@@ -265,6 +263,7 @@ fn local_config_genesis(id: ParaId) -> RuntimeGenesisConfig {
 }
 
 pub fn local_testnet_config() -> Result<ChainSpec, String> {
+	#[allow(deprecated)]
 	Ok(ChainSpec::from_genesis(
 		"Bifrost Polkadot Local Testnet",
 		"bifrost_polkadot_local_testnet",
@@ -276,10 +275,12 @@ pub fn local_testnet_config() -> Result<ChainSpec, String> {
 		None,
 		Some(bifrost_polkadot_properties()),
 		RelayExtensions { relay_chain: "polkadot-local".into(), para_id: PARA_ID },
+		bifrost_polkadot_runtime::WASM_BINARY.expect("WASM binary was not built, please build it!"),
 	))
 }
 
 pub fn chainspec_config() -> ChainSpec {
+	#[allow(deprecated)]
 	ChainSpec::from_genesis(
 		"Bifrost Polkadot",
 		"bifrost_polkadot",
@@ -291,6 +292,7 @@ pub fn chainspec_config() -> ChainSpec {
 		None,
 		Some(bifrost_polkadot_properties()),
 		RelayExtensions { relay_chain: "polkadot".into(), para_id: PARA_ID },
+		bifrost_polkadot_runtime::WASM_BINARY.expect("WASM binary was not built, please build it!"),
 	)
 }
 
