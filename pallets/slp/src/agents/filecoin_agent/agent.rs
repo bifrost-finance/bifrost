@@ -25,7 +25,6 @@ use crate::{
 };
 use bifrost_primitives::{CurrencyId, VtokenMintingOperator};
 use core::marker::PhantomData;
-pub use cumulus_primitives_core::ParaId;
 use frame_support::ensure;
 use orml_traits::MultiCurrency;
 use sp_core::Get;

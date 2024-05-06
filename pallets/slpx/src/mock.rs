@@ -25,7 +25,7 @@ pub use bifrost_primitives::{
 use bifrost_slp::{QueryId, QueryResponseManager};
 use cumulus_primitives_core::ParaId;
 use frame_support::{
-	construct_runtime, ord_parameter_types,
+	construct_runtime, derive_impl, ord_parameter_types,
 	pallet_prelude::*,
 	parameter_types,
 	traits::{Everything, Nothing},
@@ -37,11 +37,10 @@ use orml_traits::{
 	location::RelativeReserveProvider, parameter_type_with_key, xcm_transfer::Transferred,
 	MultiCurrency, XcmTransfer,
 };
-use sp_core::{blake2_256, ConstU128, H256};
+use sp_core::{blake2_256, ConstU128};
 use sp_runtime::{
 	traits::{
-		AccountIdConversion, BlakeTwo256, Convert, IdentityLookup, TrailingZeroInput,
-		UniqueSaturatedInto,
+		AccountIdConversion, Convert, IdentityLookup, TrailingZeroInput, UniqueSaturatedInto,
 	},
 	AccountId32, SaturatedConversion,
 };
@@ -55,14 +54,7 @@ use xcm::{
 	},
 };
 use xcm_builder::FrameTransactionalProcessor;
-pub use xcm_builder::{
-	AccountId32Aliases, AllowTopLevelPaidExecutionFrom, AllowUnpaidExecutionFrom,
-	ChildParachainAsNative, ChildParachainConvertsVia, ChildSystemParachainAsSuperuser,
-	CurrencyAdapter as XcmCurrencyAdapter, EnsureXcmOrigin, FixedRateOfFungible, FixedWeightBounds,
-	IsConcrete, NativeAsset, ParentAsSuperuser, ParentIsPreset, RelayChainAsNative,
-	SiblingParachainAsNative, SiblingParachainConvertsVia, SignedAccountId32AsNative,
-	SignedToAccountId32, SovereignSignedViaLocation, TakeWeightCredit,
-};
+pub use xcm_builder::{EnsureXcmOrigin, FixedWeightBounds};
 use zenlink_protocol::{
 	AssetBalance, AssetId as ZenlinkAssetId, LocalAssetHandler, PairLpGenerate, ZenlinkMultiAssets,
 };
@@ -101,30 +93,12 @@ parameter_types! {
   pub const BlockHashCount: u32 = 250;
 }
 
+#[derive_impl(frame_system::config_preludes::TestDefaultConfig as frame_system::DefaultConfig)]
 impl frame_system::Config for Test {
-	type BaseCallFilter = Everything;
-	type DbWeight = ();
-	type RuntimeOrigin = RuntimeOrigin;
-	type Nonce = u32;
 	type Block = Block;
-	type RuntimeCall = RuntimeCall;
-	type Hash = H256;
-	type Hashing = BlakeTwo256;
 	type AccountId = AccountId;
 	type Lookup = IdentityLookup<Self::AccountId>;
-	type RuntimeEvent = RuntimeEvent;
-	type BlockHashCount = BlockHashCount;
-	type Version = ();
-	type PalletInfo = PalletInfo;
 	type AccountData = pallet_balances::AccountData<Balance>;
-	type OnNewAccount = ();
-	type OnKilledAccount = ();
-	type SystemWeightInfo = ();
-	type BlockWeights = ();
-	type BlockLength = ();
-	type SS58Prefix = ();
-	type OnSetCode = ();
-	type MaxConsumers = frame_support::traits::ConstU32<16>;
 }
 
 // Pallet balances configuration
@@ -537,8 +511,6 @@ impl pallet_xcm::Config for Test {
 	type SovereignAccountOf = ();
 	type MaxLockers = ConstU32<8>;
 	type WeightInfo = pallet_xcm::TestWeightInfo;
-	#[cfg(feature = "runtime-benchmarks")]
-	type ReachableDest = ReachableDest;
 	type AdminOrigin = EnsureRoot<AccountId>;
 	type MaxRemoteLockConsumers = ConstU32<0>;
 	type RemoteLockConsumerIdentifier = ();

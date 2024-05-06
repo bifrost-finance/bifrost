@@ -22,7 +22,6 @@ use crate::{
 };
 use bifrost_primitives::CurrencyId;
 use bifrost_xcm_interface::traits::parachains;
-pub use cumulus_primitives_core::ParaId;
 use frame_support::ensure;
 use parity_scale_codec::Encode;
 use sp_core::Get;

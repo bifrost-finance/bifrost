@@ -19,7 +19,7 @@
 #![cfg(test)]
 
 use crate::{
-	agents::{AstarCall, AstarDappsStakingCall, SmartContract},
+	agents::types::{AstarCall, AstarDappsStakingCall, SmartContract},
 	mocks::mock_kusama::*,
 	*,
 };

@@ -11,6 +11,8 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+#![allow(ambiguous_glob_reexports)]
+#![allow(hidden_glob_reexports)]
 
 pub use super::*;
 use sp_runtime::BuildStorage;
@@ -18,13 +20,12 @@ use sp_runtime::BuildStorage;
 use bifrost_asset_registry::AssetIdMaps;
 pub use bifrost_primitives::{currency::*, *};
 use frame_support::{
-	construct_runtime, parameter_types,
-	traits::{AsEnsureOriginWithArg, Everything, Nothing, SortedMembers},
+	construct_runtime, derive_impl, parameter_types,
+	traits::{AsEnsureOriginWithArg, Nothing, SortedMembers},
 	PalletId,
 };
 use frame_system::{EnsureRoot, EnsureSigned, EnsureSignedBy};
 use orml_traits::{DataFeeder, DataProvider, DataProviderExtended};
-use sp_core::H256;
 use sp_runtime::{traits::IdentityLookup, AccountId32};
 use sp_std::vec::Vec;
 use std::{
@@ -54,30 +55,12 @@ parameter_types! {
 	pub const SS58Prefix: u8 = 42;
 }
 
+#[derive_impl(frame_system::config_preludes::TestDefaultConfig as frame_system::DefaultConfig)]
 impl frame_system::Config for Test {
-	type BaseCallFilter = Everything;
-	type BlockWeights = ();
-	type BlockLength = ();
-	type DbWeight = ();
-	type RuntimeOrigin = RuntimeOrigin;
-	type RuntimeCall = RuntimeCall;
-	type Nonce = u32;
 	type Block = Block;
-	type Hash = H256;
-	type Hashing = ::sp_runtime::traits::BlakeTwo256;
 	type AccountId = AccountId;
 	type Lookup = IdentityLookup<Self::AccountId>;
-	type RuntimeEvent = RuntimeEvent;
-	type BlockHashCount = BlockHashCount;
-	type Version = ();
-	type PalletInfo = PalletInfo;
 	type AccountData = pallet_balances::AccountData<Balance>;
-	type OnNewAccount = ();
-	type OnKilledAccount = ();
-	type SystemWeightInfo = ();
-	type SS58Prefix = SS58Prefix;
-	type OnSetCode = ();
-	type MaxConsumers = frame_support::traits::ConstU32<16>;
 }
 
 pub type AccountId = AccountId32;
