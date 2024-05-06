@@ -175,7 +175,7 @@ pub fn init_bond<T: Config>(origin: <T as frame_system::Config>::RuntimeOrigin) 
 		Box::new(DELEGATOR1),
 		10u32.into(),
 		None,
-		Some((100.into(), 100u32.into()))
+		Some((Weight::from_parts(4000000000, 100000), 100u32.into()))
 	));
 }
 
@@ -248,7 +248,7 @@ mod benchmarks {
 			Box::new(DELEGATOR1),
 			10u32.into(),
 			None,
-			Some((100.into(), 100u32.into())),
+			Some((Weight::from_parts(4000000000, 100000), 100u32.into())),
 		);
 
 		Ok(())
@@ -273,7 +273,7 @@ mod benchmarks {
 			Box::new(DELEGATOR1),
 			None,
 			10u32.into(),
-			Some((100.into(), 100u32.into())),
+			Some((Weight::from_parts(4000000000, 100000), 100u32.into())),
 		);
 
 		Ok(())
@@ -299,7 +299,7 @@ mod benchmarks {
 			Box::new(DELEGATOR1),
 			None,
 			0u32.into(),
-			Some((100.into(), 100u32.into())),
+			Some((Weight::from_parts(4000000000, 100000), 100u32.into())),
 		);
 
 		Ok(())
@@ -323,7 +323,7 @@ mod benchmarks {
 			origin as <T as frame_system::Config>::RuntimeOrigin,
 			KSM,
 			Box::new(DELEGATOR1),
-			Some((100.into(), 100u32.into())),
+			Some((Weight::from_parts(4000000000, 100000), 100u32.into())),
 		);
 
 		Ok(())
@@ -349,7 +349,7 @@ mod benchmarks {
 			Box::new(DELEGATOR1),
 			None,
 			Some(0u32.into()),
-			Some((100.into(), 100u32.into())),
+			Some((Weight::from_parts(4000000000, 100000), 100u32.into())),
 		);
 
 		Ok(())
@@ -374,7 +374,7 @@ mod benchmarks {
 			KSM,
 			Box::new(DELEGATOR1),
 			vec![DELEGATOR1],
-			Some((100.into(), 100u32.into())),
+			Some((Weight::from_parts(4000000000, 100000), 100u32.into())),
 		);
 
 		Ok(())
@@ -403,7 +403,7 @@ mod benchmarks {
 			KSM,
 			Box::new(DELEGATOR1),
 			vec![DELEGATOR1],
-			Some((100.into(), 100u32.into())),
+			Some((Weight::from_parts(4000000000, 100000), 100u32.into())),
 		);
 
 		Ok(())
@@ -428,7 +428,7 @@ mod benchmarks {
 			KSM,
 			Box::new(DELEGATOR1),
 			Some(vec![DELEGATOR1]),
-			Some((100.into(), 100u32.into())),
+			Some((Weight::from_parts(4000000000, 100000), 100u32.into())),
 		);
 
 		Ok(())
@@ -465,7 +465,7 @@ mod benchmarks {
 			Box::new(DELEGATOR1),
 			Box::new(DELEGATOR1),
 			Some(TimeUnit::Era(0)),
-			Some((100.into(), 100u32.into())),
+			Some((Weight::from_parts(4000000000, 100000), 100u32.into())),
 		);
 
 		Ok(())
@@ -504,7 +504,7 @@ mod benchmarks {
 			Some(TimeUnit::SlashingSpan(0)),
 			None,
 			None,
-			Some((100.into(), 100u32.into())),
+			Some((Weight::from_parts(4000000000, 100000), 100u32.into())),
 		);
 
 		Ok(())
@@ -528,7 +528,7 @@ mod benchmarks {
 			origin as <T as frame_system::Config>::RuntimeOrigin,
 			KSM,
 			Box::new(DELEGATOR1),
-			Some((100.into(), 100u32.into())),
+			Some((Weight::from_parts(4000000000, 100000), 100u32.into())),
 		);
 
 		Ok(())
@@ -570,7 +570,7 @@ mod benchmarks {
 			Box::new(DELEGATOR1),
 			Box::new(to),
 			10u32.into(),
-			Some((100.into(), 100u32.into())),
+			Some((Weight::from_parts(4000000000, 100000), 100u32.into())),
 		);
 
 		Ok(())
@@ -662,7 +662,7 @@ mod benchmarks {
 			Box::new(DELEGATOR1),
 			10u32.into(),
 			true,
-			Some((100.into(), 100u32.into())),
+			Some((Weight::from_parts(4000000000, 100000), 100u32.into())),
 		);
 
 		Ok(())
@@ -1068,7 +1068,7 @@ mod benchmarks {
 			KSM,
 			Box::new(DELEGATOR1),
 			vec![DELEGATOR1],
-			Some((100.into(), 100u32.into()))
+			Some((Weight::from_parts(4000000000, 100000), 100u32.into()))
 		));
 		ValidatorsByDelegatorXcmUpdateQueue::<T>::insert(
 			1u64,
@@ -1107,7 +1107,7 @@ mod benchmarks {
 			KSM,
 			Box::new(DELEGATOR1),
 			vec![DELEGATOR1],
-			Some((100.into(), 100u32.into()))
+			Some((Weight::from_parts(4000000000, 100000), 100u32.into()))
 		));
 		ValidatorsByDelegatorXcmUpdateQueue::<T>::insert(
 			1u64,
