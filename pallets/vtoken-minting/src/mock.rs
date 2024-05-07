@@ -28,6 +28,7 @@ use bifrost_primitives::{
 };
 use bifrost_runtime_common::{micro, milli};
 use bifrost_slp::{QueryId, QueryResponseManager};
+use bifrost_ve_minting::{Point, VeMintingInterface};
 pub use cumulus_primitives_core::ParaId;
 use frame_support::{
 	derive_impl, ord_parameter_types,
@@ -43,7 +44,7 @@ use parity_scale_codec::{Decode, Encode};
 use sp_core::blake2_256;
 use sp_runtime::{
 	traits::{AccountIdConversion, ConstU32, Convert, IdentityLookup, TrailingZeroInput},
-	AccountId32, BuildStorage,
+	AccountId32, BuildStorage, DispatchError, DispatchResult,
 };
 use xcm::{prelude::*, v3::Weight};
 use xcm_builder::{FixedWeightBounds, FrameTransactionalProcessor};
@@ -157,7 +158,7 @@ impl orml_tokens::Config for Runtime {
 	type DustRemovalWhitelist = Nothing;
 	type RuntimeEvent = RuntimeEvent;
 	type ExistentialDeposits = ExistentialDeposits;
-	type MaxLocks = ();
+	type MaxLocks = ConstU32<50>;
 	type MaxReserves = ();
 	type ReserveIdentifier = [u8; 8];
 	type WeightInfo = ();
@@ -196,8 +197,10 @@ impl orml_xtokens::Config for Runtime {
 parameter_types! {
 	pub const MaximumUnlockIdOfUser: u32 = 1_000;
 	pub const MaximumUnlockIdOfTimeUnit: u32 = 1_000;
+	pub const MaxLockRecords: u32 = 64;
 	pub BifrostEntranceAccount: PalletId = PalletId(*b"bf/vtkin");
 	pub BifrostExitAccount: PalletId = PalletId(*b"bf/vtout");
+	pub IncentivePoolAccount: PalletId = PalletId(*b"bf/inpoo");
 	pub BifrostFeeAccount: AccountId = hex!["e4da05f08e89bf6c43260d96f26fffcfc7deae5b465da08669a9d008e64c2c63"].into();
 }
 
@@ -212,11 +215,15 @@ impl vtoken_minting::Config for Runtime {
 	type ControlOrigin = EnsureSignedBy<One, AccountId>;
 	type MaximumUnlockIdOfUser = MaximumUnlockIdOfUser;
 	type MaximumUnlockIdOfTimeUnit = MaximumUnlockIdOfTimeUnit;
+	type MaxLockRecords = MaxLockRecords;
 	type EntranceAccount = BifrostEntranceAccount;
 	type ExitAccount = BifrostExitAccount;
 	type FeeAccount = BifrostFeeAccount;
+	type RedeemFeeAccount = BifrostFeeAccount;
+	type IncentivePoolAccount = IncentivePoolAccount;
 	type BifrostSlp = Slp;
 	type BifrostSlpx = SlpxInterface;
+	type VeMinting = VeMinting;
 	type RelayChainToken = RelayCurrencyId;
 	type CurrencyIdConversion = AssetIdMaps<Runtime>;
 	type CurrencyIdRegister = AssetIdMaps<Runtime>;
@@ -490,7 +497,7 @@ impl ExtBuilder {
 }
 
 /// Run until a particular block.
-pub fn _run_to_block(n: BlockNumber) {
+pub fn run_to_block(n: BlockNumber) {
 	use frame_support::traits::Hooks;
 	while System::block_number() <= n {
 		VtokenMinting::on_finalize(System::block_number());
@@ -498,5 +505,94 @@ pub fn _run_to_block(n: BlockNumber) {
 		System::set_block_number(System::block_number() + 1);
 		System::on_initialize(System::block_number());
 		VtokenMinting::on_initialize(System::block_number());
+	}
+}
+
+use bifrost_primitives::PoolId;
+use bifrost_ve_minting::IncentiveConfig;
+// Mock VeMinting Struct
+pub struct VeMinting;
+impl VeMintingInterface<AccountId, CurrencyId, Balance, BlockNumber> for VeMinting {
+	fn balance_of(_addr: &AccountId, _time: Option<BlockNumber>) -> Result<Balance, DispatchError> {
+		Ok(100)
+	}
+
+	fn total_supply(_t: BlockNumber) -> Result<Balance, DispatchError> {
+		Ok(10000)
+	}
+
+	fn increase_amount_inner(_who: &AccountId, _position: u128, _value: Balance) -> DispatchResult {
+		Ok(())
+	}
+
+	fn deposit_for(_who: &AccountId, _position: u128, _value: Balance) -> DispatchResult {
+		Ok(())
+	}
+
+	fn withdraw_inner(_who: &AccountId, _position: u128) -> DispatchResult {
+		Ok(())
+	}
+
+	fn supply_at(_: Point<u128, u64>, _: u64) -> Result<u128, sp_runtime::DispatchError> {
+		todo!()
+	}
+
+	fn find_block_epoch(_: u64, _: sp_core::U256) -> sp_core::U256 {
+		todo!()
+	}
+
+	fn create_lock_inner(
+		_: &sp_runtime::AccountId32,
+		_: u128,
+		_: u64,
+	) -> Result<(), sp_runtime::DispatchError> {
+		todo!()
+	}
+
+	fn increase_unlock_time_inner(
+		_: &sp_runtime::AccountId32,
+		_: u128,
+		_: u64,
+	) -> Result<(), sp_runtime::DispatchError> {
+		todo!()
+	}
+
+	fn auto_notify_reward(
+		_: u32,
+		_: u64,
+		_: Vec<(CurrencyId, Balance)>,
+	) -> Result<(), sp_runtime::DispatchError> {
+		todo!()
+	}
+
+	fn update_reward(
+		_pool_id: PoolId,
+		_addr: Option<&AccountId>,
+		_share_info: Option<(Balance, Balance)>,
+	) -> DispatchResult {
+		Ok(())
+	}
+
+	fn get_rewards(
+		_pool_id: PoolId,
+		_addr: &AccountId,
+		_share_info: Option<(Balance, Balance)>,
+	) -> DispatchResult {
+		Ok(())
+	}
+
+	fn set_incentive(
+		_pool_id: PoolId,
+		_rewards_duration: Option<BlockNumber>,
+		_incentive_controller: Option<AccountId>,
+	) {
+	}
+	fn add_reward(
+		_addr: &AccountId,
+		_conf: &mut IncentiveConfig<CurrencyId, Balance, BlockNumber, AccountId>,
+		_rewards: &Vec<(CurrencyId, Balance)>,
+		_remaining: Balance,
+	) -> DispatchResult {
+		Ok(())
 	}
 }

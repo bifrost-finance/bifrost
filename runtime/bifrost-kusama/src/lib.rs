@@ -339,6 +339,8 @@ parameter_types! {
 	pub const OraclePalletId: PalletId = PalletId(*b"bf/oracl");
 	pub const StableAssetPalletId: PalletId = PalletId(*b"bf/stabl");
 	pub const CommissionPalletId: PalletId = PalletId(*b"bf/comms");
+	pub IncentivePoolAccount: PalletId = PalletId(*b"bf/inpoo");
+	pub const FarmingGaugeRewardIssuerPalletId: PalletId = PalletId(*b"bf/fmgar");
 }
 
 impl frame_system::Config for Runtime {
@@ -1464,6 +1466,7 @@ impl bifrost_farming::Config for Runtime {
 	type VeMinting = ();
 	type BlockNumberToBalance = ConvertInto;
 	type WhitelistMaximumLimit = WhitelistMaximumLimit;
+	type GaugeRewardIssuer = FarmingGaugeRewardIssuerPalletId;
 }
 
 parameter_types! {
@@ -1663,6 +1666,7 @@ impl bifrost_vtoken_minting::Config for Runtime {
 	type EntranceAccount = SlpEntrancePalletId;
 	type ExitAccount = SlpExitPalletId;
 	type FeeAccount = BifrostFeeAccount;
+	type RedeemFeeAccount = BifrostFeeAccount;
 	type BifrostSlp = Slp;
 	type BifrostSlpx = Slpx;
 	type WeightInfo = weights::bifrost_vtoken_minting::BifrostWeight<Runtime>;
@@ -1677,6 +1681,9 @@ impl bifrost_vtoken_minting::Config for Runtime {
 	type MantaParachainId = ConstU32<2104>;
 	type InterlayParachainId = ConstU32<2092>;
 	type ChannelCommission = ChannelCommission;
+	type MaxLockRecords = ConstU32<100>;
+	type IncentivePoolAccount = IncentivePoolAccount;
+	type VeMinting = ();
 }
 
 impl bifrost_slpx::Config for Runtime {
