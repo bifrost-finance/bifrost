@@ -256,13 +256,8 @@ impl<T: Config> VeMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>
 		if last_point.bias < 0_i128 {
 			last_point.bias = 0_i128
 		}
-		Ok(last_point
-			.amount
-			.checked_add(
-				T::VoteWeightMultiplier::get()
-					.checked_mul((last_point.bias as u128).unique_saturated_into())
-					.ok_or(ArithmeticError::Overflow)?,
-			)
+		Ok(T::VoteWeightMultiplier::get()
+			.checked_mul((last_point.bias as u128).unique_saturated_into())
 			.ok_or(ArithmeticError::Overflow)?)
 	}
 

@@ -752,13 +752,8 @@ pub mod pallet {
 					last_point.bias = 0_i128
 				}
 
-				Ok(last_point
-					.amount
-					.checked_add(
-						T::VoteWeightMultiplier::get()
-							.checked_mul((last_point.bias as u128).unique_saturated_into())
-							.ok_or(ArithmeticError::Overflow)?,
-					)
+				Ok(T::VoteWeightMultiplier::get()
+					.checked_mul((last_point.bias as u128).unique_saturated_into())
 					.ok_or(ArithmeticError::Overflow)?)
 			}
 		}
@@ -812,13 +807,8 @@ pub mod pallet {
 			if upoint.bias < 0_i128 {
 				upoint.bias = 0_i128
 			}
-			Ok(upoint
-				.amount
-				.checked_add(
-					T::VoteWeightMultiplier::get()
-						.checked_mul((upoint.bias as u128).unique_saturated_into())
-						.ok_or(ArithmeticError::Overflow)?,
-				)
+			Ok(T::VoteWeightMultiplier::get()
+				.checked_mul((upoint.bias as u128).unique_saturated_into())
 				.ok_or(ArithmeticError::Overflow)?)
 		}
 
