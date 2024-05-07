@@ -86,6 +86,7 @@ impl frame_system::Config for Runtime {
 	type SystemWeightInfo = ();
 	type Version = ();
 	type MaxConsumers = frame_support::traits::ConstU32<16>;
+	type RuntimeTask = ();
 }
 
 parameter_types! {
