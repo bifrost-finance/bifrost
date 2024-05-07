@@ -55,7 +55,7 @@ use xcm::{latest::prelude::*, v3::MultiLocation};
 use zenlink_protocol::AssetBalance;
 
 pub mod migration;
-mod types;
+pub mod types;
 
 pub mod weights;
 pub use weights::WeightInfo;

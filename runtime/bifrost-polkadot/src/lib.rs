@@ -1910,7 +1910,10 @@ pub mod migrations {
 	use super::*;
 
 	/// Unreleased migrations. Add new ones here:
-	pub type Unreleased = cumulus_pallet_xcmp_queue::migration::v4::MigrationToV4<Runtime>;
+	pub type Unreleased = (
+		cumulus_pallet_xcmp_queue::migration::v4::MigrationToV4<Runtime>,
+		migration::slpx_migrates_whitelist::UpdateWhitelist,
+	);
 }
 
 /// Executive: handles dispatch to the various modules.
