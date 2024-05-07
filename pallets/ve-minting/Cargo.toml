@@ -50,10 +50,11 @@ std = [
 	"frame-system/std",
 	"frame-benchmarking/std",
 	"bifrost-primitives/std",
-	"orml-traits/std",
 	"bifrost-slp/std",
 	"bifrost-asset-registry/std",
 	"bifrost-runtime-common/std",
+	"orml-traits/std",
+	"orml-xtokens/std",
 ]
 
 runtime-benchmarks = [

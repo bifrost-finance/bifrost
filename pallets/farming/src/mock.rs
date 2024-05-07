@@ -128,6 +128,7 @@ parameter_types! {
 	pub const FarmingBoostPalletId: PalletId = PalletId(*b"bf/fmbst");
 	pub const TreasuryAccount: AccountId32 = TREASURY_ACCOUNT;
 	pub const WhitelistMaximumLimit: u32 = 10;
+	pub const FarmingGaugeRewardIssuerPalletId: PalletId = PalletId(*b"bf/fmgar");
 }
 
 ord_parameter_types! {
@@ -147,6 +148,7 @@ impl bifrost_farming::Config for Runtime {
 	type VeMinting = VeMinting;
 	type BlockNumberToBalance = ConvertInto;
 	type WhitelistMaximumLimit = WhitelistMaximumLimit;
+	type GaugeRewardIssuer = FarmingGaugeRewardIssuerPalletId;
 }
 
 parameter_types! {
@@ -156,7 +158,9 @@ parameter_types! {
 	pub const Week: BlockNumber = 50400; // a week
 	pub const MaxBlock: BlockNumber = 10512000; // four years
 	pub const Multiplier: Balance = 10_u128.pow(12);
-	pub const VoteWeightMultiplier: Balance = 3;
+	pub const VoteWeightMultiplier: Balance = 1;
+	pub const MaxPositions: u32 = 10;
+	pub const MarkupRefreshLimit: u32 = 100;
 }
 
 impl bifrost_ve_minting::Config for Runtime {
@@ -172,6 +176,8 @@ impl bifrost_ve_minting::Config for Runtime {
 	type MaxBlock = MaxBlock;
 	type Multiplier = Multiplier;
 	type VoteWeightMultiplier = VoteWeightMultiplier;
+	type MaxPositions = MaxPositions;
+	type MarkupRefreshLimit = MarkupRefreshLimit;
 }
 
 ord_parameter_types! {

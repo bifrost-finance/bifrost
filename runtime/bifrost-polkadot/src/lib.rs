@@ -324,6 +324,8 @@ parameter_types! {
 	pub const StableAssetPalletId: PalletId = PalletId(*b"bf/stabl");
 	pub const CommissionPalletId: PalletId = PalletId(*b"bf/comms");
 	pub const CloudsPalletId: PalletId = PalletId(*b"bf/cloud");
+	pub IncentivePoolAccount: PalletId = PalletId(*b"bf/inpoo");
+	pub const FarmingGaugeRewardIssuerPalletId: PalletId = PalletId(*b"bf/fmgar");
 }
 
 impl frame_system::Config for Runtime {
@@ -1296,6 +1298,7 @@ impl bifrost_farming::Config for Runtime {
 	type VeMinting = VeMinting;
 	type BlockNumberToBalance = ConvertInto;
 	type WhitelistMaximumLimit = WhitelistMaximumLimit;
+	type GaugeRewardIssuer = FarmingGaugeRewardIssuerPalletId;
 }
 
 parameter_types! {
@@ -1498,6 +1501,7 @@ impl bifrost_vtoken_minting::Config for Runtime {
 	type EntranceAccount = SlpEntrancePalletId;
 	type ExitAccount = SlpExitPalletId;
 	type FeeAccount = BifrostFeeAccount;
+	type RedeemFeeAccount = BifrostFeeAccount;
 	type BifrostSlp = Slp;
 	type BifrostSlpx = Slpx;
 	type WeightInfo = weights::bifrost_vtoken_minting::BifrostWeight<Runtime>;
@@ -1512,20 +1516,25 @@ impl bifrost_vtoken_minting::Config for Runtime {
 	type MantaParachainId = ConstU32<2104>;
 	type InterlayParachainId = ConstU32<2032>;
 	type ChannelCommission = ChannelCommission;
+	type MaxLockRecords = ConstU32<100>;
+	type IncentivePoolAccount = IncentivePoolAccount;
+	type VeMinting = VeMinting;
 }
 
 parameter_types! {
 	pub const VeMintingTokenType: CurrencyId = CurrencyId::VToken(TokenSymbol::BNC);
-	pub const Week: BlockNumber = WEEKS;
+	pub const Week: BlockNumber = 10;
 	pub const MaxBlock: BlockNumber = 4 * 365 * DAYS;
 	pub const Multiplier: Balance = 10_u128.pow(12);
-	pub const VoteWeightMultiplier: Balance = 3;
+	pub const VoteWeightMultiplier: Balance = 1;
+	pub const MaxPositions: u32 = 10;
+	pub const MarkupRefreshLimit: u32 = 100;
 }
 
 impl bifrost_ve_minting::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type MultiCurrency = Currencies;
-	type ControlOrigin = EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
+	type ControlOrigin = TechAdminOrCouncil;
 	type TokenType = VeMintingTokenType;
 	type VeMintingPalletId = VeMintingPalletId;
 	type IncentivePalletId = IncentivePalletId;
@@ -1535,6 +1544,8 @@ impl bifrost_ve_minting::Config for Runtime {
 	type MaxBlock = MaxBlock;
 	type Multiplier = Multiplier;
 	type VoteWeightMultiplier = VoteWeightMultiplier;
+	type MaxPositions = MaxPositions;
+	type MarkupRefreshLimit = MarkupRefreshLimit;
 }
 
 parameter_types! {

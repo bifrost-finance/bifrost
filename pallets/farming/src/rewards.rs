@@ -291,6 +291,12 @@ impl<T: Config> Pallet<T> {
 	}
 
 	pub fn claim_rewards(who: &T::AccountId, pool: PoolId) -> DispatchResult {
+		if let Some(_) = GaugePoolInfos::<T>::get(pool) {
+			let pool_info = PoolInfos::<T>::get(pool).ok_or(Error::<T>::PoolDoesNotExist)?;
+			let share_info = SharesAndWithdrawnRewards::<T>::get(pool, who)
+				.ok_or(Error::<T>::ShareInfoNotExists)?;
+			T::VeMinting::get_rewards(pool, who, Some((share_info.share, pool_info.total_shares)))?;
+		}
 		SharesAndWithdrawnRewards::<T>::mutate_exists(
 			pool,
 			who,

@@ -1898,6 +1898,7 @@ dependencies = [
  "bifrost-primitives",
  "bifrost-runtime-common",
  "bifrost-slp",
+ "bifrost-ve-minting",
  "cumulus-primitives-core",
  "env_logger",
  "frame-benchmarking",

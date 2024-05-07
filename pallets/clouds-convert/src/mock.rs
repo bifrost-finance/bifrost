@@ -86,6 +86,7 @@ impl frame_system::Config for Runtime {
 	type SystemWeightInfo = ();
 	type Version = ();
 	type MaxConsumers = frame_support::traits::ConstU32<16>;
+	type RuntimeTask = ();
 }
 
 parameter_types! {
@@ -181,7 +182,9 @@ parameter_types! {
 	pub const Week: BlockNumber = 50400; // a week
 	pub const MaxBlock: BlockNumber = 10512000; // four years
 	pub const Multiplier: Balance = 10_u128.pow(12);
-	pub const VoteWeightMultiplier: Balance = 3;
+	pub const VoteWeightMultiplier: Balance = 1;
+	pub const MaxPositions: u32 = 10;
+	pub const MarkupRefreshLimit: u32 = 100;
 }
 
 impl bifrost_ve_minting::Config for Runtime {
@@ -197,6 +200,8 @@ impl bifrost_ve_minting::Config for Runtime {
 	type MaxBlock = MaxBlock;
 	type Multiplier = Multiplier;
 	type VoteWeightMultiplier = VoteWeightMultiplier;
+	type MaxPositions = MaxPositions;
+	type MarkupRefreshLimit = MarkupRefreshLimit;
 }
 
 pub struct ExtBuilder {

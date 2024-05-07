@@ -176,6 +176,7 @@ parameter_types! {
 	pub BifrostExitAccount: PalletId = PalletId(*b"bf/vtout");
 	pub BifrostFeeAccount: AccountId = hex!["e4da05f08e89bf6c43260d96f26fffcfc7deae5b465da08669a9d008e64c2c63"].into();
 	pub const RelayCurrencyId: CurrencyId = KSM;
+	pub IncentivePoolAccount: PalletId = PalletId(*b"bf/inpoo");
 }
 
 impl bifrost_vtoken_minting::Config for Runtime {
@@ -187,6 +188,7 @@ impl bifrost_vtoken_minting::Config for Runtime {
 	type EntranceAccount = BifrostEntranceAccount;
 	type ExitAccount = BifrostExitAccount;
 	type FeeAccount = BifrostFeeAccount;
+	type RedeemFeeAccount = BifrostFeeAccount;
 	type BifrostSlp = Slp;
 	type BifrostSlpx = SlpxInterface;
 	type RelayChainToken = RelayCurrencyId;
@@ -201,6 +203,9 @@ impl bifrost_vtoken_minting::Config for Runtime {
 	type MantaParachainId = ConstU32<2104>;
 	type InterlayParachainId = ConstU32<2032>;
 	type ChannelCommission = ();
+	type MaxLockRecords = ConstU32<100>;
+	type IncentivePoolAccount = IncentivePoolAccount;
+	type VeMinting = ();
 }
 
 ord_parameter_types! {
@@ -322,6 +327,7 @@ parameter_types! {
 	pub const FarmingRewardIssuerPalletId: PalletId = PalletId(*b"bf/fmrir");
 	pub const FarmingBoostPalletId: PalletId = PalletId(*b"bf/fmbst");
 	pub const WhitelistMaximumLimit: u32 = 10;
+	pub const FarmingGaugeRewardIssuerPalletId: PalletId = PalletId(*b"bf/fmgar");
 }
 
 ord_parameter_types! {
@@ -341,6 +347,7 @@ impl bifrost_farming::Config for Runtime {
 	type VeMinting = ();
 	type BlockNumberToBalance = ConvertInto;
 	type WhitelistMaximumLimit = WhitelistMaximumLimit;
+	type GaugeRewardIssuer = FarmingGaugeRewardIssuerPalletId;
 }
 
 parameter_types! {

@@ -64,10 +64,14 @@ pub trait WeightInfo {
 	fn set_fees() -> Weight;
 	fn set_hook_iteration_limit() -> Weight;
 	fn mint() -> Weight;
+	fn mint_with_lock() -> Weight;
 	fn redeem() -> Weight;
 	fn rebond() -> Weight;
 	fn rebond_by_unlock_id() -> Weight;
 	fn on_initialize() -> Weight;
+	fn unlock_incentive_minted_vtoken() -> Weight;
+	fn set_incentive_coef() -> Weight;
+	fn set_vtoken_incentive_lock_blocks() -> Weight;
 }
 
 // For backwards compatibility and tests
@@ -210,6 +214,17 @@ impl WeightInfo for () {
 			.saturating_add(RocksDbWeight::get().reads(9_u64))
 			.saturating_add(RocksDbWeight::get().writes(6_u64))
 	}
+
+	fn mint_with_lock() -> Weight {
+		// Proof Size summary in bytes:
+		//  Measured:  `2041`
+		//  Estimated: `8769`
+		// Minimum execution time: 316_607_000 picoseconds.
+		Weight::from_parts(325_143_000, 8769)
+			.saturating_add(RocksDbWeight::get().reads(9_u64))
+			.saturating_add(RocksDbWeight::get().writes(6_u64))
+	}
+
 	/// Storage: VtokenMinting MinimumRedeem (r:1 w:0)
 	/// Proof: VtokenMinting MinimumRedeem (max_values: None, max_size: Some(38), added: 2513, mode: MaxEncodedLen)
 	/// Storage: Slp DelegationsOccupied (r:1 w:0)
@@ -316,5 +331,23 @@ impl WeightInfo for () {
 		// Minimum execution time: 14_822_000 picoseconds.
 		Weight::from_parts(15_243_000, 3492)
 			.saturating_add(RocksDbWeight::get().reads(1_u64))
+	}
+
+	fn unlock_incentive_minted_vtoken() -> Weight {
+		Weight::from_parts(227_544_000, 8769)
+			.saturating_add(RocksDbWeight::get().reads(12_u64))
+			.saturating_add(RocksDbWeight::get().writes(10_u64))
+	}
+
+	fn set_incentive_coef() -> Weight {
+		Weight::from_parts(44_736_000, 1493)
+			.saturating_add(RocksDbWeight::get().reads(1_u64))
+			.saturating_add(RocksDbWeight::get().writes(1_u64))
+	}
+
+	fn set_vtoken_incentive_lock_blocks() -> Weight {
+		Weight::from_parts(44_736_000, 1493)
+			.saturating_add(RocksDbWeight::get().reads(1_u64))
+			.saturating_add(RocksDbWeight::get().writes(1_u64))
 	}
 }
