@@ -1523,7 +1523,7 @@ impl bifrost_vtoken_minting::Config for Runtime {
 
 parameter_types! {
 	pub const VeMintingTokenType: CurrencyId = CurrencyId::VToken(TokenSymbol::BNC);
-	pub const Week: BlockNumber = WEEKS;
+	pub const Week: BlockNumber = 10;
 	pub const MaxBlock: BlockNumber = 4 * 365 * DAYS;
 	pub const Multiplier: Balance = 10_u128.pow(12);
 	pub const VoteWeightMultiplier: Balance = 1;
@@ -1534,7 +1534,7 @@ parameter_types! {
 impl bifrost_ve_minting::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type MultiCurrency = Currencies;
-	type ControlOrigin = EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
+	type ControlOrigin = TechAdminOrCouncil;
 	type TokenType = VeMintingTokenType;
 	type VeMintingPalletId = VeMintingPalletId;
 	type IncentivePalletId = IncentivePalletId;

@@ -45,7 +45,7 @@ pub struct GaugeInfo<BalanceOf: HasCompact, BlockNumberFor, AccountIdOf> {
 #[derive(Clone, Encode, Decode, PartialEq, Eq, RuntimeDebug, TypeInfo)]
 pub struct GaugePoolInfo<BalanceOf: HasCompact, CurrencyIdOf: Ord, AccountIdOf, BlockNumberFor> {
 	pub pid: PoolId,
-	// pub token: CurrencyIdOf,
+	pub token: CurrencyIdOf,
 	pub keeper: AccountIdOf,
 	pub reward_issuer: AccountIdOf,
 	pub rewards: BTreeMap<CurrencyIdOf, (BalanceOf, BalanceOf, BalanceOf)>,
@@ -80,6 +80,7 @@ where
 	) -> Self {
 		Self {
 			pid,
+			token: Default::default(),
 			keeper,
 			reward_issuer,
 			rewards: BTreeMap::new(),

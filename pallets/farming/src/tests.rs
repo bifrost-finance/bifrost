@@ -71,6 +71,7 @@ fn deposit() {
 		gauge_basic_rewards.entry(KSM).or_insert(990_000);
 		let gauge_pool_info2 = GaugePoolInfo {
 			pid,
+			token: Default::default(),
 			keeper,
 			reward_issuer,
 			rewards: BTreeMap::<
