@@ -23,6 +23,7 @@
 pub mod bifrost_asset_registry;
 pub mod bifrost_call_switchgear;
 pub mod bifrost_channel_commission;
+pub mod bifrost_clouds_convert;
 pub mod bifrost_cross_in_out;
 pub mod bifrost_currencies;
 pub mod bifrost_farming;

@@ -31,6 +31,7 @@ members = [
 	"pallets/prices",
 	"pallets/leverage-staking",
 	"pallets/channel-commission",
+	"pallets/clouds-convert",
 
 	"runtime/bifrost-kusama",
 	"runtime/bifrost-polkadot",
@@ -91,6 +92,7 @@ pallet-prices                        = { path = "pallets/prices", default-featur
 pallet-traits                        = { path = "pallets/traits", default-features = false }
 leverage-staking                     = { path = "pallets/leverage-staking", default-features = false }
 bifrost-channel-commission			 = { path = "pallets/channel-commission", default-features = false }
+bifrost-clouds-convert				 = { path = "pallets/clouds-convert", default-features = false }
 
 # Zenlink
 merkle-distributor             = { git = "https://github.com/bifrost-finance/Zenlink-DEX-Module", branch = "release-polkadot-v1.6.0", default-features = false }
