@@ -235,7 +235,7 @@ fn init_farming_no_gauge() -> (PoolId, BalanceOf<Runtime>) {
 		RuntimeOrigin::signed(ALICE),
 		tokens_proportion.clone(),
 		basic_rewards.clone(),
-		Some((CHARLIE, 1000, gauge_basic_rewards)),
+		Some((1000, gauge_basic_rewards)),
 		0,
 		0,
 		10,
@@ -245,7 +245,7 @@ fn init_farming_no_gauge() -> (PoolId, BalanceOf<Runtime>) {
 
 	let pid = 0;
 	let charge_rewards = vec![(KSM, 100000)];
-	assert_ok!(Farming::charge(RuntimeOrigin::signed(BOB), pid, charge_rewards));
+	assert_ok!(Farming::charge(RuntimeOrigin::signed(BOB), pid, charge_rewards, false));
 	assert_ok!(Farming::deposit(RuntimeOrigin::signed(ALICE), pid, tokens, None));
 	(pid, tokens)
 }

@@ -101,7 +101,6 @@ where
 	pub fn create_gauge_pool(
 		pid: PoolId,
 		pool_info: &mut PoolInfo<BalanceOf<T>, CurrencyIdOf<T>, AccountIdOf<T>, BlockNumberFor<T>>,
-		who: AccountIdOf<T>,
 		gauge_basic_rewards: BTreeMap<CurrencyIdOf<T>, BalanceOf<T>>,
 		max_block: BlockNumberFor<T>,
 	) -> DispatchResult {
@@ -122,7 +121,8 @@ where
 			Ok(())
 		})?;
 
-		T::VeMinting::set_incentive(pid, Some(max_block), Some(who));
+		let controller = T::GaugeRewardIssuer::get().into_sub_account_truncating(pid);
+		T::VeMinting::set_incentive(pid, Some(max_block), Some(controller));
 		Ok(())
 	}
 

@@ -120,6 +120,9 @@ pub mod pallet {
 
 		#[pallet::constant]
 		type WhitelistMaximumLimit: Get<u32>;
+
+		#[pallet::constant]
+		type GaugeRewardIssuer: Get<PalletId>;
 	}
 
 	#[pallet::event]
@@ -144,6 +147,7 @@ pub mod pallet {
 			who: AccountIdOf<T>,
 			pid: PoolId,
 			rewards: Vec<(CurrencyIdOf<T>, BalanceOf<T>)>,
+			if_gauge: bool,
 		},
 		Deposited {
 			who: AccountIdOf<T>,
@@ -386,11 +390,7 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			tokens_proportion: Vec<(CurrencyIdOf<T>, Perbill)>,
 			basic_rewards: Vec<(CurrencyIdOf<T>, BalanceOf<T>)>,
-			gauge_init: Option<(
-				AccountIdOf<T>,
-				BlockNumberFor<T>,
-				Vec<(CurrencyIdOf<T>, BalanceOf<T>)>,
-			)>,
+			gauge_init: Option<(BlockNumberFor<T>, Vec<(CurrencyIdOf<T>, BalanceOf<T>)>)>,
 			min_deposit_to_start: BalanceOf<T>,
 			#[pallet::compact] after_block_to_start: BlockNumberFor<T>,
 			#[pallet::compact] withdraw_limit_time: BlockNumberFor<T>,
@@ -422,17 +422,11 @@ pub mod pallet {
 				withdraw_limit_count,
 			);
 
-			if let Some((who, max_block, gauge_basic_rewards)) = gauge_init {
+			if let Some((max_block, gauge_basic_rewards)) = gauge_init {
 				let gauge_basic_rewards_map: BTreeMap<CurrencyIdOf<T>, BalanceOf<T>> =
 					gauge_basic_rewards.into_iter().map(|(k, v)| (k, v)).collect();
 
-				Self::create_gauge_pool(
-					pid,
-					&mut pool_info,
-					who,
-					gauge_basic_rewards_map,
-					max_block,
-				)?;
+				Self::create_gauge_pool(pid, &mut pool_info, gauge_basic_rewards_map, max_block)?;
 			};
 
 			PoolInfos::<T>::insert(pid, &pool_info);
@@ -451,28 +445,47 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			pid: PoolId,
 			rewards: Vec<(CurrencyIdOf<T>, BalanceOf<T>)>,
+			if_gauge: bool,
 		) -> DispatchResult {
 			let exchanger = ensure_signed(origin)?;
 
 			let mut pool_info = Self::pool_infos(&pid).ok_or(Error::<T>::PoolDoesNotExist)?;
-			ensure!(
-				pool_info.state == PoolState::UnCharged || pool_info.state == PoolState::Ongoing,
-				Error::<T>::InvalidPoolState
-			);
-			rewards.iter().try_for_each(|(reward_currency, reward)| -> DispatchResult {
-				T::MultiCurrency::transfer(
-					*reward_currency,
-					&exchanger,
-					&pool_info.reward_issuer,
-					*reward,
-				)
-			})?;
-			if pool_info.state == PoolState::UnCharged {
-				pool_info.state = PoolState::Charged
-			}
-			PoolInfos::<T>::insert(&pid, pool_info);
 
-			Self::deposit_event(Event::Charged { who: exchanger, pid, rewards });
+			match if_gauge {
+				true => {
+					let gauge_reward_issuer =
+						T::GaugeRewardIssuer::get().into_sub_account_truncating(pid);
+					rewards.iter().try_for_each(|(reward_currency, reward)| -> DispatchResult {
+						T::MultiCurrency::transfer(
+							*reward_currency,
+							&exchanger,
+							&gauge_reward_issuer,
+							*reward,
+						)
+					})?;
+				},
+				false => {
+					ensure!(
+						pool_info.state == PoolState::UnCharged ||
+							pool_info.state == PoolState::Ongoing,
+						Error::<T>::InvalidPoolState
+					);
+					rewards.iter().try_for_each(|(reward_currency, reward)| -> DispatchResult {
+						T::MultiCurrency::transfer(
+							*reward_currency,
+							&exchanger,
+							&pool_info.reward_issuer,
+							*reward,
+						)
+					})?;
+					if pool_info.state == PoolState::UnCharged {
+						pool_info.state = PoolState::Charged
+					}
+					PoolInfos::<T>::insert(&pid, pool_info);
+				},
+			};
+
+			Self::deposit_event(Event::Charged { who: exchanger, pid, rewards, if_gauge });
 			Ok(())
 		}
 
@@ -668,11 +681,7 @@ pub mod pallet {
 			withdraw_limit_time: Option<BlockNumberFor<T>>,
 			claim_limit_time: Option<BlockNumberFor<T>>,
 			withdraw_limit_count: Option<u8>,
-			gauge_init: Option<(
-				AccountIdOf<T>,
-				BlockNumberFor<T>,
-				Vec<(CurrencyIdOf<T>, BalanceOf<T>)>,
-			)>,
+			gauge_init: Option<(BlockNumberFor<T>, Vec<(CurrencyIdOf<T>, BalanceOf<T>)>)>,
 		) -> DispatchResult {
 			T::ControlOrigin::ensure_origin(origin)?;
 
@@ -698,17 +707,11 @@ pub mod pallet {
 			if let Some(withdraw_limit_count) = withdraw_limit_count {
 				pool_info.withdraw_limit_count = withdraw_limit_count;
 			};
-			if let Some((who, max_block, gauge_basic_rewards)) = gauge_init {
+			if let Some((max_block, gauge_basic_rewards)) = gauge_init {
 				let gauge_basic_rewards_map: BTreeMap<CurrencyIdOf<T>, BalanceOf<T>> =
 					gauge_basic_rewards.into_iter().map(|(k, v)| (k, v)).collect();
 
-				Self::create_gauge_pool(
-					pid,
-					&mut pool_info,
-					who,
-					gauge_basic_rewards_map,
-					max_block,
-				)?;
+				Self::create_gauge_pool(pid, &mut pool_info, gauge_basic_rewards_map, max_block)?;
 			};
 			pool_info.total_shares = Default::default();
 			pool_info.rewards = BTreeMap::new();

@@ -228,7 +228,7 @@ fn reset() {
 			None,
 			None,
 			None,
-			Some((CHARLIE, 1000, basic_rewards)),
+			Some((1000, basic_rewards)),
 		));
 		let keeper: AccountId = <Runtime as Config>::Keeper::get().into_sub_account_truncating(pid);
 		let reward_issuer: AccountId =
@@ -258,7 +258,7 @@ fn reset() {
 		assert_eq!(Farming::gauge_pool_infos(1), None);
 		assert_eq!(Tokens::free_balance(KSM, &ALICE), 4018);
 		let charge_rewards = vec![(KSM, 300000)];
-		assert_ok!(Farming::charge(RuntimeOrigin::signed(BOB), pid, charge_rewards));
+		assert_ok!(Farming::charge(RuntimeOrigin::signed(BOB), pid, charge_rewards, false));
 		assert_ok!(Farming::deposit(RuntimeOrigin::signed(ALICE), pid, 1, Some((100, 100))));
 		assert_eq!(Tokens::free_balance(KSM, &ALICE), 4017);
 		Farming::on_initialize(0);
@@ -280,7 +280,7 @@ fn init_gauge() -> (PoolId, BalanceOf<Runtime>) {
 		RuntimeOrigin::signed(ALICE),
 		tokens_proportion.clone(),
 		basic_rewards.clone(),
-		Some((CHARLIE, 1000, gauge_basic_rewards.clone())),
+		Some((1000, gauge_basic_rewards.clone())),
 		0,
 		0,
 		0,
@@ -290,7 +290,7 @@ fn init_gauge() -> (PoolId, BalanceOf<Runtime>) {
 
 	let pid = 0;
 	let charge_rewards = vec![(KSM, 300000)];
-	assert_ok!(Farming::charge(RuntimeOrigin::signed(BOB), pid, charge_rewards));
+	assert_ok!(Farming::charge(RuntimeOrigin::signed(BOB), pid, charge_rewards, false));
 	assert_ok!(Farming::deposit(RuntimeOrigin::signed(ALICE), pid, tokens, Some((100, 100))));
 	assert_ok!(VeMinting::set_config(RuntimeOrigin::signed(ALICE), Some(0), Some(7 * 86400 / 12)));
 	assert_ok!(VeMinting::notify_rewards(
@@ -328,7 +328,7 @@ fn init_no_gauge() -> (PoolId, BalanceOf<Runtime>) {
 
 	let pid = 0;
 	let charge_rewards = vec![(KSM, 100000)];
-	assert_ok!(Farming::charge(RuntimeOrigin::signed(BOB), pid, charge_rewards));
+	assert_ok!(Farming::charge(RuntimeOrigin::signed(BOB), pid, charge_rewards, false));
 	assert_ok!(Farming::deposit(RuntimeOrigin::signed(ALICE), pid, tokens, None));
 	(pid, tokens)
 }
@@ -350,7 +350,7 @@ fn create_farming_pool() {
 				RuntimeOrigin::signed(ALICE),
 				tokens_proportion2,
 				basic_rewards.clone(),
-				Some((CHARLIE, 1000, gauge_basic_rewards.clone())),
+				Some((1000, gauge_basic_rewards.clone())),
 				2,
 				1,
 				7,
@@ -363,7 +363,7 @@ fn create_farming_pool() {
 			RuntimeOrigin::signed(ALICE),
 			tokens_proportion.clone(),
 			basic_rewards.clone(),
-			Some((CHARLIE, 1000, gauge_basic_rewards.clone())),
+			Some((1000, gauge_basic_rewards.clone())),
 			2,
 			1,
 			7,
@@ -374,7 +374,7 @@ fn create_farming_pool() {
 			RuntimeOrigin::signed(ALICE),
 			tokens_proportion.clone(),
 			basic_rewards.clone(),
-			Some((CHARLIE, 1000, gauge_basic_rewards)),
+			Some((1000, gauge_basic_rewards)),
 			2,
 			1,
 			7,
@@ -388,7 +388,7 @@ fn create_farming_pool() {
 
 		let pid = 1;
 		let charge_rewards = vec![(KSM, 300000)];
-		assert_ok!(Farming::charge(RuntimeOrigin::signed(BOB), pid, charge_rewards));
+		assert_ok!(Farming::charge(RuntimeOrigin::signed(BOB), pid, charge_rewards, false));
 		if let Some(pool_infos) = Farming::pool_infos(0) {
 			assert_eq!(pool_infos.total_shares, 0);
 			assert_eq!(pool_infos.min_deposit_to_start, 2);

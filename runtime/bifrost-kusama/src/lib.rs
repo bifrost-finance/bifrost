@@ -340,6 +340,7 @@ parameter_types! {
 	pub const StableAssetPalletId: PalletId = PalletId(*b"bf/stabl");
 	pub const CommissionPalletId: PalletId = PalletId(*b"bf/comms");
 	pub IncentivePoolAccount: PalletId = PalletId(*b"bf/inpoo");
+	pub const FarmingGaugeRewardIssuerPalletId: PalletId = PalletId(*b"bf/fmgar");
 }
 
 impl frame_system::Config for Runtime {
@@ -1465,6 +1466,7 @@ impl bifrost_farming::Config for Runtime {
 	type VeMinting = ();
 	type BlockNumberToBalance = ConvertInto;
 	type WhitelistMaximumLimit = WhitelistMaximumLimit;
+	type GaugeRewardIssuer = FarmingGaugeRewardIssuerPalletId;
 }
 
 parameter_types! {
