@@ -230,3 +230,67 @@ pub mod v1 {
 		}
 	}
 }
+
+pub mod slpx_migrates_whitelist {
+	use super::*;
+	use bifrost_slpx::types::SupportChain;
+	use sp_core::crypto::Ss58Codec;
+
+	pub struct UpdateWhitelist;
+	impl OnRuntimeUpgrade for UpdateWhitelist {
+		fn on_runtime_upgrade() -> Weight {
+			let new_whitelist: BoundedVec<AccountId, ConstU32<10>> = vec![
+				AccountId::from_ss58check("dCCU6pkmwQEb29MSigvWjhvnWTtE3GaBqaAdxt4ppW7kUkw")
+					.unwrap(),
+				AccountId::from_ss58check("fV6ngGNKkM1BUymusAMcZECxNu3fqhSnS4Jhz2RBk4NtZrw")
+					.unwrap(),
+			]
+			.try_into()
+			.unwrap();
+			bifrost_slpx::WhitelistAccountId::<Runtime>::insert(
+				SupportChain::Moonbeam,
+				new_whitelist,
+			);
+
+			let new_whitelist: BoundedVec<AccountId, ConstU32<10>> = vec![
+				AccountId::from_ss58check("fErAtK3KrBPZyAtd26DMQAmuAvo8YswQQBhexibCcqh3D1c")
+					.unwrap(),
+				AccountId::from_ss58check("cG6stm2jXgbreRNGxZEvaUn3jT17fxdFXUa6mwE4bSL1v1L")
+					.unwrap(),
+			]
+			.try_into()
+			.unwrap();
+			bifrost_slpx::WhitelistAccountId::<Runtime>::insert(SupportChain::Astar, new_whitelist);
+
+			Weight::from(<Runtime as frame_system::Config>::DbWeight::get().writes(2u64))
+		}
+
+		#[cfg(feature = "try-runtime")]
+		fn post_upgrade(_state: Vec<u8>) -> Result<(), TryRuntimeError> {
+			let whitelist =
+				bifrost_slpx::WhitelistAccountId::<Runtime>::get(SupportChain::Moonbeam);
+			let new_whitelist: BoundedVec<AccountId, ConstU32<10>> = vec![
+				AccountId::from_ss58check("dCCU6pkmwQEb29MSigvWjhvnWTtE3GaBqaAdxt4ppW7kUkw")
+					.unwrap(),
+				AccountId::from_ss58check("fV6ngGNKkM1BUymusAMcZECxNu3fqhSnS4Jhz2RBk4NtZrw")
+					.unwrap(),
+			]
+			.try_into()
+			.unwrap();
+			assert_eq!(whitelist, new_whitelist);
+
+			let whitelist = bifrost_slpx::WhitelistAccountId::<Runtime>::get(SupportChain::Astar);
+			let new_whitelist: BoundedVec<AccountId, ConstU32<10>> = vec![
+				AccountId::from_ss58check("fErAtK3KrBPZyAtd26DMQAmuAvo8YswQQBhexibCcqh3D1c")
+					.unwrap(),
+				AccountId::from_ss58check("cG6stm2jXgbreRNGxZEvaUn3jT17fxdFXUa6mwE4bSL1v1L")
+					.unwrap(),
+			]
+			.try_into()
+			.unwrap();
+			assert_eq!(whitelist, new_whitelist);
+
+			Ok(())
+		}
+	}
+}
