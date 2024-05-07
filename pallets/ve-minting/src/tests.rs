@@ -129,11 +129,7 @@ fn notify_reward_amount() {
 			Some(7 * 86400 / 12),
 			rewards
 		));
-		assert_ok!(VeMinting::create_lock_inner(
-			&CHARLIE,
-			100_000_000_000,
-			System::block_number() + 4 * 365 * 86400 / 12
-		));
+		assert_ok!(VeMinting::create_lock_inner(&CHARLIE, 100_000_000_000, 4 * 365 * 86400 / 12));
 		System::set_block_number(System::block_number() + 1 * 86400 / 12);
 		assert_ok!(VeMinting::get_rewards_inner(POOLID0, &BOB, None));
 		assert_eq!(Tokens::free_balance(KSM, &BOB), 1071241763);
@@ -200,23 +196,15 @@ fn create_lock_to_withdraw() {
 			VeMinting::create_lock(
 				RuntimeOrigin::signed(BOB),
 				50_000_000_000_000,
-				System::block_number() + 7 * 86400 / 12 - 1
+				7 * 86400 / 12 - 1
 			),
 			Error::<Runtime>::Expired
 		);
 		assert_noop!(
-			VeMinting::create_lock(
-				RuntimeOrigin::signed(BOB),
-				50_000,
-				System::block_number() + 7 * 86400 / 12
-			),
+			VeMinting::create_lock(RuntimeOrigin::signed(BOB), 50_000, 7 * 86400 / 12),
 			Error::<Runtime>::BelowMinimumMint
 		);
-		assert_ok!(VeMinting::create_lock_inner(
-			&BOB,
-			50_000_000_000_000,
-			System::block_number() + 365 * 86400 / 12
-		));
+		assert_ok!(VeMinting::create_lock_inner(&BOB, 50_000_000_000_000, 365 * 86400 / 12));
 		assert_noop!(
 			VeMinting::increase_unlock_time(
 				RuntimeOrigin::signed(BOB),

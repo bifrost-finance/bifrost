@@ -89,14 +89,15 @@ impl<T: Config> VeMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>
 		let ve_config = Self::ve_configs();
 		ensure!(_value >= ve_config.min_mint, Error::<T>::BelowMinimumMint);
 
+		let current_block_number: BlockNumberFor<T> = frame_system::Pallet::<T>::block_number();
 		let _locked: LockedBalance<BalanceOf<T>, BlockNumberFor<T>> = Self::locked(new_position);
 		let unlock_time: BlockNumberFor<T> = _unlock_time
+			.saturating_add(current_block_number)
 			.checked_div(&T::Week::get())
 			.ok_or(ArithmeticError::Overflow)?
 			.checked_mul(&T::Week::get())
 			.ok_or(ArithmeticError::Overflow)?;
 
-		let current_block_number: BlockNumberFor<T> = frame_system::Pallet::<T>::block_number();
 		ensure!(
 			unlock_time >= ve_config.min_block.saturating_add(current_block_number),
 			Error::<T>::Expired
