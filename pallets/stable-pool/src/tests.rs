@@ -1267,6 +1267,9 @@ fn redeem_multi_with_swap_for_bugs2() {
 		let coin0 = DOT;
 		let coin1 = VDOT;
 		let pool_asset = CurrencyId::BLP(0);
+		let swap_id = 30160825295207673652903702381;
+		let fee_recipient = 5;
+		let yield_recipient = 7;
 
 		assert_ok!(<Test as crate::Config>::MultiCurrency::deposit(
 			coin0.into(),
@@ -1290,7 +1293,7 @@ fn redeem_multi_with_swap_for_bugs2() {
 			0u128.into(),
 			220u128.into(),
 			5,
-			5,
+			7,
 			1_000_000_000_000u128.into()
 		));
 		assert_ok!(StablePool::edit_token_rate(
@@ -1315,9 +1318,9 @@ fn redeem_multi_with_swap_for_bugs2() {
 				future_a: 220,
 				future_a_block: 0,
 				balances: vec![1000001, 1000001],
-				fee_recipient: 5,
-				account_id: 30160825295207673652903702381,
-				yield_recipient: 5,
+				fee_recipient,
+				account_id: swap_id,
+				yield_recipient,
 				precision: 1000000000000
 			})
 		);
@@ -1342,9 +1345,9 @@ fn redeem_multi_with_swap_for_bugs2() {
 				future_a: 220,
 				future_a_block: 0,
 				balances: vec![1500001, 548810],
-				fee_recipient: 5,
-				account_id: 30160825295207673652903702381,
-				yield_recipient: 5,
+				fee_recipient,
+				account_id: swap_id,
+				yield_recipient,
 				precision: 1000000000000
 			})
 		);
@@ -1367,6 +1370,9 @@ fn redeem_multi_with_swap_for_bugs2() {
 		assert_eq!(Tokens::free_balance(coin0, &6), 999999999999);
 		assert_eq!(Tokens::free_balance(pool_asset, &6), 1);
 		assert_eq!(<Test as crate::Config>::MultiCurrency::total_issuance(pool_asset), 2);
+		assert_eq!(Tokens::free_balance(pool_asset, &swap_id), 0);
+		assert_eq!(Tokens::free_balance(pool_asset, &fee_recipient), 1);
+		assert_eq!(Tokens::free_balance(pool_asset, &yield_recipient), 0);
 		assert_eq!(
 			StableAsset::pools(0),
 			Some(StableAssetPoolInfo {
@@ -1383,9 +1389,9 @@ fn redeem_multi_with_swap_for_bugs2() {
 				future_a: 220,
 				future_a_block: 0,
 				balances: vec![1, 1],
-				fee_recipient: 5,
-				account_id: 30160825295207673652903702381,
-				yield_recipient: 5,
+				fee_recipient,
+				account_id: swap_id,
+				yield_recipient,
 				precision: 1000000000000
 			})
 		);
