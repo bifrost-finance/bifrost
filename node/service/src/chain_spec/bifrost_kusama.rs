@@ -488,10 +488,10 @@ fn rococo_testnet_config_genesis(id: ParaId) -> RuntimeGenesisConfig {
 	)
 }
 
-pub fn rococo_testnet_config() -> Result<ChainSpec, String> {
+pub fn paseo_config() -> Result<ChainSpec, String> {
 	Ok(ChainSpec::from_genesis(
-		"Bifrost K Rococo",
-		"bifrost-k-rococo",
+		"Bifrost Paseo",
+		"bifrost-paseo",
 		ChainType::Live,
 		move || rococo_testnet_config_genesis(2030.into()),
 		vec![],
@@ -499,7 +499,7 @@ pub fn rococo_testnet_config() -> Result<ChainSpec, String> {
 		Some(DEFAULT_PROTOCOL_ID),
 		None,
 		Some(bifrost_kusama_properties()),
-		RelayExtensions { relay_chain: "rococo".into(), para_id: 2030 },
+		RelayExtensions { relay_chain: "paseo".into(), para_id: 2030 },
 	))
 }
 
