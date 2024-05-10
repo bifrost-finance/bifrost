@@ -57,21 +57,6 @@ type HostFunctions = sp_io::SubstrateHostFunctions;
 type HostFunctions =
 	(sp_io::SubstrateHostFunctions, frame_benchmarking::benchmarking::HostFunctions);
 
-#[cfg(any(feature = "with-bifrost-kusama-runtime", feature = "with-bifrost-runtime"))]
-pub struct BifrostExecutor;
-#[cfg(any(feature = "with-bifrost-kusama-runtime", feature = "with-bifrost-runtime"))]
-impl sc_executor::NativeExecutionDispatch for BifrostExecutor {
-	type ExtendHostFunctions = frame_benchmarking::benchmarking::HostFunctions;
-
-	fn dispatch(method: &str, data: &[u8]) -> Option<Vec<u8>> {
-		bifrost_kusama_runtime::api::dispatch(method, data)
-	}
-
-	fn native_version() -> sc_executor::NativeVersion {
-		bifrost_kusama_runtime::native_version()
-	}
-}
-
 pub type FullBackend = TFullBackend<Block>;
 pub type FullClient = TFullClient<Block, RuntimeApi, WasmExecutor<HostFunctions>>;
 pub type MaybeFullSelectChain = Option<LongestChain<FullBackend, Block>>;

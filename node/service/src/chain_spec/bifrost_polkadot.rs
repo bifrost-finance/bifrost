@@ -16,11 +16,9 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
+use crate::chain_spec::{get_account_id_from_seed, get_from_seed, RelayExtensions};
 use bifrost_polkadot_runtime::{
-	constants::currency::DOLLARS, AccountId, AssetRegistryConfig, Balance, BalancesConfig,
-	BlockNumber, CollatorSelectionConfig, CouncilMembershipConfig, IndicesConfig,
-	OracleMembershipConfig, ParachainInfoConfig, PolkadotXcmConfig, RuntimeGenesisConfig,
-	SS58Prefix, SalpConfig, SessionConfig, TechnicalMembershipConfig, TokensConfig, VestingConfig,
+	constants::currency::DOLLARS, AccountId, Balance, BlockNumber, RuntimeGenesisConfig, SS58Prefix,
 };
 use bifrost_primitives::{CurrencyId, CurrencyId::*, TokenInfo, TokenSymbol, DOT_TOKEN_ID};
 use bifrost_runtime_common::AuraId;
@@ -29,12 +27,7 @@ use frame_benchmarking::{account, whitelisted_caller};
 use hex_literal::hex;
 use sc_chain_spec::Properties;
 use sc_service::ChainType;
-use sc_telemetry::TelemetryEndpoints;
 use sp_core::{crypto::UncheckedInto, sr25519};
-use sp_runtime::traits::Zero;
-
-use super::TELEMETRY_URL;
-use crate::chain_spec::{get_account_id_from_seed, get_from_seed, RelayExtensions};
 
 const DEFAULT_PROTOCOL_ID: &str = "bifrost_polkadot";
 
@@ -74,7 +67,6 @@ pub fn bifrost_polkadot_genesis(
 	balances: Vec<(AccountId, Balance)>,
 	vestings: Vec<(AccountId, BlockNumber, BlockNumber, Balance)>,
 	id: ParaId,
-	tokens: Vec<(AccountId, CurrencyId, Balance)>,
 	council_membership: Vec<AccountId>,
 	technical_committee_membership: Vec<AccountId>,
 	salp_multisig_key: AccountId,
@@ -84,36 +76,29 @@ pub fn bifrost_polkadot_genesis(
 		Vec<(CurrencyId, u32, u32, u32)>,
 	),
 	oracle_membership: Vec<AccountId>,
-) -> RuntimeGenesisConfig {
-	RuntimeGenesisConfig {
-		system: Default::default(),
-		balances: BalancesConfig { balances },
-		indices: IndicesConfig { indices: vec![] },
-		democracy: Default::default(),
-		council_membership: CouncilMembershipConfig {
-			members: council_membership.try_into().expect("convert error!"),
-			phantom: Default::default(),
+) -> serde_json::Value {
+	serde_json::json!( {
+		"balances": {
+			"balances": balances
 		},
-		technical_membership: TechnicalMembershipConfig {
-			members: technical_committee_membership.try_into().expect("convert error!"),
-			phantom: Default::default(),
+		"councilMembership": {
+			"members": council_membership
 		},
-		oracle_membership: OracleMembershipConfig {
-			members: oracle_membership.try_into().expect("convert error!"),
-			phantom: Default::default(),
+		"oracleMembership": {
+			"members": oracle_membership
 		},
-		council: Default::default(),
-		technical_committee: Default::default(),
-		treasury: Default::default(),
-		phragmen_election: Default::default(),
-		parachain_info: ParachainInfoConfig { parachain_id: id, _config: Default::default() },
-		collator_selection: CollatorSelectionConfig {
-			invulnerables: invulnerables.iter().cloned().map(|(acc, _)| acc).collect(),
-			candidacy_bond: Zero::zero(),
-			..Default::default()
+		"technicalCommittee": {
+			"members": technical_committee_membership
 		},
-		session: SessionConfig {
-			keys: invulnerables
+		"parachainInfo": {
+			"parachainId": id
+		},
+		"collatorSelection": {
+			"invulnerables": invulnerables.iter().cloned().map(|(acc, _)| acc).collect::<Vec<_>>(),
+			"candidacyBond": 0
+		},
+		"session": {
+			"keys": invulnerables
 				.iter()
 				.cloned()
 				.map(|(acc, aura)| {
@@ -123,84 +108,24 @@ pub fn bifrost_polkadot_genesis(
 						bifrost_polkadot_runtime::SessionKeys { aura }, // session keys
 					)
 				})
-				.collect(),
+				.collect::<Vec<_>>(),
 		},
-		aura: Default::default(),
-		aura_ext: Default::default(),
-		parachain_system: Default::default(),
-		vesting: VestingConfig { vesting: vestings },
-		tokens: TokensConfig { balances: tokens },
-		asset_registry: AssetRegistryConfig {
-			currency: asset_registry.0,
-			vcurrency: asset_registry.1,
-			vsbond: asset_registry.2,
-			phantom: Default::default(),
+		"vesting": {
+			"vesting": vestings
 		},
-		polkadot_xcm: PolkadotXcmConfig { safe_xcm_version: Some(2), _config: Default::default() },
-		salp: SalpConfig { initial_multisig_account: Some(salp_multisig_key) },
-		vtoken_voting: Default::default(),
-		transaction_payment: Default::default(),
-		zenlink_protocol: Default::default(),
-	}
+		"assetRegistry": {
+			"currency": asset_registry.0,
+			"vcurrency": asset_registry.1,
+			"vsbond": asset_registry.2
+		},
+		"polkadotXcm": {
+			"safeXcmVersion": 3
+		},
+		"salp": { "initialMultisigAccount": Some(salp_multisig_key) }
+	})
 }
 
-fn development_config_genesis(id: ParaId) -> RuntimeGenesisConfig {
-	let endowed_accounts = vec![
-		get_account_id_from_seed::<sr25519::Public>("Alice"),
-		whitelisted_caller(), // Benchmarking whitelist_account
-	];
-	let balances = endowed_accounts.iter().cloned().map(|x| (x, ENDOWMENT())).collect();
-	let vestings = endowed_accounts
-		.iter()
-		.cloned()
-		.map(|x| (x, 0u32, 100u32, ENDOWMENT() / 4))
-		.collect();
-	let tokens = endowed_accounts
-		.iter()
-		.flat_map(|x| vec![(x.clone(), Token(TokenSymbol::DOT), ENDOWMENT())])
-		.collect();
-
-	let council_membership = vec![get_account_id_from_seed::<sr25519::Public>("Alice")];
-	let technical_committee_membership = vec![get_account_id_from_seed::<sr25519::Public>("Alice")];
-	let oracle_membership = vec![get_account_id_from_seed::<sr25519::Public>("Alice")];
-	let salp_multisig: AccountId =
-		hex!["49daa32c7287890f38b7e1a8cd2961723d36d20baa0bf3b82e0c4bdda93b1c0a"].into();
-
-	bifrost_polkadot_genesis(
-		vec![(
-			get_account_id_from_seed::<sr25519::Public>("Alice"),
-			get_from_seed::<AuraId>("Alice"),
-		)],
-		balances,
-		vestings,
-		id,
-		tokens,
-		council_membership,
-		technical_committee_membership,
-		salp_multisig,
-		(vec![], vec![], vec![]),
-		oracle_membership,
-	)
-}
-
-pub fn development_config() -> Result<ChainSpec, String> {
-	#[allow(deprecated)]
-	Ok(ChainSpec::from_genesis(
-		"Bifrost Polkadot Development",
-		"bifrost_polkadot_dev",
-		ChainType::Development,
-		move || development_config_genesis(PARA_ID.into()),
-		vec![],
-		None,
-		Some(DEFAULT_PROTOCOL_ID),
-		None,
-		Some(bifrost_polkadot_properties()),
-		RelayExtensions { relay_chain: "polkadot-dev".into(), para_id: PARA_ID },
-		bifrost_polkadot_runtime::WASM_BINARY.expect("WASM binary was not built, please build it!"),
-	))
-}
-
-fn local_config_genesis(id: ParaId) -> RuntimeGenesisConfig {
+pub fn local_testnet_config() -> ChainSpec {
 	let endowed_accounts = vec![
 		get_account_id_from_seed::<sr25519::Public>("Alice"),
 		get_account_id_from_seed::<sr25519::Public>("Bob"),
@@ -208,25 +133,10 @@ fn local_config_genesis(id: ParaId) -> RuntimeGenesisConfig {
 		get_account_id_from_seed::<sr25519::Public>("Dave"),
 		get_account_id_from_seed::<sr25519::Public>("Eve"),
 		get_account_id_from_seed::<sr25519::Public>("Ferdie"),
-		get_account_id_from_seed::<sr25519::Public>("Alice//stash"),
-		get_account_id_from_seed::<sr25519::Public>("Bob//stash"),
-		get_account_id_from_seed::<sr25519::Public>("Charlie//stash"),
-		get_account_id_from_seed::<sr25519::Public>("Dave//stash"),
-		get_account_id_from_seed::<sr25519::Public>("Eve//stash"),
-		get_account_id_from_seed::<sr25519::Public>("Ferdie//stash"),
 		whitelisted_caller(), // Benchmarking whitelist_account
 		account("bechmarking_account_1", 0, 0),
 	];
 	let balances = endowed_accounts.iter().cloned().map(|x| (x, ENDOWMENT())).collect();
-	let vestings = endowed_accounts
-		.iter()
-		.cloned()
-		.map(|x| (x, 0u32, 100u32, ENDOWMENT() / 4))
-		.collect();
-	let tokens = endowed_accounts
-		.iter()
-		.flat_map(|x| vec![(x.clone(), Token2(DOT_TOKEN_ID), ENDOWMENT() * 4_000_000)])
-		.collect();
 	let council_membership = vec![get_account_id_from_seed::<sr25519::Public>("Alice")];
 	let technical_committee_membership = vec![get_account_id_from_seed::<sr25519::Public>("Alice")];
 	let oracle_membership = vec![get_account_id_from_seed::<sr25519::Public>("Alice")];
@@ -242,7 +152,14 @@ fn local_config_genesis(id: ParaId) -> RuntimeGenesisConfig {
 	];
 	let vcurrency = vec![VSToken2(DOT_TOKEN_ID), VToken(TokenSymbol::BNC), VToken2(DOT_TOKEN_ID)];
 
-	bifrost_polkadot_genesis(
+	ChainSpec::builder(
+		bifrost_polkadot_runtime::WASM_BINARY.expect("WASM binary was not built, please build it!"),
+		RelayExtensions { relay_chain: "polkadot-local".into(), para_id: PARA_ID },
+	)
+	.with_name("Bifrost Polkadot Local Testnet")
+	.with_id("bifrost_polkadot_local_testnet")
+	.with_chain_type(ChainType::Local)
+	.with_genesis_config_patch(bifrost_polkadot_genesis(
 		vec![
 			(
 				get_account_id_from_seed::<sr25519::Public>("Alice"),
@@ -251,52 +168,100 @@ fn local_config_genesis(id: ParaId) -> RuntimeGenesisConfig {
 			(get_account_id_from_seed::<sr25519::Public>("Bob"), get_from_seed::<AuraId>("Bob")),
 		],
 		balances,
-		vestings,
-		id,
-		tokens,
+		vec![],
+		PARA_ID.into(),
 		council_membership,
 		technical_committee_membership,
 		salp_multisig,
 		(currency, vcurrency, vec![]),
 		oracle_membership,
-	)
-}
-
-pub fn local_testnet_config() -> Result<ChainSpec, String> {
-	#[allow(deprecated)]
-	Ok(ChainSpec::from_genesis(
-		"Bifrost Polkadot Local Testnet",
-		"bifrost_polkadot_local_testnet",
-		ChainType::Local,
-		move || local_config_genesis(PARA_ID.into()),
-		vec![],
-		None,
-		Some(DEFAULT_PROTOCOL_ID),
-		None,
-		Some(bifrost_polkadot_properties()),
-		RelayExtensions { relay_chain: "polkadot-local".into(), para_id: PARA_ID },
-		bifrost_polkadot_runtime::WASM_BINARY.expect("WASM binary was not built, please build it!"),
 	))
+	.with_properties(bifrost_polkadot_properties())
+	.with_protocol_id(DEFAULT_PROTOCOL_ID)
+	.build()
 }
 
-pub fn chainspec_config() -> ChainSpec {
-	#[allow(deprecated)]
-	ChainSpec::from_genesis(
-		"Bifrost Polkadot",
-		"bifrost_polkadot",
-		ChainType::Live,
-		move || bifrost_polkadot_config_genesis(PARA_ID.into()),
-		vec![],
-		TelemetryEndpoints::new(vec![(TELEMETRY_URL.into(), 0)]).ok(),
-		Some(DEFAULT_PROTOCOL_ID),
-		None,
-		Some(bifrost_polkadot_properties()),
-		RelayExtensions { relay_chain: "polkadot".into(), para_id: PARA_ID },
+pub fn paseo_config() -> ChainSpec {
+	let invulnerables: Vec<(AccountId, AuraId)> = vec![
+		(
+			// e2s2dTSWe9kHebF2FCbPGbXftDT7fY5AMDfib3j86zSi3v7
+			hex!["66204aeda74f07f77a4b6945681296763706f98d0f8aebb1b9ccdf6e9b7ac13f"].into(),
+			hex!["66204aeda74f07f77a4b6945681296763706f98d0f8aebb1b9ccdf6e9b7ac13f"]
+				.unchecked_into(),
+		),
+		(
+			// fFjUFbokagaDRQUDzVhDcMZQaDwQvvha74RMZnyoSWNpiBQ
+			hex!["9c2d45edb30d4bf0c285d6809e28c55e871f10578c5a3ea62da152d03761d266"].into(),
+			hex!["9c2d45edb30d4bf0c285d6809e28c55e871f10578c5a3ea62da152d03761d266"]
+				.unchecked_into(),
+		),
+		(
+			// fBAbVJAsbWsKTedTVYGrBB3Usm6Vx635z1N9PX2tZ2boT37
+			hex!["98b19fa5a3e98f693b7440de07b4744834ff0072cb704f1c6e33791953ac4924"].into(),
+			hex!["98b19fa5a3e98f693b7440de07b4744834ff0072cb704f1c6e33791953ac4924"]
+				.unchecked_into(),
+		),
+		(
+			// c9eHvgbxTFzijvY3AnAKiRTHhi2hzS5SLCPzCkb4jP79MLu
+			hex!["12d3ab675d6503279133898efe246a63fdc8be685cc3f7bce079aac064108a7a"].into(),
+			hex!["12d3ab675d6503279133898efe246a63fdc8be685cc3f7bce079aac064108a7a"]
+				.unchecked_into(),
+		),
+	];
+
+	let endowed_accounts: Vec<AccountId> = vec![
+		// dDWnEWnx3GUgfugXh9mZtgj4CvJdmd8naYkWYCZGxjfb1Cz
+		hex!["420398e0150cd9d417fb8fd4027b75bd42717262e6eac97c55f2f8f84e8ffb3f"].into(),
+		// e2s2dTSWe9kHebF2FCbPGbXftDT7fY5AMDfib3j86zSi3v7
+		hex!["66204aeda74f07f77a4b6945681296763706f98d0f8aebb1b9ccdf6e9b7ac13f"].into(),
+		// fFjUFbokagaDRQUDzVhDcMZQaDwQvvha74RMZnyoSWNpiBQ
+		hex!["9c2d45edb30d4bf0c285d6809e28c55e871f10578c5a3ea62da152d03761d266"].into(),
+		// fBAbVJAsbWsKTedTVYGrBB3Usm6Vx635z1N9PX2tZ2boT37
+		hex!["98b19fa5a3e98f693b7440de07b4744834ff0072cb704f1c6e33791953ac4924"].into(),
+		// c9eHvgbxTFzijvY3AnAKiRTHhi2hzS5SLCPzCkb4jP79MLu
+		hex!["12d3ab675d6503279133898efe246a63fdc8be685cc3f7bce079aac064108a7a"].into(),
+	];
+	let balances = endowed_accounts.iter().cloned().map(|x| (x, ENDOWMENT())).collect();
+
+	let salp_multisig: AccountId =
+		hex!["e4da05f08e89bf6c43260d96f26fffcfc7deae5b465da08669a9d008e64c2c63"].into();
+
+	let council_membership = vec![
+		// dDWnEWnx3GUgfugXh9mZtgj4CvJdmd8naYkWYCZGxjfb1Cz
+		hex!["420398e0150cd9d417fb8fd4027b75bd42717262e6eac97c55f2f8f84e8ffb3f"].into(),
+	];
+	let technical_committee_membership = vec![
+		// dDWnEWnx3GUgfugXh9mZtgj4CvJdmd8naYkWYCZGxjfb1Cz
+		hex!["420398e0150cd9d417fb8fd4027b75bd42717262e6eac97c55f2f8f84e8ffb3f"].into(),
+	];
+	let oracle_membership = vec![
+		// dDWnEWnx3GUgfugXh9mZtgj4CvJdmd8naYkWYCZGxjfb1Cz
+		hex!["420398e0150cd9d417fb8fd4027b75bd42717262e6eac97c55f2f8f84e8ffb3f"].into(),
+	];
+
+	ChainSpec::builder(
 		bifrost_polkadot_runtime::WASM_BINARY.expect("WASM binary was not built, please build it!"),
+		RelayExtensions { relay_chain: "paseo".into(), para_id: PARA_ID },
 	)
+	.with_name("Bifrost Paseo")
+	.with_id("bifrost_paseo")
+	.with_chain_type(ChainType::Live)
+	.with_genesis_config_patch(bifrost_polkadot_genesis(
+		invulnerables,
+		balances,
+		vec![],
+		PARA_ID.into(),
+		council_membership,
+		technical_committee_membership,
+		salp_multisig,
+		(vec![], vec![], vec![]),
+		oracle_membership,
+	))
+	.with_properties(bifrost_polkadot_properties())
+	.with_protocol_id(DEFAULT_PROTOCOL_ID)
+	.build()
 }
-
-fn bifrost_polkadot_config_genesis(id: ParaId) -> RuntimeGenesisConfig {
+pub fn chainspec_config() -> ChainSpec {
 	let invulnerables: Vec<(AccountId, AuraId)> = vec![
 		(
 			// dpEZwz5nHxEjQXcm3sjy6NTz83EGcBRXMBSyuuWSguiVGJB
@@ -327,16 +292,25 @@ fn bifrost_polkadot_config_genesis(id: ParaId) -> RuntimeGenesisConfig {
 	let salp_multisig: AccountId =
 		hex!["e4da05f08e89bf6c43260d96f26fffcfc7deae5b465da08669a9d008e64c2c63"].into();
 
-	bifrost_polkadot_genesis(
+	ChainSpec::builder(
+		bifrost_polkadot_runtime::WASM_BINARY.expect("WASM binary was not built, please build it!"),
+		RelayExtensions { relay_chain: "polkadot".into(), para_id: PARA_ID },
+	)
+	.with_name("Bifrost Polkadot")
+	.with_id("bifrost_polkadot")
+	.with_chain_type(ChainType::Live)
+	.with_genesis_config_patch(bifrost_polkadot_genesis(
 		invulnerables,
 		vec![],
 		vec![],
-		id,
-		vec![],
+		PARA_ID.into(),
 		vec![],
 		vec![],
 		salp_multisig,
 		(vec![], vec![], vec![]),
 		vec![],
-	)
+	))
+	.with_properties(bifrost_polkadot_properties())
+	.with_protocol_id(DEFAULT_PROTOCOL_ID)
+	.build()
 }
