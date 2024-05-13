@@ -683,12 +683,12 @@ pub mod pallet {
 			Locked::<T>::insert(addr, _locked.clone());
 
 			let free_balance = T::MultiCurrency::free_balance(T::TokenType::get(), &who);
-			if value != BalanceOf::<T>::zero() && value <= free_balance {
-				let new_locked_balance = UserLocked::<T>::get(who)
-					.checked_add(value)
-					.ok_or(ArithmeticError::Underflow)?;
-				Self::set_ve_locked(who, new_locked_balance)?;
-			}
+			ensure!(value != BalanceOf::<T>::zero(), Error::<T>::ArgumentsError);
+			let new_locked_balance =
+				UserLocked::<T>::get(who).checked_add(value).ok_or(ArithmeticError::Overflow)?;
+			ensure!(new_locked_balance <= free_balance, Error::<T>::NotEnoughBalance);
+			Self::set_ve_locked(who, new_locked_balance)?;
+
 			Self::markup_calc(
 				who,
 				addr,
