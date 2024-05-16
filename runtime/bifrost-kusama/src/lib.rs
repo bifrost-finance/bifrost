@@ -98,6 +98,7 @@ use frame_support::{
 		OnUnbalanced,
 	},
 };
+use frame_system::pallet_prelude::BlockNumberFor;
 use frame_system::{EnsureRoot, EnsureRootWithSuccess, EnsureSigned};
 use hex_literal::hex;
 use orml_oracle::{DataFeeder, DataProvider, DataProviderExtended};
@@ -466,7 +467,6 @@ impl InstanceFilter<RuntimeCall> for ProxyType {
 				RuntimeCall::TechnicalMembership(..) |
 				RuntimeCall::Treasury(..) |
 				RuntimeCall::Bounties(..) |
-				RuntimeCall::Tips(..) |
 				RuntimeCall::ConvictionVoting(..) |
 				RuntimeCall::Referenda(..) |
 				RuntimeCall::FellowshipCollective(..) |
@@ -490,7 +490,7 @@ impl InstanceFilter<RuntimeCall> for ProxyType {
 						RuntimeCall::PhragmenElection(..) |
 						RuntimeCall::Treasury(..) |
 						RuntimeCall::Bounties(..) |
-						RuntimeCall::Tips(..) | RuntimeCall::Utility(..) |
+						RuntimeCall::Utility(..) |
 						// OpenGov calls
 						RuntimeCall::ConvictionVoting(..) |
 						RuntimeCall::Referenda(..) |
@@ -503,8 +503,8 @@ impl InstanceFilter<RuntimeCall> for ProxyType {
 			},
 			ProxyType::IdentityJudgement => matches!(
 				c,
-				RuntimeCall::Identity(pallet_identity::Call::provide_judgement { .. }) |
-					RuntimeCall::Utility(..)
+				RuntimeCall::Identity(pallet_identity::Call::provide_judgement { .. })
+					| RuntimeCall::Utility(..)
 			),
 		}
 	}
@@ -911,18 +911,6 @@ impl pallet_bounties::Config for Runtime {
 	type ChildBountyManager = ();
 }
 
-impl pallet_tips::Config for Runtime {
-	type DataDepositPerByte = DataDepositPerByte;
-	type RuntimeEvent = RuntimeEvent;
-	type MaximumReasonLength = MaximumReasonLength;
-	type TipCountdown = TipCountdown;
-	type TipFindersFee = TipFindersFee;
-	type TipReportDepositBase = TipReportDepositBase;
-	type Tippers = PhragmenElection;
-	type MaxTipAmount = ();
-	type WeightInfo = pallet_tips::weights::SubstrateWeight<Runtime>;
-}
-
 impl pallet_transaction_payment::Config for Runtime {
 	type FeeMultiplierUpdate = SlowAdjustingFeeUpdate<Self>;
 	type LengthToFee = ConstantMultiplier<Balance, TransactionByteFee>;
@@ -1157,11 +1145,12 @@ impl FeeGetter<RuntimeCall> for ExtraFeeMatcher {
 				extra_fee_name: ExtraFeeName::StatemineTransfer,
 				extra_fee_currency: RelayCurrencyId::get(),
 			},
-			RuntimeCall::VtokenVoting(bifrost_vtoken_voting::Call::vote { vtoken, .. }) =>
+			RuntimeCall::VtokenVoting(bifrost_vtoken_voting::Call::vote { vtoken, .. }) => {
 				ExtraFeeInfo {
 					extra_fee_name: ExtraFeeName::VoteVtoken,
 					extra_fee_currency: vtoken.to_token().unwrap_or(vtoken),
-				},
+				}
+			},
 			RuntimeCall::VtokenVoting(bifrost_vtoken_voting::Call::remove_delegator_vote {
 				vtoken,
 				..
@@ -1998,7 +1987,6 @@ construct_runtime! {
 		// Treasury stuff
 		Treasury: pallet_treasury = 61,
 		Bounties: pallet_bounties = 62,
-		Tips: pallet_tips = 63,
 		Preimage: pallet_preimage = 64,
 
 		// Third party modules
@@ -2086,6 +2074,10 @@ pub type SignedPayload = generic::SignedPayload<RuntimeCall, SignedExtra>;
 /// upgrades in case governance decides to do so. THE ORDER IS IMPORTANT.
 pub type Migrations = migrations::Unreleased;
 
+parameter_types! {
+	pub const TipsPalletName: &'static str = "Tips";
+}
+
 /// The runtime migrations per release.
 pub mod migrations {
 	#![allow(unused_imports)]
@@ -2093,9 +2085,29 @@ pub mod migrations {
 
 	/// Unreleased migrations. Add new ones here:
 	pub type Unreleased = (
+		// Unlock & unreserve funds
+		pallet_tips::migrations::unreserve_deposits::UnreserveDeposits<UnlockConfigForTips, ()>,
 		cumulus_pallet_xcmp_queue::migration::v4::MigrationToV4<Runtime>,
 		migration::slpx_migrates_whitelist::UpdateWhitelist,
+		frame_support::migrations::RemovePallet<
+			TipsPalletName,
+			<Runtime as frame_system::Config>::DbWeight,
+		>,
 	);
+}
+
+// Special Config for tips pallets, allowing us to run migrations for them without
+// implementing their configs on [`Runtime`].
+pub struct UnlockConfigForTips;
+impl pallet_tips::migrations::unreserve_deposits::UnlockConfig<()> for UnlockConfigForTips {
+	type Currency = Balances;
+	type Hash = Hash;
+	type DataDepositPerByte = DataDepositPerByte;
+	type TipReportDepositBase = TipReportDepositBase;
+	type AccountId = AccountId;
+	type BlockNumber = BlockNumberFor<Runtime>;
+	type DbWeight = <Runtime as frame_system::Config>::DbWeight;
+	type PalletName = TipsPalletName;
 }
 
 /// Executive: handles dispatch to the various modules.
