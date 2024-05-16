@@ -466,7 +466,6 @@ impl InstanceFilter<RuntimeCall> for ProxyType {
 				RuntimeCall::PhragmenElection(..) |
 				RuntimeCall::TechnicalMembership(..) |
 				RuntimeCall::Treasury(..) |
-				RuntimeCall::Bounties(..) |
 				RuntimeCall::ConvictionVoting(..) |
 				RuntimeCall::Referenda(..) |
 				RuntimeCall::FellowshipCollective(..) |
@@ -489,7 +488,6 @@ impl InstanceFilter<RuntimeCall> for ProxyType {
 						RuntimeCall::Council(..) | RuntimeCall::TechnicalCommittee(..) |
 						RuntimeCall::PhragmenElection(..) |
 						RuntimeCall::Treasury(..) |
-						RuntimeCall::Bounties(..) |
 						RuntimeCall::Utility(..) |
 						// OpenGov calls
 						RuntimeCall::ConvictionVoting(..) |
@@ -891,24 +889,9 @@ impl pallet_treasury::Config for Runtime {
 	type ProposalBondMinimum = ProposalBondMinimum;
 	type ProposalBondMaximum = ProposalBondMaximum;
 	type RejectOrigin = MoreThanHalfCouncil;
-	type SpendFunds = Bounties;
+	type SpendFunds = ();
 	type SpendPeriod = SpendPeriod;
 	type WeightInfo = pallet_treasury::weights::SubstrateWeight<Runtime>;
-}
-
-impl pallet_bounties::Config for Runtime {
-	type BountyDepositBase = BountyDepositBase;
-	type BountyDepositPayoutDelay = BountyDepositPayoutDelay;
-	type BountyUpdatePeriod = BountyUpdatePeriod;
-	type BountyValueMinimum = BountyValueMinimum;
-	type CuratorDepositMultiplier = CuratorDepositMultiplier;
-	type CuratorDepositMin = CuratorDepositMin;
-	type CuratorDepositMax = CuratorDepositMax;
-	type DataDepositPerByte = DataDepositPerByte;
-	type RuntimeEvent = RuntimeEvent;
-	type MaximumReasonLength = MaximumReasonLength;
-	type WeightInfo = pallet_bounties::weights::SubstrateWeight<Runtime>;
-	type ChildBountyManager = ();
 }
 
 impl pallet_transaction_payment::Config for Runtime {
@@ -1986,7 +1969,6 @@ construct_runtime! {
 
 		// Treasury stuff
 		Treasury: pallet_treasury = 61,
-		Bounties: pallet_bounties = 62,
 		Preimage: pallet_preimage = 64,
 
 		// Third party modules

@@ -450,7 +450,6 @@ impl InstanceFilter<RuntimeCall> for ProxyType {
 				RuntimeCall::PhragmenElection(..) |
 				RuntimeCall::TechnicalMembership(..) |
 				RuntimeCall::Treasury(..) |
-				RuntimeCall::Bounties(..) |
 				RuntimeCall::Vesting(bifrost_vesting::Call::vest{..}) |
 				RuntimeCall::Vesting(bifrost_vesting::Call::vest_other{..}) |
 				// Specifically omitting Vesting `vested_transfer`, and `force_vested_transfer`
@@ -465,7 +464,6 @@ impl InstanceFilter<RuntimeCall> for ProxyType {
 					| RuntimeCall::TechnicalCommittee(..)
 					| RuntimeCall::PhragmenElection(..)
 					| RuntimeCall::Treasury(..)
-					| RuntimeCall::Bounties(..)
 					| RuntimeCall::Utility(..)
 			),
 			ProxyType::CancelProxy => {
@@ -851,7 +849,7 @@ impl pallet_treasury::Config for Runtime {
 	type ProposalBondMinimum = ProposalBondMinimum;
 	type ProposalBondMaximum = ProposalBondMaximum;
 	type RejectOrigin = MoreThanHalfCouncil;
-	type SpendFunds = Bounties;
+	type SpendFunds = ();
 	type SpendPeriod = SpendPeriod;
 	type WeightInfo = pallet_treasury::weights::SubstrateWeight<Runtime>;
 }
@@ -865,21 +863,6 @@ parameter_types! {
 	pub const CuratorDepositMin: Balance = 10 * DOLLARS;
 	pub const CuratorDepositMax: Balance = 200 * DOLLARS;
 	pub const BountyValueMinimum: Balance = 10 * DOLLARS;
-}
-
-impl pallet_bounties::Config for Runtime {
-	type BountyDepositBase = BountyDepositBase;
-	type BountyDepositPayoutDelay = BountyDepositPayoutDelay;
-	type BountyUpdatePeriod = BountyUpdatePeriod;
-	type BountyValueMinimum = BountyValueMinimum;
-	type CuratorDepositMultiplier = CuratorDepositMultiplier;
-	type CuratorDepositMin = CuratorDepositMin;
-	type CuratorDepositMax = CuratorDepositMax;
-	type DataDepositPerByte = DataDepositPerByte;
-	type RuntimeEvent = RuntimeEvent;
-	type MaximumReasonLength = MaximumReasonLength;
-	type WeightInfo = pallet_bounties::weights::SubstrateWeight<Runtime>;
-	type ChildBountyManager = ();
 }
 
 impl pallet_transaction_payment::Config for Runtime {
@@ -1807,7 +1790,6 @@ construct_runtime! {
 
 		// Treasury stuff
 		Treasury: pallet_treasury = 61,
-		Bounties: pallet_bounties = 62,
 		Preimage: pallet_preimage = 64,
 
 		// Third party modules
