@@ -98,8 +98,9 @@ use frame_support::{
 		OnUnbalanced,
 	},
 };
-use frame_system::pallet_prelude::BlockNumberFor;
-use frame_system::{EnsureRoot, EnsureRootWithSuccess, EnsureSigned};
+use frame_system::{
+	pallet_prelude::BlockNumberFor, EnsureRoot, EnsureRootWithSuccess, EnsureSigned,
+};
 use hex_literal::hex;
 use orml_oracle::{DataFeeder, DataProvider, DataProviderExtended};
 use pallet_identity::legacy::IdentityInfo;
@@ -501,8 +502,8 @@ impl InstanceFilter<RuntimeCall> for ProxyType {
 			},
 			ProxyType::IdentityJudgement => matches!(
 				c,
-				RuntimeCall::Identity(pallet_identity::Call::provide_judgement { .. })
-					| RuntimeCall::Utility(..)
+				RuntimeCall::Identity(pallet_identity::Call::provide_judgement { .. }) |
+					RuntimeCall::Utility(..)
 			),
 		}
 	}
@@ -1119,12 +1120,11 @@ impl FeeGetter<RuntimeCall> for ExtraFeeMatcher {
 				extra_fee_name: ExtraFeeName::StatemineTransfer,
 				extra_fee_currency: RelayCurrencyId::get(),
 			},
-			RuntimeCall::VtokenVoting(bifrost_vtoken_voting::Call::vote { vtoken, .. }) => {
+			RuntimeCall::VtokenVoting(bifrost_vtoken_voting::Call::vote { vtoken, .. }) =>
 				ExtraFeeInfo {
 					extra_fee_name: ExtraFeeName::VoteVtoken,
 					extra_fee_currency: vtoken.to_token().unwrap_or(vtoken),
-				}
-			},
+				},
 			RuntimeCall::VtokenVoting(bifrost_vtoken_voting::Call::remove_delegator_vote {
 				vtoken,
 				..
@@ -2071,6 +2071,7 @@ pub mod migrations {
 			BountiesPalletName,
 			<Runtime as frame_system::Config>::DbWeight,
 		>,
+		pallet_identity::migration::versioned::V0ToV1<Runtime, 100>,
 	);
 }
 
