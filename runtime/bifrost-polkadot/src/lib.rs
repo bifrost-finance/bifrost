@@ -97,8 +97,9 @@ use frame_support::{
 		Currency, EitherOf, EitherOfDiverse, Get, LinearStoragePrice,
 	},
 };
-use frame_system::pallet_prelude::BlockNumberFor;
-use frame_system::{EnsureRoot, EnsureRootWithSuccess, EnsureSigned};
+use frame_system::{
+	pallet_prelude::BlockNumberFor, EnsureRoot, EnsureRootWithSuccess, EnsureSigned,
+};
 use hex_literal::hex;
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 // zenlink imports
@@ -459,20 +460,20 @@ impl InstanceFilter<RuntimeCall> for ProxyType {
 			),
 			ProxyType::Governance => matches!(
 				c,
-				RuntimeCall::Democracy(..)
-					| RuntimeCall::Council(..)
-					| RuntimeCall::TechnicalCommittee(..)
-					| RuntimeCall::PhragmenElection(..)
-					| RuntimeCall::Treasury(..)
-					| RuntimeCall::Utility(..)
+				RuntimeCall::Democracy(..) |
+					RuntimeCall::Council(..) |
+					RuntimeCall::TechnicalCommittee(..) |
+					RuntimeCall::PhragmenElection(..) |
+					RuntimeCall::Treasury(..) |
+					RuntimeCall::Utility(..)
 			),
 			ProxyType::CancelProxy => {
 				matches!(c, RuntimeCall::Proxy(pallet_proxy::Call::reject_announcement { .. }))
 			},
 			ProxyType::IdentityJudgement => matches!(
 				c,
-				RuntimeCall::Identity(pallet_identity::Call::provide_judgement { .. })
-					| RuntimeCall::Utility(..)
+				RuntimeCall::Identity(pallet_identity::Call::provide_judgement { .. }) |
+					RuntimeCall::Utility(..)
 			),
 		}
 	}
@@ -971,12 +972,11 @@ impl FeeGetter<RuntimeCall> for ExtraFeeMatcher {
 				extra_fee_name: ExtraFeeName::StatemineTransfer,
 				extra_fee_currency: RelayCurrencyId::get(),
 			},
-			RuntimeCall::VtokenVoting(bifrost_vtoken_voting::Call::vote { vtoken, .. }) => {
+			RuntimeCall::VtokenVoting(bifrost_vtoken_voting::Call::vote { vtoken, .. }) =>
 				ExtraFeeInfo {
 					extra_fee_name: ExtraFeeName::VoteVtoken,
 					extra_fee_currency: vtoken.to_token().unwrap_or(vtoken),
-				}
-			},
+				},
 			RuntimeCall::VtokenVoting(bifrost_vtoken_voting::Call::remove_delegator_vote {
 				vtoken,
 				..
@@ -1886,6 +1886,8 @@ pub mod migrations {
 			BountiesPalletName,
 			<Runtime as frame_system::Config>::DbWeight,
 		>,
+		pallet_identity::migration::versioned::V0ToV1<Runtime, 100>,
+		pallet_collator_selection::migration::v2::MigrationToV2<Runtime>,
 	);
 }
 
