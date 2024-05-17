@@ -441,16 +441,6 @@ impl Contains<RuntimeCall> for SafeCallFilter {
 				pallet_identity::Call::quit_sub { .. },
 			) |
 			RuntimeCall::Vesting(..) |
-			RuntimeCall::Bounties(
-				pallet_bounties::Call::propose_bounty { .. } |
-				pallet_bounties::Call::approve_bounty { .. } |
-				pallet_bounties::Call::propose_curator { .. } |
-				pallet_bounties::Call::unassign_curator { .. } |
-				pallet_bounties::Call::accept_curator { .. } |
-				pallet_bounties::Call::award_bounty { .. } |
-				pallet_bounties::Call::claim_bounty { .. } |
-				pallet_bounties::Call::close_bounty { .. },
-			) |
 			RuntimeCall::PolkadotXcm(pallet_xcm::Call::limited_reserve_transfer_assets { .. }) |
 			RuntimeCall::Proxy(..) |
 			RuntimeCall::Tokens(
