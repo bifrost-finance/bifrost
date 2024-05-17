@@ -103,10 +103,14 @@ impl<T: Config> VeMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>
 			unlock_time >= ve_config.min_block.saturating_add(current_block_number),
 			Error::<T>::ArgumentsError
 		);
-		ensure!(
-			unlock_time <= T::MaxBlock::get().saturating_add(current_block_number),
-			Error::<T>::ArgumentsError
-		);
+		let max_block = T::MaxBlock::get()
+			.saturating_add(current_block_number)
+			.checked_div(&T::Week::get())
+			.ok_or(ArithmeticError::Overflow)?
+			.saturating_add(1u32.into())
+			.checked_mul(&T::Week::get())
+			.ok_or(ArithmeticError::Overflow)?;
+		ensure!(unlock_time <= max_block, Error::<T>::ArgumentsError);
 		ensure!(_locked.amount == BalanceOf::<T>::zero(), Error::<T>::LockExist); // Withdraw old tokens first
 
 		Self::_deposit_for(who, new_position, _value, unlock_time, _locked)?;
@@ -140,10 +144,15 @@ impl<T: Config> VeMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>
 			unlock_time >= ve_config.min_block.saturating_add(current_block_number),
 			Error::<T>::ArgumentsError
 		);
-		ensure!(
-			unlock_time <= T::MaxBlock::get().saturating_add(current_block_number),
-			Error::<T>::ArgumentsError
-		);
+		let max_block = T::MaxBlock::get()
+			.saturating_add(_locked.end)
+			.saturating_add(current_block_number)
+			.checked_div(&T::Week::get())
+			.ok_or(ArithmeticError::Overflow)?
+			.saturating_add(1u32.into())
+			.checked_mul(&T::Week::get())
+			.ok_or(ArithmeticError::Overflow)?;
+		ensure!(unlock_time <= max_block, Error::<T>::ArgumentsError);
 		ensure!(_locked.amount > BalanceOf::<T>::zero(), Error::<T>::LockNotExist);
 		ensure!(_locked.end > current_block_number, Error::<T>::Expired); // Cannot add to expired/non-existent lock
 
