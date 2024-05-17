@@ -2049,6 +2049,7 @@ pub type Migrations = migrations::Unreleased;
 
 parameter_types! {
 	pub const TipsPalletName: &'static str = "Tips";
+	pub const BountiesPalletName: &'static str = "Bounties";
 }
 
 /// The runtime migrations per release.
@@ -2064,6 +2065,10 @@ pub mod migrations {
 		migration::slpx_migrates_whitelist::UpdateWhitelist,
 		frame_support::migrations::RemovePallet<
 			TipsPalletName,
+			<Runtime as frame_system::Config>::DbWeight,
+		>,
+		frame_support::migrations::RemovePallet<
+			BountiesPalletName,
 			<Runtime as frame_system::Config>::DbWeight,
 		>,
 	);
