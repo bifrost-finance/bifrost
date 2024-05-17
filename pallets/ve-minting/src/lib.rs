@@ -229,14 +229,8 @@ pub mod pallet {
 
 	#[pallet::storage]
 	#[pallet::getter(fn user_locked)]
-	pub type UserLocked<T: Config> = StorageMap<
-		_,
-		Blake2_128Concat,
-		AccountIdOf<T>,
-		BalanceOf<T>,
-		// LockedBalance<BalanceOf<T>, BlockNumberFor<T>>,
-		ValueQuery,
-	>;
+	pub type UserLocked<T: Config> =
+		StorageMap<_, Blake2_128Concat, AccountIdOf<T>, BalanceOf<T>, ValueQuery>;
 
 	// Each week has a Point struct stored in PointHistory.
 	#[pallet::storage]
@@ -689,18 +683,14 @@ pub mod pallet {
 			Locked::<T>::insert(addr, _locked.clone());
 
 			let free_balance = T::MultiCurrency::free_balance(T::TokenType::get(), &who);
-			if value != BalanceOf::<T>::zero() && value <= free_balance {
+			if value != BalanceOf::<T>::zero() {
 				let new_locked_balance = UserLocked::<T>::get(who)
 					.checked_add(value)
-					.ok_or(ArithmeticError::Underflow)?;
-				T::MultiCurrency::set_lock(
-					VE_LOCK_ID,
-					T::TokenType::get(),
-					who,
-					new_locked_balance,
-				)?;
-				UserLocked::<T>::set(who, new_locked_balance);
+					.ok_or(ArithmeticError::Overflow)?;
+				ensure!(new_locked_balance <= free_balance, Error::<T>::NotEnoughBalance);
+				Self::set_ve_locked(who, new_locked_balance)?;
 			}
+
 			Self::markup_calc(
 				who,
 				addr,
@@ -1096,8 +1086,7 @@ pub mod pallet {
 			UserPointEpoch::<T>::remove(position);
 			let new_locked_balance =
 				UserLocked::<T>::get(who).checked_sub(value).ok_or(ArithmeticError::Underflow)?;
-			T::MultiCurrency::set_lock(VE_LOCK_ID, T::TokenType::get(), who, new_locked_balance)?;
-			UserLocked::<T>::set(who, new_locked_balance);
+			Self::set_ve_locked(who, new_locked_balance)?;
 			if let Some(fast) = if_fast {
 				if fast != Perbill::zero() {
 					T::MultiCurrency::transfer(
@@ -1130,12 +1119,32 @@ pub mod pallet {
 			Ok(Perbill::from_rational(commission.into_inner(), 1_000_000))
 		}
 
-		fn redeem_unlock_inner(who: &AccountIdOf<T>, position: u128) -> DispatchResult {
+		/// This function will check the lock and redeem it regardless of whether it has expired.
+		pub fn redeem_unlock_inner(who: &AccountIdOf<T>, position: u128) -> DispatchResult {
 			let mut _locked = Self::locked(position);
 			let current_block_number: BlockNumberFor<T> = frame_system::Pallet::<T>::block_number();
-			ensure!(_locked.end > current_block_number, Error::<T>::Expired);
+			ensure!(_locked.end > current_block_number, Error::<T>::ArgumentsError);
 			let fast = Self::redeem_commission(_locked.end - current_block_number)?;
 			Self::withdraw_no_ensure(who, position, _locked, Some(fast))
+		}
+
+		fn set_ve_locked(who: &AccountIdOf<T>, new_locked_balance: BalanceOf<T>) -> DispatchResult {
+			match new_locked_balance {
+				0 => {
+					// Can not set lock to zero, should remove it.
+					T::MultiCurrency::remove_lock(VE_LOCK_ID, T::TokenType::get(), who)?;
+				},
+				_ => {
+					T::MultiCurrency::set_lock(
+						VE_LOCK_ID,
+						T::TokenType::get(),
+						who,
+						new_locked_balance,
+					)?;
+				},
+			};
+			UserLocked::<T>::set(who, new_locked_balance);
+			Ok(())
 		}
 	}
 }
