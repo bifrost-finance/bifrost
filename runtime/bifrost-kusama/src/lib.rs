@@ -28,6 +28,7 @@ include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
 use bifrost_slp::{DerivativeAccountProvider, QueryResponseManager};
 use core::convert::TryInto;
+use pallet_traits::evm::InspectEvmAccounts;
 // A few exports that help ease life for downstream crates.
 pub use bifrost_parachain_staking::{InflationInfo, Range};
 pub use frame_support::{
@@ -49,7 +50,7 @@ pub use pallet_balances::Call as BalancesCall;
 pub use pallet_timestamp::Call as TimestampCall;
 use sp_api::impl_runtime_apis;
 use sp_arithmetic::Percent;
-use sp_core::{crypto::ByteArray, ConstBool, OpaqueMetadata, H160, H256, U256};
+use sp_core::{ConstBool, OpaqueMetadata, H160, H256, U256};
 use sp_runtime::{
 	create_runtime_str, generic, impl_opaque_keys,
 	traits::{
@@ -57,8 +58,8 @@ use sp_runtime::{
 		UniqueSaturatedInto, Zero,
 	},
 	transaction_validity::{TransactionSource, TransactionValidity},
-	ApplyExtrinsicResult, ConsensusEngineId, DispatchError, DispatchResult, Perbill, Permill,
-	RuntimeDebug, SaturatedConversion,
+	ApplyExtrinsicResult, DispatchError, DispatchResult, Perbill, Permill, RuntimeDebug,
+	SaturatedConversion,
 };
 use sp_std::{marker::PhantomData, prelude::*};
 #[cfg(feature = "std")]
@@ -67,12 +68,12 @@ use sp_version::RuntimeVersion;
 use static_assertions::const_assert;
 /// Constant values used within the runtime.
 pub mod constants;
+mod evm;
 mod migration;
 mod precompiles;
 pub mod weights;
 
 use bifrost_asset_registry::AssetIdMaps;
-use precompiles::FrontierPrecompiles;
 
 pub use bifrost_primitives::{
 	traits::{
@@ -97,8 +98,8 @@ use frame_support::{
 	traits::{
 		fungible::HoldConsideration,
 		tokens::{PayFromAccount, UnityAssetBalanceConversion},
-		Currency, EitherOf, EitherOfDiverse, FindAuthor, Get, Imbalance, LinearStoragePrice,
-		LockIdentifier, OnFinalize, OnUnbalanced,
+		Currency, EitherOf, EitherOfDiverse, Get, Imbalance, LinearStoragePrice, LockIdentifier,
+		OnFinalize, OnUnbalanced,
 	},
 };
 use frame_system::{EnsureRoot, EnsureRootWithSuccess, EnsureSigned};
@@ -142,9 +143,7 @@ use pallet_ethereum::{
 	Call::transact, PostLogContent, Transaction as EthereumTransaction, TransactionAction,
 	TransactionData,
 };
-use pallet_evm::{
-	Account as EVMAccount, EnsureAddressTruncated, FeeCalculator, HashedAddressMapping, Runner,
-};
+use pallet_evm::{Account as EVMAccount, EnsureAddressTruncated, FeeCalculator, Runner};
 use sp_runtime::transaction_validity::TransactionValidityError;
 // impl_opaque_keys! {
 // 	pub struct SessionKeys {
@@ -1171,20 +1170,6 @@ impl bifrost_vesting::Config for Runtime {
 
 impl pallet_evm_chain_id::Config for Runtime {}
 
-pub struct FindAuthorTruncated<F>(PhantomData<F>);
-impl<F: FindAuthor<u32>> FindAuthor<H160> for FindAuthorTruncated<F> {
-	fn find_author<'a, I>(digests: I) -> Option<H160>
-	where
-		I: 'a + IntoIterator<Item = (ConsensusEngineId, &'a [u8])>,
-	{
-		if let Some(author_index) = F::find_author(digests) {
-			let authority_id = Aura::authorities()[author_index as usize].clone();
-			return Some(H160::from_slice(&authority_id.to_raw_vec()[4..24]));
-		}
-		None
-	}
-}
-
 const BLOCK_GAS_LIMIT: u64 = 75_000_000;
 const MAX_POV_SIZE: u64 = 5 * 1024 * 1024;
 pub const WEIGHT_MILLISECS_PER_BLOCK: u64 = 2000;
@@ -1192,41 +1177,29 @@ pub const WEIGHT_MILLISECS_PER_BLOCK: u64 = 2000;
 parameter_types! {
 	pub BlockGasLimit: U256 = U256::from(BLOCK_GAS_LIMIT);
 	pub const GasLimitPovSizeRatio: u64 = BLOCK_GAS_LIMIT.saturating_div(MAX_POV_SIZE);
-	pub PrecompilesValue: FrontierPrecompiles<Runtime> = FrontierPrecompiles::<_>::new();
+	pub PrecompilesValue: evm::precompiles::BifrostPrecompiles<Runtime> = evm::precompiles::BifrostPrecompiles::<_>::new();
 	pub WeightPerGas: Weight = Weight::from_parts(weight_per_gas(BLOCK_GAS_LIMIT, NORMAL_DISPATCH_RATIO, WEIGHT_MILLISECS_PER_BLOCK), 0);
 	pub SuicideQuickClearLimit: u32 = 0;
 }
 
-// pub struct ExtendedAddressMapping;
-//
-// impl AddressMapping<AccountId> for ExtendedAddressMapping {
-// 	fn into_account_id(address: H160) -> AccountId {
-// 		// EVMAccounts::account_id(address)
-// 		AccountId::from_ss58check("F7fq1jMmNj5j2jAHcBxgM26JzUn2N4duXu1U4UZNdkfZEPV").unwrap()
-// 	}
-// }
-
 impl pallet_evm::Config for Runtime {
-	type FeeCalculator = BaseFee;
+	type FeeCalculator = DynamicFee;
 	type GasWeightMapping = pallet_evm::FixedGasWeightMapping<Self>;
 	type WeightPerGas = WeightPerGas;
 	type BlockHashMapping = pallet_ethereum::EthereumBlockHashMapping<Self>;
 	type CallOrigin = EnsureAddressTruncated;
 	type WithdrawOrigin = EnsureAddressTruncated;
-	type AddressMapping = HashedAddressMapping<BlakeTwo256>;
-	// type CallOrigin = EnsureAccountId20;
-	// type WithdrawOrigin = EnsureAccountId20;
-	// type AddressMapping = IdentityAddressMapping;
+	type AddressMapping = evm::ExtendedAddressMapping;
 	type Currency = Balances;
 	type RuntimeEvent = RuntimeEvent;
-	type PrecompilesType = FrontierPrecompiles<Self>;
+	type PrecompilesType = evm::precompiles::BifrostPrecompiles<Self>;
 	type PrecompilesValue = PrecompilesValue;
 	type ChainId = EVMChainId;
 	type BlockGasLimit = BlockGasLimit;
 	type Runner = pallet_evm::runner::stack::Runner<Self>;
 	type OnChargeTransaction = ();
 	type OnCreate = ();
-	type FindAuthor = FindAuthorTruncated<Aura>;
+	type FindAuthor = evm::FindAuthorTruncated<Aura>;
 	type GasLimitPovSizeRatio = GasLimitPovSizeRatio;
 	type SuicideQuickClearLimit = SuicideQuickClearLimit;
 	type Timestamp = Timestamp;
@@ -1244,6 +1217,21 @@ impl pallet_ethereum::Config for Runtime {
 	type ExtraDataLength = ConstU32<30>;
 }
 
+pub struct EvmNonceProvider;
+impl pallet_evm_accounts::EvmNonceProvider for EvmNonceProvider {
+	fn get_nonce(evm_address: sp_core::H160) -> U256 {
+		EVM::account_basic(&evm_address).0.nonce
+	}
+}
+
+impl pallet_evm_accounts::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type FeeMultiplier = ConstU32<50>;
+	type EvmNonceProvider = EvmNonceProvider;
+	type ControllerOrigin = TechAdminOrCouncil;
+	type WeightInfo = ();
+}
+
 parameter_types! {
 	pub BoundDivision: U256 = U256::from(1024);
 }
@@ -1255,26 +1243,6 @@ impl pallet_dynamic_fee::Config for Runtime {
 parameter_types! {
 	pub DefaultBaseFeePerGas: U256 = U256::from(1_000_000_000);
 	pub DefaultElasticity: Permill = Permill::from_parts(125_000);
-}
-
-pub struct BaseFeeThreshold;
-impl pallet_base_fee::BaseFeeThreshold for BaseFeeThreshold {
-	fn lower() -> Permill {
-		Permill::zero()
-	}
-	fn ideal() -> Permill {
-		Permill::from_parts(500_000)
-	}
-	fn upper() -> Permill {
-		Permill::from_parts(1_000_000)
-	}
-}
-
-impl pallet_base_fee::Config for Runtime {
-	type RuntimeEvent = RuntimeEvent;
-	type Threshold = BaseFeeThreshold;
-	type DefaultBaseFeePerGas = DefaultBaseFeePerGas;
-	type DefaultElasticity = DefaultElasticity;
 }
 
 // Bifrost modules start
@@ -2133,9 +2101,7 @@ construct_runtime! {
 		EVM: pallet_evm = 66,
 		EVMChainId: pallet_evm_chain_id = 67,
 		DynamicFee: pallet_dynamic_fee = 68,
-		BaseFee: pallet_base_fee = 69,
-		// EVMAccounts: pallet_evm_accounts = 68,
-		// DynamicEvmFee: pallet_dynamic_evm_fee = 69,
+		EVMAccounts: pallet_evm_accounts = 69,
 
 		// Third party modules
 		XTokens: orml_xtokens = 70,
@@ -2453,13 +2419,11 @@ impl_runtime_apis! {
 			estimate: bool,
 			access_list: Option<Vec<(H160, Vec<H256>)>>,
 		) -> Result<pallet_evm::CallInfo, sp_runtime::DispatchError> {
-			let config = if estimate {
-				let mut config = <Runtime as pallet_evm::Config>::config().clone();
-				config.estimate = true;
-				Some(config)
-			} else {
-				None
-			};
+			let mut config = <Runtime as pallet_evm::Config>::config().clone();
+			config.estimate = estimate;
+
+			let is_transactional = false;
+			let validate = true;
 
 			let gas_limit = gas_limit.min(u64::MAX.into());
 			let transaction_data = TransactionData::new(
@@ -2476,6 +2440,11 @@ impl_runtime_apis! {
 			);
 			let (weight_limit, proof_size_base_cost) = pallet_ethereum::Pallet::<Runtime>::transaction_weight(&transaction_data);
 
+			// don't allow calling EVM RPC or Runtime API from a bound address
+			if EVMAccounts::bound_account_id(from).is_some() {
+				return Err(pallet_evm_accounts::Error::<Runtime>::BoundAddressCannotBeUsed.into())
+			};
+
 			<Runtime as pallet_evm::Config>::Runner::call(
 				from,
 				to,
@@ -2486,11 +2455,11 @@ impl_runtime_apis! {
 				max_priority_fee_per_gas,
 				nonce,
 				access_list.unwrap_or_default(),
-				false,
-				true,
+				is_transactional,
+				validate,
 				weight_limit,
 				proof_size_base_cost,
-				config.as_ref().unwrap_or(<Runtime as pallet_evm::Config>::config()),
+				&config,
 			).map_err(|err| err.error.into())
 		}
 
@@ -2505,13 +2474,11 @@ impl_runtime_apis! {
 			estimate: bool,
 			access_list: Option<Vec<(H160, Vec<H256>)>>,
 		) -> Result<pallet_evm::CreateInfo, sp_runtime::DispatchError> {
-			let config = if estimate {
-				let mut config = <Runtime as pallet_evm::Config>::config().clone();
-				config.estimate = true;
-				Some(config)
-			} else {
-				None
-			};
+			let mut config = <Runtime as pallet_evm::Config>::config().clone();
+			config.estimate = estimate;
+
+			let is_transactional = false;
+			let validate = true;
 
 			let transaction_data = TransactionData::new(
 				TransactionAction::Create,
@@ -2536,11 +2503,11 @@ impl_runtime_apis! {
 				max_priority_fee_per_gas,
 				nonce,
 				access_list.unwrap_or_default(),
-				false,
-				true,
+				is_transactional,
+				validate,
 				weight_limit,
 				proof_size_base_cost,
-				config.as_ref().unwrap_or(<Runtime as pallet_evm::Config>::config()),
+				&config,
 			).map_err(|err| err.error.into())
 		}
 
@@ -2578,7 +2545,7 @@ impl_runtime_apis! {
 		}
 
 		fn elasticity() -> Option<Permill> {
-			Some(pallet_base_fee::Elasticity::<Runtime>::get())
+			None
 		}
 
 		fn gas_limit_multiplier_support() {}
@@ -2604,6 +2571,18 @@ impl_runtime_apis! {
 			UncheckedExtrinsic::new_unsigned(
 				pallet_ethereum::Call::<Runtime>::transact { transaction }.into(),
 			)
+		}
+	}
+
+	impl pallet_evm_accounts_rpc_runtime_api::EvmAccountsApi<Block, AccountId, H160> for Runtime {
+		fn evm_address(account_id: AccountId) -> H160 {
+			EVMAccounts::evm_address(&account_id)
+		}
+		fn bound_account_id(evm_address: H160) -> Option<AccountId> {
+			EVMAccounts::bound_account_id(evm_address)
+		}
+		fn account_id(evm_address: H160) -> AccountId {
+			EVMAccounts::account_id(evm_address)
 		}
 	}
 

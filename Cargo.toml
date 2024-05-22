@@ -12,6 +12,7 @@ members = [
     "pallets/asset-registry",
     "pallets/currencies",
     "pallets/flexible-fee",
+    "pallets/evm-accounts",
     "pallets/farming",
     "pallets/salp",
     "pallets/token-issuer",
@@ -35,6 +36,7 @@ members = [
     "pallets/leverage-staking",
     "pallets/channel-commission",
     "runtime/bifrost-kusama",
+    "runtime/bifrost-kusama/src/evm/evm-utility/macro",
     "runtime/bifrost-polkadot",
 ]
 resolver = "2"
@@ -285,10 +287,12 @@ hex-literal = { version = "0.4.1" }
 impl-trait-for-tuples = { version = "0.2.2" }
 jsonrpsee = { version = "0.16.3" }
 log = { version = "0.4.21", default-features = false }
+num_enum = { version = "0.5.1", default-features = false }
 num-bigint = { version = "0.4.3", default-features = false }
 num-traits = { version = "0.2.18", default-features = false }
 parity-scale-codec = { version = "3.6.5", default-features = false }
 paste = { version = "1.0.14" }
+primitive-types = { version = "0.12.0", default-features = false }
 scale-info = { version = "2.11.0", default-features = false }
 serde = { version = "1.0.193", default-features = false }
 serde_json = { version = "1.0.109", default-features = false }
@@ -327,8 +331,13 @@ pallet-evm-precompile-modexp = { git = "https://github.com/polkadot-evm/frontier
 pallet-evm-precompile-bn128 = { git = "https://github.com/polkadot-evm/frontier", branch = "polkadot-v1.3.0", default-features = false }
 pallet-evm-precompile-blake2 = { git = "https://github.com/polkadot-evm/frontier", branch = "polkadot-v1.3.0", default-features = false }
 pallet-evm-precompile-sha3fips = { git = "https://github.com/polkadot-evm/frontier", branch = "polkadot-v1.3.0", default-features = false }
+pallet-evm-accounts = { path = "pallets/evm-accounts" }
+pallet-evm-accounts-rpc-runtime-api = { path = "pallets/evm-accounts/rpc/runtime-api" }
 
 evm = { version = "0.41.1", default-features = false }
+
+# EVM from acala
+module-evm-utility-macro = { path = "runtime/bifrost-kusama/src/evm/evm-utility/macro", default-features = false }
 
 # Integration-tests
 beefy-primitives = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.3.0", package = "sp-consensus-beefy" }

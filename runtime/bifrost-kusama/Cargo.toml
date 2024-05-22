@@ -10,6 +10,8 @@ build = "build.rs"
 parity-scale-codec = { workspace = true, features = ["derive", "max-encoded-len"] }
 hex-literal = { workspace = true }
 log = { workspace = true }
+num_enum = { workspace = true }
+primitive-types = { workspace = true }
 scale-info = { workspace = true, features = ["derive"] }
 smallvec = { workspace = true }
 static_assertions = { workspace = true }
@@ -17,6 +19,8 @@ strum = { workspace = true, features = ["derive"] }
 strum_macros = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
+ethabi = { version = "18.0.0", default-features = false }
+module-evm-utility-macro = { workspace = true }
 
 # frame dependencies
 frame-benchmarking = { workspace = true, optional = true }
@@ -119,9 +123,15 @@ pallet-dynamic-fee = { workspace = true }
 pallet-ethereum = { workspace = true }
 pallet-evm = { workspace = true }
 pallet-evm-chain-id = { workspace = true }
+pallet-evm-precompile-dispatch = { workspace = true }
 pallet-evm-precompile-modexp = { workspace = true }
 pallet-evm-precompile-sha3fips = { workspace = true }
 pallet-evm-precompile-simple = { workspace = true }
+pallet-evm-precompile-bn128 = { workspace = true }
+pallet-evm-precompile-blake2 = { workspace = true }
+pallet-evm-accounts = { workspace = true }
+pallet-evm-accounts-rpc-runtime-api = { workspace = true }
+pallet-traits = { workspace = true }
 
 # Bifrost
 bifrost-asset-registry = { workspace = true }
@@ -199,6 +209,7 @@ std = [
     "pallet-treasury/std",
     "pallet-utility/std",
     "pallet-whitelist/std",
+    "pallet-traits/std",
     "sp-api/std",
     "sp-arithmetic/std",
     "sp-block-builder/std",
@@ -286,6 +297,7 @@ std = [
     "pallet-ethereum/std",
     "pallet-evm/std",
     "pallet-evm-chain-id/std",
+    "pallet-evm-precompile-dispatch/std",
     "pallet-evm-precompile-modexp/std",
     "pallet-evm-precompile-sha3fips/std",
     "pallet-evm-precompile-simple/std",
