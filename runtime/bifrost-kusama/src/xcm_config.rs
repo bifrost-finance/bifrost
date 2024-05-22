@@ -651,6 +651,28 @@ impl Contains<RuntimeCall> for SafeCallFilter {
 	}
 }
 
+/// Matches foreign assets from a given origin.
+/// Foreign assets are assets bridged from other consensus systems. i.e parents > 1.
+pub struct IsForeignNativeAssetFrom<Origin>(PhantomData<Origin>);
+impl<Origin> ContainsPair<MultiAsset, MultiLocation> for IsForeignNativeAssetFrom<Origin>
+where
+	Origin: Get<MultiLocation>,
+{
+	fn contains(asset: &MultiAsset, origin: &MultiLocation) -> bool {
+		let loc = Origin::get();
+		&loc == origin &&
+			matches!(
+				asset,
+				MultiAsset { id: Concrete(MultiLocation { parents: 2, .. }), fun: Fungible(_) },
+			)
+	}
+}
+
+parameter_types! {
+  /// Location of Asset Hub
+  pub AssetHubLocation: MultiLocation = (Parent, Parachain(1000)).into();
+}
+
 pub struct XcmConfig;
 impl xcm_executor::Config for XcmConfig {
 	type AssetClaims = PolkadotXcm;
@@ -658,7 +680,8 @@ impl xcm_executor::Config for XcmConfig {
 	type AssetTrap = BifrostDropAssets<ToTreasury>;
 	type Barrier = Barrier;
 	type RuntimeCall = RuntimeCall;
-	type IsReserve = MultiNativeAsset<RelativeReserveProvider>;
+	type IsReserve =
+		(IsForeignNativeAssetFrom<AssetHubLocation>, MultiNativeAsset<RelativeReserveProvider>);
 	type IsTeleporter = ();
 	type UniversalLocation = UniversalLocation;
 	type OriginConverter = XcmOriginToTransactDispatchOrigin;
