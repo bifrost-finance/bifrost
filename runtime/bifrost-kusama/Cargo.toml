@@ -301,6 +301,10 @@ std = [
     "pallet-evm-precompile-modexp/std",
     "pallet-evm-precompile-sha3fips/std",
     "pallet-evm-precompile-simple/std",
+    "pallet-evm-precompile-bn128/std",
+    "pallet-evm-precompile-blake2/std",
+    "pallet-evm-accounts/std",
+    "pallet-evm-accounts-rpc-runtime-api/std",
 ]
 with-tracing = ["frame-executive/with-tracing"]
 

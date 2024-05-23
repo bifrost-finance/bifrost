@@ -331,8 +331,8 @@ pallet-evm-precompile-modexp = { git = "https://github.com/polkadot-evm/frontier
 pallet-evm-precompile-bn128 = { git = "https://github.com/polkadot-evm/frontier", branch = "polkadot-v1.3.0", default-features = false }
 pallet-evm-precompile-blake2 = { git = "https://github.com/polkadot-evm/frontier", branch = "polkadot-v1.3.0", default-features = false }
 pallet-evm-precompile-sha3fips = { git = "https://github.com/polkadot-evm/frontier", branch = "polkadot-v1.3.0", default-features = false }
-pallet-evm-accounts = { path = "pallets/evm-accounts" }
-pallet-evm-accounts-rpc-runtime-api = { path = "pallets/evm-accounts/rpc/runtime-api" }
+pallet-evm-accounts = { path = "pallets/evm-accounts", default-features = false }
+pallet-evm-accounts-rpc-runtime-api = { path = "pallets/evm-accounts/rpc/runtime-api", default-features = false }
 
 evm = { version = "0.41.1", default-features = false }
 
