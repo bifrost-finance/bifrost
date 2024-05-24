@@ -54,7 +54,7 @@ fn create_lock_should_work() {
 fn increase_unlock_time_should_work() {
 	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
 		asset_registry();
-		System::set_block_number(System::block_number() + 20);
+		System::set_block_number(System::block_number() + 7 * 86400 / 12);
 
 		assert_ok!(VeMinting::set_config(RuntimeOrigin::root(), Some(0), Some(7 * 86400 / 12)));
 		assert_ok!(VeMinting::create_lock_inner(
@@ -62,17 +62,27 @@ fn increase_unlock_time_should_work() {
 			10_000_000_000_000,
 			System::block_number() + (3 * 365 * 86400 - 5 * 86400) / 12,
 		));
+		assert_eq!(Locked::<Runtime>::get(POSITIONID0).end, 7963200);
+		assert_noop!(
+			VeMinting::increase_unlock_time(
+				RuntimeOrigin::signed(BOB),
+				POSITIONID0,
+				System::block_number() + 365 * 86400 / 12
+			),
+			Error::<Runtime>::ArgumentsError
+		);
 		assert_ok!(VeMinting::increase_unlock_time(
 			RuntimeOrigin::signed(BOB),
 			POSITIONID0,
-			System::block_number() + (365 * 86400 - 5 * 86400) / 12
+			(365 * 86400 - 5 * 86400) / 12
 		),);
 		assert_eq!(
 			UserPointHistory::<Runtime>::get(POSITIONID0, U256::from(1)),
-			Point { bias: 7479427057340, slope: 951293, block: 20, amount: 10000000000000 }
+			Point { bias: 7527391250400, slope: 951293, block: 50400, amount: 10000000000000 }
 		);
-		assert_eq!(VeMinting::balance_of(&BOB, Some(System::block_number())), Ok(9972575751740));
-		assert_eq!(VeMinting::total_supply(System::block_number()), Ok(9972575751740));
+		assert_eq!(Locked::<Runtime>::get(POSITIONID0).end, 10584000);
+		assert_eq!(VeMinting::balance_of(&BOB, Some(System::block_number())), Ok(10020539944800));
+		assert_eq!(VeMinting::total_supply(System::block_number()), Ok(10020539944800));
 	});
 }
 
