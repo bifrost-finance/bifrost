@@ -133,7 +133,6 @@ impl<T: Config> VeMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>
 
 		let unlock_time: BlockNumberFor<T> = _unlock_time
 			.saturating_add(_locked.end)
-			.saturating_add(current_block_number)
 			.checked_div(&T::Week::get())
 			.ok_or(ArithmeticError::Overflow)?
 			.saturating_add(1u32.into())
@@ -145,7 +144,6 @@ impl<T: Config> VeMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>
 			Error::<T>::ArgumentsError
 		);
 		let max_block = T::MaxBlock::get()
-			.saturating_add(_locked.end)
 			.saturating_add(current_block_number)
 			.checked_div(&T::Week::get())
 			.ok_or(ArithmeticError::Overflow)?
