@@ -19,6 +19,24 @@
 // Ensure we're `no_std` when compiling for Wasm.
 
 use frame_support::pallet_prelude::Weight;
+use parity_scale_codec::{Decode, Encode};
+use sp_core::H160;
+
+#[derive(PartialEq, Eq, Clone, Encode, Decode, scale_info::TypeInfo)]
+pub enum RedeemTo<AccountId> {
+	/// Native chain.
+	Native(AccountId),
+	/// Astar chain.
+	Astar(AccountId),
+	/// Moonbeam chain.
+	Moonbeam(H160),
+	/// Hydradx chain.
+	Hydradx(AccountId),
+	/// Interlay chain.
+	Interlay(AccountId),
+	/// Manta chain.
+	Manta(AccountId),
+}
 
 pub trait OnRedeemSuccess<AccountId, CurrencyId, Balance> {
 	fn on_redeem_success(
