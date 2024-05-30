@@ -40,7 +40,7 @@ use frame_support::{
 			AccountIdConversion, CheckedAdd, CheckedDiv, CheckedMul, CheckedSub, Convert,
 			Saturating, UniqueSaturatedInto, Zero,
 		},
-		ArithmeticError, DispatchError, FixedPointNumber, FixedU128, Perbill, SaturatedConversion,
+		ArithmeticError, DispatchError, FixedPointNumber, FixedU128, SaturatedConversion,
 	},
 	PalletId,
 };
@@ -840,13 +840,15 @@ pub mod pallet {
 			user_markup_info: Option<&UserMarkupInfo>,
 		) -> DispatchResult {
 			if let Some(info) = user_markup_info {
-				old_locked.amount = FixedU128::from_inner(old_locked.amount)
-					.checked_mul(&info.old_markup_coefficient)
-					.and_then(|x| x.into_inner().checked_add(old_locked.amount))
+				old_locked.amount = info
+					.old_markup_coefficient
+					.checked_mul_int(old_locked.amount)
+					.and_then(|x| x.checked_add(old_locked.amount))
 					.ok_or(ArithmeticError::Overflow)?;
-				new_locked.amount = FixedU128::from_inner(new_locked.amount)
-					.checked_mul(&info.markup_coefficient)
-					.and_then(|x| x.into_inner().checked_add(new_locked.amount))
+				new_locked.amount = info
+					.markup_coefficient
+					.checked_mul_int(new_locked.amount)
+					.and_then(|x| x.checked_add(new_locked.amount))
 					.ok_or(ArithmeticError::Overflow)?;
 			}
 
@@ -1071,7 +1073,7 @@ pub mod pallet {
 			who: &AccountIdOf<T>,
 			position: u128,
 			mut _locked: LockedBalance<BalanceOf<T>, BlockNumberFor<T>>,
-			if_fast: Option<Perbill>,
+			if_fast: Option<FixedU128>,
 		) -> DispatchResult {
 			let value = _locked.amount;
 			let old_locked: LockedBalance<BalanceOf<T>, BlockNumberFor<T>> = _locked.clone();
@@ -1091,12 +1093,12 @@ pub mod pallet {
 				UserLocked::<T>::get(who).checked_sub(value).ok_or(ArithmeticError::Underflow)?;
 			Self::set_ve_locked(who, new_locked_balance)?;
 			if let Some(fast) = if_fast {
-				if fast != Perbill::zero() {
+				if fast != FixedU128::zero() {
 					T::MultiCurrency::transfer(
 						T::TokenType::get(),
 						who,
 						&T::VeMintingPalletId::get().into_account_truncating(),
-						fast * value,
+						fast.checked_mul_int(value).ok_or(ArithmeticError::Overflow)?,
 					)?;
 				}
 			}
@@ -1113,20 +1115,27 @@ pub mod pallet {
 
 		fn redeem_commission(
 			remaining_blocks: BlockNumberFor<T>,
-		) -> Result<Perbill, DispatchError> {
-			let commission = FixedU128::from_inner(remaining_blocks.saturated_into::<u128>())
-				.checked_add(&FixedU128::from_inner(2_628_000))
-				.and_then(|x| x.checked_div(&FixedU128::from_inner(10_512_000)))
+		) -> Result<FixedU128, ArithmeticError> {
+			FixedU128::checked_from_integer(remaining_blocks.saturated_into::<u128>())
+				.and_then(|x| {
+					x.checked_add(&FixedU128::checked_from_integer(
+						T::Week::get().saturated_into::<u128>().checked_mul(52)?,
+					)?)
+				}) // one years
+				.and_then(|x| {
+					x.checked_div(&FixedU128::checked_from_integer(
+						T::Week::get().saturated_into::<u128>().checked_mul(208)?,
+					)?)
+				}) // four years
 				.and_then(|x| Some(x.saturating_pow(2)))
-				.ok_or(ArithmeticError::Overflow)?;
-			Ok(Perbill::from_rational(commission.into_inner(), 1_000_000))
+				.ok_or(ArithmeticError::Overflow)
 		}
 
 		/// This function will check the lock and redeem it regardless of whether it has expired.
 		pub fn redeem_unlock_inner(who: &AccountIdOf<T>, position: u128) -> DispatchResult {
 			let mut _locked = Self::locked(position);
 			let current_block_number: BlockNumberFor<T> = frame_system::Pallet::<T>::block_number();
-			ensure!(_locked.end > current_block_number, Error::<T>::ArgumentsError);
+			ensure!(_locked.end > current_block_number, Error::<T>::Expired);
 			let fast = Self::redeem_commission(_locked.end - current_block_number)?;
 			Self::withdraw_no_ensure(who, position, _locked, Some(fast))
 		}

@@ -449,7 +449,7 @@ fn redeem_unlock_should_work() {
 		assert_ok!(VeMinting::set_markup_coefficient(
 			RuntimeOrigin::root(),
 			VKSM,
-			FixedU128::from_inner(100_000_000_000_000_000), // 0.1
+			FixedU128::from_inner(FixedU128::DIV / 10), // 0.1
 			FixedU128::saturating_from_integer(1),
 		));
 		assert_ok!(VeMinting::deposit_markup(RuntimeOrigin::signed(BOB), VKSM, 10_000_000_000_000));
@@ -467,12 +467,50 @@ fn redeem_unlock_should_work() {
 		);
 		assert_eq!(Locked::<Runtime>::get(POSITIONID0).amount, 10_000_000_000_000);
 		assert_eq!(VeMinting::balance_of(&BOB, Some(System::block_number())), Ok(5082152342660));
-		assert_eq!(Tokens::free_balance(VBNC, &BOB), 1000000000000000);
-		assert_eq!(Tokens::ensure_can_withdraw(VBNC, &BOB, 1000000000000000).is_ok(), false);
+		assert_eq!(Tokens::free_balance(VBNC, &BOB), 1_000_000_000_000_000);
+		assert_eq!(Tokens::ensure_can_withdraw(VBNC, &BOB, 1_000_000_000_000_000).is_ok(), false);
 		assert_ok!(VeMinting::redeem_unlock(RuntimeOrigin::signed(BOB), 0));
 		assert_eq!(VeMinting::balance_of(&BOB, Some(System::block_number())), Ok(0));
-		assert_eq!(Tokens::free_balance(VBNC, &BOB), 990000000000000);
-		assert_eq!(Tokens::ensure_can_withdraw(VBNC, &BOB, 990000000000000).is_ok(), true);
+		assert_eq!(Tokens::free_balance(VBNC, &BOB), 997451711199422);
+		assert_eq!(Tokens::ensure_can_withdraw(VBNC, &BOB, 997451711199422).is_ok(), true);
+	});
+}
+
+#[test]
+fn redeem_unlock_after_360_days_should_work() {
+	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
+		asset_registry();
+		System::set_block_number(System::block_number() + 20);
+
+		assert_ok!(VeMinting::set_config(RuntimeOrigin::root(), Some(0), Some(7 * 86400 / 12)));
+		assert_ok!(VeMinting::set_markup_coefficient(
+			RuntimeOrigin::root(),
+			VKSM,
+			FixedU128::from_inner(FixedU128::DIV / 10), // 0.1
+			FixedU128::saturating_from_integer(1),
+		));
+		assert_ok!(VeMinting::deposit_markup(RuntimeOrigin::signed(BOB), VKSM, 10_000_000_000_000));
+		assert_eq!(VeMinting::balance_of(&BOB, Some(System::block_number())), Ok(0));
+		assert_eq!(Tokens::free_balance(VBNC, &BOB), 1000000000000000);
+		assert_eq!(Tokens::ensure_can_withdraw(VBNC, &BOB, 1000000000000000).is_ok(), true);
+		assert_ok!(VeMinting::create_lock_inner(
+			&BOB,
+			10_000_000_000_000,
+			System::block_number() + 365 * 86400 / 12,
+		));
+		assert_eq!(
+			UserPointHistory::<Runtime>::get(POSITIONID0, U256::one()),
+			Point { bias: 5082152342660, slope: 1902587, block: 20, amount: 20000000000000 }
+		);
+		assert_eq!(Locked::<Runtime>::get(POSITIONID0).amount, 10_000_000_000_000);
+		assert_eq!(VeMinting::balance_of(&BOB, Some(System::block_number())), Ok(5082152342660));
+		assert_eq!(Tokens::free_balance(VBNC, &BOB), 1_000_000_000_000_000);
+		assert_eq!(Tokens::ensure_can_withdraw(VBNC, &BOB, 1_000_000_000_000_000).is_ok(), false);
+		System::set_block_number(System::block_number() + 360 * 86400 / 12);
+		assert_ok!(VeMinting::redeem_unlock(RuntimeOrigin::signed(BOB), 0));
+		assert_eq!(VeMinting::balance_of(&BOB, Some(System::block_number())), Ok(0));
+		assert_eq!(Tokens::free_balance(VBNC, &BOB), 999336664330082);
+		assert_eq!(Tokens::ensure_can_withdraw(VBNC, &BOB, 999336664330082).is_ok(), true);
 	});
 }
 
