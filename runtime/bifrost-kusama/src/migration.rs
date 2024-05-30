@@ -240,7 +240,7 @@ pub mod slpx_migrates_whitelist {
 	impl OnRuntimeUpgrade for UpdateWhitelist {
 		fn on_runtime_upgrade() -> Weight {
 			let new_whitelist: BoundedVec<AccountId, ConstU32<10>> =
-				vec![AccountId::from_ss58check("eVjSno5E5Teibbu3zdaZbBKhsFWU4QjpQXif2YiZ1jFbmEB")
+				vec![AccountId::from_ss58check("gtXJWw9ME9w7cXfmR6n9MFkKCSu2MrtA3dcFV2BhHpEZFjZ")
 					.unwrap()]
 				.try_into()
 				.unwrap();
@@ -257,7 +257,7 @@ pub mod slpx_migrates_whitelist {
 			let whitelist =
 				bifrost_slpx::WhitelistAccountId::<Runtime>::get(SupportChain::Moonbeam);
 			let new_whitelist: BoundedVec<AccountId, ConstU32<10>> =
-				vec![AccountId::from_ss58check("eVjSno5E5Teibbu3zdaZbBKhsFWU4QjpQXif2YiZ1jFbmEB")
+				vec![AccountId::from_ss58check("gtXJWw9ME9w7cXfmR6n9MFkKCSu2MrtA3dcFV2BhHpEZFjZ")
 					.unwrap()]
 				.try_into()
 				.unwrap();
