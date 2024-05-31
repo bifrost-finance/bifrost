@@ -1483,7 +1483,7 @@ impl bifrost_vtoken_minting::Config for Runtime {
 
 parameter_types! {
 	pub const VeMintingTokenType: CurrencyId = CurrencyId::VToken(TokenSymbol::BNC);
-	pub const Week: BlockNumber = 10;
+	pub const Week: BlockNumber = prod_or_fast!(WEEKS, 10);;
 	pub const MaxBlock: BlockNumber = 4 * 365 * DAYS;
 	pub const Multiplier: Balance = 10_u128.pow(12);
 	pub const VoteWeightMultiplier: Balance = 1;
