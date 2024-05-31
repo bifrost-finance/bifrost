@@ -240,9 +240,9 @@ pub mod slpx_migrates_whitelist {
 	impl OnRuntimeUpgrade for UpdateWhitelist {
 		fn on_runtime_upgrade() -> Weight {
 			let new_whitelist: BoundedVec<AccountId, ConstU32<10>> = vec![
-				AccountId::from_ss58check("dCCU6pkmwQEb29MSigvWjhvnWTtE3GaBqaAdxt4ppW7kUkw")
+				AccountId::from_ss58check("gWEvf2EDMzxR7JHyrEHXf3nqxKLGvHaFbk7HUkJnNPUxDts")
 					.unwrap(),
-				AccountId::from_ss58check("fV6ngGNKkM1BUymusAMcZECxNu3fqhSnS4Jhz2RBk4NtZrw")
+				AccountId::from_ss58check("bpRBE4rWcBJqqN2ESts5LefuvLonBeZ4r2YBpfuuxvMxoea")
 					.unwrap(),
 			]
 			.try_into()
@@ -253,9 +253,9 @@ pub mod slpx_migrates_whitelist {
 			);
 
 			let new_whitelist: BoundedVec<AccountId, ConstU32<10>> = vec![
-				AccountId::from_ss58check("fErAtK3KrBPZyAtd26DMQAmuAvo8YswQQBhexibCcqh3D1c")
+				AccountId::from_ss58check("g96o4GVpsAop1MJiArnmUYtXUjEisfkbfcpsuqmXrS28MEr")
 					.unwrap(),
-				AccountId::from_ss58check("cG6stm2jXgbreRNGxZEvaUn3jT17fxdFXUa6mwE4bSL1v1L")
+				AccountId::from_ss58check("dZWAvaUWbPN1oKbWMkeDWHBceX8RqP4CMwmi1trq9uf5pBn")
 					.unwrap(),
 			]
 			.try_into()
@@ -270,9 +270,9 @@ pub mod slpx_migrates_whitelist {
 			let whitelist =
 				bifrost_slpx::WhitelistAccountId::<Runtime>::get(SupportChain::Moonbeam);
 			let new_whitelist: BoundedVec<AccountId, ConstU32<10>> = vec![
-				AccountId::from_ss58check("dCCU6pkmwQEb29MSigvWjhvnWTtE3GaBqaAdxt4ppW7kUkw")
+				AccountId::from_ss58check("gWEvf2EDMzxR7JHyrEHXf3nqxKLGvHaFbk7HUkJnNPUxDts")
 					.unwrap(),
-				AccountId::from_ss58check("fV6ngGNKkM1BUymusAMcZECxNu3fqhSnS4Jhz2RBk4NtZrw")
+				AccountId::from_ss58check("bpRBE4rWcBJqqN2ESts5LefuvLonBeZ4r2YBpfuuxvMxoea")
 					.unwrap(),
 			]
 			.try_into()
@@ -281,9 +281,9 @@ pub mod slpx_migrates_whitelist {
 
 			let whitelist = bifrost_slpx::WhitelistAccountId::<Runtime>::get(SupportChain::Astar);
 			let new_whitelist: BoundedVec<AccountId, ConstU32<10>> = vec![
-				AccountId::from_ss58check("fErAtK3KrBPZyAtd26DMQAmuAvo8YswQQBhexibCcqh3D1c")
+				AccountId::from_ss58check("g96o4GVpsAop1MJiArnmUYtXUjEisfkbfcpsuqmXrS28MEr")
 					.unwrap(),
-				AccountId::from_ss58check("cG6stm2jXgbreRNGxZEvaUn3jT17fxdFXUa6mwE4bSL1v1L")
+				AccountId::from_ss58check("dZWAvaUWbPN1oKbWMkeDWHBceX8RqP4CMwmi1trq9uf5pBn")
 					.unwrap(),
 			]
 			.try_into()
