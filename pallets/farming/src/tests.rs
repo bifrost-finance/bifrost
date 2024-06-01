@@ -303,7 +303,7 @@ fn init_gauge() -> (PoolId, BalanceOf<Runtime>) {
 	assert_ok!(VeMinting::create_lock_inner(
 		&ALICE,
 		100_000_000_000,
-		System::block_number() + 4 * 365 * 86400 / 12
+		System::block_number() + (4 * 365 * 86400 - 7 * 86400) / 12
 	));
 	(pid, tokens)
 }

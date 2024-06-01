@@ -743,7 +743,7 @@ dependencies = [
 
 [[package]]
 name = "bifrost-cli"
-version = "0.9.98"
+version = "0.10.0"
 dependencies = [
  "bifrost-primitives",
  "bifrost-service",
@@ -1088,6 +1088,7 @@ dependencies = [
  "sp-block-builder",
  "sp-consensus-aura",
  "sp-core",
+ "sp-genesis-builder",
  "sp-inherents",
  "sp-io",
  "sp-offchain",
@@ -1240,6 +1241,7 @@ dependencies = [
  "sp-block-builder",
  "sp-consensus-aura",
  "sp-core",
+ "sp-genesis-builder",
  "sp-inherents",
  "sp-io",
  "sp-offchain",

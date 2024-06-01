@@ -441,16 +441,6 @@ impl Contains<RuntimeCall> for SafeCallFilter {
 				pallet_identity::Call::quit_sub { .. },
 			) |
 			RuntimeCall::Vesting(..) |
-			RuntimeCall::Bounties(
-				pallet_bounties::Call::propose_bounty { .. } |
-				pallet_bounties::Call::approve_bounty { .. } |
-				pallet_bounties::Call::propose_curator { .. } |
-				pallet_bounties::Call::unassign_curator { .. } |
-				pallet_bounties::Call::accept_curator { .. } |
-				pallet_bounties::Call::award_bounty { .. } |
-				pallet_bounties::Call::claim_bounty { .. } |
-				pallet_bounties::Call::close_bounty { .. },
-			) |
 			RuntimeCall::PolkadotXcm(pallet_xcm::Call::limited_reserve_transfer_assets { .. }) |
 			RuntimeCall::Proxy(..) |
 			RuntimeCall::Tokens(
@@ -808,7 +798,7 @@ mod tests {
 	#[test]
 	fn test_location_to_account() {
 		let moonbeam_slpx_origin_location = MultiLocation::new(
-			0,
+			1,
 			X2(
 				Parachain(2004),
 				AccountKey20 {
@@ -824,7 +814,7 @@ mod tests {
 		.unwrap();
 
 		let moonbeam_receiver_origin_location = MultiLocation::new(
-			0,
+			1,
 			X2(
 				Parachain(2004),
 				AccountKey20 {
@@ -840,7 +830,7 @@ mod tests {
 		.unwrap();
 
 		let moonriver_slpx_origin_location = MultiLocation::new(
-			0,
+			1,
 			X2(
 				Parachain(2023),
 				AccountKey20 {
@@ -856,7 +846,7 @@ mod tests {
 		.unwrap();
 
 		let astar_slpx_origin_location = MultiLocation::new(
-			0,
+			1,
 			X2(
 				Parachain(2006),
 				AccountId32 {
@@ -873,7 +863,7 @@ mod tests {
 		.unwrap();
 
 		let astar_receiver_origin_location = MultiLocation::new(
-			0,
+			1,
 			X2(
 				Parachain(2006),
 				AccountId32 {
@@ -891,23 +881,23 @@ mod tests {
 
 		assert_eq!(
 			moonbeam_slpx_derived,
-			AccountId::from_ss58check("dCCU6pkmwQEb29MSigvWjhvnWTtE3GaBqaAdxt4ppW7kUkw").unwrap()
+			AccountId::from_ss58check("gWEvf2EDMzxR7JHyrEHXf3nqxKLGvHaFbk7HUkJnNPUxDts").unwrap()
 		);
 		assert_eq!(
 			moonbeam_receiver_derived,
-			AccountId::from_ss58check("fV6ngGNKkM1BUymusAMcZECxNu3fqhSnS4Jhz2RBk4NtZrw").unwrap()
+			AccountId::from_ss58check("bpRBE4rWcBJqqN2ESts5LefuvLonBeZ4r2YBpfuuxvMxoea").unwrap()
 		);
 		assert_eq!(
 			moonriver_slpx_derived,
-			AccountId::from_ss58check("eVjSno5E5Teibbu3zdaZbBKhsFWU4QjpQXif2YiZ1jFbmEB").unwrap()
+			AccountId::from_ss58check("gtXJWw9ME9w7cXfmR6n9MFkKCSu2MrtA3dcFV2BhHpEZFjZ").unwrap()
 		);
 		assert_eq!(
 			astar_slpx_derived,
-			AccountId::from_ss58check("fErAtK3KrBPZyAtd26DMQAmuAvo8YswQQBhexibCcqh3D1c").unwrap()
+			AccountId::from_ss58check("g96o4GVpsAop1MJiArnmUYtXUjEisfkbfcpsuqmXrS28MEr").unwrap()
 		);
 		assert_eq!(
 			astar_receiver_derived,
-			AccountId::from_ss58check("cG6stm2jXgbreRNGxZEvaUn3jT17fxdFXUa6mwE4bSL1v1L").unwrap()
+			AccountId::from_ss58check("dZWAvaUWbPN1oKbWMkeDWHBceX8RqP4CMwmi1trq9uf5pBn").unwrap()
 		);
 	}
 }

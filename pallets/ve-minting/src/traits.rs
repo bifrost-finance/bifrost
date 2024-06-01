@@ -95,17 +95,22 @@ impl<T: Config> VeMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>
 			.saturating_add(current_block_number)
 			.checked_div(&T::Week::get())
 			.ok_or(ArithmeticError::Overflow)?
+			.saturating_add(1u32.into())
 			.checked_mul(&T::Week::get())
 			.ok_or(ArithmeticError::Overflow)?;
 
 		ensure!(
 			unlock_time >= ve_config.min_block.saturating_add(current_block_number),
-			Error::<T>::Expired
+			Error::<T>::ArgumentsError
 		);
-		ensure!(
-			unlock_time <= T::MaxBlock::get().saturating_add(current_block_number),
-			Error::<T>::Expired
-		);
+		let max_block = T::MaxBlock::get()
+			.saturating_add(current_block_number)
+			.checked_div(&T::Week::get())
+			.ok_or(ArithmeticError::Overflow)?
+			.saturating_add(1u32.into())
+			.checked_mul(&T::Week::get())
+			.ok_or(ArithmeticError::Overflow)?;
+		ensure!(unlock_time <= max_block, Error::<T>::ArgumentsError);
 		ensure!(_locked.amount == BalanceOf::<T>::zero(), Error::<T>::LockExist); // Withdraw old tokens first
 
 		Self::_deposit_for(who, new_position, _value, unlock_time, _locked)?;
@@ -124,21 +129,28 @@ impl<T: Config> VeMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>
 	) -> DispatchResult {
 		let ve_config = Self::ve_configs();
 		let _locked: LockedBalance<BalanceOf<T>, BlockNumberFor<T>> = Self::locked(position);
+		let current_block_number: BlockNumberFor<T> = frame_system::Pallet::<T>::block_number();
+
 		let unlock_time: BlockNumberFor<T> = _unlock_time
+			.saturating_add(_locked.end)
 			.checked_div(&T::Week::get())
 			.ok_or(ArithmeticError::Overflow)?
+			.saturating_add(1u32.into())
 			.checked_mul(&T::Week::get())
 			.ok_or(ArithmeticError::Overflow)?;
 
-		let current_block_number: BlockNumberFor<T> = frame_system::Pallet::<T>::block_number();
 		ensure!(
-			unlock_time >= ve_config.min_block.saturating_add(_locked.end),
-			Error::<T>::Expired
+			unlock_time >= ve_config.min_block.saturating_add(current_block_number),
+			Error::<T>::ArgumentsError
 		);
-		ensure!(
-			unlock_time <= T::MaxBlock::get().saturating_add(current_block_number),
-			Error::<T>::Expired
-		);
+		let max_block = T::MaxBlock::get()
+			.saturating_add(current_block_number)
+			.checked_div(&T::Week::get())
+			.ok_or(ArithmeticError::Overflow)?
+			.saturating_add(1u32.into())
+			.checked_mul(&T::Week::get())
+			.ok_or(ArithmeticError::Overflow)?;
+		ensure!(unlock_time <= max_block, Error::<T>::ArgumentsError);
 		ensure!(_locked.amount > BalanceOf::<T>::zero(), Error::<T>::LockNotExist);
 		ensure!(_locked.end > current_block_number, Error::<T>::Expired); // Cannot add to expired/non-existent lock
 
