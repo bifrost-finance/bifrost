@@ -26,7 +26,7 @@ use frame_benchmarking::v2::*;
 use frame_support::assert_ok;
 use frame_system::{pallet_prelude::BlockNumberFor, RawOrigin};
 use sp_runtime::{
-	traits::{AccountIdConversion, Bounded, UniqueSaturatedFrom},
+	traits::{AccountIdConversion, Bounded, StaticLookup, UniqueSaturatedFrom},
 	SaturatedConversion,
 };
 use sp_std::prelude::*;
@@ -73,6 +73,12 @@ where
 	QueryIdContributionInfo::<T>::insert(0u64, (index, who.clone(), value));
 	MultisigConfirmAccount::<T>::put(who.clone());
 	(who, value)
+}
+
+pub fn lookup_of_account<T: Config>(
+	who: T::AccountId,
+) -> <<T as frame_system::Config>::Lookup as StaticLookup>::Source {
+	<T as frame_system::Config>::Lookup::unlookup(who)
 }
 
 #[benchmarks(
@@ -373,6 +379,7 @@ mod benchmarks {
 			RawOrigin::Root.into(),
 			zenlink_protocol::AssetId { chain_id: 2001, asset_type: 2, asset_index: 516 },
 			zenlink_protocol::AssetId { chain_id: 2001, asset_type: 2, asset_index: 1028 },
+			lookup_of_account::<T>(caller.clone()),
 		));
 
 		let buybck_caller = T::BuybackPalletId::get().into_account_truncating();

@@ -688,6 +688,9 @@ impl Contains<AccountId> for DustRemovalWhitelist {
 		.eq(a) || FeeSharePalletId::get().check_sub_account::<DistributionId>(a) ||
 			a.eq(&ZenklinkFeeAccount::get()) ||
 			AccountIdConversion::<AccountId>::into_account_truncating(&CommissionPalletId::get())
+				.eq(a) || AccountIdConversion::<AccountId>::into_account_truncating(&BuyBackAccount::get())
+			.eq(a) ||
+			AccountIdConversion::<AccountId>::into_account_truncating(&LiquidityAccount::get())
 				.eq(a)
 	}
 }

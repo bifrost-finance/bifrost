@@ -110,6 +110,7 @@ bifrost-stable-asset = { workspace = true }
 
 # Bifrost
 bifrost-asset-registry = { workspace = true }
+bifrost-buy-back = { workspace = true }
 bifrost-call-switchgear = { workspace = true }
 bifrost-cross-in-out = { workspace = true }
 bifrost-currencies = { workspace = true }
@@ -225,6 +226,7 @@ std = [
 	"zenlink-protocol/std",
 
 	"bifrost-asset-registry/std",
+	"bifrost-buy-back/std",
 	"bifrost-cross-in-out/std",
 	"bifrost-currencies/std",
 	"bifrost-farming-rpc-runtime-api/std",
@@ -364,6 +366,7 @@ try-runtime = [
 	"leverage-staking/try-runtime",
 	"bifrost-channel-commission/try-runtime",
 	"bifrost-clouds-convert/try-runtime",
+	"bifrost-buy-back/try-runtime",
 ]
 
 # When enabled, the runtime API will not be build.

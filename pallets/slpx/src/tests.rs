@@ -145,7 +145,12 @@ fn test_zenlink() {
 		let ksm_token: AssetId =
 			AssetId::try_convert_from(CurrencyId::Token(TokenSymbol::KSM), 2001).unwrap();
 
-		assert_ok!(ZenlinkProtocol::create_pair(RawOrigin::Root.into(), bnc_token, ksm_token));
+		assert_ok!(ZenlinkProtocol::create_pair(
+			RawOrigin::Root.into(),
+			bnc_token,
+			ksm_token,
+			ALICE
+		));
 		assert_ok!(ZenlinkProtocol::add_liquidity(
 			RawOrigin::Signed(ALICE).into(),
 			bnc_token,

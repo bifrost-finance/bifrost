@@ -26,53 +26,39 @@ use frame_support::assert_ok;
 use sp_arithmetic::per_things::Permill;
 
 #[test]
-fn on_idle() {
+fn buy_back_should_work() {
 	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
 		let para_id = 2001u32;
 		let zenlink_pair_account_id = init_zenlink(para_id);
 
-		assert_ok!(SystemMaker::set_config(
+		assert_ok!(BuyBack::set_vtoken(
 			RuntimeOrigin::signed(ALICE),
-			RelayCurrencyId::get(),
-			Info {
-				vcurrency_id: VKSM,
-				annualization: 600_000u32,
-				granularity: 1000,
-				minimum_redeem: 20000
-			},
+			VKSM,
+			1_000_000u128,
+			Permill::from_percent(2),
+			1000,
+			1000,
+			true
 		));
-		let system_maker =
-			<Runtime as Config>::SystemMakerPalletId::get().into_account_truncating();
-		assert_eq!(Tokens::free_balance(KSM, &system_maker), 10000);
-		SystemMaker::on_idle(
+		let buyback_account = <Runtime as Config>::BuyBackAccount::get().into_account_truncating();
+		assert_eq!(Tokens::free_balance(VKSM, &buyback_account), 10000);
+		assert_eq!(Tokens::free_balance(VKSM, &zenlink_pair_account_id), 2200);
+		assert_eq!(Balances::free_balance(&zenlink_pair_account_id), 2000);
+		assert_eq!(Balances::free_balance(&buyback_account), 0);
+		BuyBack::on_idle(
 			<frame_system::Pallet<Runtime>>::block_number(),
 			Weight::from_parts(100000000, 0),
 		);
 		System::set_block_number(System::block_number() + 1);
-		assert_eq!(Tokens::free_balance(VKSM, &system_maker), 10731);
-		assert_eq!(Tokens::free_balance(KSM, &zenlink_pair_account_id), 3000);
-		assert_eq!(Tokens::free_balance(VKSM, &zenlink_pair_account_id), 1469);
-		init_vtoken_minting();
-		SystemMaker::on_idle(<frame_system::Pallet<Runtime>>::block_number(), Weight::zero());
-		assert_eq!(Tokens::free_balance(VKSM, &system_maker), 10731);
-		assert_ok!(SystemMaker::set_config(
-			RuntimeOrigin::signed(ALICE),
-			RelayCurrencyId::get(),
-			Info {
-				vcurrency_id: VKSM,
-				annualization: 600_000u32,
-				granularity: 1000,
-				minimum_redeem: 2000
-			},
-		));
-		SystemMaker::on_idle(<frame_system::Pallet<Runtime>>::block_number(), Weight::zero());
-		assert_eq!(Tokens::free_balance(VKSM, &system_maker), 0);
+		assert_eq!(Tokens::free_balance(VKSM, &buyback_account), 0);
+		assert_eq!(Tokens::free_balance(VKSM, &zenlink_pair_account_id), 12200);
+		assert_eq!(Balances::free_balance(&zenlink_pair_account_id), 362);
+		assert_eq!(Balances::free_balance(&buyback_account), 1638);
 	});
 }
 
 fn init_zenlink(para_id: u32) -> AccountIdOf<Runtime> {
-	let asset_0_currency_id: AssetId =
-		AssetId::try_convert_from(RelayCurrencyId::get(), para_id).unwrap();
+	let asset_0_currency_id: AssetId = AssetId::try_convert_from(BNC, para_id).unwrap();
 	let asset_1_currency_id: AssetId = AssetId::try_convert_from(VKSM, para_id).unwrap();
 	// let path = vec![asset_0_currency_id, asset_1_currency_id];
 	assert_ok!(ZenlinkProtocol::create_pair(
@@ -94,17 +80,4 @@ fn init_zenlink(para_id: u32) -> AccountIdOf<Runtime> {
 		deadline
 	));
 	ZenlinkProtocol::pair_account_id(asset_0_currency_id, asset_1_currency_id)
-}
-
-fn init_vtoken_minting() {
-	pub const FEE: Permill = Permill::from_percent(2);
-	assert_ok!(VtokenMinting::set_fees(RuntimeOrigin::root(), FEE, FEE));
-	assert_ok!(VtokenMinting::set_unlock_duration(
-		RuntimeOrigin::signed(ALICE),
-		KSM,
-		TimeUnit::Era(1)
-	));
-	assert_ok!(VtokenMinting::increase_token_pool(KSM, 1000));
-	assert_ok!(VtokenMinting::update_ongoing_time_unit(KSM, TimeUnit::Era(1)));
-	assert_ok!(VtokenMinting::set_minimum_redeem(RuntimeOrigin::signed(ALICE), VKSM, 90));
 }
