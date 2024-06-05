@@ -329,6 +329,8 @@ parameter_types! {
 	pub const CloudsPalletId: PalletId = PalletId(*b"bf/cloud");
 	pub IncentivePoolAccount: PalletId = PalletId(*b"bf/inpoo");
 	pub const FarmingGaugeRewardIssuerPalletId: PalletId = PalletId(*b"bf/fmgar");
+	pub const BuyBackAccount: PalletId = PalletId(*b"bf/bybck");
+	pub const LiquidityAccount: PalletId = PalletId(*b"bf/liqdt");
 }
 
 impl frame_system::Config for Runtime {
@@ -1632,6 +1634,22 @@ impl bifrost_clouds_convert::Config for Runtime {
 	type LockedBlocks = MaxBlock;
 }
 
+impl bifrost_buy_back::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type MultiCurrency = Currencies;
+	type ControlOrigin = EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
+	type WeightInfo = weights::bifrost_buy_back::BifrostWeight<Runtime>;
+	type DexOperator = ZenlinkProtocol;
+	type CurrencyIdConversion = AssetIdMaps<Runtime>;
+	type TreasuryAccount = BifrostTreasuryAccount;
+	type RelayChainToken = RelayCurrencyId;
+	type BuyBackAccount = BuyBackAccount;
+	type LiquidityAccount = LiquidityAccount;
+	type ParachainId = ParachainInfo;
+	type CurrencyIdRegister = AssetIdMaps<Runtime>;
+	type VeMinting = VeMinting;
+}
+
 // Below is the implementation of tokens manipulation functions other than native token.
 pub struct LocalAssetAdaptor<Local>(PhantomData<Local>);
 
@@ -1816,6 +1834,7 @@ construct_runtime! {
 		LeverageStaking: leverage_staking = 135,
 		ChannelCommission: bifrost_channel_commission = 136,
 		CloudsConvert: bifrost_clouds_convert = 137,
+		BuyBack: bifrost_buy_back = 138,
 	}
 }
 
@@ -1921,7 +1940,10 @@ extern crate frame_benchmarking;
 
 #[cfg(feature = "runtime-benchmarks")]
 mod benches {
-	define_benchmarks!([bifrost_ve_minting, VeMinting]);
+	define_benchmarks!(
+		[bifrost_ve_minting, VeMinting]
+		[bifrost_buy_back, BuyBack]
+	);
 }
 
 impl_runtime_apis! {

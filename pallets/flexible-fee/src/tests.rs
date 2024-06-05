@@ -89,25 +89,29 @@ fn basic_setup() {
 	assert_ok!(ZenlinkProtocol::create_pair(
 		RuntimeOrigin::root(),
 		asset_0_currency_id,
-		asset_1_currency_id
+		asset_1_currency_id,
+		ALICE
 	));
 
 	assert_ok!(ZenlinkProtocol::create_pair(
 		RuntimeOrigin::root(),
 		asset_0_currency_id,
-		asset_2_currency_id
+		asset_2_currency_id,
+		ALICE
 	));
 
 	assert_ok!(ZenlinkProtocol::create_pair(
 		RuntimeOrigin::root(),
 		asset_0_currency_id,
-		asset_3_currency_id
+		asset_3_currency_id,
+		ALICE
 	));
 
 	assert_ok!(ZenlinkProtocol::create_pair(
 		RuntimeOrigin::root(),
 		asset_0_currency_id,
-		asset_4_currency_id
+		asset_4_currency_id,
+		ALICE
 	));
 
 	let mut deadline: BlockNumberFor<Test> =
