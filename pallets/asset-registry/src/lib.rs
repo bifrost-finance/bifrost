@@ -121,6 +121,8 @@ pub mod pallet {
 		AssetUpdated { asset_id: AssetIds, metadata: AssetMetadata<BalanceOf<T>> },
 		/// The CurrencyId registered.
 		CurrencyIdRegistered { currency_id: CurrencyId, metadata: AssetMetadata<BalanceOf<T>> },
+		/// The CurrencyId updated.
+		CurrencyIdUpdated { currency_id: CurrencyId, metadata: AssetMetadata<BalanceOf<T>> },
 		/// MultiLocation Force set.
 		MultiLocationSet { currency_id: CurrencyId, location: MultiLocation, weight: Weight },
 	}
@@ -441,6 +443,44 @@ pub mod pallet {
 				location,
 				weight,
 			});
+
+			Ok(())
+		}
+
+		#[pallet::call_index(8)]
+		#[pallet::weight(T::WeightInfo::force_set_multilocation())]
+		// #[pallet::weight(T::WeightInfo::update_currency_metadata())]
+		pub fn update_currency_metadata(
+			origin: OriginFor<T>,
+			currency_id: CurrencyId,
+			asset_name: Option<Vec<u8>>,
+			asset_symbol: Option<Vec<u8>>,
+			asset_decimals: Option<u8>,
+			asset_minimal_balance: Option<BalanceOf<T>>,
+		) -> DispatchResult {
+			T::RegisterOrigin::ensure_origin(origin)?;
+
+			// Check if the currency metadata exists
+			let mut metadata =
+				CurrencyMetadatas::<T>::get(currency_id).ok_or(Error::<T>::CurrencyIdNotExists)?;
+
+			// Update the metadata fields based on the provided options
+			if let Some(name) = asset_name {
+				metadata.name = name;
+			}
+			if let Some(symbol) = asset_symbol {
+				metadata.symbol = symbol;
+			}
+			if let Some(decimals) = asset_decimals {
+				metadata.decimals = decimals;
+			}
+			if let Some(minimal_balance) = asset_minimal_balance {
+				metadata.minimal_balance = minimal_balance;
+			}
+
+			// Store the updated metadata
+			CurrencyMetadatas::<T>::insert(currency_id, metadata.clone());
+			Self::deposit_event(Event::<T>::CurrencyIdUpdated { currency_id, metadata });
 
 			Ok(())
 		}
