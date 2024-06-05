@@ -97,14 +97,14 @@ bifrost-channel-commission			 = { path = "pallets/channel-commission", default-f
 bifrost-clouds-convert				 = { path = "pallets/clouds-convert", default-features = false }
 
 # Zenlink
-merkle-distributor             = { git = "https://github.com/bifrost-finance/Zenlink-DEX-Module", branch = "add-new-fee-receiver", default-features = false }
-zenlink-protocol               = { git = "https://github.com/bifrost-finance/Zenlink-DEX-Module", branch = "add-new-fee-receiver", default-features = false }
-zenlink-protocol-rpc           = { git = "https://github.com/bifrost-finance/Zenlink-DEX-Module", branch = "add-new-fee-receiver" }
-zenlink-protocol-runtime-api   = { git = "https://github.com/bifrost-finance/Zenlink-DEX-Module", branch = "add-new-fee-receiver", default-features = false }
-zenlink-stable-amm             = { git = "https://github.com/bifrost-finance/Zenlink-DEX-Module", branch = "add-new-fee-receiver", default-features = false }
-zenlink-stable-amm-rpc         = { git = "https://github.com/bifrost-finance/Zenlink-DEX-Module", branch = "add-new-fee-receiver" }
-zenlink-stable-amm-runtime-api = { git = "https://github.com/bifrost-finance/Zenlink-DEX-Module", branch = "add-new-fee-receiver", default-features = false }
-zenlink-swap-router            = { git = "https://github.com/bifrost-finance/Zenlink-DEX-Module", branch = "add-new-fee-receiver", default-features = false }
+merkle-distributor             = { git = "https://github.com/bifrost-finance/Zenlink-DEX-Module", branch = "release-polkadot-v1.6.0", default-features = false }
+zenlink-protocol               = { git = "https://github.com/bifrost-finance/Zenlink-DEX-Module", branch = "release-polkadot-v1.6.0", default-features = false }
+zenlink-protocol-rpc           = { git = "https://github.com/bifrost-finance/Zenlink-DEX-Module", branch = "release-polkadot-v1.6.0" }
+zenlink-protocol-runtime-api   = { git = "https://github.com/bifrost-finance/Zenlink-DEX-Module", branch = "release-polkadot-v1.6.0", default-features = false }
+zenlink-stable-amm             = { git = "https://github.com/bifrost-finance/Zenlink-DEX-Module", branch = "release-polkadot-v1.6.0", default-features = false }
+zenlink-stable-amm-rpc         = { git = "https://github.com/bifrost-finance/Zenlink-DEX-Module", branch = "release-polkadot-v1.6.0" }
+zenlink-stable-amm-runtime-api = { git = "https://github.com/bifrost-finance/Zenlink-DEX-Module", branch = "release-polkadot-v1.6.0", default-features = false }
+zenlink-swap-router            = { git = "https://github.com/bifrost-finance/Zenlink-DEX-Module", branch = "release-polkadot-v1.6.0", default-features = false }
 
 # Orml
 orml-tokens         = { version = "0.7.0", default-features = false }

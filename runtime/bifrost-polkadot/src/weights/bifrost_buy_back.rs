@@ -43,11 +43,12 @@
 #![allow(unused_imports)]
 #![allow(missing_docs)]
 
-use frame_support::{traits::Get, weights::{constants::RocksDbWeight, Weight}};
+use frame_support::{traits::Get, weights::Weight};
 use core::marker::PhantomData;
 
 /// Weight functions for `bifrost_buy_back`.
-impl WeightInfo for () {
+pub struct BifrostWeight<T>(PhantomData<T>);
+impl<T: frame_system::Config> bifrost_buy_back::WeightInfo for BifrostWeight<T> {
 	/// Storage: `System::Number` (r:1 w:0)
 	/// Proof: `System::Number` (`max_values`: Some(1), `max_size`: Some(4), added: 499, mode: `MaxEncodedLen`)
 	/// Storage: `System::ExecutionPhase` (r:1 w:0)
@@ -65,8 +66,8 @@ impl WeightInfo for () {
 		// Minimum execution time: 11_582_000 picoseconds.
 		Weight::from_parts(11_753_000, 0)
 			.saturating_add(Weight::from_parts(0, 1510))
-			.saturating_add(RocksDbWeight::get().reads(4))
-			.saturating_add(RocksDbWeight::get().writes(3))
+			.saturating_add(T::DbWeight::get().reads(4))
+			.saturating_add(T::DbWeight::get().writes(3))
 	}
 	/// Storage: `Tokens::Accounts` (r:2 w:2)
 	/// Proof: `Tokens::Accounts` (`max_values`: None, `max_size`: Some(118), added: 2593, mode: `MaxEncodedLen`)
@@ -87,8 +88,8 @@ impl WeightInfo for () {
 		// Minimum execution time: 43_842_000 picoseconds.
 		Weight::from_parts(44_144_000, 0)
 			.saturating_add(Weight::from_parts(0, 6196))
-			.saturating_add(RocksDbWeight::get().reads(8))
-			.saturating_add(RocksDbWeight::get().writes(5))
+			.saturating_add(T::DbWeight::get().reads(8))
+			.saturating_add(T::DbWeight::get().writes(5))
 	}
 	/// Storage: `System::Number` (r:1 w:0)
 	/// Proof: `System::Number` (`max_values`: Some(1), `max_size`: Some(4), added: 499, mode: `MaxEncodedLen`)
@@ -107,8 +108,8 @@ impl WeightInfo for () {
 		// Minimum execution time: 10_931_000 picoseconds.
 		Weight::from_parts(11_161_000, 0)
 			.saturating_add(Weight::from_parts(0, 1510))
-			.saturating_add(RocksDbWeight::get().reads(4))
-			.saturating_add(RocksDbWeight::get().writes(3))
+			.saturating_add(T::DbWeight::get().reads(4))
+			.saturating_add(T::DbWeight::get().writes(3))
 	}
 	/// Storage: `BuyBack::Infos` (r:2 w:1)
 	/// Proof: `BuyBack::Infos` (`max_values`: None, `max_size`: None, mode: `Measured`)
@@ -123,16 +124,7 @@ impl WeightInfo for () {
 		// Minimum execution time: 32_792_000 picoseconds.
 		Weight::from_parts(33_293_000, 0)
 			.saturating_add(Weight::from_parts(0, 6442))
-			.saturating_add(RocksDbWeight::get().reads(5))
-			.saturating_add(RocksDbWeight::get().writes(1))
+			.saturating_add(T::DbWeight::get().reads(5))
+			.saturating_add(T::DbWeight::get().writes(1))
 	}
-}
-
-
-/// Weight functions needed for bifrost_buy_back.
-pub trait WeightInfo {
-	fn set_vtoken() -> Weight;
-	fn charge() -> Weight;
-	fn remove_vtoken() -> Weight;
-	fn on_idle() -> Weight;
 }

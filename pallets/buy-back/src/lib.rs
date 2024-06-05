@@ -33,6 +33,7 @@ pub mod weights;
 use bifrost_primitives::{
 	currency::BNC, CurrencyId, CurrencyIdConversion, CurrencyIdRegister, TryConvertFrom,
 };
+use bifrost_ve_minting::VeMintingInterface;
 use cumulus_primitives_core::ParaId;
 use frame_support::{
 	pallet_prelude::*,
@@ -94,6 +95,13 @@ pub mod pallet {
 		type ParachainId: Get<ParaId>;
 
 		type CurrencyIdRegister: CurrencyIdRegister<CurrencyId>;
+
+		type VeMinting: VeMintingInterface<
+			AccountIdOf<Self>,
+			CurrencyIdOf<Self>,
+			BalanceOf<Self>,
+			BlockNumberFor<Self>,
+		>;
 	}
 
 	#[pallet::event]
@@ -133,7 +141,7 @@ pub mod pallet {
 			let buyback_address = T::BuyBackAccount::get().into_account_truncating();
 			let liquidity_address = T::LiquidityAccount::get().into_account_truncating();
 			for (asset_id, mut info) in Infos::<T>::iter() {
-				if info.if_auto == false {
+				if !info.if_auto {
 					continue;
 				}
 
@@ -172,7 +180,7 @@ pub mod pallet {
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
 		#[pallet::call_index(0)]
-		#[pallet::weight(T::WeightInfo::set_config())]
+		#[pallet::weight(T::WeightInfo::set_vtoken())]
 		pub fn set_vtoken(
 			origin: OriginFor<T>,
 			asset_id: CurrencyIdOf<T>,
@@ -235,7 +243,7 @@ pub mod pallet {
 		}
 
 		#[pallet::call_index(2)]
-		#[pallet::weight(T::WeightInfo::close())]
+		#[pallet::weight(T::WeightInfo::remove_vtoken())]
 		pub fn remove_vtoken(origin: OriginFor<T>, asset_id: CurrencyIdOf<T>) -> DispatchResult {
 			T::ControlOrigin::ensure_origin(origin)?;
 
@@ -249,7 +257,10 @@ pub mod pallet {
 
 	impl<T: Config> Pallet<T> {
 		#[transactional]
-		fn buy_back(buyback_address: &AccountIdOf<T>, currency_id: CurrencyId) -> DispatchResult {
+		pub fn buy_back(
+			buyback_address: &AccountIdOf<T>,
+			currency_id: CurrencyId,
+		) -> DispatchResult {
 			let asset_id: AssetId =
 				AssetId::try_convert_from(currency_id, T::ParachainId::get().into())
 					.map_err(|_| DispatchError::Other("Conversion Error."))?;
@@ -266,7 +277,10 @@ pub mod pallet {
 				0,
 				&path,
 				&buyback_address,
-			)
+			)?;
+
+			let bnc_balance = T::MultiCurrency::free_balance(BNC, &buyback_address);
+			T::VeMinting::notify_reward(0, &Some(buyback_address.clone()), vec![(BNC, bnc_balance)])
 		}
 
 		#[transactional]

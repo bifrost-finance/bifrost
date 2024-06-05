@@ -29,7 +29,7 @@ use frame_support::{
 	derive_impl, ord_parameter_types,
 	pallet_prelude::Get,
 	parameter_types,
-	sp_runtime::{DispatchError, DispatchResult},
+	sp_runtime::{traits::ConvertInto, DispatchError, DispatchResult},
 	traits::{Everything, Nothing},
 	PalletId,
 };
@@ -77,6 +77,7 @@ frame_support::construct_runtime!(
 		ZenlinkProtocol: zenlink_protocol,
 		AssetRegistry: bifrost_asset_registry,
 		PolkadotXcm: pallet_xcm,
+		VeMinting: bifrost_ve_minting,
 	}
 );
 
@@ -105,7 +106,7 @@ impl frame_system::Config for Runtime {
 }
 
 parameter_types! {
-	pub const GetNativeCurrencyId: CurrencyId = CurrencyId::Native(TokenSymbol::ASG);
+	pub const GetNativeCurrencyId: CurrencyId = CurrencyId::Native(TokenSymbol::BNC);
 }
 
 pub type AdaptedBasicCurrency =
@@ -184,6 +185,7 @@ impl bifrost_buy_back::Config for Runtime {
 	type LiquidityAccount = LiquidityAccount;
 	type ParachainId = ParaInfo;
 	type CurrencyIdRegister = AssetIdMaps<Runtime>;
+	type VeMinting = VeMinting;
 }
 
 pub struct ParaInfo;
@@ -509,6 +511,35 @@ impl pallet_xcm::Config for Runtime {
 	type RemoteLockConsumerIdentifier = ();
 }
 
+parameter_types! {
+	pub const VeMintingTokenType: CurrencyId = CurrencyId::VToken(TokenSymbol::BNC);
+	pub VeMintingPalletId: PalletId = PalletId(*b"bf/vemnt");
+	pub IncentivePalletId: PalletId = PalletId(*b"bf/veict");
+	pub const Week: BlockNumber = 50400; // a week
+	pub const MaxBlock: BlockNumber = 10512000; // four years
+	pub const Multiplier: Balance = 10_u128.pow(12);
+	pub const VoteWeightMultiplier: Balance = 1;
+	pub const MaxPositions: u32 = 10;
+	pub const MarkupRefreshLimit: u32 = 100;
+}
+
+impl bifrost_ve_minting::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type MultiCurrency = Currencies;
+	type ControlOrigin = EnsureSignedBy<One, AccountId>;
+	type TokenType = VeMintingTokenType;
+	type VeMintingPalletId = VeMintingPalletId;
+	type IncentivePalletId = IncentivePalletId;
+	type WeightInfo = ();
+	type BlockNumberToBalance = ConvertInto;
+	type Week = Week;
+	type MaxBlock = MaxBlock;
+	type Multiplier = Multiplier;
+	type VoteWeightMultiplier = VoteWeightMultiplier;
+	type MaxPositions = MaxPositions;
+	type MarkupRefreshLimit = MarkupRefreshLimit;
+}
+
 pub struct ExtBuilder {
 	endowed_accounts: Vec<(AccountId, CurrencyId, Balance)>,
 }
@@ -533,13 +564,14 @@ impl ExtBuilder {
 			// (ALICE, RelayCurrencyId::get(), 10000),
 			(ALICE, VKSM, 10000),
 			(BOB, KSM, 100),
-			(BuyBackAccount::get().into_account_truncating(), VKSM, 10000),
+			(BuyBackAccount::get().into_account_truncating(), VKSM, 9000),
 			(BuyBackAccount::get().into_account_truncating(), KSM, 10000),
 		])
 	}
 
 	pub fn build(self) -> sp_io::TestExternalities {
 		let mut t = frame_system::GenesisConfig::<Runtime>::default().build_storage().unwrap();
+		env_logger::try_init().unwrap_or(());
 
 		pallet_balances::GenesisConfig::<Runtime> {
 			balances: self

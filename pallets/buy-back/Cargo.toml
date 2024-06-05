@@ -27,6 +27,7 @@ sp-runtime = { workspace = true }
 sp-std = { workspace = true }
 xcm = { workspace = true }
 zenlink-protocol = { workspace = true }
+bifrost-ve-minting = { workspace = true }
 
 [dev-dependencies]
 bifrost-asset-registry = { workspace = true }
@@ -39,6 +40,7 @@ sp-core = { workspace = true }
 sp-io = { workspace = true }
 xcm-builder = { workspace = true }
 xcm-executor = { workspace = true }
+env_logger = { workspace = true }
 
 [features]
 default = ["std"]

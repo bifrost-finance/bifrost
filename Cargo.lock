@@ -709,8 +709,10 @@ dependencies = [
  "bifrost-currencies",
  "bifrost-primitives",
  "bifrost-slp",
+ "bifrost-ve-minting",
  "bifrost-vtoken-minting",
  "cumulus-primitives-core",
+ "env_logger",
  "frame-benchmarking",
  "frame-support",
  "frame-system",
@@ -6672,7 +6674,7 @@ dependencies = [
 [[package]]
 name = "merkle-distributor"
 version = "0.1.0"
-source = "git+https://github.com/bifrost-finance/Zenlink-DEX-Module?branch=add-new-fee-receiver#1d027999704dde515f13e6147a24450bc0ba29ae"
+source = "git+https://github.com/bifrost-finance/Zenlink-DEX-Module?branch=release-polkadot-v1.6.0#af308c7f73ab244000201be3619056b2c62eff6a"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -16087,7 +16089,7 @@ dependencies = [
 [[package]]
 name = "zenlink-protocol"
 version = "0.4.4"
-source = "git+https://github.com/bifrost-finance/Zenlink-DEX-Module?branch=add-new-fee-receiver#1d027999704dde515f13e6147a24450bc0ba29ae"
+source = "git+https://github.com/bifrost-finance/Zenlink-DEX-Module?branch=release-polkadot-v1.6.0#af308c7f73ab244000201be3619056b2c62eff6a"
 dependencies = [
  "cumulus-primitives-core",
  "frame-benchmarking",
@@ -16109,7 +16111,7 @@ dependencies = [
 [[package]]
 name = "zenlink-protocol-rpc"
 version = "0.4.4"
-source = "git+https://github.com/bifrost-finance/Zenlink-DEX-Module?branch=add-new-fee-receiver#1d027999704dde515f13e6147a24450bc0ba29ae"
+source = "git+https://github.com/bifrost-finance/Zenlink-DEX-Module?branch=release-polkadot-v1.6.0#af308c7f73ab244000201be3619056b2c62eff6a"
 dependencies = [
  "jsonrpsee",
  "parity-scale-codec",
@@ -16125,7 +16127,7 @@ dependencies = [
 [[package]]
 name = "zenlink-protocol-runtime-api"
 version = "0.4.4"
-source = "git+https://github.com/bifrost-finance/Zenlink-DEX-Module?branch=add-new-fee-receiver#1d027999704dde515f13e6147a24450bc0ba29ae"
+source = "git+https://github.com/bifrost-finance/Zenlink-DEX-Module?branch=release-polkadot-v1.6.0#af308c7f73ab244000201be3619056b2c62eff6a"
 dependencies = [
  "parity-scale-codec",
  "sp-api",
@@ -16136,7 +16138,7 @@ dependencies = [
 [[package]]
 name = "zenlink-stable-amm"
 version = "0.1.0"
-source = "git+https://github.com/bifrost-finance/Zenlink-DEX-Module?branch=add-new-fee-receiver#1d027999704dde515f13e6147a24450bc0ba29ae"
+source = "git+https://github.com/bifrost-finance/Zenlink-DEX-Module?branch=release-polkadot-v1.6.0#af308c7f73ab244000201be3619056b2c62eff6a"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -16153,7 +16155,7 @@ dependencies = [
 [[package]]
 name = "zenlink-stable-amm-rpc"
 version = "0.1.0"
-source = "git+https://github.com/bifrost-finance/Zenlink-DEX-Module?branch=add-new-fee-receiver#1d027999704dde515f13e6147a24450bc0ba29ae"
+source = "git+https://github.com/bifrost-finance/Zenlink-DEX-Module?branch=release-polkadot-v1.6.0#af308c7f73ab244000201be3619056b2c62eff6a"
 dependencies = [
  "jsonrpsee",
  "parity-scale-codec",
@@ -16167,7 +16169,7 @@ dependencies = [
 [[package]]
 name = "zenlink-stable-amm-runtime-api"
 version = "0.1.0"
-source = "git+https://github.com/bifrost-finance/Zenlink-DEX-Module?branch=add-new-fee-receiver#1d027999704dde515f13e6147a24450bc0ba29ae"
+source = "git+https://github.com/bifrost-finance/Zenlink-DEX-Module?branch=release-polkadot-v1.6.0#af308c7f73ab244000201be3619056b2c62eff6a"
 dependencies = [
  "parity-scale-codec",
  "sp-api",
@@ -16178,7 +16180,7 @@ dependencies = [
 [[package]]
 name = "zenlink-swap-router"
 version = "0.1.0"
-source = "git+https://github.com/bifrost-finance/Zenlink-DEX-Module?branch=add-new-fee-receiver#1d027999704dde515f13e6147a24450bc0ba29ae"
+source = "git+https://github.com/bifrost-finance/Zenlink-DEX-Module?branch=release-polkadot-v1.6.0#af308c7f73ab244000201be3619056b2c62eff6a"
 dependencies = [
  "frame-support",
  "frame-system",

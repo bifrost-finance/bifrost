@@ -21,6 +21,7 @@
 //! A list of the different weight modules for our runtime.
 
 pub mod bifrost_asset_registry;
+pub mod bifrost_buy_back;
 pub mod bifrost_call_switchgear;
 pub mod bifrost_channel_commission;
 pub mod bifrost_clouds_convert;

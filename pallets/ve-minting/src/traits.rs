@@ -68,6 +68,11 @@ pub trait VeMintingInterface<AccountId, CurrencyId, Balance, BlockNumber> {
 		rewards: &Vec<(CurrencyId, Balance)>,
 		remaining: Balance,
 	) -> DispatchResult;
+	fn notify_reward(
+		pool_id: PoolId,
+		addr: &Option<AccountId>,
+		rewards: Vec<(CurrencyId, Balance)>,
+	) -> DispatchResult;
 }
 
 impl<T: Config> VeMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>, BlockNumberFor<T>>
@@ -318,6 +323,7 @@ impl<T: Config> VeMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>
 		IncentiveConfigs::<T>::set(pool_id, incentive_config.clone());
 		Self::deposit_event(Event::IncentiveSet { incentive_config });
 	}
+
 	fn add_reward(
 		addr: &AccountIdOf<T>,
 		conf: &mut IncentiveConfig<
@@ -366,6 +372,14 @@ impl<T: Config> VeMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>
 				*reward,
 			)
 		})
+	}
+
+	fn notify_reward(
+		pool_id: PoolId,
+		addr: &Option<AccountIdOf<T>>,
+		rewards: Vec<(CurrencyIdOf<T>, BalanceOf<T>)>,
+	) -> DispatchResult {
+		Self::notify_reward_amount(pool_id, addr, rewards)
 	}
 }
 
@@ -456,6 +470,13 @@ where
 		_conf: &mut IncentiveConfig<CurrencyId, Balance, BlockNumber, AccountId>,
 		_rewards: &Vec<(CurrencyId, Balance)>,
 		_remaining: Balance,
+	) -> DispatchResult {
+		Ok(())
+	}
+	fn notify_reward(
+		_pool_id: PoolId,
+		_addr: &Option<AccountId>,
+		_rewards: Vec<(CurrencyId, Balance)>,
 	) -> DispatchResult {
 		Ok(())
 	}

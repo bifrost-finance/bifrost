@@ -595,4 +595,11 @@ impl VeMintingInterface<AccountId, CurrencyId, Balance, BlockNumber> for VeMinti
 	) -> DispatchResult {
 		Ok(())
 	}
+	fn notify_reward(
+		_pool_id: u32,
+		_addr: &Option<AccountId>,
+		_rewards: Vec<(CurrencyId, Balance)>,
+	) -> DispatchResult {
+		Ok(())
+	}
 }

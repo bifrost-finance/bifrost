@@ -1638,7 +1638,7 @@ impl bifrost_buy_back::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type MultiCurrency = Currencies;
 	type ControlOrigin = EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
-	type WeightInfo = (); //weights::bifrost_system_maker::BifrostWeight<Runtime>;
+	type WeightInfo = weights::bifrost_buy_back::BifrostWeight<Runtime>;
 	type DexOperator = ZenlinkProtocol;
 	type CurrencyIdConversion = AssetIdMaps<Runtime>;
 	type TreasuryAccount = BifrostTreasuryAccount;
@@ -1647,6 +1647,7 @@ impl bifrost_buy_back::Config for Runtime {
 	type LiquidityAccount = LiquidityAccount;
 	type ParachainId = ParachainInfo;
 	type CurrencyIdRegister = AssetIdMaps<Runtime>;
+	type VeMinting = VeMinting;
 }
 
 // Below is the implementation of tokens manipulation functions other than native token.
@@ -1939,7 +1940,10 @@ extern crate frame_benchmarking;
 
 #[cfg(feature = "runtime-benchmarks")]
 mod benches {
-	define_benchmarks!([bifrost_ve_minting, VeMinting]);
+	define_benchmarks!(
+		[bifrost_ve_minting, VeMinting]
+		[bifrost_buy_back, BuyBack]
+	);
 }
 
 impl_runtime_apis! {
