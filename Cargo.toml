@@ -95,6 +95,7 @@ pallet-traits                        = { path = "pallets/traits", default-featur
 leverage-staking                     = { path = "pallets/leverage-staking", default-features = false }
 bifrost-channel-commission			 = { path = "pallets/channel-commission", default-features = false }
 bifrost-clouds-convert				 = { path = "pallets/clouds-convert", default-features = false }
+bifrost-vtoken-minting-rpc-runtime-api = { path = "pallets/vtoken-minting/rpc/runtime-api", default-features = false }
 
 # Zenlink
 merkle-distributor             = { git = "https://github.com/bifrost-finance/Zenlink-DEX-Module", branch = "release-polkadot-v1.6.0", default-features = false }

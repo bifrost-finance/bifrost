@@ -603,6 +603,10 @@ impl<T: Config> CurrencyIdMapping<CurrencyId, MultiLocation, AssetMetadata<Balan
 		Pallet::<T>::currency_metadatas(currency_id)
 	}
 
+	fn get_all_currency() -> Vec<CurrencyId> {
+		CurrencyMetadatas::<T>::iter_keys().collect()
+	}
+
 	fn get_multi_location(currency_id: CurrencyId) -> Option<MultiLocation> {
 		Pallet::<T>::currency_id_to_locations(currency_id)
 	}
