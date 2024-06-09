@@ -354,7 +354,8 @@ fn test_add_order() {
 			source_chain_caller,
 			DOT,
 			TargetChain::Astar(source_chain_caller),
-			BoundedVec::default()
+			BoundedVec::default(),
+			None
 		));
 		assert_eq!(OrderQueue::<Test>::get().len(), 1usize);
 		assert_ok!(Slpx::redeem(
@@ -389,7 +390,8 @@ fn test_hook() {
 			source_chain_caller,
 			DOT,
 			TargetChain::Astar(source_chain_caller),
-			BoundedVec::default()
+			BoundedVec::default(),
+			None
 		));
 		assert_eq!(OrderQueue::<Test>::get().len(), 1usize);
 		<frame_system::Pallet<Test>>::set_block_number(2u32.into());
