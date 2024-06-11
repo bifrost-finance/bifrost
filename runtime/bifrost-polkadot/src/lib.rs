@@ -113,7 +113,7 @@ use pallet_xcm::{EnsureResponse, QueryStatus};
 use polkadot_runtime_common::prod_or_fast;
 use sp_runtime::traits::{IdentityLookup, Verify};
 use static_assertions::const_assert;
-use xcm::v3::prelude::*;
+use xcm::{v3::MultiLocation, v4::prelude::*};
 use xcm_config::{
 	parachains, BifrostCurrencyIdConvert, BifrostTreasuryAccount, MultiCurrency, SelfParaChainId,
 };
@@ -633,7 +633,6 @@ impl pallet_balances::Config for Runtime {
 	type MaxReserves = ConstU32<50>;
 	type ReserveIdentifier = [u8; 8];
 	type FreezeIdentifier = ();
-	type MaxHolds = ConstU32<1>;
 	type MaxFreezes = ConstU32<0>;
 	type WeightInfo = pallet_balances::weights::SubstrateWeight<Runtime>;
 	type RuntimeHoldReason = RuntimeHoldReason;
@@ -956,6 +955,7 @@ impl pallet_aura::Config for Runtime {
 	type DisabledValidators = ();
 	type MaxAuthorities = ConstU32<100_000>;
 	type AllowMultipleBlocksPerSlot = ConstBool<false>;
+	// type SlotDuration = ConstU64<SLOT_DURATION>;
 }
 
 parameter_types! {
@@ -1057,9 +1057,9 @@ pub fn create_x2_multilocation(index: u16, currency_id: CurrencyId) -> MultiLoca
 	match currency_id {
 		CurrencyId::Token2(GLMR_TOKEN_ID) => MultiLocation::new(
 			1,
-			X2(
-				Parachain(parachains::moonbeam::ID.into()),
-				AccountKey20 {
+			xcm::v3::Junctions::X2(
+				xcm::v3::Junction::Parachain(parachains::moonbeam::ID.into()),
+				xcm::v3::Junction::AccountKey20 {
 					network: None,
 					key: Slp::derivative_account_id_20(
 						polkadot_parachain_primitives::primitives::Sibling::from(
@@ -1073,9 +1073,9 @@ pub fn create_x2_multilocation(index: u16, currency_id: CurrencyId) -> MultiLoca
 			),
 		),
 		// Only relay chain use the Bifrost para account with "para"
-		CurrencyId::Token2(DOT_TOKEN_ID) => MultiLocation::new(
+		CurrencyId::Token2(DOT_TOKEN_ID) => xcm::v3::Location::new(
 			1,
-			X1(AccountId32 {
+			xcm::v3::Junctions::X1(xcm::v3::Junction::AccountId32 {
 				network: None,
 				id: Utility::derivative_account_id(
 					ParachainInfo::get().into_account_truncating(),
@@ -1085,9 +1085,9 @@ pub fn create_x2_multilocation(index: u16, currency_id: CurrencyId) -> MultiLoca
 			}),
 		),
 		// Bifrost Polkadot Native token
-		CurrencyId::Native(TokenSymbol::BNC) => MultiLocation::new(
+		CurrencyId::Native(TokenSymbol::BNC) => xcm::v3::Location::new(
 			0,
-			X1(AccountId32 {
+			xcm::v3::Junctions::X1(xcm::v3::Junction::AccountId32 {
 				network: None,
 				id: Utility::derivative_account_id(
 					polkadot_parachain_primitives::primitives::Sibling::from(ParachainInfo::get())
@@ -1104,11 +1104,11 @@ pub fn create_x2_multilocation(index: u16, currency_id: CurrencyId) -> MultiLoca
 				BifrostCurrencyIdConvert::<SelfParaChainId>::convert(currency_id)
 			{
 				if let Some(Parachain(para_id)) = location.interior().first() {
-					MultiLocation::new(
+					xcm::v3::Location::new(
 						1,
-						X2(
-							Parachain(*para_id),
-							AccountId32 {
+						xcm::v3::Junctions::X2(
+							xcm::v3::Junction::Parachain(*para_id),
+							xcm::v3::Junction::AccountId32 {
 								network: None,
 								id: Utility::derivative_account_id(
 									polkadot_parachain_primitives::primitives::Sibling::from(
@@ -1122,10 +1122,10 @@ pub fn create_x2_multilocation(index: u16, currency_id: CurrencyId) -> MultiLoca
 						),
 					)
 				} else {
-					MultiLocation::default()
+					xcm::v3::Location::default()
 				}
 			} else {
-				MultiLocation::default()
+				xcm::v3::Location::default()
 			}
 		},
 	}
@@ -1201,7 +1201,7 @@ parameter_types! {
 }
 
 pub struct SubstrateResponseManager;
-impl QueryResponseManager<QueryId, MultiLocation, BlockNumber, RuntimeCall>
+impl QueryResponseManager<QueryId, Location, BlockNumber, RuntimeCall>
 	for SubstrateResponseManager
 {
 	fn get_query_response_record(query_id: QueryId) -> bool {
@@ -1213,14 +1213,14 @@ impl QueryResponseManager<QueryId, MultiLocation, BlockNumber, RuntimeCall>
 	}
 
 	fn create_query_record(
-		responder: &MultiLocation,
+		responder: Location,
 		call_back: Option<RuntimeCall>,
 		timeout: BlockNumber,
 	) -> u64 {
 		if let Some(call_back) = call_back {
-			PolkadotXcm::new_notify_query(*responder, call_back, timeout, Here)
+			PolkadotXcm::new_notify_query(responder.clone(), call_back, timeout, Here)
 		} else {
-			PolkadotXcm::new_query(*responder, timeout, Here)
+			PolkadotXcm::new_query(responder, timeout, Here)
 		}
 	}
 
@@ -1911,10 +1911,7 @@ pub mod migrations {
 	use super::*;
 
 	/// Unreleased migrations. Add new ones here:
-	pub type Unreleased = (
-		cumulus_pallet_xcmp_queue::migration::v4::MigrationToV4<Runtime>,
-		migration::slpx_migrates_whitelist::UpdateWhitelist,
-	);
+	pub type Unreleased = ();
 }
 
 /// Executive: handles dispatch to the various modules.

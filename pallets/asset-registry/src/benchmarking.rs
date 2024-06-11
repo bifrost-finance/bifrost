@@ -24,16 +24,15 @@ use bifrost_primitives::{CurrencyId, TokenSymbol};
 use frame_benchmarking::{benchmarks, v1::BenchmarkError};
 use frame_support::{assert_ok, traits::UnfilteredDispatchable};
 use sp_runtime::traits::UniqueSaturatedFrom;
-use xcm::v3::prelude::*;
 
 benchmarks! {
 	register_native_asset {
 		let origin = T::RegisterOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?;
-		let v3_location = VersionedMultiLocation::V3(MultiLocation::from(X1(Junction::Parachain(1000))));
+		let versioned_location = VersionedLocation::V4(Location::from([Parachain(1000)]));
 
 	let call = Call::<T>::register_native_asset {
-			currency_id: CurrencyId::Token(TokenSymbol::DOT),
-			location: Box::new(v3_location.clone()),
+			currency_id: Token(TokenSymbol::DOT),
+			location: Box::new(versioned_location.clone()),
 			metadata: Box::new(AssetMetadata {
 				name: b"Token Name".to_vec(),
 				symbol: b"TN".to_vec(),
@@ -44,7 +43,7 @@ benchmarks! {
 	}: {call.dispatch_bypass_filter(origin)?}
 	verify {
 		assert_eq!(
-			AssetMetadatas::<T>::get(AssetIds::NativeAssetId(CurrencyId::Token(
+			AssetMetadatas::<T>::get(AssetIds::NativeAssetId(Token(
 				TokenSymbol::DOT
 			))),
 			Some(AssetMetadata {
@@ -58,12 +57,12 @@ benchmarks! {
 
 	update_native_asset {
 		let origin = T::RegisterOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?;
-		let v3_location = VersionedMultiLocation::V3(MultiLocation::from(X1(Junction::Parachain(1000))));
+		let versioned_location = VersionedLocation::V4(Location::from([Parachain(1000)]));
 
 		assert_ok!(AssetRegistry::<T>::register_native_asset(
 			origin.clone(),
-			CurrencyId::Token(TokenSymbol::DOT),
-			Box::new(v3_location.clone()),
+			Token(TokenSymbol::DOT),
+			Box::new(versioned_location.clone()),
 			Box::new(AssetMetadata {
 				name: b"Token Name".to_vec(),
 				symbol: b"TN".to_vec(),
@@ -73,8 +72,8 @@ benchmarks! {
 		));
 
 	let call = Call::<T>::update_native_asset {
-			currency_id: CurrencyId::Token(TokenSymbol::DOT),
-			location: Box::new(v3_location.clone()),
+			currency_id: Token(TokenSymbol::DOT),
+			location: Box::new(versioned_location.clone()),
 			metadata: Box::new(AssetMetadata {
 				name: b"Token Name".to_vec(),
 				symbol: b"TN".to_vec(),
@@ -85,7 +84,7 @@ benchmarks! {
 	}: {call.dispatch_bypass_filter(origin)?}
 	verify {
 		assert_eq!(
-			AssetMetadatas::<T>::get(AssetIds::NativeAssetId(CurrencyId::Token(
+			AssetMetadatas::<T>::get(AssetIds::NativeAssetId(Token(
 				TokenSymbol::DOT
 			))),
 			Some(AssetMetadata {
@@ -111,7 +110,7 @@ benchmarks! {
 		};
 	}: {call.dispatch_bypass_filter(origin)?}
 	verify {
-		assert_eq!(CurrencyMetadatas::<T>::get(CurrencyId::Token2(0)), Some(metadata.clone()))
+		assert_eq!(CurrencyMetadatas::<T>::get(Token2(0)), Some(metadata.clone()))
 	}
 
 	register_vtoken_metadata {
@@ -208,7 +207,7 @@ benchmarks! {
 		)
 	}
 
-	register_multilocation {
+	register_location {
 		let origin = T::RegisterOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?;
 		let metadata = AssetMetadata {
 			name: b"Bifrost Native Coin".to_vec(),
@@ -216,38 +215,34 @@ benchmarks! {
 			decimals: 12,
 			minimal_balance: BalanceOf::<T>::unique_saturated_from(0u128),
 		};
-		// v3
-		let location = VersionedMultiLocation::V3(MultiLocation {
-			parents: 1,
-			interior: Junctions::X1(Parachain(2001)),
-		});
+	let versioned_location = VersionedLocation::V4(Location::new(1, [Parachain(2001)]));
 
-		let multi_location: MultiLocation = location.clone().try_into().unwrap();
+		let location: xcm::v3::Location = versioned_location.clone().try_into().unwrap();
 
 		assert_ok!(AssetRegistry::<T>::register_token_metadata(
 			origin.clone(),
 			Box::new(metadata.clone())
 		));
 
-		let call = Call::<T>::register_multilocation {
-			currency_id: CurrencyId::Token2(0),
-			location:Box::new(location.clone()),
+		let call = Call::<T>::register_location {
+			currency_id: Token2(0),
+			location:Box::new(versioned_location.clone()),
 			weight:Weight::from_parts(2000_000_000, u64::MAX),
 		};
 	}: {call.dispatch_bypass_filter(origin)?}
 	verify {
 		assert_eq!(
-			LocationToCurrencyIds::<T>::get(multi_location.clone()),
-			Some(CurrencyId::Token2(0))
+			LocationToCurrencyIds::<T>::get(location.clone()),
+			Some(Token2(0))
 		);
 		assert_eq!(
-			CurrencyIdToLocations::<T>::get(CurrencyId::Token2(0)),
-			Some(multi_location.clone())
+			CurrencyIdToLocations::<T>::get(Token2(0)),
+			Some(location.clone())
 		);
-		assert_eq!(CurrencyIdToWeights::<T>::get(CurrencyId::Token2(0)), Some(Weight::from_parts(2000_000_000, u64::MAX)));
+		assert_eq!(CurrencyIdToWeights::<T>::get(Token2(0)), Some(Weight::from_parts(2000_000_000, u64::MAX)));
 	}
 
-	force_set_multilocation {
+	force_set_location {
 		let origin = T::RegisterOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?;
 		let metadata = AssetMetadata {
 			name: b"Bifrost Native Coin".to_vec(),
@@ -255,22 +250,18 @@ benchmarks! {
 			decimals: 12,
 			minimal_balance: BalanceOf::<T>::unique_saturated_from(0u128),
 		};
-		// v3
-		let location = VersionedMultiLocation::V3(MultiLocation {
-			parents: 1,
-			interior: Junctions::X1(Parachain(2001)),
-		});
+		let versioned_location = VersionedLocation::V4(Location::new(1, [Parachain(2001)]));
 
-		let multi_location: MultiLocation = location.clone().try_into().unwrap();
+		let location: xcm::v3::Location = versioned_location.clone().try_into().unwrap();
 
 		assert_ok!(AssetRegistry::<T>::register_token_metadata(
 			origin.clone(),
 			Box::new(metadata.clone())
 		));
 
-		let call = Call::<T>::force_set_multilocation {
-			currency_id: CurrencyId::Token2(0),
-			location:Box::new(location.clone()),
+		let call = Call::<T>::force_set_location {
+			currency_id: Token2(0),
+			location:Box::new(versioned_location.clone()),
 			weight:Weight::from_parts(2000_000_000, u64::MAX),
 		};
 	}: {call.dispatch_bypass_filter(origin)?}

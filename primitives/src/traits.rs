@@ -168,10 +168,10 @@ pub trait CurrencyIdMapping<CurrencyId, MultiLocation, AssetMetadata> {
 	fn get_asset_metadata(asset_ids: AssetIds) -> Option<AssetMetadata>;
 	/// Returns the AssetMetadata associated with a given `CurrencyId`.
 	fn get_currency_metadata(currency_id: CurrencyId) -> Option<AssetMetadata>;
-	/// Returns the MultiLocation associated with a given CurrencyId.
-	fn get_multi_location(currency_id: CurrencyId) -> Option<MultiLocation>;
-	/// Returns the CurrencyId associated with a given MultiLocation.
-	fn get_currency_id(multi_location: MultiLocation) -> Option<CurrencyId>;
+	/// Returns the Location associated with a given CurrencyId.
+	fn get_location(currency_id: CurrencyId) -> Option<xcm::v4::Location>;
+	/// Returns the CurrencyId associated with a given Location.
+	fn get_currency_id(multi_location: xcm::v4::Location) -> Option<CurrencyId>;
 }
 
 pub trait CurrencyIdConversion<CurrencyId> {

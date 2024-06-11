@@ -28,7 +28,7 @@ use sp_runtime::{
 	traits::{BlakeTwo256, IdentifyAccount, Verify},
 	FixedU128, MultiSignature, OpaqueExtrinsic, Permill,
 };
-use xcm::v3::prelude::*;
+use xcm::v4::{prelude::*, Asset, Location};
 use xcm_executor::traits::{AssetTransferError, TransferType, XcmAssetTransfers};
 
 pub mod currency;
@@ -254,8 +254,8 @@ impl<AccountId> Default for RedeemType<AccountId> {
 pub struct DoNothingRouter;
 impl SendXcm for DoNothingRouter {
 	type Ticket = ();
-	fn validate(_dest: &mut Option<MultiLocation>, _msg: &mut Option<Xcm<()>>) -> SendResult<()> {
-		Ok(((), MultiAssets::new()))
+	fn validate(_dest: &mut Option<Location>, _msg: &mut Option<Xcm<()>>) -> SendResult<()> {
+		Ok(((), Assets::new()))
 	}
 	fn deliver(_: ()) -> Result<XcmHash, SendError> {
 		Ok([0; 32])
@@ -278,34 +278,15 @@ impl<Call> ExecuteXcm<Call> for DoNothingExecuteXcm {
 	}
 
 	fn execute(
-		_origin: impl Into<MultiLocation>,
+		_origin: impl Into<Location>,
 		_pre: Self::Prepared,
 		_hash: &mut XcmHash,
 		_weight_credit: Weight,
 	) -> Outcome {
-		Outcome::Complete(Weight::default())
+		Outcome::Complete { used: Weight::default() }
 	}
 
-	fn execute_xcm(
-		_origin: impl Into<MultiLocation>,
-		_message: Xcm<Call>,
-		_hash: XcmHash,
-		_weight_limit: Weight,
-	) -> Outcome {
-		Outcome::Complete(Weight::default())
-	}
-
-	fn execute_xcm_in_credit(
-		_origin: impl Into<MultiLocation>,
-		_message: Xcm<Call>,
-		_hash: XcmHash,
-		_weight_limit: Weight,
-		_weight_credit: Weight,
-	) -> Outcome {
-		Outcome::Complete(Weight::default())
-	}
-
-	fn charge_fees(_location: impl Into<MultiLocation>, _fees: MultiAssets) -> XcmResult {
+	fn charge_fees(_location: impl Into<Location>, _fees: Assets) -> XcmResult {
 		Ok(())
 	}
 }
@@ -315,10 +296,7 @@ impl XcmAssetTransfers for DoNothingExecuteXcm {
 	type IsTeleporter = ();
 	type AssetTransactor = ();
 
-	fn determine_for(
-		_asset: &MultiAsset,
-		_dest: &MultiLocation,
-	) -> Result<TransferType, AssetTransferError> {
+	fn determine_for(_asset: &Asset, _dest: &Location) -> Result<TransferType, AssetTransferError> {
 		Ok(TransferType::DestinationReserve)
 	}
 }

@@ -20,6 +20,7 @@ use frame_support::sp_runtime::MultiSignature;
 use parity_scale_codec::{Decode, Encode};
 use sp_runtime::RuntimeDebug;
 use sp_std::vec::Vec;
+use xcm::{VersionedAssets, VersionedLocation};
 
 use crate::ChainId;
 
@@ -35,6 +36,23 @@ pub enum UtilityCall<RelayChainCall> {
 pub enum StakingCall {
 	#[codec(index = 3)]
 	WithdrawUnbonded(u32),
+}
+
+#[derive(Encode, Decode, RuntimeDebug, Clone)]
+pub enum PolkadotXcm {
+	#[codec(index = 2)]
+	ReserveTransferAssets(
+		Box<VersionedLocation>,
+		Box<VersionedLocation>,
+		Box<VersionedAssets>,
+		u32,
+	),
+}
+
+#[derive(Encode, Decode, RuntimeDebug, Clone)]
+pub enum SystemCall {
+	#[codec(index = 7)]
+	RemarkWithEvent(Vec<u8>),
 }
 
 pub mod rococo {

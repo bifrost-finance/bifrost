@@ -59,8 +59,8 @@ pub trait WeightInfo {
 	fn register_vtoken_metadata() -> Weight;
 	fn register_vstoken_metadata() -> Weight;
 	fn register_vsbond_metadata() -> Weight;
-	fn register_multilocation() -> Weight;
-	fn force_set_multilocation() -> Weight;
+	fn register_location() -> Weight;
+	fn force_set_location() -> Weight;
 }
 
 // For backwards compatibility and tests
@@ -149,7 +149,7 @@ impl WeightInfo for () {
 	/// Proof Skipped: AssetRegistry CurrencyIdToLocations (max_values: None, max_size: None, mode: Measured)
 	/// Storage: AssetRegistry CurrencyIdToWeights (r:0 w:1)
 	/// Proof Skipped: AssetRegistry CurrencyIdToWeights (max_values: None, max_size: None, mode: Measured)
-	fn register_multilocation() -> Weight {
+	fn register_location() -> Weight {
 		// Proof Size summary in bytes:
 		//  Measured:  `683`
 		//  Estimated: `4148`
@@ -166,7 +166,7 @@ impl WeightInfo for () {
 	/// Proof Skipped: AssetRegistry CurrencyIdToWeights (max_values: None, max_size: None, mode: Measured)
 	/// Storage: AssetRegistry CurrencyIdToLocations (r:0 w:1)
 	/// Proof Skipped: AssetRegistry CurrencyIdToLocations (max_values: None, max_size: None, mode: Measured)
-	fn force_set_multilocation() -> Weight {
+	fn force_set_location() -> Weight {
 		// Proof Size summary in bytes:
 		//  Measured:  `683`
 		//  Estimated: `4148`

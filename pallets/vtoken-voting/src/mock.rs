@@ -39,7 +39,7 @@ use sp_runtime::{
 	traits::{BlockNumberProvider, ConstU32, IdentityLookup},
 	BuildStorage, Perbill,
 };
-use xcm::prelude::*;
+use xcm::{prelude::*, v3::MultiLocation};
 use xcm_builder::{FixedWeightBounds, FrameTransactionalProcessor};
 use xcm_executor::XcmExecutor;
 
@@ -110,7 +110,6 @@ impl pallet_balances::Config for Runtime {
 	type RuntimeHoldReason = RuntimeHoldReason;
 	type RuntimeFreezeReason = RuntimeFreezeReason;
 	type FreezeIdentifier = ();
-	type MaxHolds = ConstU32<0>;
 	type MaxFreezes = ConstU32<0>;
 }
 
@@ -142,7 +141,7 @@ parameter_types! {
 	// One XCM operation is 200_000_000 XcmWeight, cross-chain transfer ~= 2x of transfer = 3_000_000_000
 	pub UnitWeightCost: Weight = Weight::from_parts(200_000_000, 0);
 	pub const MaxInstructions: u32 = 100;
-	pub UniversalLocation: InteriorMultiLocation = X1(Parachain(2001));
+	pub UniversalLocation: InteriorLocation = Parachain(2001).into();
 }
 
 pub struct XcmConfig;
@@ -176,7 +175,7 @@ impl xcm_executor::Config for XcmConfig {
 
 #[cfg(feature = "runtime-benchmarks")]
 parameter_types! {
-	pub ReachableDest: Option<MultiLocation> = Some(Parent.into());
+	pub ReachableDest: Option<Location> = Some(Parent.into());
 }
 
 impl pallet_xcm::Config for Runtime {
@@ -248,7 +247,7 @@ impl DerivativeAccountHandler<CurrencyId, Balance> for DerivativeAccount {
 		_token: CurrencyId,
 		_derivative_index: DerivativeIndex,
 	) -> Option<MultiLocation> {
-		Some(Parent.into())
+		Some(xcm::v3::Parent.into())
 	}
 
 	fn get_stake_info(

@@ -22,7 +22,7 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use bifrost_primitives::{
+pub use bifrost_primitives::{
 	AssetIds, CurrencyId,
 	CurrencyId::{Native, Token, Token2},
 	CurrencyIdConversion, CurrencyIdMapping, CurrencyIdRegister, ForeignAssetId, LeasePeriod,
@@ -43,15 +43,13 @@ use sp_runtime::{
 };
 use sp_std::{boxed::Box, vec::Vec};
 use xcm::{
-	opaque::{
-		lts::XcmContext,
-		v3::{prelude::XcmError, AssetId, Fungibility::Fungible, MultiAsset},
-	},
+	opaque::lts::XcmContext,
 	v3::MultiLocation,
-	VersionedMultiLocation,
+	v4::{prelude::*, Asset, Location},
+	VersionedLocation,
 };
 use xcm_builder::TakeRevenue;
-use xcm_executor::{traits::WeightTrader, Assets};
+use xcm_executor::{traits::WeightTrader, AssetsInHolding};
 
 pub mod migration;
 mod mock;
@@ -100,8 +98,8 @@ pub mod pallet {
 		/// The given location could not be used (e.g. because it cannot be expressed in the
 		/// desired version of XCM).
 		BadLocation,
-		/// MultiLocation existed
-		MultiLocationExisted,
+		/// Location existed
+		LocationExisted,
 		/// AssetId not exists
 		AssetIdNotExists,
 		/// AssetId exists
@@ -121,8 +119,8 @@ pub mod pallet {
 		AssetUpdated { asset_id: AssetIds, metadata: AssetMetadata<BalanceOf<T>> },
 		/// The CurrencyId registered.
 		CurrencyIdRegistered { currency_id: CurrencyId, metadata: AssetMetadata<BalanceOf<T>> },
-		/// MultiLocation Force set.
-		MultiLocationSet { currency_id: CurrencyId, location: MultiLocation, weight: Weight },
+		/// Location Force set.
+		LocationSet { currency_id: CurrencyId, location: Location, weight: Weight },
 	}
 
 	/// Next available Foreign AssetId ID.
@@ -139,21 +137,21 @@ pub mod pallet {
 	#[pallet::getter(fn next_token_id)]
 	pub type NextTokenId<T: Config> = StorageValue<_, TokenId, ValueQuery>;
 
-	/// The storages for MultiLocations.
+	/// The storages for Locations.
 	///
-	/// CurrencyIdToLocations: map CurrencyId => Option<MultiLocation>
+	/// CurrencyIdToLocations: map CurrencyId => Option<Location>
 	#[pallet::storage]
 	#[pallet::getter(fn currency_id_to_locations)]
 	pub type CurrencyIdToLocations<T: Config> =
-		StorageMap<_, Twox64Concat, CurrencyId, MultiLocation, OptionQuery>;
+		StorageMap<_, Twox64Concat, CurrencyId, xcm::v3::Location, OptionQuery>;
 
 	/// The storages for CurrencyIds.
 	///
-	/// LocationToCurrencyIds: map MultiLocation => Option<CurrencyId>
+	/// LocationToCurrencyIds: map Location => Option<CurrencyId>
 	#[pallet::storage]
 	#[pallet::getter(fn location_to_currency_ids)]
 	pub type LocationToCurrencyIds<T: Config> =
-		StorageMap<_, Twox64Concat, MultiLocation, CurrencyId, OptionQuery>;
+		StorageMap<_, Twox64Concat, xcm::v3::Location, CurrencyId, OptionQuery>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn currency_id_to_weight)]
@@ -279,12 +277,12 @@ pub mod pallet {
 		pub fn register_native_asset(
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
-			location: Box<VersionedMultiLocation>,
+			location: Box<VersionedLocation>,
 			metadata: Box<AssetMetadata<BalanceOf<T>>>,
 		) -> DispatchResult {
 			T::RegisterOrigin::ensure_origin(origin)?;
 
-			let location: MultiLocation =
+			let location: Location =
 				(*location).try_into().map_err(|()| Error::<T>::BadLocation)?;
 			Self::do_register_native_asset(currency_id, &location, &metadata)?;
 
@@ -300,12 +298,12 @@ pub mod pallet {
 		pub fn update_native_asset(
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
-			location: Box<VersionedMultiLocation>,
+			location: Box<VersionedLocation>,
 			metadata: Box<AssetMetadata<BalanceOf<T>>>,
 		) -> DispatchResult {
 			T::RegisterOrigin::ensure_origin(origin)?;
 
-			let location: MultiLocation =
+			let location: Location =
 				(*location).try_into().map_err(|()| Error::<T>::BadLocation)?;
 			Self::do_update_native_asset(currency_id, &location, &metadata)?;
 
@@ -325,7 +323,7 @@ pub mod pallet {
 			T::RegisterOrigin::ensure_origin(origin)?;
 
 			let token_id = Self::get_next_token_id()?;
-			let currency_id = CurrencyId::Token2(token_id);
+			let currency_id = Token2(token_id);
 			Self::do_register_metadata(currency_id, &metadata)?;
 
 			Ok(())
@@ -336,8 +334,7 @@ pub mod pallet {
 		pub fn register_vtoken_metadata(origin: OriginFor<T>, token_id: TokenId) -> DispatchResult {
 			T::RegisterOrigin::ensure_origin(origin)?;
 
-			if let Some(token_metadata) = CurrencyMetadatas::<T>::get(CurrencyId::Token2(token_id))
-			{
+			if let Some(token_metadata) = CurrencyMetadatas::<T>::get(Token2(token_id)) {
 				let vtoken_metadata = Self::convert_to_vtoken_metadata(token_metadata);
 				Self::do_register_metadata(CurrencyId::VToken2(token_id), &vtoken_metadata)?;
 
@@ -397,50 +394,49 @@ pub mod pallet {
 		}
 
 		#[pallet::call_index(6)]
-		#[pallet::weight(T::WeightInfo::register_multilocation())]
-		pub fn register_multilocation(
+		#[pallet::weight(T::WeightInfo::register_location())]
+		pub fn register_location(
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
-			location: Box<VersionedMultiLocation>,
+			location: Box<VersionedLocation>,
 			weight: Weight,
 		) -> DispatchResult {
 			T::RegisterOrigin::ensure_origin(origin)?;
 
-			let location: MultiLocation =
+			let location: Location =
 				(*location).try_into().map_err(|()| Error::<T>::BadLocation)?;
-			Self::do_register_multilocation(currency_id, &location)?;
+			Self::do_register_location(currency_id, &location)?;
 			Self::do_register_weight(currency_id, weight)?;
 
 			Ok(())
 		}
 
 		#[pallet::call_index(7)]
-		#[pallet::weight(T::WeightInfo::force_set_multilocation())]
-		pub fn force_set_multilocation(
+		#[pallet::weight(T::WeightInfo::force_set_location())]
+		pub fn force_set_location(
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
-			location: Box<VersionedMultiLocation>,
+			location: Box<VersionedLocation>,
 			weight: Weight,
 		) -> DispatchResult {
 			T::RegisterOrigin::ensure_origin(origin)?;
 
-			let location: MultiLocation =
+			let location: Location =
 				(*location).try_into().map_err(|()| Error::<T>::BadLocation)?;
+
+			let v3_location = xcm::v3::Location::try_from(location.clone())
+				.map_err(|()| Error::<T>::BadLocation)?;
 
 			ensure!(
 				CurrencyMetadatas::<T>::get(currency_id).is_some(),
 				Error::<T>::CurrencyIdNotExists
 			);
 
-			LocationToCurrencyIds::<T>::insert(location, currency_id);
-			CurrencyIdToLocations::<T>::insert(currency_id, location);
+			LocationToCurrencyIds::<T>::insert(v3_location, currency_id);
+			CurrencyIdToLocations::<T>::insert(currency_id, v3_location);
 			CurrencyIdToWeights::<T>::insert(currency_id, weight);
 
-			Pallet::<T>::deposit_event(Event::<T>::MultiLocationSet {
-				currency_id,
-				location,
-				weight,
-			});
+			Pallet::<T>::deposit_event(Event::<T>::LocationSet { currency_id, location, weight });
 
 			Ok(())
 		}
@@ -458,21 +454,24 @@ impl<T: Config> Pallet<T> {
 
 	pub fn do_register_native_asset(
 		currency_id: CurrencyId,
-		location: &MultiLocation,
+		location: &Location,
 		metadata: &AssetMetadata<BalanceOf<T>>,
 	) -> DispatchResult {
-		ensure!(LocationToCurrencyIds::<T>::get(location).is_none(), Error::<T>::AssetIdExisted);
+		let v3_location =
+			xcm::v3::Location::try_from(location.clone()).map_err(|()| Error::<T>::BadLocation)?;
+
+		ensure!(LocationToCurrencyIds::<T>::get(v3_location).is_none(), Error::<T>::AssetIdExisted);
 		ensure!(
 			CurrencyIdToLocations::<T>::get(currency_id).is_none(),
-			Error::<T>::MultiLocationExisted
+			Error::<T>::LocationExisted
 		);
 		ensure!(
 			AssetMetadatas::<T>::get(AssetIds::NativeAssetId(currency_id)).is_none(),
 			Error::<T>::AssetIdExisted
 		);
 
-		LocationToCurrencyIds::<T>::insert(location, currency_id);
-		CurrencyIdToLocations::<T>::insert(currency_id, location);
+		LocationToCurrencyIds::<T>::insert(v3_location, currency_id);
+		CurrencyIdToLocations::<T>::insert(currency_id, v3_location);
 		AssetMetadatas::<T>::insert(AssetIds::NativeAssetId(currency_id), metadata);
 
 		Ok(())
@@ -532,28 +531,27 @@ impl<T: Config> Pallet<T> {
 		Ok(())
 	}
 
-	pub fn do_register_multilocation(
-		currency_id: CurrencyId,
-		location: &MultiLocation,
-	) -> DispatchResult {
+	pub fn do_register_location(currency_id: CurrencyId, location: &Location) -> DispatchResult {
+		let v3_location =
+			xcm::v3::Location::try_from(location.clone()).map_err(|()| Error::<T>::BadLocation)?;
+
 		ensure!(
 			CurrencyMetadatas::<T>::get(currency_id).is_some(),
 			Error::<T>::CurrencyIdNotExists
 		);
-		ensure!(LocationToCurrencyIds::<T>::get(location).is_none(), Error::<T>::CurrencyIdExisted);
+		ensure!(
+			LocationToCurrencyIds::<T>::get(v3_location).is_none(),
+			Error::<T>::CurrencyIdExisted
+		);
 		ensure!(
 			CurrencyIdToLocations::<T>::get(currency_id).is_none(),
-			Error::<T>::MultiLocationExisted
+			Error::<T>::LocationExisted
 		);
 
-		LocationToCurrencyIds::<T>::insert(location, currency_id);
-		CurrencyIdToLocations::<T>::insert(currency_id, location);
+		LocationToCurrencyIds::<T>::insert(v3_location, currency_id);
+		CurrencyIdToLocations::<T>::insert(currency_id, v3_location);
 
 		Ok(())
-	}
-
-	pub fn do_remove_multilocation(location: &MultiLocation) {
-		LocationToCurrencyIds::<T>::remove(location);
 	}
 
 	pub fn do_register_weight(currency_id: CurrencyId, weight: Weight) -> DispatchResult {
@@ -569,21 +567,27 @@ impl<T: Config> Pallet<T> {
 
 	fn do_update_native_asset(
 		currency_id: CurrencyId,
-		location: &MultiLocation,
+		location: &Location,
 		metadata: &AssetMetadata<BalanceOf<T>>,
 	) -> DispatchResult {
-		ensure!(LocationToCurrencyIds::<T>::get(location).is_some(), Error::<T>::AssetIdNotExists);
+		let v3_location =
+			xcm::v3::Location::try_from(location.clone()).map_err(|()| Error::<T>::BadLocation)?;
+
+		ensure!(
+			LocationToCurrencyIds::<T>::get(v3_location).is_some(),
+			Error::<T>::AssetIdNotExists
+		);
 		ensure!(
 			CurrencyIdToLocations::<T>::get(currency_id).is_some(),
-			Error::<T>::MultiLocationExisted
+			Error::<T>::LocationExisted
 		);
 		ensure!(
 			AssetMetadatas::<T>::get(AssetIds::NativeAssetId(currency_id)).is_some(),
 			Error::<T>::AssetIdNotExists
 		);
 
-		LocationToCurrencyIds::<T>::insert(location, currency_id);
-		CurrencyIdToLocations::<T>::insert(currency_id, location);
+		LocationToCurrencyIds::<T>::insert(v3_location, currency_id);
+		CurrencyIdToLocations::<T>::insert(currency_id, v3_location);
 		AssetMetadatas::<T>::insert(AssetIds::NativeAssetId(currency_id), metadata);
 
 		Ok(())
@@ -603,12 +607,14 @@ impl<T: Config> CurrencyIdMapping<CurrencyId, MultiLocation, AssetMetadata<Balan
 		Pallet::<T>::currency_metadatas(currency_id)
 	}
 
-	fn get_multi_location(currency_id: CurrencyId) -> Option<MultiLocation> {
+	fn get_location(currency_id: CurrencyId) -> Option<Location> {
 		Pallet::<T>::currency_id_to_locations(currency_id)
+			.map(|location| location.try_into().ok())?
 	}
 
-	fn get_currency_id(multi_location: MultiLocation) -> Option<CurrencyId> {
-		Pallet::<T>::location_to_currency_ids(multi_location)
+	fn get_currency_id(multi_location: Location) -> Option<CurrencyId> {
+		let v3_location = xcm::v3::Location::try_from(multi_location).ok()?;
+		Pallet::<T>::location_to_currency_ids(v3_location)
 	}
 }
 
@@ -853,7 +859,7 @@ pub struct FixedRateOfAsset<T, FixedRate: Get<u128>, R: TakeRevenue> {
 	weight: u64,
 	amount: u128,
 	ed_ratio: FixedU128,
-	multi_location: Option<MultiLocation>,
+	location: Option<Location>,
 	_marker: PhantomData<(T, FixedRate, R)>,
 }
 
@@ -867,7 +873,7 @@ where
 			weight: 0,
 			amount: 0,
 			ed_ratio: Default::default(),
-			multi_location: None,
+			location: None,
 			_marker: PhantomData,
 		}
 	}
@@ -875,9 +881,9 @@ where
 	fn buy_weight(
 		&mut self,
 		weight: Weight,
-		payment: Assets,
+		payment: AssetsInHolding,
 		_context: &XcmContext,
-	) -> Result<Assets, XcmError> {
+	) -> Result<AssetsInHolding, XcmError> {
 		log::trace!(target: "asset-registry::weight", "buy_weight weight: {:?}, payment: {:?}", weight, payment);
 
 		// only support first fungible assets now.
@@ -887,51 +893,51 @@ where
 			.next()
 			.map_or(Err(XcmError::TooExpensive), |v| Ok(v.0))?;
 
-		if let AssetId::Concrete(ref multi_location) = asset_id {
-			log::debug!(target: "asset-registry::weight", "buy_weight multi_location: {:?}", multi_location);
+		let AssetId(ref location) = asset_id.clone();
+		log::debug!(target: "asset-registry::weight", "buy_weight location: {:?}", location);
 
-			if let Some(currency_id) = Pallet::<T>::location_to_currency_ids(multi_location) {
-				if let Some(currency_metadatas) = Pallet::<T>::currency_metadatas(currency_id) {
-					// The integration tests can ensure the ed is non-zero.
-					let ed_ratio = FixedU128::saturating_from_rational(
-						currency_metadatas.minimal_balance.into(),
-						T::Currency::minimum_balance().into(),
-					);
-					// The WEIGHT_REF_TIME_PER_SECOND is non-zero.
-					let weight_ratio = FixedU128::saturating_from_rational(
-						weight.ref_time(),
-						WEIGHT_REF_TIME_PER_SECOND,
-					);
-					let amount = ed_ratio
-						.saturating_mul_int(weight_ratio.saturating_mul_int(FixedRate::get()));
+		let v3_location =
+			xcm::v3::Location::try_from(location.clone()).map_err(|_| XcmError::InvalidLocation)?;
 
-					let required = MultiAsset { id: *asset_id, fun: Fungible(amount) };
+		if let Some(currency_id) = Pallet::<T>::location_to_currency_ids(v3_location) {
+			if let Some(currency_metadatas) = Pallet::<T>::currency_metadatas(currency_id) {
+				// The integration tests can ensure the ed is non-zero.
+				let ed_ratio = FixedU128::saturating_from_rational(
+					currency_metadatas.minimal_balance.into(),
+					T::Currency::minimum_balance().into(),
+				);
+				// The WEIGHT_REF_TIME_PER_SECOND is non-zero.
+				let weight_ratio = FixedU128::saturating_from_rational(
+					weight.ref_time(),
+					WEIGHT_REF_TIME_PER_SECOND,
+				);
+				let amount =
+					ed_ratio.saturating_mul_int(weight_ratio.saturating_mul_int(FixedRate::get()));
 
-					log::trace!(
-						target: "asset-registry::weight", "buy_weight payment: {:?}, required: {:?}, fixed_rate: {:?}, ed_ratio: {:?}, weight_ratio: {:?}",
-						payment, required, FixedRate::get(), ed_ratio, weight_ratio
-					);
-					let unused = payment
-						.clone()
-						.checked_sub(required)
-						.map_err(|_| XcmError::TooExpensive)?;
-					self.weight = self.weight.saturating_add(weight.ref_time());
-					self.amount = self.amount.saturating_add(amount);
-					self.ed_ratio = ed_ratio;
-					self.multi_location = Some(*multi_location);
-					return Ok(unused);
-				}
+				let required = Asset { id: asset_id.clone(), fun: Fungible(amount) };
+
+				log::trace!(
+					target: "asset-registry::weight", "buy_weight payment: {:?}, required: {:?}, fixed_rate: {:?}, ed_ratio: {:?}, weight_ratio: {:?}",
+					payment, required, FixedRate::get(), ed_ratio, weight_ratio
+				);
+				let unused =
+					payment.clone().checked_sub(required).map_err(|_| XcmError::TooExpensive)?;
+				self.weight = self.weight.saturating_add(weight.ref_time());
+				self.amount = self.amount.saturating_add(amount);
+				self.ed_ratio = ed_ratio;
+				self.location = Some(location.clone());
+				return Ok(unused);
 			}
-		}
+		};
 
 		log::trace!(target: "asset-registry::weight", "no concrete fungible asset");
 		Err(XcmError::TooExpensive)
 	}
 
-	fn refund_weight(&mut self, weight: Weight, _context: &XcmContext) -> Option<MultiAsset> {
+	fn refund_weight(&mut self, weight: Weight, _context: &XcmContext) -> Option<Asset> {
 		log::trace!(
-			target: "asset-registry::weight", "refund_weight weight: {:?}, weight: {:?}, amount: {:?}, ed_ratio: {:?}, multi_location: {:?}",
-			weight, self.weight, self.amount, self.ed_ratio, self.multi_location
+			target: "asset-registry::weight", "refund_weight weight: {:?}, weight: {:?}, amount: {:?}, ed_ratio: {:?}, location: {:?}",
+			weight, self.weight, self.amount, self.ed_ratio, self.location
 		);
 		let weight = weight.min(Weight::from_parts(self.weight, 0));
 		let weight_ratio =
@@ -944,8 +950,13 @@ where
 		self.amount = self.amount.saturating_sub(amount);
 
 		log::trace!(target: "asset-registry::weight", "refund_weight amount: {:?}", amount);
-		if amount > 0 && self.multi_location.is_some() {
-			Some((*self.multi_location.as_ref().expect("checked is non-empty; qed"), amount).into())
+		if amount > 0 && self.location.is_some() {
+			Some(Asset {
+				fun: Fungible(amount),
+				id: AssetId(
+					self.location.clone().expect("checked is non-empty; qed").try_into().unwrap(),
+				),
+			})
 		} else {
 			None
 		}
@@ -954,12 +965,14 @@ where
 
 impl<T, FixedRate: Get<u128>, R: TakeRevenue> Drop for FixedRateOfAsset<T, FixedRate, R> {
 	fn drop(&mut self) {
-		log::trace!(target: "asset-registry::weight", "take revenue, weight: {:?}, amount: {:?}, multi_location: {:?}", self.weight, self.amount, self.multi_location);
-		if self.amount > 0 && self.multi_location.is_some() {
-			R::take_revenue(
-				(*self.multi_location.as_ref().expect("checked is non-empty; qed"), self.amount)
-					.into(),
-			);
+		log::trace!(target: "asset-registry::weight", "take revenue, weight: {:?}, amount: {:?}, location: {:?}", self.weight, self.amount, self.location);
+		if self.amount > 0 && self.location.is_some() {
+			R::take_revenue(Asset {
+				fun: Fungible(self.amount),
+				id: AssetId(
+					self.location.clone().expect("checked is non-empty; qed").try_into().unwrap(),
+				),
+			});
 		}
 	}
 }

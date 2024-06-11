@@ -78,7 +78,8 @@ fn init_zenlink(para_id: u32) -> AccountIdOf<Runtime> {
 	assert_ok!(ZenlinkProtocol::create_pair(
 		RuntimeOrigin::root(),
 		asset_0_currency_id,
-		asset_1_currency_id
+		asset_1_currency_id,
+		ALICE
 	));
 	let deadline: BlockNumberFor<Runtime> =
 		<frame_system::Pallet<Runtime>>::block_number() + BlockNumberFor::<Runtime>::from(100u32);

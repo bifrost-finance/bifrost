@@ -239,6 +239,7 @@ pub mod slpx_migrates_whitelist {
 	pub struct UpdateWhitelist;
 	impl OnRuntimeUpgrade for UpdateWhitelist {
 		fn on_runtime_upgrade() -> Weight {
+			pallet_xcm::migrations::migrate_to_v1::<Runtime, pallet_xcm::Pallet<Runtime>>();
 			let new_whitelist: BoundedVec<AccountId, ConstU32<10>> = vec![
 				AccountId::from_ss58check("dCCU6pkmwQEb29MSigvWjhvnWTtE3GaBqaAdxt4ppW7kUkw")
 					.unwrap(),

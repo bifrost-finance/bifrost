@@ -23,7 +23,7 @@ pub use bifrost_salp_rpc_runtime_api::{self as runtime_api, SalpRuntimeApi};
 use jsonrpsee::{
 	core::{async_trait, RpcResult},
 	proc_macros::rpc,
-	types::error::{CallError, ErrorCode, ErrorObject},
+	types::error::{ErrorCode, ErrorObject},
 };
 use parity_scale_codec::Codec;
 use sp_api::ProvideRuntimeApi;
@@ -44,16 +44,13 @@ impl<C, Block> SalpRpc<C, Block> {
 }
 
 fn convert_rpc_params(value: Balance) -> RpcResult<NumberOrHex> {
-	value
-		.try_into()
-		.map_err(|e| {
-			CallError::Custom(ErrorObject::owned(
-				ErrorCode::InvalidParams.code(),
-				format!("{} doesn't fit in NumberOrHex representation", value),
-				Some(format!("{:?}", e)),
-			))
-		})
-		.map_err(|e| jsonrpsee::core::Error::Call(e))
+	value.try_into().map_err(|e| {
+		ErrorObject::owned(
+			ErrorCode::InvalidParams.code(),
+			format!("{} doesn't fit in NumberOrHex representation", value),
+			Some(format!("{:?}", e)),
+		)
+	})
 }
 
 #[rpc(client, server)]
@@ -94,12 +91,11 @@ where
 				Ok(value) => Ok((value, status)),
 				Err(e) => Err(e),
 			},
-			Err(e) => Err(CallError::Custom(ErrorObject::owned(
+			Err(e) => Err(ErrorObject::owned(
 				ErrorCode::InternalError.code(),
 				"Failed to get salp contribution.",
 				Some(format!("{:?}", e)),
-			)))
-			.map_err(|e| jsonrpsee::core::Error::Call(e)),
+			)),
 		}
 	}
 }

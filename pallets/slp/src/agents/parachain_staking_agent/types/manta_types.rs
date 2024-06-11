@@ -19,7 +19,7 @@ use crate::{BalanceOf, Config, Decode, Encode};
 use scale_info::TypeInfo;
 use sp_runtime::{traits::StaticLookup, RuntimeDebug};
 use sp_std::{boxed::Box, vec::Vec};
-use xcm::{opaque::v3::WeightLimit, VersionedMultiLocation};
+use xcm::{opaque::v3::WeightLimit, VersionedLocation};
 
 #[derive(Encode, Decode, RuntimeDebug)]
 pub enum MantaCall<T: Config> {
@@ -86,7 +86,7 @@ pub enum MantaParachainStakingCall<T: Config> {
 #[derive(Encode, Decode, RuntimeDebug, Clone)]
 pub enum MantaXtokensCall<T: Config> {
 	#[codec(index = 0)]
-	Transfer(MantaCurrencyId, BalanceOf<T>, Box<VersionedMultiLocation>, WeightLimit),
+	Transfer(MantaCurrencyId, BalanceOf<T>, Box<VersionedLocation>, WeightLimit),
 }
 
 #[derive(Clone, Eq, Debug, PartialEq, Ord, PartialOrd, Encode, Decode, TypeInfo)]
