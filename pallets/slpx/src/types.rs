@@ -130,4 +130,5 @@ pub struct Order<AccountId, CurrencyId, Balance, BlockNumber> {
 	pub order_type: OrderType,
 	pub remark: BoundedVec<u8, ConstU32<32>>,
 	pub target_chain: TargetChain<AccountId>,
+	pub channel_id: Option<u32>,
 }

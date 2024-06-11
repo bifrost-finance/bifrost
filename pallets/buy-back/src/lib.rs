@@ -109,8 +109,11 @@ pub mod pallet {
 	pub enum Event<T: Config> {
 		Charged { who: AccountIdOf<T>, asset_id: CurrencyIdOf<T>, value: BalanceOf<T> },
 		ConfigSet { asset_id: CurrencyIdOf<T>, info: Info<BalanceOf<T>, BlockNumberFor<T>> },
-		Closed { asset_id: CurrencyIdOf<T> },
-		Paid { asset_id: CurrencyIdOf<T>, value: BalanceOf<T> },
+		Removed { asset_id: CurrencyIdOf<T> },
+		BuyBackFailed { asset_id: CurrencyIdOf<T>, block_number: BlockNumberFor<T> },
+		BuyBackSuccess { asset_id: CurrencyIdOf<T>, block_number: BlockNumberFor<T> },
+		AddLiquidityFailed { asset_id: CurrencyIdOf<T>, block_number: BlockNumberFor<T> },
+		AddLiquiditySuccess { asset_id: CurrencyIdOf<T>, block_number: BlockNumberFor<T> },
 	}
 
 	#[pallet::error]
@@ -155,6 +158,15 @@ pub mod pallet {
 							"Received invalid justification for {:?}",
 							e,
 						);
+						Self::deposit_event(Event::AddLiquidityFailed {
+							asset_id,
+							block_number: n,
+						});
+					} else {
+						Self::deposit_event(Event::AddLiquiditySuccess {
+							asset_id,
+							block_number: n,
+						});
 					}
 					info.last_add_liquidity = n;
 					Infos::<T>::insert(asset_id, info.clone());
@@ -162,12 +174,15 @@ pub mod pallet {
 				if info.last_buyback == BlockNumberFor::<T>::from(0u32) ||
 					info.last_buyback + info.buyback_duration == n
 				{
-					if let Some(e) = Self::buy_back(&buyback_address, asset_id).err() {
+					if let Some(e) = Self::buy_back(&buyback_address, asset_id, &info).err() {
 						log::error!(
-							target: "runtime::buyback",
+							target: "runtime::buy_back",
 							"Received invalid justification for {:?}",
 							e,
 						);
+						Self::deposit_event(Event::BuyBackFailed { asset_id, block_number: n });
+					} else {
+						Self::deposit_event(Event::BuyBackSuccess { asset_id, block_number: n });
 					}
 					info.last_buyback = n;
 					Infos::<T>::insert(asset_id, info);
@@ -249,7 +264,7 @@ pub mod pallet {
 
 			Infos::<T>::remove(asset_id);
 
-			Self::deposit_event(Event::Closed { asset_id });
+			Self::deposit_event(Event::Removed { asset_id });
 
 			Ok(())
 		}
@@ -260,6 +275,7 @@ pub mod pallet {
 		pub fn buy_back(
 			buyback_address: &AccountIdOf<T>,
 			currency_id: CurrencyId,
+			info: &Info<BalanceOf<T>, BlockNumberFor<T>>,
 		) -> DispatchResult {
 			let asset_id: AssetId =
 				AssetId::try_convert_from(currency_id, T::ParachainId::get().into())
@@ -273,7 +289,7 @@ pub mod pallet {
 
 			T::DexOperator::inner_swap_exact_assets_for_assets(
 				buyback_address,
-				balance.saturated_into(),
+				balance.min(info.value).saturated_into(),
 				0,
 				&path,
 				&buyback_address,
