@@ -448,8 +448,7 @@ pub mod pallet {
 		}
 
 		#[pallet::call_index(8)]
-		#[pallet::weight(T::WeightInfo::force_set_multilocation())]
-		// #[pallet::weight(T::WeightInfo::update_currency_metadata())]
+		#[pallet::weight(T::WeightInfo::update_currency_metadata())]
 		pub fn update_currency_metadata(
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
