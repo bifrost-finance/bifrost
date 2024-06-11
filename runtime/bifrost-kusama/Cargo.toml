@@ -144,6 +144,7 @@ lend-market-rpc-runtime-api = { workspace = true }
 pallet-prices = { workspace = true }
 leverage-staking = { workspace = true }
 bifrost-channel-commission = { workspace = true }
+bifrost-vtoken-minting-rpc-runtime-api = { workspace = true }
 
 [build-dependencies]
 substrate-wasm-builder = { workspace = true, optional = true }
@@ -263,6 +264,7 @@ std = [
 	"bifrost-vtoken-voting/std",
 	"lend-market/std",
 	"lend-market-rpc-runtime-api/std",
+	"bifrost-vtoken-minting-rpc-runtime-api/std",
 	"pallet-prices/std",
 	"leverage-staking/std",
 	"bifrost-stable-asset/std",

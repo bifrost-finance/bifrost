@@ -168,6 +168,8 @@ pub trait CurrencyIdMapping<CurrencyId, MultiLocation, AssetMetadata> {
 	fn get_asset_metadata(asset_ids: AssetIds) -> Option<AssetMetadata>;
 	/// Returns the AssetMetadata associated with a given `CurrencyId`.
 	fn get_currency_metadata(currency_id: CurrencyId) -> Option<AssetMetadata>;
+	/// Returns all currencies in currencyMetadata.
+	fn get_all_currency() -> Vec<CurrencyId>;
 	/// Returns the MultiLocation associated with a given CurrencyId.
 	fn get_multi_location(currency_id: CurrencyId) -> Option<MultiLocation>;
 	/// Returns the CurrencyId associated with a given MultiLocation.

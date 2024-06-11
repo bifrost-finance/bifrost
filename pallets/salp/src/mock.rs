@@ -440,6 +440,7 @@ impl bifrost_vtoken_minting::Config for Test {
 	type MaxLockRecords = ConstU32<100>;
 	type IncentivePoolAccount = IncentivePoolAccount;
 	type VeMinting = ();
+	type AssetIdMaps = AssetIdMaps<Test>;
 }
 
 parameter_types! {
