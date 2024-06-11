@@ -33,7 +33,7 @@ fn buy_back_should_work() {
 		assert_ok!(BuyBack::set_vtoken(
 			RuntimeOrigin::signed(ALICE),
 			VKSM,
-			1_000_000u128,
+			1000u128,
 			Permill::from_percent(2),
 			1000,
 			1000,
@@ -48,13 +48,14 @@ fn buy_back_should_work() {
 		assert_eq!(Currencies::free_balance(BNC, &incentive_account), 0);
 		VeMinting::set_incentive(0, Some(7 * 86400 / 12), Some(buyback_account.clone()));
 		assert_ok!(BuyBack::charge(RuntimeOrigin::signed(ALICE), VKSM, 1000));
-		assert_ok!(BuyBack::buy_back(&buyback_account, VKSM));
+		let infos = Infos::<Runtime>::get(VKSM).unwrap();
+		assert_ok!(BuyBack::buy_back(&buyback_account, VKSM, &infos));
 		System::set_block_number(System::block_number() + 1);
-		assert_eq!(Currencies::free_balance(VKSM, &buyback_account), 0);
-		assert_eq!(Currencies::free_balance(VKSM, &zenlink_pair_account_id), 12200);
-		assert_eq!(Currencies::free_balance(BNC, &zenlink_pair_account_id), 362);
+		assert_eq!(Currencies::free_balance(VKSM, &buyback_account), 9000);
+		assert_eq!(Currencies::free_balance(VKSM, &zenlink_pair_account_id), 3200);
+		assert_eq!(Currencies::free_balance(BNC, &zenlink_pair_account_id), 1377);
 		assert_eq!(Currencies::free_balance(BNC, &buyback_account), 0);
-		assert_eq!(Currencies::free_balance(BNC, &incentive_account), 1638);
+		assert_eq!(Currencies::free_balance(BNC, &incentive_account), 623);
 	});
 }
 
