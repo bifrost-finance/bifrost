@@ -445,3 +445,123 @@ fn force_set_multilocation_should_work() {
 		);
 	})
 }
+
+#[test]
+fn update_currency_metadata_should_work() {
+	ExtBuilder::default().build().execute_with(|| {
+		let caller = CouncilAccount::get();
+		let currency_id = CurrencyId::Token2(0);
+		let name = b"Updated Name".to_vec();
+		let symbol = b"UN".to_vec();
+		let decimals: u8 = 10;
+		let minimal_balance = 1000u32.into();
+
+		// Pre-insert a currency_metadata to update
+		CurrencyMetadatas::<Runtime>::insert(
+			currency_id,
+			AssetMetadata {
+				name: b"Old Name".to_vec(),
+				symbol: b"ON".to_vec(),
+				decimals: 8,
+				minimal_balance: 1u32.into(),
+			},
+		);
+
+		// Ensure the origin has the required permissions
+		let origin = RuntimeOrigin::signed(caller);
+		assert_ok!(AssetRegistry::update_currency_metadata(
+			origin,
+			currency_id,
+			Some(name.clone()),
+			Some(symbol.clone()),
+			Some(decimals),
+			Some(minimal_balance)
+		));
+
+		System::assert_last_event(RuntimeEvent::AssetRegistry(crate::Event::CurrencyIdUpdated {
+			currency_id,
+			metadata: AssetMetadata {
+				name: name.clone(),
+				symbol: symbol.clone(),
+				decimals,
+				minimal_balance,
+			},
+		}));
+
+		// Verify the updated metadata
+		let updated_metadata = CurrencyMetadatas::<Runtime>::get(currency_id).unwrap();
+		assert_eq!(updated_metadata.name, name);
+		assert_eq!(updated_metadata.symbol, symbol);
+		assert_eq!(updated_metadata.decimals, decimals);
+		assert_eq!(updated_metadata.minimal_balance, minimal_balance);
+	})
+}
+
+#[test]
+fn update_currency_metadata_should_work_no_change() {
+	ExtBuilder::default().build().execute_with(|| {
+		let caller = CouncilAccount::get();
+		let currency_id = CurrencyId::Token2(0);
+		let name = None;
+		let symbol = None;
+		let decimals = None;
+		let minimal_balance = None;
+
+		let old_metadata = AssetMetadata {
+			name: b"Old Name".to_vec(),
+			symbol: b"ON".to_vec(),
+			decimals: 8,
+			minimal_balance: 1u32.into(),
+		};
+
+		// Pre-insert a currency_metadata to update
+		CurrencyMetadatas::<Runtime>::insert(currency_id, old_metadata.clone());
+
+		// Ensure the origin has the required permissions
+		let origin = RuntimeOrigin::signed(caller);
+		assert_ok!(AssetRegistry::update_currency_metadata(
+			origin,
+			currency_id,
+			name,
+			symbol,
+			decimals,
+			minimal_balance
+		));
+
+		// Verify the event
+		System::assert_last_event(RuntimeEvent::AssetRegistry(crate::Event::CurrencyIdUpdated {
+			currency_id,
+			metadata: old_metadata.clone(),
+		}));
+
+		// Verify the updated metadata
+		let updated_metadata = CurrencyMetadatas::<Runtime>::get(currency_id).unwrap();
+		assert_eq!(updated_metadata, old_metadata);
+	});
+}
+
+#[test]
+fn update_currency_metadata_nonexistent_currency_id() {
+	ExtBuilder::default().build().execute_with(|| {
+		let caller = CouncilAccount::get();
+		let currency_id = CurrencyId::Token2(1); // Non-existent currency ID
+		let name = Some(b"Updated Name".to_vec());
+		let symbol = Some(b"UN".to_vec());
+		let decimals = Some(10);
+		let minimal_balance = Some(1000u32.into());
+
+		// Ensure the origin has the required permissions
+		let origin = RuntimeOrigin::signed(caller);
+		assert_noop!(
+			AssetRegistry::update_currency_metadata(
+				origin,
+				currency_id,
+				name,
+				symbol,
+				decimals,
+				minimal_balance
+			),
+			Error::<Runtime>::CurrencyIdNotExists
+		);
+	});
+}
