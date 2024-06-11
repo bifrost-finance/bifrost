@@ -191,7 +191,7 @@ pub mod pallet {
 		RedeemSuccess {
 			unlock_id: UnlockId,
 			token_id: CurrencyIdOf<T>,
-			to: AccountIdOf<T>,
+			to: RedeemTo<AccountIdOf<T>>,
 			token_amount: BalanceOf<T>,
 		},
 		Rebonded {
@@ -1197,6 +1197,7 @@ pub mod pallet {
 		) -> DispatchResult {
 			let ed = T::MultiCurrency::minimum_balance(token_id);
 			let mut account_to_send = account.clone();
+			let mut redeem_to = RedeemTo::Native(account_to_send.clone());
 
 			if unlock_amount < ed {
 				let receiver_balance = T::MultiCurrency::total_balance(token_id, &account);
@@ -1206,6 +1207,7 @@ pub mod pallet {
 					.ok_or(ArithmeticError::Overflow)?;
 				if receiver_balance_after < ed {
 					account_to_send = T::FeeAccount::get();
+					redeem_to = RedeemTo::Native(T::FeeAccount::get());
 				}
 			}
 			if entrance_account_balance >= unlock_amount {
@@ -1276,6 +1278,7 @@ pub mod pallet {
 							dest,
 							Unlimited,
 						)?;
+						redeem_to = RedeemTo::Astar(receiver);
 					},
 					RedeemType::Hydradx(receiver) => {
 						let dest = Location::new(
@@ -1295,6 +1298,7 @@ pub mod pallet {
 							dest,
 							Unlimited,
 						)?;
+						redeem_to = RedeemTo::Hydradx(receiver);
 					},
 					RedeemType::Interlay(receiver) => {
 						let dest = Location::new(
@@ -1314,6 +1318,7 @@ pub mod pallet {
 							dest,
 							Unlimited,
 						)?;
+						redeem_to = RedeemTo::Interlay(receiver);
 					},
 					RedeemType::Manta(receiver) => {
 						let dest = Location::new(
@@ -1333,6 +1338,7 @@ pub mod pallet {
 							dest,
 							Unlimited,
 						)?;
+						redeem_to = RedeemTo::Manta(receiver);
 					},
 					RedeemType::Moonbeam(receiver) => {
 						let dest = Location::new(
@@ -1364,6 +1370,7 @@ pub mod pallet {
 								Unlimited,
 							)?;
 						}
+						redeem_to = RedeemTo::Moonbeam(receiver);
 					},
 				};
 			} else {
@@ -1457,7 +1464,7 @@ pub mod pallet {
 			Self::deposit_event(Event::RedeemSuccess {
 				unlock_id: *index,
 				token_id,
-				to: account_to_send,
+				to: redeem_to,
 				token_amount: unlock_amount,
 			});
 			Ok(())

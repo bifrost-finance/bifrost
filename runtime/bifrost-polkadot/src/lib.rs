@@ -141,7 +141,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: create_runtime_str!("bifrost_polkadot"),
 	impl_name: create_runtime_str!("bifrost_polkadot"),
 	authoring_version: 0,
-	spec_version: 10000,
+	spec_version: 10001,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 1,
@@ -327,6 +327,8 @@ parameter_types! {
 	pub const CloudsPalletId: PalletId = PalletId(*b"bf/cloud");
 	pub IncentivePoolAccount: PalletId = PalletId(*b"bf/inpoo");
 	pub const FarmingGaugeRewardIssuerPalletId: PalletId = PalletId(*b"bf/fmgar");
+	pub const BuyBackAccount: PalletId = PalletId(*b"bf/bybck");
+	pub const LiquidityAccount: PalletId = PalletId(*b"bf/liqdt");
 }
 
 impl frame_system::Config for Runtime {
@@ -449,8 +451,6 @@ impl InstanceFilter<RuntimeCall> for ProxyType {
 				RuntimeCall::PhragmenElection(..) |
 				RuntimeCall::TechnicalMembership(..) |
 				RuntimeCall::Treasury(..) |
-				RuntimeCall::Bounties(..) |
-				RuntimeCall::Tips(..) |
 				RuntimeCall::Vesting(bifrost_vesting::Call::vest{..}) |
 				RuntimeCall::Vesting(bifrost_vesting::Call::vest_other{..}) |
 				// Specifically omitting Vesting `vested_transfer`, and `force_vested_transfer`
@@ -458,16 +458,15 @@ impl InstanceFilter<RuntimeCall> for ProxyType {
 				RuntimeCall::Proxy(..) |
 				RuntimeCall::Multisig(..)
 			),
-			ProxyType::Governance =>
-				matches!(
-					c,
-					RuntimeCall::Democracy(..) |
-						RuntimeCall::Council(..) | RuntimeCall::TechnicalCommittee(..) |
-						RuntimeCall::PhragmenElection(..) |
-						RuntimeCall::Treasury(..) |
-						RuntimeCall::Bounties(..) |
-						RuntimeCall::Tips(..) | RuntimeCall::Utility(..)
-				),
+			ProxyType::Governance => matches!(
+				c,
+				RuntimeCall::Democracy(..) |
+					RuntimeCall::Council(..) |
+					RuntimeCall::TechnicalCommittee(..) |
+					RuntimeCall::PhragmenElection(..) |
+					RuntimeCall::Treasury(..) |
+					RuntimeCall::Utility(..)
+			),
 			ProxyType::CancelProxy => {
 				matches!(c, RuntimeCall::Proxy(pallet_proxy::Call::reject_announcement { .. }))
 			},
@@ -815,8 +814,6 @@ parameter_types! {
 	pub const SpendPeriod: BlockNumber = 6 * DAYS;
 	pub const PayoutSpendPeriod: BlockNumber = 30 * DAYS;
 	pub const Burn: Permill = Permill::from_perthousand(0);
-	pub const TipCountdown: BlockNumber = 1 * DAYS;
-	pub const TipFindersFee: Percent = Percent::from_percent(20);
 	pub const TipReportDepositBase: Balance = 1 * DOLLARS;
 	pub const DataDepositPerByte: Balance = 1 * CENTS;
 	pub const MaxApprovals: u32 = 100;
@@ -850,47 +847,9 @@ impl pallet_treasury::Config for Runtime {
 	type ProposalBondMinimum = ProposalBondMinimum;
 	type ProposalBondMaximum = ProposalBondMaximum;
 	type RejectOrigin = MoreThanHalfCouncil;
-	type SpendFunds = Bounties;
+	type SpendFunds = ();
 	type SpendPeriod = SpendPeriod;
 	type WeightInfo = pallet_treasury::weights::SubstrateWeight<Runtime>;
-}
-
-parameter_types! {
-	pub const BountyDepositBase: Balance = 1 * DOLLARS;
-	pub const BountyDepositPayoutDelay: BlockNumber = 8 * DAYS;
-	pub const BountyUpdatePeriod: BlockNumber = 90 * DAYS;
-	pub const MaximumReasonLength: u32 = 16384;
-	pub const CuratorDepositMultiplier: Permill = Permill::from_percent(50);
-	pub const CuratorDepositMin: Balance = 10 * DOLLARS;
-	pub const CuratorDepositMax: Balance = 200 * DOLLARS;
-	pub const BountyValueMinimum: Balance = 10 * DOLLARS;
-}
-
-impl pallet_bounties::Config for Runtime {
-	type BountyDepositBase = BountyDepositBase;
-	type BountyDepositPayoutDelay = BountyDepositPayoutDelay;
-	type BountyUpdatePeriod = BountyUpdatePeriod;
-	type BountyValueMinimum = BountyValueMinimum;
-	type CuratorDepositMultiplier = CuratorDepositMultiplier;
-	type CuratorDepositMin = CuratorDepositMin;
-	type CuratorDepositMax = CuratorDepositMax;
-	type DataDepositPerByte = DataDepositPerByte;
-	type RuntimeEvent = RuntimeEvent;
-	type MaximumReasonLength = MaximumReasonLength;
-	type WeightInfo = pallet_bounties::weights::SubstrateWeight<Runtime>;
-	type ChildBountyManager = ();
-}
-
-impl pallet_tips::Config for Runtime {
-	type DataDepositPerByte = DataDepositPerByte;
-	type RuntimeEvent = RuntimeEvent;
-	type MaximumReasonLength = MaximumReasonLength;
-	type MaxTipAmount = ();
-	type TipCountdown = TipCountdown;
-	type TipFindersFee = TipFindersFee;
-	type TipReportDepositBase = TipReportDepositBase;
-	type Tippers = PhragmenElection;
-	type WeightInfo = pallet_tips::weights::SubstrateWeight<Runtime>;
 }
 
 impl pallet_transaction_payment::Config for Runtime {
@@ -955,7 +914,6 @@ impl pallet_aura::Config for Runtime {
 	type DisabledValidators = ();
 	type MaxAuthorities = ConstU32<100_000>;
 	type AllowMultipleBlocksPerSlot = ConstBool<false>;
-	// type SlotDuration = ConstU64<SLOT_DURATION>;
 }
 
 parameter_types! {
@@ -1524,7 +1482,7 @@ impl bifrost_vtoken_minting::Config for Runtime {
 
 parameter_types! {
 	pub const VeMintingTokenType: CurrencyId = CurrencyId::VToken(TokenSymbol::BNC);
-	pub const Week: BlockNumber = 10;
+	pub const Week: BlockNumber = prod_or_fast!(WEEKS, 10);
 	pub const MaxBlock: BlockNumber = 4 * 365 * DAYS;
 	pub const Multiplier: Balance = 10_u128.pow(12);
 	pub const VoteWeightMultiplier: Balance = 1;
@@ -1673,6 +1631,22 @@ impl bifrost_clouds_convert::Config for Runtime {
 	type LockedBlocks = MaxBlock;
 }
 
+impl bifrost_buy_back::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type MultiCurrency = Currencies;
+	type ControlOrigin = EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
+	type WeightInfo = weights::bifrost_buy_back::BifrostWeight<Runtime>;
+	type DexOperator = ZenlinkProtocol;
+	type CurrencyIdConversion = AssetIdMaps<Runtime>;
+	type TreasuryAccount = BifrostTreasuryAccount;
+	type RelayChainToken = RelayCurrencyId;
+	type BuyBackAccount = BuyBackAccount;
+	type LiquidityAccount = LiquidityAccount;
+	type ParachainId = ParachainInfo;
+	type CurrencyIdRegister = AssetIdMaps<Runtime>;
+	type VeMinting = VeMinting;
+}
+
 // Below is the implementation of tokens manipulation functions other than native token.
 pub struct LocalAssetAdaptor<Local>(PhantomData<Local>);
 
@@ -1818,8 +1792,6 @@ construct_runtime! {
 
 		// Treasury stuff
 		Treasury: pallet_treasury = 61,
-		Bounties: pallet_bounties = 62,
-		Tips: pallet_tips = 63,
 		Preimage: pallet_preimage = 64,
 
 		// Third party modules
@@ -1859,6 +1831,7 @@ construct_runtime! {
 		LeverageStaking: leverage_staking = 135,
 		ChannelCommission: bifrost_channel_commission = 136,
 		CloudsConvert: bifrost_clouds_convert = 137,
+		BuyBack: bifrost_buy_back = 138,
 	}
 }
 
@@ -1930,7 +1903,10 @@ extern crate frame_benchmarking;
 
 #[cfg(feature = "runtime-benchmarks")]
 mod benches {
-	define_benchmarks!([bifrost_ve_minting, VeMinting]);
+	define_benchmarks!(
+		[bifrost_ve_minting, VeMinting]
+		[bifrost_buy_back, BuyBack]
+	);
 }
 
 impl_runtime_apis! {

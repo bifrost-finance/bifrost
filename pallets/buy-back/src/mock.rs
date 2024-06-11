@@ -22,43 +22,44 @@
 #![allow(non_upper_case_globals)]
 
 use bifrost_asset_registry::AssetIdMaps;
-use bifrost_primitives::{
-	currency::{BNC, DOT, FIL, KSM, MOVR, VBNC, VFIL, VKSM, VMOVR},
-	CurrencyId, CurrencyIdMapping, SlpxOperator, TokenSymbol,
-};
-use bifrost_runtime_common::{micro, milli};
+pub use bifrost_primitives::{currency::*, CurrencyId, SlpxOperator, TokenSymbol};
 use bifrost_slp::{QueryId, QueryResponseManager};
-use bifrost_ve_minting::{Point, VeMintingInterface};
 pub use cumulus_primitives_core::ParaId;
 use frame_support::{
 	derive_impl, ord_parameter_types,
 	pallet_prelude::Get,
 	parameter_types,
+	sp_runtime::{traits::ConvertInto, DispatchError, DispatchResult},
 	traits::{Everything, Nothing},
 	PalletId,
 };
 use frame_system::{EnsureRoot, EnsureSignedBy};
 use hex_literal::hex;
-use orml_traits::{location::RelativeReserveProvider, parameter_type_with_key};
+use orml_traits::{location::RelativeReserveProvider, parameter_type_with_key, MultiCurrency};
+use sp_core::ConstU32;
 use sp_runtime::{
-	traits::{ConstU32, IdentityLookup},
-	AccountId32, BuildStorage, DispatchError, DispatchResult,
+	traits::{AccountIdConversion, IdentityLookup, UniqueSaturatedInto},
+	AccountId32, BuildStorage, SaturatedConversion,
 };
-use xcm::{prelude::*, v3::Weight};
+use sp_std::marker::PhantomData;
+use xcm::{v3::Weight, v4::prelude::*};
 use xcm_builder::{FixedWeightBounds, FrameTransactionalProcessor};
 use xcm_executor::XcmExecutor;
+use zenlink_protocol::{
+	AssetBalance, AssetId as ZenlinkAssetId, LocalAssetHandler, PairLpGenerate, ZenlinkMultiAssets,
+};
 
-use crate as vtoken_minting;
+use crate as bifrost_buy_back;
 
 pub type BlockNumber = u64;
 pub type Amount = i128;
 pub type Balance = u128;
 
 pub type AccountId = AccountId32;
-
 pub const ALICE: AccountId = AccountId32::new([0u8; 32]);
 pub const BOB: AccountId = AccountId32::new([1u8; 32]);
 pub const CHARLIE: AccountId = AccountId32::new([3u8; 32]);
+pub const TREASURY_ACCOUNT: AccountId = AccountId32::new([9u8; 32]);
 
 frame_support::construct_runtime!(
 	pub enum Runtime {
@@ -67,12 +68,25 @@ frame_support::construct_runtime!(
 		XTokens: orml_xtokens,
 		Balances: pallet_balances,
 		Currencies: bifrost_currencies,
-		VtokenMinting: vtoken_minting,
+		BuyBack: bifrost_buy_back,
 		Slp: bifrost_slp,
+		VtokenMinting: bifrost_vtoken_minting,
+		ZenlinkProtocol: zenlink_protocol,
 		AssetRegistry: bifrost_asset_registry,
 		PolkadotXcm: pallet_xcm,
+		VeMinting: bifrost_ve_minting,
 	}
 );
+
+ord_parameter_types! {
+	pub const CouncilAccount: AccountId = AccountId::from([1u8; 32]);
+}
+impl bifrost_asset_registry::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type Currency = Balances;
+	type RegisterOrigin = EnsureSignedBy<CouncilAccount, AccountId>;
+	type WeightInfo = ();
+}
 
 type Block = frame_system::mocking::MockBlock<Runtime>;
 
@@ -89,14 +103,14 @@ impl frame_system::Config for Runtime {
 }
 
 parameter_types! {
-	pub const NativeCurrencyId: CurrencyId = CurrencyId::Native(TokenSymbol::BNC);
+	pub const GetNativeCurrencyId: CurrencyId = CurrencyId::Native(TokenSymbol::BNC);
 }
 
 pub type AdaptedBasicCurrency =
 	bifrost_currencies::BasicCurrencyAdapter<Runtime, Balances, Amount, BlockNumber>;
 
 impl bifrost_currencies::Config for Runtime {
-	type GetNativeCurrencyId = NativeCurrencyId;
+	type GetNativeCurrencyId = GetNativeCurrencyId;
 	type MultiCurrency = Tokens;
 	type NativeCurrency = AdaptedBasicCurrency;
 	type WeightInfo = ();
@@ -104,11 +118,6 @@ impl bifrost_currencies::Config for Runtime {
 
 parameter_types! {
 	pub const ExistentialDeposit: Balance = 1;
-	// pub const NativeCurrencyId: CurrencyId = CurrencyId::Native(TokenSymbol::BNC);
-	// pub const RelayCurrencyId: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
-	pub const StableCurrencyId: CurrencyId = CurrencyId::Stable(TokenSymbol::KUSD);
-	// pub SelfParaId: u32 = ParachainInfo::parachain_id().into();
-	pub const PolkadotCurrencyId: CurrencyId = CurrencyId::Token(TokenSymbol::DOT);
 }
 
 impl pallet_balances::Config for Runtime {
@@ -128,24 +137,8 @@ impl pallet_balances::Config for Runtime {
 }
 
 orml_traits::parameter_type_with_key! {
-	pub ExistentialDeposits: |currency_id: CurrencyId| -> Balance {
-		env_logger::try_init().unwrap_or(());
-
-		log::debug!(
-			"{:?}",currency_id
-		);
-		match currency_id {
-			&BNC => 10 * milli::<Runtime>(NativeCurrencyId::get()),   // 0.01 BNC
-			&KSM => 0,
-			&VKSM => 0,
-			&FIL => 0,
-			&VFIL => 0,
-			&MOVR => 1 * micro::<Runtime>(MOVR),	// MOVR has a decimals of 10e18
-			&VMOVR => 1 * micro::<Runtime>(MOVR),	// MOVR has a decimals of 10e18
-			&VBNC => 10 * milli::<Runtime>(NativeCurrencyId::get()),  // 0.01 BNC
-			_ => AssetIdMaps::<Runtime>::get_currency_metadata(*currency_id)
-				.map_or(Balance::max_value(), |metatata| metatata.minimal_balance)
-		}
+	pub ExistentialDeposits: |_currency_id: CurrencyId| -> Balance {
+		0
 	};
 }
 impl orml_tokens::Config for Runtime {
@@ -155,97 +148,49 @@ impl orml_tokens::Config for Runtime {
 	type DustRemovalWhitelist = Nothing;
 	type RuntimeEvent = RuntimeEvent;
 	type ExistentialDeposits = ExistentialDeposits;
-	type MaxLocks = ConstU32<50>;
+	type MaxLocks = ();
 	type MaxReserves = ();
 	type ReserveIdentifier = [u8; 8];
 	type WeightInfo = ();
 	type CurrencyHooks = ();
 }
 
-parameter_type_with_key! {
-	pub ParachainMinFee: |_location: Location| -> Option<u128> {
-		Some(u128::MAX)
-	};
-}
-
 parameter_types! {
-	pub SelfRelativeLocation: Location = Location::here();
-	pub const BaseXcmWeight: Weight = Weight::from_parts(1000_000_000u64, 0);
-	pub const MaxAssetsForTransfer: usize = 2;
-}
-
-impl orml_xtokens::Config for Runtime {
-	type RuntimeEvent = RuntimeEvent;
-	type Balance = Balance;
-	type CurrencyId = CurrencyId;
-	type CurrencyIdConvert = ();
-	type AccountIdToLocation = ();
-	type UniversalLocation = UniversalLocation;
-	type SelfLocation = SelfRelativeLocation;
-	type XcmExecutor = XcmExecutor<XcmConfig>;
-	type Weigher = FixedWeightBounds<UnitWeightCost, RuntimeCall, MaxInstructions>;
-	type BaseXcmWeight = BaseXcmWeight;
-	type MaxAssetsForTransfer = MaxAssetsForTransfer;
-	type MinXcmFee = ParachainMinFee;
-	type LocationsFilter = Everything;
-	type ReserveProvider = RelativeReserveProvider;
-	type RateLimiter = ();
-	type RateLimiterId = ();
-}
-
-parameter_types! {
-	pub const MaximumUnlockIdOfUser: u32 = 1_000;
-	pub const MaximumUnlockIdOfTimeUnit: u32 = 1_000;
-	pub const MaxLockRecords: u32 = 64;
-	pub BifrostEntranceAccount: PalletId = PalletId(*b"bf/vtkin");
-	pub BifrostExitAccount: PalletId = PalletId(*b"bf/vtout");
-	pub IncentivePoolAccount: PalletId = PalletId(*b"bf/inpoo");
-	pub BifrostFeeAccount: AccountId = hex!["e4da05f08e89bf6c43260d96f26fffcfc7deae5b465da08669a9d008e64c2c63"].into();
+	pub const TreasuryAccount: AccountId32 = TREASURY_ACCOUNT;
+	pub BifrostVsbondAccount: PalletId = PalletId(*b"bf/salpb");
+	pub const BuyBackAccount: PalletId = PalletId(*b"bf/bybck");
+	pub const LiquidityAccount: PalletId = PalletId(*b"bf/liqdt");
 }
 
 ord_parameter_types! {
 	pub const One: AccountId = ALICE;
+	// pub const RelayChainTokenSymbolKSM: TokenSymbol = TokenSymbol::KSM;
 	pub const RelayCurrencyId: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
 }
 
-impl vtoken_minting::Config for Runtime {
+impl bifrost_buy_back::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type MultiCurrency = Currencies;
 	type ControlOrigin = EnsureSignedBy<One, AccountId>;
-	type MaximumUnlockIdOfUser = MaximumUnlockIdOfUser;
-	type MaximumUnlockIdOfTimeUnit = MaximumUnlockIdOfTimeUnit;
-	type MaxLockRecords = MaxLockRecords;
-	type EntranceAccount = BifrostEntranceAccount;
-	type ExitAccount = BifrostExitAccount;
-	type FeeAccount = BifrostFeeAccount;
-	type RedeemFeeAccount = BifrostFeeAccount;
-	type IncentivePoolAccount = IncentivePoolAccount;
-	type BifrostSlp = Slp;
-	type BifrostSlpx = SlpxInterface;
-	type VeMinting = VeMinting;
-	type RelayChainToken = RelayCurrencyId;
-	type CurrencyIdConversion = AssetIdMaps<Runtime>;
-	type CurrencyIdRegister = AssetIdMaps<Runtime>;
 	type WeightInfo = ();
-	type OnRedeemSuccess = ();
-	type XcmTransfer = XTokens;
-	type AstarParachainId = ConstU32<2007>;
-	type MoonbeamParachainId = ConstU32<2023>;
-	type HydradxParachainId = ConstU32<2034>;
-	type MantaParachainId = ConstU32<2104>;
-	type InterlayParachainId = ConstU32<2032>;
-	type ChannelCommission = ();
+	type DexOperator = ZenlinkProtocol;
+	type CurrencyIdConversion = AssetIdMaps<Runtime>;
+	type TreasuryAccount = TreasuryAccount;
+	type RelayChainToken = RelayCurrencyId;
+	type BuyBackAccount = BuyBackAccount;
+	type LiquidityAccount = LiquidityAccount;
+	type ParachainId = ParaInfo;
+	type CurrencyIdRegister = AssetIdMaps<Runtime>;
+	type VeMinting = VeMinting;
 }
 
-ord_parameter_types! {
-	pub const CouncilAccount: AccountId = AccountId::from([1u8; 32]);
+pub struct ParaInfo;
+impl Get<ParaId> for ParaInfo {
+	fn get() -> ParaId {
+		ParaId::from(2001)
+	}
 }
-impl bifrost_asset_registry::Config for Runtime {
-	type RuntimeEvent = RuntimeEvent;
-	type Currency = Balances;
-	type RegisterOrigin = EnsureSignedBy<CouncilAccount, AccountId>;
-	type WeightInfo = ();
-}
+
 pub struct ParachainId;
 impl Get<ParaId> for ParachainId {
 	fn get() -> ParaId {
@@ -283,11 +228,6 @@ impl SlpxOperator<Balance> for SlpxInterface {
 	}
 }
 
-pub const TREASURY_ACCOUNT: AccountId = AccountId32::new([9u8; 32]);
-parameter_types! {
-	pub const TreasuryAccount: AccountId32 = TREASURY_ACCOUNT;
-}
-
 impl bifrost_slp::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type RuntimeOrigin = RuntimeOrigin;
@@ -311,6 +251,153 @@ impl bifrost_slp::Config for Runtime {
 	type StablePoolHandler = ();
 	type AssetIdMaps = AssetIdMaps<Runtime>;
 	type TreasuryAccount = TreasuryAccount;
+}
+
+parameter_type_with_key! {
+	pub ParachainMinFee: |_location: Location| -> Option<u128> {
+		Some(u128::MAX)
+	};
+}
+
+parameter_types! {
+	pub SelfRelativeLocation: Location = Location::here();
+	pub const BaseXcmWeight: Weight = Weight::from_parts(1000_000_000u64, 0);
+	pub const MaxAssetsForTransfer: usize = 2;
+}
+
+impl orml_xtokens::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type Balance = Balance;
+	type CurrencyId = CurrencyId;
+	type CurrencyIdConvert = ();
+	type AccountIdToLocation = ();
+	type UniversalLocation = UniversalLocation;
+	type SelfLocation = SelfRelativeLocation;
+	type XcmExecutor = XcmExecutor<XcmConfig>;
+	type Weigher = FixedWeightBounds<UnitWeightCost, RuntimeCall, MaxInstructions>;
+	type BaseXcmWeight = BaseXcmWeight;
+	type MaxAssetsForTransfer = MaxAssetsForTransfer;
+	type MinXcmFee = ParachainMinFee;
+	type LocationsFilter = Everything;
+	type ReserveProvider = RelativeReserveProvider;
+	type RateLimiter = ();
+	type RateLimiterId = ();
+}
+
+parameter_types! {
+	pub const MaximumUnlockIdOfUser: u32 = 10;
+	pub const MaximumUnlockIdOfTimeUnit: u32 = 50;
+	pub BifrostEntranceAccount: PalletId = PalletId(*b"bf/vtkin");
+	pub BifrostExitAccount: PalletId = PalletId(*b"bf/vtout");
+	pub BifrostFeeAccount: AccountId = hex!["e4da05f08e89bf6c43260d96f26fffcfc7deae5b465da08669a9d008e64c2c63"].into();
+	pub IncentivePoolAccount: PalletId = PalletId(*b"bf/inpoo");
+}
+
+impl bifrost_vtoken_minting::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type MultiCurrency = Currencies;
+	type ControlOrigin = EnsureSignedBy<One, AccountId>;
+	type MaximumUnlockIdOfUser = MaximumUnlockIdOfUser;
+	type MaximumUnlockIdOfTimeUnit = MaximumUnlockIdOfTimeUnit;
+	type EntranceAccount = BifrostEntranceAccount;
+	type ExitAccount = BifrostExitAccount;
+	type FeeAccount = BifrostFeeAccount;
+	type RedeemFeeAccount = BifrostFeeAccount;
+	type BifrostSlp = Slp;
+	type BifrostSlpx = SlpxInterface;
+	type RelayChainToken = RelayCurrencyId;
+	type CurrencyIdConversion = AssetIdMaps<Runtime>;
+	type CurrencyIdRegister = AssetIdMaps<Runtime>;
+	type WeightInfo = ();
+	type OnRedeemSuccess = ();
+	type XcmTransfer = XTokens;
+	type AstarParachainId = ConstU32<2007>;
+	type MoonbeamParachainId = ConstU32<2023>;
+	type HydradxParachainId = ConstU32<2034>;
+	type MantaParachainId = ConstU32<2104>;
+	type InterlayParachainId = ConstU32<2032>;
+	type ChannelCommission = ();
+	type MaxLockRecords = ConstU32<100>;
+	type IncentivePoolAccount = IncentivePoolAccount;
+	type VeMinting = ();
+}
+
+parameter_types! {
+	pub const ZenlinkPalletId: PalletId = PalletId(*b"/zenlink");
+	pub const GetExchangeFee: (u32, u32) = (3, 1000);   // 0.3%
+	pub const SelfParaId: u32 = 2001;
+}
+
+impl zenlink_protocol::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type MultiAssetsHandler = MultiAssets;
+	type PalletId = ZenlinkPalletId;
+	type SelfParaId = SelfParaId;
+	type TargetChains = ();
+	type WeightInfo = ();
+	type AssetId = ZenlinkAssetId;
+	type LpGenerate = PairLpGenerate<Self>;
+}
+
+type MultiAssets = ZenlinkMultiAssets<ZenlinkProtocol, Balances, LocalAssetAdaptor<Currencies>>;
+
+// Below is the implementation of tokens manipulation functions other than native token.
+pub struct LocalAssetAdaptor<Local>(PhantomData<Local>);
+
+impl<Local, AccountId> LocalAssetHandler<AccountId> for LocalAssetAdaptor<Local>
+where
+	Local: MultiCurrency<AccountId, CurrencyId = CurrencyId>,
+{
+	fn local_balance_of(asset_id: ZenlinkAssetId, who: &AccountId) -> AssetBalance {
+		let currency_id: CurrencyId = asset_id.try_into().unwrap();
+		Local::free_balance(currency_id, &who).saturated_into()
+	}
+
+	fn local_total_supply(asset_id: ZenlinkAssetId) -> AssetBalance {
+		let currency_id: CurrencyId = asset_id.try_into().unwrap();
+		Local::total_issuance(currency_id).saturated_into()
+	}
+
+	fn local_is_exists(asset_id: ZenlinkAssetId) -> bool {
+		let rs: Result<CurrencyId, _> = asset_id.try_into();
+		match rs {
+			Ok(_) => true,
+			Err(_) => false,
+		}
+	}
+
+	fn local_transfer(
+		asset_id: ZenlinkAssetId,
+		origin: &AccountId,
+		target: &AccountId,
+		amount: AssetBalance,
+	) -> DispatchResult {
+		let currency_id: CurrencyId = asset_id.try_into().unwrap();
+		Local::transfer(currency_id, &origin, &target, amount.unique_saturated_into())?;
+
+		Ok(())
+	}
+
+	fn local_deposit(
+		asset_id: ZenlinkAssetId,
+		origin: &AccountId,
+		amount: AssetBalance,
+	) -> Result<AssetBalance, DispatchError> {
+		let currency_id: CurrencyId = asset_id.try_into().unwrap();
+		Local::deposit(currency_id, &origin, amount.unique_saturated_into())?;
+		return Ok(amount);
+	}
+
+	fn local_withdraw(
+		asset_id: ZenlinkAssetId,
+		origin: &AccountId,
+		amount: AssetBalance,
+	) -> Result<AssetBalance, DispatchError> {
+		let currency_id: CurrencyId = asset_id.try_into().unwrap();
+		Local::withdraw(currency_id, &origin, amount.unique_saturated_into())?;
+
+		Ok(amount)
+	}
 }
 
 parameter_types! {
@@ -380,6 +467,35 @@ impl pallet_xcm::Config for Runtime {
 	type RemoteLockConsumerIdentifier = ();
 }
 
+parameter_types! {
+	pub const VeMintingTokenType: CurrencyId = CurrencyId::VToken(TokenSymbol::BNC);
+	pub VeMintingPalletId: PalletId = PalletId(*b"bf/vemnt");
+	pub IncentivePalletId: PalletId = PalletId(*b"bf/veict");
+	pub const Week: BlockNumber = 50400; // a week
+	pub const MaxBlock: BlockNumber = 10512000; // four years
+	pub const Multiplier: Balance = 10_u128.pow(12);
+	pub const VoteWeightMultiplier: Balance = 1;
+	pub const MaxPositions: u32 = 10;
+	pub const MarkupRefreshLimit: u32 = 100;
+}
+
+impl bifrost_ve_minting::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type MultiCurrency = Currencies;
+	type ControlOrigin = EnsureSignedBy<One, AccountId>;
+	type TokenType = VeMintingTokenType;
+	type VeMintingPalletId = VeMintingPalletId;
+	type IncentivePalletId = IncentivePalletId;
+	type WeightInfo = ();
+	type BlockNumberToBalance = ConvertInto;
+	type Week = Week;
+	type MaxBlock = MaxBlock;
+	type Multiplier = Multiplier;
+	type VoteWeightMultiplier = VoteWeightMultiplier;
+	type MaxPositions = MaxPositions;
+	type MarkupRefreshLimit = MarkupRefreshLimit;
+}
+
 pub struct ExtBuilder {
 	endowed_accounts: Vec<(AccountId, CurrencyId, Balance)>,
 }
@@ -398,19 +514,20 @@ impl ExtBuilder {
 
 	pub fn one_hundred_for_alice_n_bob(self) -> Self {
 		self.balances(vec![
-			(ALICE, BNC, 1000000000000000000000),
-			(BOB, BNC, 1000000000000),
-			(BOB, VKSM, 1000),
-			(BOB, KSM, 1000000000000),
-			(BOB, MOVR, 1000000000000000000000),
-			(BOB, VFIL, 1000),
-			(BOB, FIL, 100000000000000000000000),
-			(CHARLIE, MOVR, 100000000000000000000000),
+			(ALICE, BNC, 10000),
+			(BOB, BNC, 100),
+			(CHARLIE, BNC, 100),
+			// (ALICE, RelayCurrencyId::get(), 10000),
+			(ALICE, VKSM, 10000),
+			(BOB, KSM, 100),
+			(BuyBackAccount::get().into_account_truncating(), VKSM, 9000),
+			(BuyBackAccount::get().into_account_truncating(), KSM, 10000),
 		])
 	}
 
 	pub fn build(self) -> sp_io::TestExternalities {
 		let mut t = frame_system::GenesisConfig::<Runtime>::default().build_storage().unwrap();
+		env_logger::try_init().unwrap_or(());
 
 		pallet_balances::GenesisConfig::<Runtime> {
 			balances: self
@@ -434,128 +551,6 @@ impl ExtBuilder {
 		.assimilate_storage(&mut t)
 		.unwrap();
 
-		bifrost_asset_registry::GenesisConfig::<Runtime> {
-			currency: vec![
-				(DOT, 100_000_000, None),
-				(KSM, 10_000_000, None),
-				(BNC, 10_000_000, None),
-				(FIL, 10_000_000, None),
-			],
-			vcurrency: vec![],
-			vsbond: vec![],
-			phantom: Default::default(),
-		}
-		.assimilate_storage(&mut t)
-		.unwrap();
-
 		t.into()
-	}
-}
-
-/// Run until a particular block.
-pub fn run_to_block(n: BlockNumber) {
-	use frame_support::traits::Hooks;
-	while System::block_number() <= n {
-		VtokenMinting::on_finalize(System::block_number());
-		System::on_finalize(System::block_number());
-		System::set_block_number(System::block_number() + 1);
-		System::on_initialize(System::block_number());
-		VtokenMinting::on_initialize(System::block_number());
-	}
-}
-
-use bifrost_primitives::PoolId;
-use bifrost_ve_minting::IncentiveConfig;
-// Mock VeMinting Struct
-pub struct VeMinting;
-impl VeMintingInterface<AccountId, CurrencyId, Balance, BlockNumber> for VeMinting {
-	fn balance_of(_addr: &AccountId, _time: Option<BlockNumber>) -> Result<Balance, DispatchError> {
-		Ok(100)
-	}
-
-	fn total_supply(_t: BlockNumber) -> Result<Balance, DispatchError> {
-		Ok(10000)
-	}
-
-	fn increase_amount_inner(_who: &AccountId, _position: u128, _value: Balance) -> DispatchResult {
-		Ok(())
-	}
-
-	fn deposit_for(_who: &AccountId, _position: u128, _value: Balance) -> DispatchResult {
-		Ok(())
-	}
-
-	fn withdraw_inner(_who: &AccountId, _position: u128) -> DispatchResult {
-		Ok(())
-	}
-
-	fn supply_at(_: Point<u128, u64>, _: u64) -> Result<u128, sp_runtime::DispatchError> {
-		todo!()
-	}
-
-	fn find_block_epoch(_: u64, _: sp_core::U256) -> sp_core::U256 {
-		todo!()
-	}
-
-	fn create_lock_inner(
-		_: &sp_runtime::AccountId32,
-		_: u128,
-		_: u64,
-	) -> Result<(), sp_runtime::DispatchError> {
-		todo!()
-	}
-
-	fn increase_unlock_time_inner(
-		_: &sp_runtime::AccountId32,
-		_: u128,
-		_: u64,
-	) -> Result<(), sp_runtime::DispatchError> {
-		todo!()
-	}
-
-	fn auto_notify_reward(
-		_: u32,
-		_: u64,
-		_: Vec<(CurrencyId, Balance)>,
-	) -> Result<(), sp_runtime::DispatchError> {
-		todo!()
-	}
-
-	fn update_reward(
-		_pool_id: PoolId,
-		_addr: Option<&AccountId>,
-		_share_info: Option<(Balance, Balance)>,
-	) -> DispatchResult {
-		Ok(())
-	}
-
-	fn get_rewards(
-		_pool_id: PoolId,
-		_addr: &AccountId,
-		_share_info: Option<(Balance, Balance)>,
-	) -> DispatchResult {
-		Ok(())
-	}
-
-	fn set_incentive(
-		_pool_id: PoolId,
-		_rewards_duration: Option<BlockNumber>,
-		_incentive_controller: Option<AccountId>,
-	) {
-	}
-	fn add_reward(
-		_addr: &AccountId,
-		_conf: &mut IncentiveConfig<CurrencyId, Balance, BlockNumber, AccountId>,
-		_rewards: &Vec<(CurrencyId, Balance)>,
-		_remaining: Balance,
-	) -> DispatchResult {
-		Ok(())
-	}
-	fn notify_reward(
-		_pool_id: u32,
-		_addr: &Option<AccountId>,
-		_rewards: Vec<(CurrencyId, Balance)>,
-	) -> DispatchResult {
-		Ok(())
 	}
 }

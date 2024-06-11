@@ -84,6 +84,7 @@ impl bifrost_currencies::Config for Runtime {
 
 parameter_types! {
 	pub const ExistentialDeposit: Balance = 1;
+	pub const MaxLocks: u32 = 100;
 }
 
 impl pallet_balances::Config for Runtime {
@@ -114,7 +115,7 @@ impl orml_tokens::Config for Runtime {
 	type DustRemovalWhitelist = Nothing;
 	type RuntimeEvent = RuntimeEvent;
 	type ExistentialDeposits = ExistentialDeposits;
-	type MaxLocks = ();
+	type MaxLocks = MaxLocks;
 	type MaxReserves = ();
 	type ReserveIdentifier = [u8; 8];
 	type WeightInfo = ();
@@ -215,6 +216,7 @@ impl ExtBuilder {
 			(ALICE, DOT, 100),
 			(ALICE, VDOT, 100),
 			(ALICE, KSM, 3000),
+			(ALICE, VBNC, 1_000_000_000_000_000),
 			(BOB, VSKSM, 100),
 			(BOB, KSM, 10000000),
 		])

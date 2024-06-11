@@ -110,6 +110,7 @@ bifrost-stable-asset = { workspace = true }
 
 # Bifrost
 bifrost-asset-registry = { workspace = true }
+bifrost-buy-back = { workspace = true }
 bifrost-call-switchgear = { workspace = true }
 bifrost-cross-in-out = { workspace = true }
 bifrost-currencies = { workspace = true }
@@ -225,6 +226,7 @@ std = [
 	"zenlink-protocol/std",
 
 	"bifrost-asset-registry/std",
+	"bifrost-buy-back/std",
 	"bifrost-cross-in-out/std",
 	"bifrost-currencies/std",
 	"bifrost-farming-rpc-runtime-api/std",
@@ -293,10 +295,12 @@ runtime-benchmarks = [
 	"lend-market/runtime-benchmarks",
 	"bifrost-channel-commission/runtime-benchmarks",
 	"bifrost-clouds-convert/runtime-benchmarks",
+	"bifrost-buy-back/runtime-benchmarks",
 ]
 
 try-runtime = [
 	"bifrost-asset-registry/try-runtime",
+	"bifrost-buy-back/try-runtime",
 	"bifrost-call-switchgear/try-runtime",
 	"bifrost-channel-commission/try-runtime",
 	"bifrost-clouds-convert/try-runtime",

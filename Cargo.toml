@@ -7,6 +7,7 @@ members = [
 	"node/service",
 	"primitives",
 	"pallets/asset-registry",
+	"pallets/buy-back",
 	"pallets/currencies",
 	"pallets/flexible-fee",
 	"pallets/farming",
@@ -56,6 +57,7 @@ bifrost-polkadot-runtime = { path = "runtime/bifrost-polkadot" }
 
 # Bifrost Wasm
 bifrost-asset-registry               = { path = "pallets/asset-registry", default-features = false }
+bifrost-buy-back                     = { path = "pallets/buy-back", default-features = false }
 bifrost-call-switchgear              = { path = "pallets/call-switchgear", default-features = false }
 bifrost-cross-in-out                 = { path = "pallets/cross-in-out", default-features = false }
 bifrost-currencies                   = { path = "pallets/currencies", default-features = false }

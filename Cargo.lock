@@ -702,6 +702,41 @@ dependencies = [
 ]
 
 [[package]]
+name = "bifrost-buy-back"
+version = "0.8.0"
+dependencies = [
+ "bifrost-asset-registry",
+ "bifrost-currencies",
+ "bifrost-primitives",
+ "bifrost-slp",
+ "bifrost-ve-minting",
+ "bifrost-vtoken-minting",
+ "cumulus-primitives-core",
+ "env_logger",
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "hex-literal 0.4.1",
+ "log",
+ "orml-tokens",
+ "orml-traits",
+ "orml-xtokens",
+ "pallet-balances",
+ "pallet-xcm",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-arithmetic",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+ "staging-xcm",
+ "staging-xcm-builder",
+ "staging-xcm-executor",
+ "zenlink-protocol",
+]
+
+[[package]]
 name = "bifrost-call-switchgear"
 version = "0.8.0"
 dependencies = [
@@ -743,7 +778,7 @@ dependencies = [
 
 [[package]]
 name = "bifrost-cli"
-version = "0.10.0"
+version = "0.10.1"
 dependencies = [
  "bifrost-primitives",
  "bifrost-service",
@@ -1141,6 +1176,7 @@ name = "bifrost-polkadot-runtime"
 version = "0.8.0"
 dependencies = [
  "bifrost-asset-registry",
+ "bifrost-buy-back",
  "bifrost-call-switchgear",
  "bifrost-channel-commission",
  "bifrost-clouds-convert",

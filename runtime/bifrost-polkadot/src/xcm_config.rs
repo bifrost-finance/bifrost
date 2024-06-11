@@ -46,7 +46,7 @@ pub use xcm_builder::{
 };
 use xcm_builder::{
 	DescribeAllTerminal, DescribeFamily, FrameTransactionalProcessor, HashedDescription,
-	NativeAsset, TrailingSetTopicAsId,
+	TrailingSetTopicAsId,
 };
 use xcm_executor::traits::{MatchesFungible, ShouldExecute};
 
@@ -363,9 +363,6 @@ parameter_types! {
 	0
 	);
 	pub BasePerSecond: u128 = dot_per_second::<Runtime>();
-	pub SystemAssetHubLocation: Location = Location::new(1, [Parachain(1000)]);
-	pub EthereumNetwork: NetworkId = NetworkId::Ethereum { chain_id: 1 };
-	pub EthereumLocation: Location = Location::new(2, [GlobalConsensus(EthereumNetwork::get())]);
 }
 
 pub struct ToTreasury;
@@ -434,16 +431,6 @@ impl Contains<RuntimeCall> for SafeCallFilter {
 				pallet_identity::Call::quit_sub { .. },
 			) |
 			RuntimeCall::Vesting(..) |
-			RuntimeCall::Bounties(
-				pallet_bounties::Call::propose_bounty { .. } |
-				pallet_bounties::Call::approve_bounty { .. } |
-				pallet_bounties::Call::propose_curator { .. } |
-				pallet_bounties::Call::unassign_curator { .. } |
-				pallet_bounties::Call::accept_curator { .. } |
-				pallet_bounties::Call::award_bounty { .. } |
-				pallet_bounties::Call::claim_bounty { .. } |
-				pallet_bounties::Call::close_bounty { .. },
-			) |
 			RuntimeCall::PolkadotXcm(pallet_xcm::Call::limited_reserve_transfer_assets { .. }) |
 			RuntimeCall::Proxy(..) |
 			RuntimeCall::Tokens(
@@ -496,43 +483,6 @@ impl Contains<RuntimeCall> for SafeCallFilter {
 	}
 }
 
-/// Asset filter that allows all assets from a certain location matching asset id.
-pub struct AssetPrefixFrom<Prefix, Origin>(PhantomData<(Prefix, Origin)>);
-impl<Prefix, Origin> ContainsPair<Asset, Location> for AssetPrefixFrom<Prefix, Origin>
-where
-	Prefix: Get<Location>,
-	Origin: Get<Location>,
-{
-	fn contains(asset: &Asset, origin: &Location) -> bool {
-		let loc = Origin::get();
-		&loc == origin &&
-			matches!(asset, Asset { id: AssetId(asset_loc), fun: Fungible(_a) }
-			if asset_loc.starts_with(&Prefix::get()))
-	}
-}
-
-type AssetsFrom<T> = AssetPrefixFrom<T, T>;
-
-/// Asset filter that allows native/relay asset if coming from a certain location.
-pub struct NativeAssetFrom<T>(PhantomData<T>);
-impl<T: Get<Location>> ContainsPair<Asset, Location> for NativeAssetFrom<T> {
-	fn contains(asset: &Asset, origin: &Location) -> bool {
-		let loc = T::get();
-		&loc == origin &&
-			matches!(asset, Asset { id: AssetId(asset_loc), fun: Fungible(_a) }
-			if *asset_loc == Location::from(Parent))
-	}
-}
-
-/// Asset filter that allows all assets from a certain location matching asset id.
-
-pub type Reserves = (
-	NativeAsset,
-	AssetsFrom<SystemAssetHubLocation>,
-	NativeAssetFrom<SystemAssetHubLocation>,
-	AssetPrefixFrom<EthereumLocation, SystemAssetHubLocation>,
-);
-
 pub struct XcmConfig;
 impl xcm_executor::Config for XcmConfig {
 	type AssetClaims = PolkadotXcm;
@@ -540,7 +490,7 @@ impl xcm_executor::Config for XcmConfig {
 	type AssetTrap = BifrostDropAssets<ToTreasury>;
 	type Barrier = Barrier;
 	type RuntimeCall = RuntimeCall;
-	type IsReserve = Reserves;
+	type IsReserve = MultiNativeAsset<RelativeReserveProvider>;
 	type IsTeleporter = ();
 	type UniversalLocation = UniversalLocation;
 	type OriginConverter = XcmOriginToTransactDispatchOrigin;
@@ -705,6 +655,9 @@ impl Contains<AccountId> for DustRemovalWhitelist {
 		.eq(a) || FeeSharePalletId::get().check_sub_account::<DistributionId>(a) ||
 			a.eq(&ZenklinkFeeAccount::get()) ||
 			AccountIdConversion::<AccountId>::into_account_truncating(&CommissionPalletId::get())
+				.eq(a) || AccountIdConversion::<AccountId>::into_account_truncating(&BuyBackAccount::get())
+			.eq(a) ||
+			AccountIdConversion::<AccountId>::into_account_truncating(&LiquidityAccount::get())
 				.eq(a)
 	}
 }

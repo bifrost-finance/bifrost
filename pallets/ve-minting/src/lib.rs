@@ -40,7 +40,7 @@ use frame_support::{
 			AccountIdConversion, CheckedAdd, CheckedDiv, CheckedMul, CheckedSub, Convert,
 			Saturating, UniqueSaturatedInto, Zero,
 		},
-		ArithmeticError, DispatchError, FixedU128, Perbill, SaturatedConversion,
+		ArithmeticError, DispatchError, FixedPointNumber, FixedU128, SaturatedConversion,
 	},
 	PalletId,
 };
@@ -229,14 +229,8 @@ pub mod pallet {
 
 	#[pallet::storage]
 	#[pallet::getter(fn user_locked)]
-	pub type UserLocked<T: Config> = StorageMap<
-		_,
-		Blake2_128Concat,
-		AccountIdOf<T>,
-		BalanceOf<T>,
-		// LockedBalance<BalanceOf<T>, BlockNumberFor<T>>,
-		ValueQuery,
-	>;
+	pub type UserLocked<T: Config> =
+		StorageMap<_, Blake2_128Concat, AccountIdOf<T>, BalanceOf<T>, ValueQuery>;
 
 	// Each week has a Point struct stored in PointHistory.
 	#[pallet::storage]
@@ -449,7 +443,6 @@ pub mod pallet {
 			hardcap: FixedU128,   // token对应加成硬顶
 		) -> DispatchResult {
 			T::ControlOrigin::ensure_origin(origin)?;
-			ensure!(markup <= hardcap, Error::<T>::ArgumentsError);
 
 			if !TotalLock::<T>::contains_key(asset_id) {
 				TotalLock::<T>::insert(asset_id, BalanceOf::<T>::zero());
@@ -689,18 +682,14 @@ pub mod pallet {
 			Locked::<T>::insert(addr, _locked.clone());
 
 			let free_balance = T::MultiCurrency::free_balance(T::TokenType::get(), &who);
-			if value != BalanceOf::<T>::zero() && value <= free_balance {
+			if value != BalanceOf::<T>::zero() {
 				let new_locked_balance = UserLocked::<T>::get(who)
 					.checked_add(value)
-					.ok_or(ArithmeticError::Underflow)?;
-				T::MultiCurrency::set_lock(
-					VE_LOCK_ID,
-					T::TokenType::get(),
-					who,
-					new_locked_balance,
-				)?;
-				UserLocked::<T>::set(who, new_locked_balance);
+					.ok_or(ArithmeticError::Overflow)?;
+				ensure!(new_locked_balance <= free_balance, Error::<T>::NotEnoughBalance);
+				Self::set_ve_locked(who, new_locked_balance)?;
 			}
+
 			Self::markup_calc(
 				who,
 				addr,
@@ -851,13 +840,15 @@ pub mod pallet {
 			user_markup_info: Option<&UserMarkupInfo>,
 		) -> DispatchResult {
 			if let Some(info) = user_markup_info {
-				old_locked.amount = FixedU128::from_inner(old_locked.amount)
-					.checked_mul(&info.old_markup_coefficient)
-					.and_then(|x| x.into_inner().checked_add(old_locked.amount))
+				old_locked.amount = info
+					.old_markup_coefficient
+					.checked_mul_int(old_locked.amount)
+					.and_then(|x| x.checked_add(old_locked.amount))
 					.ok_or(ArithmeticError::Overflow)?;
-				new_locked.amount = FixedU128::from_inner(new_locked.amount)
-					.checked_mul(&info.markup_coefficient)
-					.and_then(|x| x.into_inner().checked_add(new_locked.amount))
+				new_locked.amount = info
+					.markup_coefficient
+					.checked_mul_int(new_locked.amount)
+					.and_then(|x| x.checked_add(new_locked.amount))
 					.ok_or(ArithmeticError::Overflow)?;
 			}
 
@@ -883,41 +874,42 @@ pub mod pallet {
 			let current_block_number: BlockNumberFor<T> = frame_system::Pallet::<T>::block_number();
 
 			let mut user_markup_info = UserMarkupInfos::<T>::get(&addr).unwrap_or_default();
-			let delta_coefficient: FixedU128 = markup_coefficient
-				.markup_coefficient
-				.checked_mul(&FixedU128::from_inner(value))
-				.ok_or(ArithmeticError::Overflow)?;
 			let mut locked_token = LockedTokens::<T>::get(asset_id, &addr).unwrap_or(LockedToken {
 				amount: Zero::zero(),
 				markup_coefficient: Zero::zero(),
 				refresh_block: current_block_number,
 			});
-			let asset_id_markup_coefficient =
-				locked_token.markup_coefficient.saturating_add(delta_coefficient);
-			locked_token.markup_coefficient =
-				match markup_coefficient.hardcap.cmp(&asset_id_markup_coefficient) {
-					Ordering::Less => {
-						Self::update_markup_info(
-							&addr,
-							user_markup_info
-								.markup_coefficient
-								.saturating_sub(locked_token.markup_coefficient)
-								.saturating_add(markup_coefficient.hardcap),
-							&mut user_markup_info,
-						);
-						markup_coefficient.hardcap
-					},
-					Ordering::Equal | Ordering::Greater => {
-						// TODO: need logic of hardcap
-						Self::update_markup_info(
-							&addr,
-							user_markup_info.markup_coefficient.saturating_add(delta_coefficient),
-							&mut user_markup_info,
-						);
-						asset_id_markup_coefficient
-					},
-				};
 			locked_token.amount = locked_token.amount.saturating_add(value);
+
+			let left: FixedU128 = FixedU128::checked_from_integer(locked_token.amount)
+				.and_then(|x| x.checked_mul(&markup_coefficient.markup_coefficient))
+				.and_then(|x| {
+					x.checked_div(&FixedU128::checked_from_integer(Self::total_lock(asset_id))?)
+				})
+				.ok_or(ArithmeticError::Overflow)?;
+
+			let total_issuance = T::MultiCurrency::total_issuance(asset_id);
+			let right: FixedU128 = FixedU128::checked_from_integer(locked_token.amount)
+				.and_then(|x| x.checked_mul(&markup_coefficient.markup_coefficient))
+				.and_then(|x| x.checked_div(&FixedU128::checked_from_integer(total_issuance)?))
+				.ok_or(ArithmeticError::Overflow)?;
+
+			let asset_id_markup_coefficient: FixedU128 =
+				left.checked_add(&right).ok_or(ArithmeticError::Overflow)?;
+			let new_markup_coefficient =
+				match markup_coefficient.hardcap.cmp(&asset_id_markup_coefficient) {
+					Ordering::Less => markup_coefficient.hardcap,
+					Ordering::Equal | Ordering::Greater => asset_id_markup_coefficient,
+				};
+			Self::update_markup_info(
+				&addr,
+				user_markup_info
+					.markup_coefficient
+					.saturating_sub(locked_token.markup_coefficient)
+					.saturating_add(new_markup_coefficient),
+				&mut user_markup_info,
+			);
+			locked_token.markup_coefficient = new_markup_coefficient;
 			locked_token.refresh_block = current_block_number;
 
 			T::MultiCurrency::set_lock(MARKUP_LOCK_ID, asset_id, &addr, locked_token.amount)?;
@@ -1004,39 +996,42 @@ pub mod pallet {
 				if locked_token.refresh_block <= markup_coefficient.update_block {
 					locked_token.refresh_block = current_block_number;
 
-					let new_markup_coefficient = markup_coefficient
-						.markup_coefficient
-						.checked_mul(&FixedU128::from_inner(locked_token.amount))
+					let left: FixedU128 = FixedU128::checked_from_integer(locked_token.amount)
+						.and_then(|x| x.checked_mul(&markup_coefficient.markup_coefficient))
+						.and_then(|x| {
+							x.checked_div(&FixedU128::checked_from_integer(Self::total_lock(
+								asset_id,
+							))?)
+						})
 						.ok_or(ArithmeticError::Overflow)?;
+
+					let total_issuance = T::MultiCurrency::total_issuance(asset_id);
+					let right: FixedU128 = FixedU128::checked_from_integer(locked_token.amount)
+						.and_then(|x| x.checked_mul(&markup_coefficient.markup_coefficient))
+						.and_then(|x| {
+							x.checked_div(&FixedU128::checked_from_integer(total_issuance)?)
+						})
+						.ok_or(ArithmeticError::Overflow)?;
+					let asset_id_markup_coefficient: FixedU128 =
+						left.checked_add(&right).ok_or(ArithmeticError::Overflow)?;
+
 					let mut user_markup_info =
 						UserMarkupInfos::<T>::get(&addr).ok_or(Error::<T>::LockNotExist)?;
 
-					locked_token.markup_coefficient =
-						match markup_coefficient.hardcap.cmp(&new_markup_coefficient) {
-							Ordering::Less => {
-								Self::update_markup_info(
-									&addr,
-									user_markup_info
-										.markup_coefficient
-										.saturating_sub(locked_token.markup_coefficient)
-										.saturating_add(markup_coefficient.hardcap),
-									&mut user_markup_info,
-								);
-								markup_coefficient.hardcap
-							},
-							Ordering::Equal | Ordering::Greater => {
-								Self::update_markup_info(
-									&addr,
-									user_markup_info
-										.markup_coefficient
-										.saturating_sub(locked_token.markup_coefficient)
-										.saturating_add(new_markup_coefficient),
-									&mut user_markup_info,
-								);
-								new_markup_coefficient
-							},
+					let new_markup_coefficient =
+						match markup_coefficient.hardcap.cmp(&asset_id_markup_coefficient) {
+							Ordering::Less => markup_coefficient.hardcap,
+							Ordering::Equal | Ordering::Greater => asset_id_markup_coefficient,
 						};
-
+					Self::update_markup_info(
+						&addr,
+						user_markup_info
+							.markup_coefficient
+							.saturating_sub(locked_token.markup_coefficient)
+							.saturating_add(new_markup_coefficient),
+						&mut user_markup_info,
+					);
+					locked_token.markup_coefficient = new_markup_coefficient;
 					LockedTokens::<T>::insert(&asset_id, &addr, locked_token);
 					UserPositions::<T>::get(&addr).into_iter().try_for_each(
 						|position| -> DispatchResult {
@@ -1078,7 +1073,7 @@ pub mod pallet {
 			who: &AccountIdOf<T>,
 			position: u128,
 			mut _locked: LockedBalance<BalanceOf<T>, BlockNumberFor<T>>,
-			if_fast: Option<Perbill>,
+			if_fast: Option<FixedU128>,
 		) -> DispatchResult {
 			let value = _locked.amount;
 			let old_locked: LockedBalance<BalanceOf<T>, BlockNumberFor<T>> = _locked.clone();
@@ -1096,15 +1091,14 @@ pub mod pallet {
 			UserPointEpoch::<T>::remove(position);
 			let new_locked_balance =
 				UserLocked::<T>::get(who).checked_sub(value).ok_or(ArithmeticError::Underflow)?;
-			T::MultiCurrency::set_lock(VE_LOCK_ID, T::TokenType::get(), who, new_locked_balance)?;
-			UserLocked::<T>::set(who, new_locked_balance);
+			Self::set_ve_locked(who, new_locked_balance)?;
 			if let Some(fast) = if_fast {
-				if fast != Perbill::zero() {
+				if fast != FixedU128::zero() {
 					T::MultiCurrency::transfer(
 						T::TokenType::get(),
 						who,
 						&T::VeMintingPalletId::get().into_account_truncating(),
-						fast * value,
+						fast.checked_mul_int(value).ok_or(ArithmeticError::Overflow)?,
 					)?;
 				}
 			}
@@ -1121,21 +1115,48 @@ pub mod pallet {
 
 		fn redeem_commission(
 			remaining_blocks: BlockNumberFor<T>,
-		) -> Result<Perbill, DispatchError> {
-			let commission = FixedU128::from_inner(remaining_blocks.saturated_into::<u128>())
-				.checked_add(&FixedU128::from_inner(2_628_000))
-				.and_then(|x| x.checked_div(&FixedU128::from_inner(10_512_000)))
+		) -> Result<FixedU128, ArithmeticError> {
+			FixedU128::checked_from_integer(remaining_blocks.saturated_into::<u128>())
+				.and_then(|x| {
+					x.checked_add(&FixedU128::checked_from_integer(
+						T::Week::get().saturated_into::<u128>().checked_mul(52)?,
+					)?)
+				}) // one years
+				.and_then(|x| {
+					x.checked_div(&FixedU128::checked_from_integer(
+						T::Week::get().saturated_into::<u128>().checked_mul(208)?,
+					)?)
+				}) // four years
 				.and_then(|x| Some(x.saturating_pow(2)))
-				.ok_or(ArithmeticError::Overflow)?;
-			Ok(Perbill::from_rational(commission.into_inner(), 1_000_000))
+				.ok_or(ArithmeticError::Overflow)
 		}
 
-		fn redeem_unlock_inner(who: &AccountIdOf<T>, position: u128) -> DispatchResult {
+		/// This function will check the lock and redeem it regardless of whether it has expired.
+		pub fn redeem_unlock_inner(who: &AccountIdOf<T>, position: u128) -> DispatchResult {
 			let mut _locked = Self::locked(position);
 			let current_block_number: BlockNumberFor<T> = frame_system::Pallet::<T>::block_number();
 			ensure!(_locked.end > current_block_number, Error::<T>::Expired);
 			let fast = Self::redeem_commission(_locked.end - current_block_number)?;
 			Self::withdraw_no_ensure(who, position, _locked, Some(fast))
+		}
+
+		fn set_ve_locked(who: &AccountIdOf<T>, new_locked_balance: BalanceOf<T>) -> DispatchResult {
+			match new_locked_balance {
+				0 => {
+					// Can not set lock to zero, should remove it.
+					T::MultiCurrency::remove_lock(VE_LOCK_ID, T::TokenType::get(), who)?;
+				},
+				_ => {
+					T::MultiCurrency::set_lock(
+						VE_LOCK_ID,
+						T::TokenType::get(),
+						who,
+						new_locked_balance,
+					)?;
+				},
+			};
+			UserLocked::<T>::set(who, new_locked_balance);
+			Ok(())
 		}
 	}
 }

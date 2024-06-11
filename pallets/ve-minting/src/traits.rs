@@ -68,6 +68,11 @@ pub trait VeMintingInterface<AccountId, CurrencyId, Balance, BlockNumber> {
 		rewards: &Vec<(CurrencyId, Balance)>,
 		remaining: Balance,
 	) -> DispatchResult;
+	fn notify_reward(
+		pool_id: PoolId,
+		addr: &Option<AccountId>,
+		rewards: Vec<(CurrencyId, Balance)>,
+	) -> DispatchResult;
 }
 
 impl<T: Config> VeMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>, BlockNumberFor<T>>
@@ -95,17 +100,22 @@ impl<T: Config> VeMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>
 			.saturating_add(current_block_number)
 			.checked_div(&T::Week::get())
 			.ok_or(ArithmeticError::Overflow)?
+			.saturating_add(1u32.into())
 			.checked_mul(&T::Week::get())
 			.ok_or(ArithmeticError::Overflow)?;
 
 		ensure!(
 			unlock_time >= ve_config.min_block.saturating_add(current_block_number),
-			Error::<T>::Expired
+			Error::<T>::ArgumentsError
 		);
-		ensure!(
-			unlock_time <= T::MaxBlock::get().saturating_add(current_block_number),
-			Error::<T>::Expired
-		);
+		let max_block = T::MaxBlock::get()
+			.saturating_add(current_block_number)
+			.checked_div(&T::Week::get())
+			.ok_or(ArithmeticError::Overflow)?
+			.saturating_add(1u32.into())
+			.checked_mul(&T::Week::get())
+			.ok_or(ArithmeticError::Overflow)?;
+		ensure!(unlock_time <= max_block, Error::<T>::ArgumentsError);
 		ensure!(_locked.amount == BalanceOf::<T>::zero(), Error::<T>::LockExist); // Withdraw old tokens first
 
 		Self::_deposit_for(who, new_position, _value, unlock_time, _locked)?;
@@ -124,21 +134,28 @@ impl<T: Config> VeMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>
 	) -> DispatchResult {
 		let ve_config = Self::ve_configs();
 		let _locked: LockedBalance<BalanceOf<T>, BlockNumberFor<T>> = Self::locked(position);
+		let current_block_number: BlockNumberFor<T> = frame_system::Pallet::<T>::block_number();
+
 		let unlock_time: BlockNumberFor<T> = _unlock_time
+			.saturating_add(_locked.end)
 			.checked_div(&T::Week::get())
 			.ok_or(ArithmeticError::Overflow)?
+			.saturating_add(1u32.into())
 			.checked_mul(&T::Week::get())
 			.ok_or(ArithmeticError::Overflow)?;
 
-		let current_block_number: BlockNumberFor<T> = frame_system::Pallet::<T>::block_number();
 		ensure!(
-			unlock_time >= ve_config.min_block.saturating_add(_locked.end),
-			Error::<T>::Expired
+			unlock_time >= ve_config.min_block.saturating_add(current_block_number),
+			Error::<T>::ArgumentsError
 		);
-		ensure!(
-			unlock_time <= T::MaxBlock::get().saturating_add(current_block_number),
-			Error::<T>::Expired
-		);
+		let max_block = T::MaxBlock::get()
+			.saturating_add(current_block_number)
+			.checked_div(&T::Week::get())
+			.ok_or(ArithmeticError::Overflow)?
+			.saturating_add(1u32.into())
+			.checked_mul(&T::Week::get())
+			.ok_or(ArithmeticError::Overflow)?;
+		ensure!(unlock_time <= max_block, Error::<T>::ArgumentsError);
 		ensure!(_locked.amount > BalanceOf::<T>::zero(), Error::<T>::LockNotExist);
 		ensure!(_locked.end > current_block_number, Error::<T>::Expired); // Cannot add to expired/non-existent lock
 
@@ -306,6 +323,7 @@ impl<T: Config> VeMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>
 		IncentiveConfigs::<T>::set(pool_id, incentive_config.clone());
 		Self::deposit_event(Event::IncentiveSet { incentive_config });
 	}
+
 	fn add_reward(
 		addr: &AccountIdOf<T>,
 		conf: &mut IncentiveConfig<
@@ -354,6 +372,14 @@ impl<T: Config> VeMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>
 				*reward,
 			)
 		})
+	}
+
+	fn notify_reward(
+		pool_id: PoolId,
+		addr: &Option<AccountIdOf<T>>,
+		rewards: Vec<(CurrencyIdOf<T>, BalanceOf<T>)>,
+	) -> DispatchResult {
+		Self::notify_reward_amount(pool_id, addr, rewards)
 	}
 }
 
@@ -444,6 +470,13 @@ where
 		_conf: &mut IncentiveConfig<CurrencyId, Balance, BlockNumber, AccountId>,
 		_rewards: &Vec<(CurrencyId, Balance)>,
 		_remaining: Balance,
+	) -> DispatchResult {
+		Ok(())
+	}
+	fn notify_reward(
+		_pool_id: PoolId,
+		_addr: &Option<AccountId>,
+		_rewards: Vec<(CurrencyId, Balance)>,
 	) -> DispatchResult {
 		Ok(())
 	}
