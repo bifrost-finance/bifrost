@@ -132,6 +132,7 @@ cumulus-primitives-utility                 = { version = "0.8.0", default-featur
 cumulus-test-relay-sproof-builder          = { version = "0.8.0", default-features = false }
 frame-benchmarking                         = { version = "29.0.0", default-features = false }
 frame-executive                            = { version = "29.0.0", default-features = false }
+frame-metadata-hash-extension              = { version = "0.1.0", default-features = false }
 frame-support                              = { version = "29.0.0", default-features = false }
 frame-system                               = { version = "29.0.0", default-features = false }
 frame-system-benchmarking                  = { version = "29.0.0", default-features = false }
@@ -264,7 +265,7 @@ sp-rpc                                        = { version = "27.0.0" }
 substrate-build-script-utils                  = { version = "11.0.0" }
 substrate-frame-rpc-system                    = { version = "29.0.0" }
 substrate-prometheus-endpoint                 = { version = "0.17.0" }
-substrate-wasm-builder                        = { version = "18.0.0" }
+substrate-wasm-builder                        = { version = "18.0.1" }
 try-runtime-cli                               = { version = "0.39.0" }
 xcm-emulator                                  = { version = "0.6.0" }
 xcm-simulator                                 = { version = "8.0.0" }
