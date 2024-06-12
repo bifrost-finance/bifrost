@@ -41,7 +41,7 @@ use sp_runtime::{
 	DispatchResult,
 };
 use sp_std::prelude::*;
-use xcm::{opaque::v3::MultiLocation, v3::prelude::*, VersionedMultiAssets};
+use xcm::{opaque::v3::MultiLocation, v3::prelude::*, VersionedAssets};
 
 /// StakingAgent implementation for Kusama/Polkadot
 pub struct PolkadotAgent<T>(PhantomData<T>);
@@ -154,7 +154,8 @@ impl<T: Config>
 		)?;
 
 		// Send out the xcm message.
-		send_xcm::<T::XcmRouter>(Parent.into(), xcm_message)
+		let v4_location = xcm_message.try_into().map_err(|()| Error::<T>::FailToConvert)?;
+		xcm::v4::send_xcm::<T::XcmRouter>(xcm::v4::Parent.into(), v4_location)
 			.map_err(|_e| Error::<T>::XcmFailure)?;
 
 		Ok(query_id)
@@ -223,7 +224,8 @@ impl<T: Config>
 		)?;
 
 		// Send out the xcm message.
-		send_xcm::<T::XcmRouter>(Parent.into(), xcm_message)
+		let v4_location = xcm_message.try_into().map_err(|()| Error::<T>::FailToConvert)?;
+		xcm::v4::send_xcm::<T::XcmRouter>(xcm::v4::Parent.into(), v4_location)
 			.map_err(|_e| Error::<T>::XcmFailure)?;
 
 		Ok(query_id)
@@ -300,7 +302,8 @@ impl<T: Config>
 		)?;
 
 		// Send out the xcm message.
-		send_xcm::<T::XcmRouter>(Parent.into(), xcm_message)
+		let v4_location = xcm_message.try_into().map_err(|()| Error::<T>::FailToConvert)?;
+		xcm::v4::send_xcm::<T::XcmRouter>(xcm::v4::Parent.into(), v4_location)
 			.map_err(|_e| Error::<T>::XcmFailure)?;
 
 		Ok(query_id)
@@ -353,7 +356,8 @@ impl<T: Config>
 			)?;
 
 			// Send out the xcm message.
-			send_xcm::<T::XcmRouter>(Parent.into(), xcm_message)
+			let v4_location = xcm_message.try_into().map_err(|()| Error::<T>::FailToConvert)?;
+			xcm::v4::send_xcm::<T::XcmRouter>(xcm::v4::Parent.into(), v4_location)
 				.map_err(|_e| Error::<T>::XcmFailure)?;
 
 			Ok(query_id)
@@ -428,7 +432,8 @@ impl<T: Config>
 		)?;
 
 		// Send out the xcm message.
-		send_xcm::<T::XcmRouter>(Parent.into(), xcm_message)
+		let v4_location = xcm_message.try_into().map_err(|()| Error::<T>::FailToConvert)?;
+		xcm::v4::send_xcm::<T::XcmRouter>(xcm::v4::Parent.into(), v4_location)
 			.map_err(|_e| Error::<T>::XcmFailure)?;
 
 		Ok(query_id)
@@ -499,7 +504,8 @@ impl<T: Config>
 		)?;
 
 		// Send out the xcm message.
-		send_xcm::<T::XcmRouter>(Parent.into(), xcm_message)
+		let v4_location = xcm_message.try_into().map_err(|()| Error::<T>::FailToConvert)?;
+		xcm::v4::send_xcm::<T::XcmRouter>(xcm::v4::Parent.into(), v4_location)
 			.map_err(|_e| Error::<T>::XcmFailure)?;
 
 		Ok(query_id)
@@ -577,7 +583,8 @@ impl<T: Config>
 		)?;
 
 		// Send out the xcm message.
-		send_xcm::<T::XcmRouter>(Parent.into(), xcm_message)
+		let v4_location = xcm_message.try_into().map_err(|()| Error::<T>::FailToConvert)?;
+		xcm::v4::send_xcm::<T::XcmRouter>(xcm::v4::Parent.into(), v4_location)
 			.map_err(|_e| Error::<T>::XcmFailure)?;
 
 		Ok(query_id)
@@ -705,7 +712,8 @@ impl<T: Config>
 		)?;
 
 		// Send out the xcm message.
-		send_xcm::<T::XcmRouter>(Parent.into(), xcm_message)
+		let v4_location = xcm_message.try_into().map_err(|()| Error::<T>::FailToConvert)?;
+		xcm::v4::send_xcm::<T::XcmRouter>(xcm::v4::Parent.into(), v4_location)
 			.map_err(|_e| Error::<T>::XcmFailure)?;
 
 		Ok(query_id)
@@ -769,7 +777,8 @@ impl<T: Config>
 		}
 
 		// Send out the xcm message.
-		send_xcm::<T::XcmRouter>(Parent.into(), xcm_message)
+		let v4_location = xcm_message.try_into().map_err(|()| Error::<T>::FailToConvert)?;
+		xcm::v4::send_xcm::<T::XcmRouter>(xcm::v4::Parent.into(), v4_location)
 			.map_err(|_e| Error::<T>::XcmFailure)?;
 
 		Ok(query_id)
@@ -795,8 +804,7 @@ impl<T: Config>
 			fun: Fungible(amount.unique_saturated_into()),
 			id: Concrete(MultiLocation { parents: 0, interior: Here }),
 		};
-		let assets: Box<VersionedMultiAssets> =
-			Box::new(VersionedMultiAssets::from(MultiAssets::from(asset)));
+		let assets: Box<VersionedAssets> = Box::new(VersionedAssets::V3(MultiAssets::from(asset)));
 
 		// Prepare parameter fee_asset_item.
 		let fee_asset_item: u32 = 0;

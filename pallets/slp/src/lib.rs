@@ -58,7 +58,7 @@ use sp_std::{boxed::Box, vec, vec::Vec};
 pub use weights::WeightInfo;
 use xcm::{
 	prelude::*,
-	v3::{Junction, Junctions, MultiLocation, Xcm},
+	v3::{Junction, Junctions, MultiLocation},
 };
 
 mod agents;
@@ -142,7 +142,7 @@ pub mod pallet {
 		/// Substrate response manager.
 		type SubstrateResponseManager: QueryResponseManager<
 			QueryId,
-			MultiLocation,
+			xcm::v4::Location,
 			BlockNumberFor<Self>,
 			<Self as pallet::Config>::RuntimeCall,
 		>;
@@ -1307,16 +1307,16 @@ pub mod pallet {
 								)?;
 							},
 							RedeemType::Astar(receiver) => {
-								let dest = MultiLocation {
-									parents: 1,
-									interior: X2(
+								let dest = Location::new(
+									1,
+									[
 										Parachain(T::VtokenMinting::get_astar_parachain_id()),
-										AccountId32 {
+										xcm::v4::Junction::AccountId32 {
 											network: None,
 											id: receiver.encode().try_into().unwrap(),
 										},
-									),
-								};
+									],
+								);
 								T::XcmTransfer::transfer(
 									user_account.clone(),
 									currency_id,
@@ -1326,16 +1326,16 @@ pub mod pallet {
 								)?;
 							},
 							RedeemType::Hydradx(receiver) => {
-								let dest = MultiLocation {
-									parents: 1,
-									interior: X2(
+								let dest = xcm::v4::Location::new(
+									1,
+									[
 										Parachain(T::VtokenMinting::get_hydradx_parachain_id()),
-										AccountId32 {
+										xcm::v4::Junction::AccountId32 {
 											network: None,
 											id: receiver.encode().try_into().unwrap(),
 										},
-									),
-								};
+									],
+								);
 								T::XcmTransfer::transfer(
 									user_account.clone(),
 									currency_id,
@@ -1345,16 +1345,16 @@ pub mod pallet {
 								)?;
 							},
 							RedeemType::Interlay(receiver) => {
-								let dest = MultiLocation {
-									parents: 1,
-									interior: X2(
+								let dest = xcm::v4::Location::new(
+									1,
+									[
 										Parachain(T::VtokenMinting::get_interlay_parachain_id()),
-										AccountId32 {
+										xcm::v4::Junction::AccountId32 {
 											network: None,
 											id: receiver.encode().try_into().unwrap(),
 										},
-									),
-								};
+									],
+								);
 								T::XcmTransfer::transfer(
 									user_account.clone(),
 									currency_id,
@@ -1364,16 +1364,16 @@ pub mod pallet {
 								)?;
 							},
 							RedeemType::Manta(receiver) => {
-								let dest = MultiLocation {
-									parents: 1,
-									interior: X2(
+								let dest = xcm::v4::Location::new(
+									1,
+									[
 										Parachain(T::VtokenMinting::get_manta_parachain_id()),
-										AccountId32 {
+										xcm::v4::Junction::AccountId32 {
 											network: None,
 											id: receiver.encode().try_into().unwrap(),
 										},
-									),
-								};
+									],
+								);
 								T::XcmTransfer::transfer(
 									user_account.clone(),
 									currency_id,
@@ -1383,16 +1383,16 @@ pub mod pallet {
 								)?;
 							},
 							RedeemType::Moonbeam(receiver) => {
-								let dest = MultiLocation {
-									parents: 1,
-									interior: X2(
+								let dest = xcm::v4::Location::new(
+									1,
+									[
 										Parachain(T::VtokenMinting::get_moonbeam_parachain_id()),
 										AccountKey20 {
 											network: None,
 											key: receiver.to_fixed_bytes(),
 										},
-									),
-								};
+									],
+								);
 								if currency_id == FIL {
 									let assets = vec![
 										(currency_id, deduct_amount),
@@ -2618,7 +2618,7 @@ impl<T: Config, F: Contains<CurrencyIdOf<T>>>
 			currency_id,
 			&who,
 			Ledger::Substrate(SubstrateLedger {
-				account: Parent.into(),
+				account: xcm::v3::Parent.into(),
 				total: u32::MAX.into(),
 				active: u32::MAX.into(),
 				unlocking: vec![],

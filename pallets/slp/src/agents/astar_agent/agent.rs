@@ -41,7 +41,7 @@ use sp_std::prelude::*;
 use xcm::{
 	opaque::v3::{Junction::Parachain, Junctions::X1, MultiLocation},
 	v3::prelude::*,
-	VersionedMultiAssets, VersionedMultiLocation,
+	VersionedAssets, VersionedLocation,
 };
 
 /// StakingAgent implementation for Astar
@@ -153,7 +153,10 @@ impl<T: Config>
 
 		// Send out the xcm message.
 		let dest = Pallet::<T>::get_para_multilocation_by_currency_id(currency_id)?;
-		send_xcm::<T::XcmRouter>(dest, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
+		let v4_dest = dest.try_into().map_err(|()| Error::<T>::FailToConvert)?;
+		let v4_message = xcm_message.try_into().map_err(|()| Error::<T>::FailToConvert)?;
+		xcm::v4::send_xcm::<T::XcmRouter>(v4_dest, v4_message)
+			.map_err(|_e| Error::<T>::XcmFailure)?;
 
 		Ok(query_id)
 	}
@@ -252,7 +255,10 @@ impl<T: Config>
 
 		// Send out the xcm message.
 		let dest = Pallet::<T>::get_para_multilocation_by_currency_id(currency_id)?;
-		send_xcm::<T::XcmRouter>(dest, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
+		let v4_dest = dest.try_into().map_err(|()| Error::<T>::FailToConvert)?;
+		let v4_message = xcm_message.try_into().map_err(|()| Error::<T>::FailToConvert)?;
+		xcm::v4::send_xcm::<T::XcmRouter>(v4_dest, v4_message)
+			.map_err(|_e| Error::<T>::XcmFailure)?;
 
 		Ok(query_id)
 	}
@@ -395,7 +401,10 @@ impl<T: Config>
 
 		// Send out the xcm message.
 		let dest = Pallet::<T>::get_para_multilocation_by_currency_id(currency_id)?;
-		send_xcm::<T::XcmRouter>(dest, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
+		let v4_dest = dest.try_into().map_err(|()| Error::<T>::FailToConvert)?;
+		let v4_message = xcm_message.try_into().map_err(|()| Error::<T>::FailToConvert)?;
+		xcm::v4::send_xcm::<T::XcmRouter>(v4_dest, v4_message)
+			.map_err(|_e| Error::<T>::XcmFailure)?;
 
 		Ok(query_id)
 	}
@@ -436,24 +445,22 @@ impl<T: Config>
 		// Prepare parameter dest and beneficiary.
 		let to_32: [u8; 32] = Pallet::<T>::multilocation_to_account_32(to)?;
 
-		let dest = Box::new(VersionedMultiLocation::from(MultiLocation::new(
+		let dest = Box::new(VersionedLocation::V3(MultiLocation::new(
 			1,
 			X1(Parachain(T::ParachainId::get().into())),
 		)));
 
-		let beneficiary =
-			Box::new(VersionedMultiLocation::from(MultiLocation::from(X1(AccountId32 {
-				network: None,
-				id: to_32,
-			}))));
+		let beneficiary = Box::new(VersionedLocation::V3(MultiLocation::from(X1(AccountId32 {
+			network: None,
+			id: to_32,
+		}))));
 
 		// Prepare parameter assets.
 		let asset = MultiAsset {
 			fun: Fungible(amount.unique_saturated_into()),
 			id: Concrete(MultiLocation { parents: 0, interior: Here }),
 		};
-		let assets: Box<VersionedMultiAssets> =
-			Box::new(VersionedMultiAssets::from(MultiAssets::from(asset)));
+		let assets: Box<VersionedAssets> = Box::new(VersionedAssets::V3(MultiAssets::from(asset)));
 
 		// Prepare parameter fee_asset_item.
 		let fee_asset_item: u32 = 0;

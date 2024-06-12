@@ -171,7 +171,10 @@ impl<T: Config>
 
 		// Send out the xcm message.
 		let dest = Pallet::<T>::get_para_multilocation_by_currency_id(currency_id)?;
-		send_xcm::<T::XcmRouter>(dest, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
+		let v4_dest = dest.try_into().map_err(|()| Error::<T>::FailToConvert)?;
+		let v4_message = xcm_message.try_into().map_err(|()| Error::<T>::FailToConvert)?;
+		xcm::v4::send_xcm::<T::XcmRouter>(v4_dest, v4_message)
+			.map_err(|_e| Error::<T>::XcmFailure)?;
 
 		Ok(query_id)
 	}
@@ -281,7 +284,10 @@ impl<T: Config>
 
 		// Send out the xcm message.
 		let dest = Pallet::<T>::get_para_multilocation_by_currency_id(currency_id)?;
-		send_xcm::<T::XcmRouter>(dest, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
+		let v4_dest = dest.try_into().map_err(|()| Error::<T>::FailToConvert)?;
+		let v4_message = xcm_message.try_into().map_err(|()| Error::<T>::FailToConvert)?;
+		xcm::v4::send_xcm::<T::XcmRouter>(v4_dest, v4_message)
+			.map_err(|_e| Error::<T>::XcmFailure)?;
 
 		Ok(query_id)
 	}
@@ -509,7 +515,10 @@ impl<T: Config>
 
 		// Send out the xcm message.
 		let dest = Pallet::<T>::get_para_multilocation_by_currency_id(currency_id)?;
-		send_xcm::<T::XcmRouter>(dest, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
+		let v4_dest = dest.try_into().map_err(|()| Error::<T>::FailToConvert)?;
+		let v4_message = xcm_message.try_into().map_err(|()| Error::<T>::FailToConvert)?;
+		xcm::v4::send_xcm::<T::XcmRouter>(v4_dest, v4_message)
+			.map_err(|_e| Error::<T>::XcmFailure)?;
 
 		Ok(query_id)
 	}
@@ -691,7 +700,10 @@ impl<T: Config>
 
 		// Send out the xcm message.
 		let dest = Pallet::<T>::get_para_multilocation_by_currency_id(currency_id)?;
-		send_xcm::<T::XcmRouter>(dest, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
+		let v4_dest = dest.try_into().map_err(|()| Error::<T>::FailToConvert)?;
+		let v4_message = xcm_message.try_into().map_err(|()| Error::<T>::FailToConvert)?;
+		xcm::v4::send_xcm::<T::XcmRouter>(v4_dest, v4_message)
+			.map_err(|_e| Error::<T>::XcmFailure)?;
 
 		Ok(query_id)
 	}
@@ -918,10 +930,7 @@ impl<T: Config> PhalaAgent<T> {
 		DelegatorLedgerXcmUpdateQueue::<T>::remove(query_id);
 
 		// Delete the query in pallet_xcm.
-		ensure!(
-			T::SubstrateResponseManager::remove_query_record(query_id),
-			Error::<T>::QueryResponseRemoveError
-		);
+		T::SubstrateResponseManager::remove_query_record(query_id);
 
 		Ok(())
 	}

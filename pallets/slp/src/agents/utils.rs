@@ -26,14 +26,7 @@ use frame_support::ensure;
 use parity_scale_codec::Encode;
 use sp_core::Get;
 use sp_std::prelude::*;
-use xcm::{
-	opaque::v3::{
-		Junction::{AccountId32, Parachain},
-		Junctions::X1,
-		MultiLocation,
-	},
-	v3::prelude::*,
-};
+use xcm::v3::{prelude::*, MultiLocation};
 
 // Some untilities.
 impl<T: Config> Pallet<T> {

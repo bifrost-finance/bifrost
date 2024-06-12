@@ -58,6 +58,7 @@ pub use pallet::*;
 use sp_core::U256;
 use sp_std::{vec, vec::Vec};
 pub use traits::*;
+use xcm::v3::MultiLocation;
 
 pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
 
@@ -78,7 +79,7 @@ pub mod pallet {
 	use bifrost_primitives::{currency::BNC, FIL};
 	use frame_support::pallet_prelude::DispatchResultWithPostInfo;
 	use orml_traits::XcmTransfer;
-	use xcm::{prelude::*, v3::MultiLocation};
+	use xcm::{prelude::*, v4::Location};
 
 	#[pallet::pallet]
 	pub struct Pallet<T>(_);
@@ -1268,16 +1269,16 @@ pub mod pallet {
 				match redeem_type {
 					RedeemType::Native => {},
 					RedeemType::Astar(receiver) => {
-						let dest = MultiLocation {
-							parents: 1,
-							interior: X2(
+						let dest = Location::new(
+							1,
+							[
 								Parachain(T::AstarParachainId::get()),
 								AccountId32 {
 									network: None,
 									id: receiver.encode().try_into().unwrap(),
 								},
-							),
-						};
+							],
+						);
 						T::XcmTransfer::transfer(
 							account.clone(),
 							token_id,
@@ -1288,16 +1289,16 @@ pub mod pallet {
 						redeem_to = RedeemTo::Astar(receiver);
 					},
 					RedeemType::Hydradx(receiver) => {
-						let dest = MultiLocation {
-							parents: 1,
-							interior: X2(
+						let dest = Location::new(
+							1,
+							[
 								Parachain(T::HydradxParachainId::get()),
 								AccountId32 {
 									network: None,
 									id: receiver.encode().try_into().unwrap(),
 								},
-							),
-						};
+							],
+						);
 						T::XcmTransfer::transfer(
 							account.clone(),
 							token_id,
@@ -1308,16 +1309,16 @@ pub mod pallet {
 						redeem_to = RedeemTo::Hydradx(receiver);
 					},
 					RedeemType::Interlay(receiver) => {
-						let dest = MultiLocation {
-							parents: 1,
-							interior: X2(
+						let dest = Location::new(
+							1,
+							[
 								Parachain(T::InterlayParachainId::get()),
 								AccountId32 {
 									network: None,
 									id: receiver.encode().try_into().unwrap(),
 								},
-							),
-						};
+							],
+						);
 						T::XcmTransfer::transfer(
 							account.clone(),
 							token_id,
@@ -1328,16 +1329,16 @@ pub mod pallet {
 						redeem_to = RedeemTo::Interlay(receiver);
 					},
 					RedeemType::Manta(receiver) => {
-						let dest = MultiLocation {
-							parents: 1,
-							interior: X2(
+						let dest = Location::new(
+							1,
+							[
 								Parachain(T::MantaParachainId::get()),
 								AccountId32 {
 									network: None,
 									id: receiver.encode().try_into().unwrap(),
 								},
-							),
-						};
+							],
+						);
 						T::XcmTransfer::transfer(
 							account.clone(),
 							token_id,
@@ -1348,13 +1349,13 @@ pub mod pallet {
 						redeem_to = RedeemTo::Manta(receiver);
 					},
 					RedeemType::Moonbeam(receiver) => {
-						let dest = MultiLocation {
-							parents: 1,
-							interior: X2(
+						let dest = Location::new(
+							1,
+							[
 								Parachain(T::MoonbeamParachainId::get()),
 								AccountKey20 { network: None, key: receiver.to_fixed_bytes() },
-							),
-						};
+							],
+						);
 						if token_id == FIL {
 							let assets = vec![
 								(token_id, unlock_amount),

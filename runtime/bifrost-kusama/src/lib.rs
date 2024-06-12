@@ -98,9 +98,7 @@ use frame_support::{
 		OnUnbalanced,
 	},
 };
-use frame_system::{
-	pallet_prelude::BlockNumberFor, EnsureRoot, EnsureRootWithSuccess, EnsureSigned,
-};
+use frame_system::{EnsureRoot, EnsureRootWithSuccess, EnsureSigned};
 use hex_literal::hex;
 use orml_oracle::{DataFeeder, DataProvider, DataProviderExtended};
 use pallet_identity::legacy::IdentityInfo;
@@ -125,7 +123,7 @@ use governance::{
 pub mod xcm_config;
 use pallet_xcm::{EnsureResponse, QueryStatus};
 use sp_runtime::traits::{IdentityLookup, Verify};
-use xcm::v3::prelude::*;
+use xcm::{v3::MultiLocation, v4::prelude::*};
 pub use xcm_config::{
 	parachains, AccountId32Aliases, BifrostCurrencyIdConvert, BifrostTreasuryAccount,
 	ExistentialDeposits, MultiCurrency, SelfParaChainId, Sibling, SiblingParachainConvertsVia,
@@ -662,7 +660,6 @@ impl pallet_balances::Config for Runtime {
 	type MaxReserves = ConstU32<50>;
 	type ReserveIdentifier = [u8; 8];
 	type FreezeIdentifier = ();
-	type MaxHolds = ConstU32<1>;
 	type MaxFreezes = ConstU32<0>;
 	type WeightInfo = pallet_balances::weights::SubstrateWeight<Runtime>;
 	type RuntimeHoldReason = RuntimeHoldReason;
@@ -1160,14 +1157,14 @@ parameter_types! {
 	pub BifrostParachainAccountId20: [u8; 20] = cumulus_primitives_core::ParaId::from(ParachainInfo::get()).into_account_truncating();
 }
 
-pub fn create_x2_multilocation(index: u16, currency_id: CurrencyId) -> MultiLocation {
+pub fn create_x2_multilocation(index: u16, currency_id: CurrencyId) -> xcm::v3::Location {
 	match currency_id {
 		// AccountKey20 format of Bifrost sibling para account
-		CurrencyId::Token(TokenSymbol::MOVR) => MultiLocation::new(
+		CurrencyId::Token(TokenSymbol::MOVR) => xcm::v3::Location::new(
 			1,
-			X2(
-				Parachain(parachains::moonriver::ID.into()),
-				AccountKey20 {
+			xcm::v3::Junctions::X2(
+				xcm::v3::Junction::Parachain(parachains::moonriver::ID.into()),
+				xcm::v3::Junction::AccountKey20 {
 					network: None,
 					key: Slp::derivative_account_id_20(
 						polkadot_parachain_primitives::primitives::Sibling::from(
@@ -1181,9 +1178,9 @@ pub fn create_x2_multilocation(index: u16, currency_id: CurrencyId) -> MultiLoca
 			),
 		),
 		// Only relay chain use the Bifrost para account with "para"
-		CurrencyId::Token(TokenSymbol::KSM) => MultiLocation::new(
+		CurrencyId::Token(TokenSymbol::KSM) => xcm::v3::Location::new(
 			1,
-			X1(AccountId32 {
+			xcm::v3::Junctions::X1(xcm::v3::Junction::AccountId32 {
 				network: None,
 				id: Utility::derivative_account_id(
 					ParachainInfo::get().into_account_truncating(),
@@ -1193,9 +1190,9 @@ pub fn create_x2_multilocation(index: u16, currency_id: CurrencyId) -> MultiLoca
 			}),
 		),
 		// Bifrost Kusama Native token
-		CurrencyId::Native(TokenSymbol::BNC) => MultiLocation::new(
+		CurrencyId::Native(TokenSymbol::BNC) => xcm::v3::Location::new(
 			0,
-			X1(AccountId32 {
+			xcm::v3::Junctions::X1(xcm::v3::Junction::AccountId32 {
 				network: None,
 				id: Utility::derivative_account_id(
 					polkadot_parachain_primitives::primitives::Sibling::from(ParachainInfo::get())
@@ -1212,11 +1209,11 @@ pub fn create_x2_multilocation(index: u16, currency_id: CurrencyId) -> MultiLoca
 				BifrostCurrencyIdConvert::<SelfParaChainId>::convert(currency_id)
 			{
 				if let Some(Parachain(para_id)) = location.interior().first() {
-					MultiLocation::new(
+					xcm::v3::Location::new(
 						1,
-						X2(
-							Parachain(*para_id),
-							AccountId32 {
+						xcm::v3::Junctions::X2(
+							xcm::v3::Junction::Parachain(*para_id),
+							xcm::v3::Junction::AccountId32 {
 								network: None,
 								id: Utility::derivative_account_id(
 									polkadot_parachain_primitives::primitives::Sibling::from(
@@ -1230,10 +1227,10 @@ pub fn create_x2_multilocation(index: u16, currency_id: CurrencyId) -> MultiLoca
 						),
 					)
 				} else {
-					MultiLocation::default()
+					xcm::v3::Location::default()
 				}
 			} else {
-				MultiLocation::default()
+				xcm::v3::Location::default()
 			}
 		},
 	}
@@ -1334,7 +1331,7 @@ parameter_types! {
 }
 
 pub struct SubstrateResponseManager;
-impl QueryResponseManager<QueryId, MultiLocation, BlockNumber, RuntimeCall>
+impl QueryResponseManager<QueryId, Location, BlockNumber, RuntimeCall>
 	for SubstrateResponseManager
 {
 	fn get_query_response_record(query_id: QueryId) -> bool {
@@ -1346,16 +1343,16 @@ impl QueryResponseManager<QueryId, MultiLocation, BlockNumber, RuntimeCall>
 	}
 
 	fn create_query_record(
-		responder: &MultiLocation,
+		responder: Location,
 		call_back: Option<RuntimeCall>,
 		timeout: BlockNumber,
 	) -> u64 {
 		// for xcm v3 version see the following
 		// PolkadotXcm::new_query(responder, timeout, Here)
 		if let Some(call_back) = call_back {
-			PolkadotXcm::new_notify_query(*responder, call_back, timeout, Here)
+			PolkadotXcm::new_notify_query(responder.clone(), call_back, timeout, Here)
 		} else {
-			PolkadotXcm::new_query(*responder, timeout, Here)
+			PolkadotXcm::new_query(responder, timeout, Here)
 		}
 	}
 
@@ -2048,46 +2045,13 @@ pub type SignedPayload = generic::SignedPayload<RuntimeCall, SignedExtra>;
 /// upgrades in case governance decides to do so. THE ORDER IS IMPORTANT.
 pub type Migrations = migrations::Unreleased;
 
-parameter_types! {
-	pub const TipsPalletName: &'static str = "Tips";
-	pub const BountiesPalletName: &'static str = "Bounties";
-}
-
 /// The runtime migrations per release.
 pub mod migrations {
 	#![allow(unused_imports)]
 	use super::*;
 
 	/// Unreleased migrations. Add new ones here:
-	pub type Unreleased = (
-		// Unlock & unreserve funds
-		pallet_tips::migrations::unreserve_deposits::UnreserveDeposits<UnlockConfigForTips, ()>,
-		cumulus_pallet_xcmp_queue::migration::v4::MigrationToV4<Runtime>,
-		migration::slpx_migrates_whitelist::UpdateWhitelist,
-		frame_support::migrations::RemovePallet<
-			TipsPalletName,
-			<Runtime as frame_system::Config>::DbWeight,
-		>,
-		frame_support::migrations::RemovePallet<
-			BountiesPalletName,
-			<Runtime as frame_system::Config>::DbWeight,
-		>,
-		pallet_identity::migration::versioned::V0ToV1<Runtime, 100>,
-	);
-}
-
-// Special Config for tips pallets, allowing us to run migrations for them without
-// implementing their configs on [`Runtime`].
-pub struct UnlockConfigForTips;
-impl pallet_tips::migrations::unreserve_deposits::UnlockConfig<()> for UnlockConfigForTips {
-	type Currency = Balances;
-	type Hash = Hash;
-	type DataDepositPerByte = DataDepositPerByte;
-	type TipReportDepositBase = TipReportDepositBase;
-	type AccountId = AccountId;
-	type BlockNumber = BlockNumberFor<Runtime>;
-	type DbWeight = <Runtime as frame_system::Config>::DbWeight;
-	type PalletName = TipsPalletName;
+	pub type Unreleased = ();
 }
 
 /// Executive: handles dispatch to the various modules.

@@ -26,6 +26,7 @@ use bifrost_primitives::{
 use frame_support::{assert_noop, assert_ok, PalletId};
 use orml_traits::MultiCurrency;
 use sp_runtime::{traits::AccountIdConversion, MultiAddress};
+use xcm::v3::{prelude::*, MultiAsset};
 
 const SUBACCOUNT_0_32: [u8; 32] =
 	hex_literal::hex!["5a53736d8e96f1c007cf0d630acf5209b20611617af23ce924c8e25328eb5d28"];
@@ -694,17 +695,17 @@ fn test_construct_xcm() {
 
 		assert_eq!(
 			messsage.0[1],
-			BuyExecution {
+			xcm::v3::prelude::BuyExecution {
 				fees: MultiAsset {
-					id: Concrete(MultiLocation { parents: 0, interior: Here }),
-					fun: Fungible(10000000000)
+					id: Concrete(MultiLocation { parents: 0, interior: xcm::v3::prelude::Here }),
+					fun: xcm::v3::prelude::Fungible(10000000000)
 				},
 				weight_limit: Unlimited
 			}
 		);
 		assert_eq!(
 			messsage.0[2],
-			Transact {
+			xcm::v3::prelude::Transact {
 				origin_kind: OriginKind::SovereignAccount,
 				require_weight_at_most: weight,
 				call: [26, 1, 0, 0].to_vec().into()
@@ -723,17 +724,17 @@ fn test_construct_xcm() {
 			.unwrap();
 		assert_eq!(
 			messsage.0[1],
-			BuyExecution {
+			xcm::v3::prelude::BuyExecution {
 				fees: MultiAsset {
-					id: Concrete(MultiLocation { parents: 0, interior: Here }),
-					fun: Fungible(100)
+					id: Concrete(MultiLocation { parents: 0, interior: xcm::v3::prelude::Here }),
+					fun: xcm::v3::prelude::Fungible(100)
 				},
 				weight_limit: Unlimited
 			}
 		);
 		assert_eq!(
 			messsage.0[2],
-			Transact {
+			xcm::v3::prelude::Transact {
 				origin_kind: OriginKind::SovereignAccount,
 				require_weight_at_most: weight,
 				call: [26, 1, 0, 0].to_vec().into()
