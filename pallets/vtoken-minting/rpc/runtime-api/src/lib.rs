@@ -21,6 +21,7 @@
 use parity_scale_codec::Codec;
 use sp_api::decl_runtime_apis;
 use sp_core::U256;
+use sp_std::vec::Vec;
 
 decl_runtime_apis! {
 	pub trait VtokenMintingRuntimeApi<CurrencyId> where CurrencyId: Codec
