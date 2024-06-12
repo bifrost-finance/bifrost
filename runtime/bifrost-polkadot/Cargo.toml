@@ -142,6 +142,7 @@ pallet-prices = { workspace = true }
 leverage-staking = { workspace = true }
 bifrost-channel-commission = { workspace = true }
 bifrost-clouds-convert = { workspace = true }
+bifrost-vtoken-minting-rpc-runtime-api = { workspace = true }
 
 [build-dependencies]
 substrate-wasm-builder = { workspace = true, optional = true }
@@ -256,6 +257,7 @@ std = [
 	"bifrost-xcm-interface/std",
 	"bifrost-channel-commission/std",
 	"bifrost-clouds-convert/std",
+	"bifrost-vtoken-minting-rpc-runtime-api/std",
 
 	"substrate-wasm-builder"
 ]

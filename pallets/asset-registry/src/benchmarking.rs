@@ -266,6 +266,40 @@ benchmarks! {
 		};
 	}: {call.dispatch_bypass_filter(origin)?}
 
+	update_currency_metadata {
+		let origin = T::RegisterOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?;
+
+		assert_ok!(AssetRegistry::<T>::register_token_metadata(
+			origin.clone(),
+			Box::new(AssetMetadata {
+				name: b"Old Token Name".to_vec(),
+				symbol: b"OTN".to_vec(),
+				decimals: 10,
+				minimal_balance: BalanceOf::<T>::unique_saturated_from(1u128),
+			})
+		));
+
+		let call = Call::<T>::update_currency_metadata {
+			currency_id: CurrencyId::Token2(0),
+			asset_name: Some(b"Token Name".to_vec()),
+			asset_symbol: Some(b"TN".to_vec()),
+			asset_decimals : Some(12),
+			asset_minimal_balance : Some(BalanceOf::<T>::unique_saturated_from(1000u128)),
+		};
+
+	}: {call.dispatch_bypass_filter(origin)?}
+	verify {
+		assert_eq!(
+			CurrencyMetadatas::<T>::get(CurrencyId::Token2(0)),
+			Some(AssetMetadata {
+				name: b"Token Name".to_vec(),
+				symbol: b"TN".to_vec(),
+				decimals: 12,
+				minimal_balance: BalanceOf::<T>::unique_saturated_from(1000u128),
+			})
+		);
+	}
+
 	impl_benchmark_test_suite!(
 	AssetRegistry,
 	crate::mock::ExtBuilder::default().build(),

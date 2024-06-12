@@ -61,6 +61,7 @@ pub trait WeightInfo {
 	fn register_vsbond_metadata() -> Weight;
 	fn register_location() -> Weight;
 	fn force_set_location() -> Weight;
+	fn update_currency_metadata() -> Weight;
 }
 
 // For backwards compatibility and tests
@@ -174,5 +175,16 @@ impl WeightInfo for () {
 		Weight::from_parts(55_012_000, 4148)
 			.saturating_add(RocksDbWeight::get().reads(1_u64))
 			.saturating_add(RocksDbWeight::get().writes(3_u64))
+	}
+	/// Storage: `AssetRegistry::CurrencyMetadatas` (r:1 w:1)
+	/// Proof: `AssetRegistry::CurrencyMetadatas` (`max_values`: None, `max_size`: None, mode: `Measured`)
+	fn update_currency_metadata() -> Weight {
+		// Proof Size summary in bytes:
+		//  Measured:  `409`
+		//  Estimated: `3874`
+		// Minimum execution time: 12_000_000 picoseconds.
+		Weight::from_parts(13_000_000, 3874)
+			.saturating_add(RocksDbWeight::get().reads(1_u64))
+			.saturating_add(RocksDbWeight::get().writes(1_u64))
 	}
 }

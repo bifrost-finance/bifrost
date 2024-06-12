@@ -235,6 +235,7 @@ impl vtoken_minting::Config for Runtime {
 	type MantaParachainId = ConstU32<2104>;
 	type InterlayParachainId = ConstU32<2032>;
 	type ChannelCommission = ();
+	type AssetIdMaps = AssetIdMaps<Runtime>;
 }
 
 ord_parameter_types! {

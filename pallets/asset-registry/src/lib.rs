@@ -121,6 +121,8 @@ pub mod pallet {
 		CurrencyIdRegistered { currency_id: CurrencyId, metadata: AssetMetadata<BalanceOf<T>> },
 		/// Location Force set.
 		LocationSet { currency_id: CurrencyId, location: Location, weight: Weight },
+		/// The CurrencyId updated.
+		CurrencyIdUpdated { currency_id: CurrencyId, metadata: AssetMetadata<BalanceOf<T>> },
 	}
 
 	/// Next available Foreign AssetId ID.
@@ -440,6 +442,43 @@ pub mod pallet {
 
 			Ok(())
 		}
+
+		#[pallet::call_index(8)]
+		#[pallet::weight(T::WeightInfo::update_currency_metadata())]
+		pub fn update_currency_metadata(
+			origin: OriginFor<T>,
+			currency_id: CurrencyId,
+			asset_name: Option<Vec<u8>>,
+			asset_symbol: Option<Vec<u8>>,
+			asset_decimals: Option<u8>,
+			asset_minimal_balance: Option<BalanceOf<T>>,
+		) -> DispatchResult {
+			T::RegisterOrigin::ensure_origin(origin)?;
+
+			// Check if the currency metadata exists
+			let mut metadata =
+				CurrencyMetadatas::<T>::get(currency_id).ok_or(Error::<T>::CurrencyIdNotExists)?;
+
+			// Update the metadata fields based on the provided options
+			if let Some(name) = asset_name {
+				metadata.name = name;
+			}
+			if let Some(symbol) = asset_symbol {
+				metadata.symbol = symbol;
+			}
+			if let Some(decimals) = asset_decimals {
+				metadata.decimals = decimals;
+			}
+			if let Some(minimal_balance) = asset_minimal_balance {
+				metadata.minimal_balance = minimal_balance;
+			}
+
+			// Store the updated metadata
+			CurrencyMetadatas::<T>::insert(currency_id, metadata.clone());
+			Self::deposit_event(Event::<T>::CurrencyIdUpdated { currency_id, metadata });
+
+			Ok(())
+		}
 	}
 }
 
@@ -605,6 +644,10 @@ impl<T: Config> CurrencyIdMapping<CurrencyId, MultiLocation, AssetMetadata<Balan
 
 	fn get_currency_metadata(currency_id: CurrencyId) -> Option<AssetMetadata<BalanceOf<T>>> {
 		Pallet::<T>::currency_metadatas(currency_id)
+	}
+
+	fn get_all_currency() -> Vec<CurrencyId> {
+		CurrencyMetadatas::<T>::iter_keys().collect()
 	}
 
 	fn get_location(currency_id: CurrencyId) -> Option<Location> {

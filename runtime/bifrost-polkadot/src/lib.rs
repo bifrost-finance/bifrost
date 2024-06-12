@@ -1478,6 +1478,7 @@ impl bifrost_vtoken_minting::Config for Runtime {
 	type MaxLockRecords = ConstU32<100>;
 	type IncentivePoolAccount = IncentivePoolAccount;
 	type VeMinting = VeMinting;
+	type AssetIdMaps = AssetIdMaps<Runtime>;
 }
 
 parameter_types! {
@@ -2174,6 +2175,12 @@ impl_runtime_apis! {
 			amounts: Vec<Balance>,
 		) -> Balance {
 			StablePool::add_liquidity_amount(pool_id, amounts).unwrap_or(Zero::zero())
+		}
+	}
+
+	impl bifrost_vtoken_minting_rpc_runtime_api::VtokenMintingRuntimeApi<Block, CurrencyId> for Runtime {
+		fn get_exchange_rate(token_id: Option<CurrencyId>) -> Vec<(CurrencyId, U256)> {
+			VtokenMinting::get_exchange_rate(token_id).unwrap_or(Vec::new())
 		}
 	}
 
