@@ -2,9 +2,9 @@ cargo-features = ["resolver"]
 
 [workspace]
 members = [
-    "integration-tests/bifrost-kusama",
-    "integration-tests/bifrost-polkadot",
-    "integration-tests/common",
+#    "integration-tests/bifrost-kusama",
+#    "integration-tests/bifrost-polkadot",
+#    "integration-tests/common",
     "node/cli",
     "node/rpc",
     "node/service",

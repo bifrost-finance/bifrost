@@ -3,17 +3,18 @@ use super::*;
 
 use crate as pallet_evm_accounts;
 use crate::{Balance, Config};
-use frame_support::parameter_types;
-use frame_support::sp_runtime::{
-	traits::{BlakeTwo256, IdentifyAccount, IdentityLookup, Verify},
-	BuildStorage, MultiSignature,
+use frame_support::{
+	parameter_types,
+	sp_runtime::{
+		traits::{BlakeTwo256, IdentifyAccount, IdentityLookup, Verify},
+		BuildStorage, MultiSignature,
+	},
+	traits::Everything,
 };
-use frame_support::traits::Everything;
 use frame_system::EnsureRoot;
 use orml_traits::parameter_type_with_key;
 pub use sp_core::{H160, H256};
-use std::cell::RefCell;
-use std::collections::HashMap;
+use std::{cell::RefCell, collections::HashMap};
 
 pub type AssetId = u32;
 pub type Signature = MultiSignature;
@@ -50,9 +51,7 @@ parameter_types! {
 pub struct EvmNonceProviderMock;
 impl EvmNonceProvider for EvmNonceProviderMock {
 	fn get_nonce(evm_address: H160) -> U256 {
-		NONCE
-			.with(|v| v.borrow().get(&evm_address).copied())
-			.unwrap_or_default()
+		NONCE.with(|v| v.borrow().get(&evm_address).copied()).unwrap_or_default()
 	}
 }
 
@@ -120,9 +119,7 @@ impl Default for ExtBuilder {
 			v.borrow_mut().clear();
 		});
 
-		Self {
-			endowed_accounts: vec![(ALICE, HDX, INITIAL_BALANCE)],
-		}
+		Self { endowed_accounts: vec![(ALICE, HDX, INITIAL_BALANCE)] }
 	}
 }
 
@@ -130,11 +127,9 @@ impl ExtBuilder {
 	pub fn build(self) -> sp_io::TestExternalities {
 		let mut t = frame_system::GenesisConfig::<Test>::default().build_storage().unwrap();
 
-		orml_tokens::GenesisConfig::<Test> {
-			balances: self.endowed_accounts,
-		}
-		.assimilate_storage(&mut t)
-		.unwrap();
+		orml_tokens::GenesisConfig::<Test> { balances: self.endowed_accounts }
+			.assimilate_storage(&mut t)
+			.unwrap();
 
 		let mut r: sp_io::TestExternalities = t.into();
 		r.execute_with(|| System::set_block_number(1));

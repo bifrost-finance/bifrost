@@ -19,6 +19,7 @@
 //! Service implementation. Specialized wrapper over substrate service.
 use std::{
 	collections::BTreeMap,
+	path::Path,
 	sync::{Arc, Mutex},
 	time::Duration,
 };
@@ -55,8 +56,9 @@ use sp_core::U256;
 use sp_keystore::KeystorePtr;
 use substrate_prometheus_endpoint::Registry;
 
-use crate::eth::EthConfiguration;
-use fc_db::kv::Backend as FrontierBackend;
+use crate::eth::{
+	db_config_dir, spawn_frontier_tasks, BackendType, EthConfiguration, FrontierBackend,
+};
 
 #[cfg(not(feature = "runtime-benchmarks"))]
 type HostFunctions = sp_io::SubstrateHostFunctions;
@@ -87,6 +89,7 @@ type ParachainBlockImport = TParachainBlockImport<Block, Arc<FullClient>, FullBa
 
 pub fn new_partial(
 	config: &Configuration,
+	eth_config: &EthConfiguration,
 	dev: bool,
 ) -> Result<
 	PartialComponents<
@@ -95,12 +98,7 @@ pub fn new_partial(
 		MaybeFullSelectChain,
 		sc_consensus::import_queue::BasicQueue<Block>,
 		sc_transaction_pool::FullPool<Block, FullClient>,
-		(
-			ParachainBlockImport,
-			Option<Telemetry>,
-			Option<TelemetryWorkerHandle>,
-			Arc<FrontierBackend<Block>>,
-		),
+		(ParachainBlockImport, Option<Telemetry>, Option<TelemetryWorkerHandle>, FrontierBackend),
 	>,
 	sc_service::Error,
 > {
@@ -154,22 +152,36 @@ pub fn new_partial(
 
 	let select_chain = if dev { Some(LongestChain::new(backend.clone())) } else { None };
 
-	let frontier_backend = Arc::new(FrontierBackend::open(
-		Arc::clone(&client),
-		&config.database,
-		// &evm::db_config_dir(config),
-		&config.base_path.config_dir(config.chain_spec.id()),
-	)?);
+	let overrides = fc_storage::overrides_handle(client.clone());
+	let frontier_backend = match eth_config.frontier_backend_type {
+		BackendType::KeyValue => FrontierBackend::KeyValue(fc_db::kv::Backend::open(
+			Arc::clone(&client),
+			&config.database,
+			&db_config_dir(config),
+		)?),
+		BackendType::Sql => {
+			let db_path = db_config_dir(config).join("sql");
+			std::fs::create_dir_all(&db_path).expect("failed creating sql db directory");
+			let backend = futures::executor::block_on(fc_db::sql::Backend::new(
+				fc_db::sql::BackendConfig::Sqlite(fc_db::sql::SqliteBackendConfig {
+					path: Path::new("sqlite:///")
+						.join(db_path)
+						.join("frontier.db3")
+						.to_str()
+						.unwrap(),
+					create_if_missing: true,
+					thread_count: eth_config.frontier_sql_backend_thread_count,
+					cache_size: eth_config.frontier_sql_backend_cache_size,
+				}),
+				eth_config.frontier_sql_backend_pool_size,
+				std::num::NonZeroU32::new(eth_config.frontier_sql_backend_num_ops_timeout),
+				overrides.clone(),
+			))
+			.unwrap_or_else(|err| panic!("failed creating sql backend: {:?}", err));
+			FrontierBackend::Sql(backend)
+		},
+	};
 
-	// let evm_since = chain_spec::Extensions::try_get(&config.chain_spec)
-	// 	.map(|e| e.evm_since)
-	// 	.unwrap_or(1);
-	// let block_import = evm::BlockImport::new(
-	// 	ParachainBlockImport::new(client.clone(), backend.clone()),
-	// 	client.clone(),
-	// 	frontier_backend.clone(),
-	// 	evm_since,
-	// );
 	let block_import = ParachainBlockImport::new(client.clone(), backend.clone());
 
 	let import_queue = if dev {
@@ -318,7 +330,7 @@ async fn start_node_impl(
 ) -> sc_service::error::Result<(TaskManager, Arc<FullClient>)> {
 	let parachain_config = prepare_node_config(parachain_config);
 
-	let params = new_partial(&parachain_config, false)?;
+	let params = new_partial(&parachain_config, &eth_config, false)?;
 	let (block_import, mut telemetry, telemetry_worker_handle, frontier_backend) = params.other;
 
 	let client = params.client.clone();
@@ -450,11 +462,10 @@ async fn start_node_impl(
 				enable_dev_signer,
 				network: network.clone(),
 				sync: sync_service.clone(),
-				frontier_backend: frontier_backend.clone(),
-				// frontier_backend: match frontier_backend.clone() {
-				// 	fc_db::Backend::KeyValue(b) => Arc::new(b),
-				// 	fc_db::Backend::Sql(b) => Arc::new(b),
-				// },
+				frontier_backend: match frontier_backend.clone() {
+					fc_db::Backend::KeyValue(b) => Arc::new(b),
+					fc_db::Backend::Sql(b) => Arc::new(b),
+				},
 				overrides: overrides.clone(),
 				block_data_cache: block_data_cache.clone(),
 				filter_pool: filter_pool.clone(),
@@ -488,13 +499,27 @@ async fn start_node_impl(
 		task_manager: &mut task_manager,
 		config: parachain_config,
 		keystore: params.keystore_container.keystore(),
-		backend,
+		backend: backend.clone(),
 		network: network.clone(),
 		sync_service: sync_service.clone(),
 		system_rpc_tx,
 		tx_handler_controller,
 		telemetry: telemetry.as_mut(),
 	})?;
+
+	spawn_frontier_tasks(
+		&task_manager,
+		client.clone(),
+		backend,
+		frontier_backend,
+		filter_pool,
+		overrides,
+		fee_history_cache,
+		fee_history_cache_limit,
+		sync_service.clone(),
+		pubsub_notification_sinks,
+	)
+	.await;
 
 	if let Some(hwbench) = hwbench {
 		sc_sysinfo::print_hwbench(&hwbench);

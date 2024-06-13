@@ -189,15 +189,7 @@ where
 
 	io.merge(Web3::new(client.clone()).into_rpc())?;
 
-	io.merge(
-		Debug::new(
-			client.clone(),
-			frontier_backend,
-			overrides,
-			block_data_cache,
-		)
-		.into_rpc(),
-	)?;
+	io.merge(Debug::new(client.clone(), frontier_backend, overrides, block_data_cache).into_rpc())?;
 
 	#[cfg(feature = "txpool")]
 	io.merge(TxPool::new(client, graph).into_rpc())?;

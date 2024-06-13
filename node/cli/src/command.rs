@@ -248,7 +248,7 @@ pub fn run() -> Result<()> {
 
 			with_runtime_or_err!(chain_spec, {
 				return runner.async_run(|config| {
-					let components = new_partial(&config, false)?;
+					let components = new_partial(&config, &cli.eth_config, false)?;
 					Ok((
 						cmd.run(components.client, components.import_queue),
 						components.task_manager,
@@ -264,7 +264,7 @@ pub fn run() -> Result<()> {
 
 			with_runtime_or_err!(chain_spec, {
 				return runner.async_run(|config| {
-					let components = new_partial(&config, false)?;
+					let components = new_partial(&config, &cli.eth_config, false)?;
 					Ok((cmd.run(components.client, config.database), components.task_manager))
 				});
 			})
@@ -277,7 +277,7 @@ pub fn run() -> Result<()> {
 
 			with_runtime_or_err!(chain_spec, {
 				return runner.async_run(|config| {
-					let components = new_partial(&config, false)?;
+					let components = new_partial(&config, &cli.eth_config, false)?;
 					Ok((cmd.run(components.client, config.chain_spec), components.task_manager))
 				});
 			})
@@ -288,7 +288,7 @@ pub fn run() -> Result<()> {
 
 			with_runtime_or_err!(chain_spec, {
 				return runner.sync_run(|config| {
-					let partials = new_partial(&config, false)?;
+					let partials = new_partial(&config, &cli.eth_config, false)?;
 					cmd.run(&*config.chain_spec, &*partials.client)
 				});
 			})
@@ -316,7 +316,7 @@ pub fn run() -> Result<()> {
 			set_default_ss58_version(chain_spec);
 			with_runtime_or_err!(chain_spec, {
 				return runner.async_run(|config| {
-					let components = new_partial(&config, false)?;
+					let components = new_partial(&config, &cli.eth_config, false)?;
 					Ok((
 						cmd.run(components.client, components.import_queue),
 						components.task_manager,
@@ -350,7 +350,7 @@ pub fn run() -> Result<()> {
 			set_default_ss58_version(chain_spec);
 			with_runtime_or_err!(chain_spec, {
 				return runner.async_run(|config| {
-					let components = new_partial(&config, false)?;
+					let components = new_partial(&config, &cli.eth_config, false)?;
 					Ok((
 						cmd.run(components.client, components.backend, None),
 						components.task_manager,
@@ -387,7 +387,7 @@ pub fn run() -> Result<()> {
 				BenchmarkCmd::Block(cmd) => runner.sync_run(|config| {
 					with_runtime_or_err!(config.chain_spec, {
 						{
-							let partials = new_partial(&config, false)?;
+							let partials = new_partial(&config, &cli.eth_config, false)?;
 							cmd.run(partials.client)
 						}
 					})
@@ -404,7 +404,7 @@ pub fn run() -> Result<()> {
 				BenchmarkCmd::Storage(cmd) => runner.sync_run(|config| {
 					with_runtime_or_err!(config.chain_spec, {
 						{
-							let partials = new_partial(&config, false)?;
+							let partials = new_partial(&config, &cli.eth_config, false)?;
 							let db = partials.backend.expose_db();
 							let storage = partials.backend.expose_storage();
 							cmd.run(config, partials.client.clone(), db, storage)
@@ -462,10 +462,17 @@ pub fn run() -> Result<()> {
 
 				with_runtime_or_err!(config.chain_spec, {
 					{
-						start_node(config, polkadot_config, cli.eth_config, collator_options, id, hwbench)
-							.await
-							.map(|r| r.0)
-							.map_err(Into::into)
+						start_node(
+							config,
+							polkadot_config,
+							cli.eth_config,
+							collator_options,
+							id,
+							hwbench,
+						)
+						.await
+						.map(|r| r.0)
+						.map_err(Into::into)
 					}
 				})
 			})

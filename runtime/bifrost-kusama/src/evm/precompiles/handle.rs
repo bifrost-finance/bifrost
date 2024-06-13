@@ -1,11 +1,12 @@
-//                    :                     $$\   $$\                 $$\                    $$$$$$$\  $$\   $$\
-//                  !YJJ^                   $$ |  $$ |                $$ |                   $$  __$$\ $$ |  $$ |
-//                7B5. ~B5^                 $$ |  $$ |$$\   $$\  $$$$$$$ | $$$$$$\  $$$$$$\  $$ |  $$ |\$$\ $$  |
-//             .?B@G    ~@@P~               $$$$$$$$ |$$ |  $$ |$$  __$$ |$$  __$$\ \____$$\ $$ |  $$ | \$$$$  /
-//           :?#@@@Y    .&@@@P!.            $$  __$$ |$$ |  $$ |$$ /  $$ |$$ |  \__|$$$$$$$ |$$ |  $$ | $$  $$<
-//         ^?J^7P&@@!  .5@@#Y~!J!.          $$ |  $$ |$$ |  $$ |$$ |  $$ |$$ |     $$  __$$ |$$ |  $$ |$$  /\$$\
-//       ^JJ!.   :!J5^ ?5?^    ^?Y7.        $$ |  $$ |\$$$$$$$ |\$$$$$$$ |$$ |     \$$$$$$$ |$$$$$$$  |$$ /  $$ |
-//     ~PP: 7#B5!.         :?P#G: 7G?.      \__|  \__| \____$$ | \_______|\__|      \_______|\_______/ \__|  \__|
+//                    :                     $$\   $$\                 $$\
+// $$$$$$$\  $$\   $$\                  !YJJ^                   $$ |  $$ |                $$ |
+// $$  __$$\ $$ |  $$ |                7B5. ~B5^                 $$ |  $$ |$$\   $$\  $$$$$$$ |
+// $$$$$$\  $$$$$$\  $$ |  $$ |\$$\ $$  |             .?B@G    ~@@P~               $$$$$$$$ |$$ |
+// $$ |$$  __$$ |$$  __$$\ \____$$\ $$ |  $$ | \$$$$  /           :?#@@@Y    .&@@@P!.            $$
+// __$$ |$$ |  $$ |$$ /  $$ |$$ |  \__|$$$$$$$ |$$ |  $$ | $$  $$<         ^?J^7P&@@!  .5@@#Y~!J!.
+// $$ |  $$ |$$ |  $$ |$$ |  $$ |$$ |     $$  __$$ |$$ |  $$ |$$  /\$$\       ^JJ!.   :!J5^ ?5?^
+// ^?Y7.        $$ |  $$ |\$$$$$$$ |\$$$$$$$ |$$ |     \$$$$$$$ |$$$$$$$  |$$ /  $$ |     ~PP: 7#B5!
+// .         :?P#G: 7G?.      \__|  \__| \____$$ | \_______|\__|      \_______|\_______/ \__|  \__|
 //  .!P@G    7@@@#Y^    .!P@@@#.   ~@&J:              $$\   $$ |
 //  !&@@J    :&@@@@P.   !&@@@@5     #@@P.             \$$$$$$  |
 //   :J##:   Y@@&P!      :JB@@&~   ?@G!                \______/
@@ -15,17 +16,15 @@
 //            !G@@@Y    .&@@&J:
 //              ^5@#.   7@#?.               Copyright (C) 2021-2023  Intergalactic, Limited (GIB).
 //                :5P^.?G7.                 SPDX-License-Identifier: Apache-2.0
-//                  :?Y!                    Licensed under the Apache License, Version 2.0 (the "License");
-//                                          you may not use this file except in compliance with the License.
-//                                          http://www.apache.org/licenses/LICENSE-2.0
+//                  :?Y!                    Licensed under the Apache License, Version 2.0 (the
+// "License");                                          you may not use this file except in
+// compliance with the License.                                          http://www.apache.org/licenses/LICENSE-2.0
 
 use crate::evm::precompiles::{costs, revert, Address, Bytes, EvmResult};
 use pallet_evm::{Context, Log, PrecompileHandle};
 use primitive_types::{H160, H256, U256};
 use smallvec::alloc;
-use sp_std::borrow::ToOwned;
-use sp_std::vec;
-use sp_std::vec::Vec;
+use sp_std::{borrow::ToOwned, vec, vec::Vec};
 
 /// Wrapper around an EVM input slice, helping to parse it.
 /// Provide functions to parse common types.
@@ -45,22 +44,14 @@ pub struct EvmDataWriter {
 impl EvmDataWriter {
 	/// Creates a new empty output builder (without selector).
 	pub fn new() -> Self {
-		Self {
-			data: vec![],
-			offset_data: vec![],
-			selector: None,
-		}
+		Self { data: vec![], offset_data: vec![], selector: None }
 	}
 
 	/// Creates a new empty output builder with provided selector.
 	/// Selector will only be appended before the data when calling
 	/// `build` to not mess with the offsets.
 	pub fn new_with_selector(selector: impl Into<u32>) -> Self {
-		Self {
-			data: vec![],
-			offset_data: vec![],
-			selector: Some(selector.into()),
-		}
+		Self { data: vec![], offset_data: vec![], selector: Some(selector.into()) }
 	}
 
 	/// Return the built data.
@@ -90,7 +81,8 @@ impl EvmDataWriter {
 			let free_space_offset = output.len() - offset_datum.offset_shift;
 
 			// Override dummy offset to the offset it will be in the final output.
-			U256::from(free_space_offset).to_big_endian(&mut output[offset_position..offset_position_end]);
+			U256::from(free_space_offset)
+				.to_big_endian(&mut output[offset_position..offset_position_end]);
 
 			// Append this data at the end of the current output.
 			output.append(&mut offset_datum.data);
@@ -120,11 +112,7 @@ impl EvmDataWriter {
 		let offset_position = self.data.len();
 		H256::write(self, H256::repeat_byte(0xff));
 
-		self.offset_data.push(OffsetDatum {
-			offset_position,
-			data,
-			offset_shift: 0,
-		});
+		self.offset_data.push(OffsetDatum { offset_position, data, offset_shift: 0 });
 	}
 }
 
@@ -140,8 +128,8 @@ struct OffsetDatum {
 	offset_position: usize,
 	// Data pointed by the offset that must be inserted at the end of container data.
 	data: Vec<u8>,
-	// Inside of arrays, the offset is not from the start of array data (length), but from the start
-	// of the item. This shift allow to correct this.
+	// Inside of arrays, the offset is not from the start of array data (length), but from the
+	// start of the item. This shift allow to correct this.
 	offset_shift: usize,
 }
 
@@ -236,10 +224,7 @@ impl EvmData for Bytes {
 		value.resize(padded_size, 0);
 
 		writer.write_pointer(
-			EvmDataWriter::new()
-				.write(U256::from(length))
-				.write_raw_bytes(&value)
-				.build(),
+			EvmDataWriter::new().write(U256::from(length)).write_raw_bytes(&value).build(),
 		);
 	}
 
@@ -397,10 +382,7 @@ impl<'a> EvmDataReader<'a> {
 			return Err(revert("pointer points out of bounds"));
 		}
 
-		Ok(Self {
-			input: &self.input[offset..],
-			cursor: 0,
-		})
+		Ok(Self { input: &self.input[offset..], cursor: 0 })
 	}
 
 	/// Read remaining bytes
@@ -505,7 +487,11 @@ impl<T: PrecompileHandle> PrecompileHandleExt for T {
 
 /// Check that a function call is compatible with the context it is
 /// called into.
-pub fn check_function_modifier(context: &Context, is_static: bool, modifier: FunctionModifier) -> EvmResult {
+pub fn check_function_modifier(
+	context: &Context,
+	is_static: bool,
+	modifier: FunctionModifier,
+) -> EvmResult {
 	if is_static && modifier != FunctionModifier::View {
 		return Err(revert("can't call non-static function in static context"));
 	}

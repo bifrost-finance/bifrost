@@ -26,10 +26,10 @@ use std::{
 use bifrost_kusama_runtime::{
 	constants::currency::DOLLARS, AccountId, AssetRegistryConfig, Balance, BalancesConfig,
 	BlockNumber, CouncilConfig, CouncilMembershipConfig, DefaultBlocksPerRound, DemocracyConfig,
-	EVMChainIdConfig, EVMConfig, IndicesConfig, InflationInfo, OracleMembershipConfig,
-	ParachainInfoConfig, ParachainStakingConfig, PolkadotXcmConfig, Range, RuntimeGenesisConfig,
-	SS58Prefix, SalpConfig, SessionConfig, SystemConfig, TechnicalCommitteeConfig,
-	TechnicalMembershipConfig, TokensConfig, VestingConfig, WASM_BINARY,
+	DynamicFeeConfig, EVMChainIdConfig, EVMConfig, IndicesConfig, InflationInfo,
+	OracleMembershipConfig, ParachainInfoConfig, ParachainStakingConfig, PolkadotXcmConfig, Range,
+	RuntimeGenesisConfig, SS58Prefix, SalpConfig, SessionConfig, SystemConfig,
+	TechnicalCommitteeConfig, TechnicalMembershipConfig, TokensConfig, VestingConfig, WASM_BINARY,
 };
 use bifrost_primitives::{CurrencyId, CurrencyId::*, TokenInfo, TokenSymbol, TokenSymbol::*};
 use bifrost_runtime_common::AuraId;
@@ -251,7 +251,7 @@ pub fn bifrost_genesis(
 			..Default::default()
 		},
 		ethereum: Default::default(),
-		dynamic_fee: Default::default(),
+		dynamic_fee: DynamicFeeConfig { min_gas_price: 6335128.into(), ..Default::default() },
 	}
 }
 

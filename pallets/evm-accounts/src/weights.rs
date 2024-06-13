@@ -58,15 +58,16 @@ pub struct HydraWeight<T>(PhantomData<T>);
 
 impl<T: frame_system::Config> WeightInfo for HydraWeight<T> {
 	/// Storage: `EVMAccounts::AccountExtension` (r:1 w:1)
-	/// Proof: `EVMAccounts::AccountExtension` (`max_values`: None, `max_size`: Some(48), added: 2523, mode: `MaxEncodedLen`)
-	/// Storage: `System::Account` (r:1 w:0)
-	/// Proof: `System::Account` (`max_values`: None, `max_size`: Some(128), added: 2603, mode: `MaxEncodedLen`)
-	/// Storage: `AssetRegistry::NextAssetId` (r:1 w:0)
-	/// Proof: `AssetRegistry::NextAssetId` (`max_values`: Some(1), `max_size`: Some(4), added: 499, mode: `MaxEncodedLen`)
-	/// Storage: `AssetRegistry::LocationAssets` (r:1 w:0)
-	/// Proof: `AssetRegistry::LocationAssets` (`max_values`: None, `max_size`: Some(622), added: 3097, mode: `MaxEncodedLen`)
-	/// Storage: `Tokens::Accounts` (r:1 w:0)
-	/// Proof: `Tokens::Accounts` (`max_values`: None, `max_size`: Some(108), added: 2583, mode: `MaxEncodedLen`)
+	/// Proof: `EVMAccounts::AccountExtension` (`max_values`: None, `max_size`: Some(48), added:
+	/// 2523, mode: `MaxEncodedLen`) Storage: `System::Account` (r:1 w:0)
+	/// Proof: `System::Account` (`max_values`: None, `max_size`: Some(128), added: 2603, mode:
+	/// `MaxEncodedLen`) Storage: `AssetRegistry::NextAssetId` (r:1 w:0)
+	/// Proof: `AssetRegistry::NextAssetId` (`max_values`: Some(1), `max_size`: Some(4), added: 499,
+	/// mode: `MaxEncodedLen`) Storage: `AssetRegistry::LocationAssets` (r:1 w:0)
+	/// Proof: `AssetRegistry::LocationAssets` (`max_values`: None, `max_size`: Some(622), added:
+	/// 3097, mode: `MaxEncodedLen`) Storage: `Tokens::Accounts` (r:1 w:0)
+	/// Proof: `Tokens::Accounts` (`max_values`: None, `max_size`: Some(108), added: 2583, mode:
+	/// `MaxEncodedLen`)
 	fn bind_evm_address() -> Weight {
 		// Proof Size summary in bytes:
 		//  Measured:  `479`
@@ -77,7 +78,8 @@ impl<T: frame_system::Config> WeightInfo for HydraWeight<T> {
 			.saturating_add(T::DbWeight::get().writes(1))
 	}
 	/// Storage: `EVMAccounts::ContractDeployer` (r:0 w:1)
-	/// Proof: `EVMAccounts::ContractDeployer` (`max_values`: None, `max_size`: Some(36), added: 2511, mode: `MaxEncodedLen`)
+	/// Proof: `EVMAccounts::ContractDeployer` (`max_values`: None, `max_size`: Some(36), added:
+	/// 2511, mode: `MaxEncodedLen`)
 	fn add_contract_deployer() -> Weight {
 		// Proof Size summary in bytes:
 		//  Measured:  `0`
@@ -86,7 +88,8 @@ impl<T: frame_system::Config> WeightInfo for HydraWeight<T> {
 		Weight::from_parts(13_481_000, 0).saturating_add(T::DbWeight::get().writes(1))
 	}
 	/// Storage: `EVMAccounts::ContractDeployer` (r:0 w:1)
-	/// Proof: `EVMAccounts::ContractDeployer` (`max_values`: None, `max_size`: Some(36), added: 2511, mode: `MaxEncodedLen`)
+	/// Proof: `EVMAccounts::ContractDeployer` (`max_values`: None, `max_size`: Some(36), added:
+	/// 2511, mode: `MaxEncodedLen`)
 	fn remove_contract_deployer() -> Weight {
 		// Proof Size summary in bytes:
 		//  Measured:  `0`
@@ -95,7 +98,8 @@ impl<T: frame_system::Config> WeightInfo for HydraWeight<T> {
 		Weight::from_parts(13_517_000, 0).saturating_add(T::DbWeight::get().writes(1))
 	}
 	/// Storage: `EVMAccounts::ContractDeployer` (r:0 w:1)
-	/// Proof: `EVMAccounts::ContractDeployer` (`max_values`: None, `max_size`: Some(36), added: 2511, mode: `MaxEncodedLen`)
+	/// Proof: `EVMAccounts::ContractDeployer` (`max_values`: None, `max_size`: Some(36), added:
+	/// 2511, mode: `MaxEncodedLen`)
 	fn renounce_contract_deployer() -> Weight {
 		// Proof Size summary in bytes:
 		//  Measured:  `0`
@@ -108,15 +112,16 @@ impl<T: frame_system::Config> WeightInfo for HydraWeight<T> {
 // For backwards compatibility and tests
 impl WeightInfo for () {
 	/// Storage: `EVMAccounts::AccountExtension` (r:1 w:1)
-	/// Proof: `EVMAccounts::AccountExtension` (`max_values`: None, `max_size`: Some(48), added: 2523, mode: `MaxEncodedLen`)
-	/// Storage: `System::Account` (r:1 w:0)
-	/// Proof: `System::Account` (`max_values`: None, `max_size`: Some(128), added: 2603, mode: `MaxEncodedLen`)
-	/// Storage: `AssetRegistry::NextAssetId` (r:1 w:0)
-	/// Proof: `AssetRegistry::NextAssetId` (`max_values`: Some(1), `max_size`: Some(4), added: 499, mode: `MaxEncodedLen`)
-	/// Storage: `AssetRegistry::LocationAssets` (r:1 w:0)
-	/// Proof: `AssetRegistry::LocationAssets` (`max_values`: None, `max_size`: Some(622), added: 3097, mode: `MaxEncodedLen`)
-	/// Storage: `Tokens::Accounts` (r:1 w:0)
-	/// Proof: `Tokens::Accounts` (`max_values`: None, `max_size`: Some(108), added: 2583, mode: `MaxEncodedLen`)
+	/// Proof: `EVMAccounts::AccountExtension` (`max_values`: None, `max_size`: Some(48), added:
+	/// 2523, mode: `MaxEncodedLen`) Storage: `System::Account` (r:1 w:0)
+	/// Proof: `System::Account` (`max_values`: None, `max_size`: Some(128), added: 2603, mode:
+	/// `MaxEncodedLen`) Storage: `AssetRegistry::NextAssetId` (r:1 w:0)
+	/// Proof: `AssetRegistry::NextAssetId` (`max_values`: Some(1), `max_size`: Some(4), added: 499,
+	/// mode: `MaxEncodedLen`) Storage: `AssetRegistry::LocationAssets` (r:1 w:0)
+	/// Proof: `AssetRegistry::LocationAssets` (`max_values`: None, `max_size`: Some(622), added:
+	/// 3097, mode: `MaxEncodedLen`) Storage: `Tokens::Accounts` (r:1 w:0)
+	/// Proof: `Tokens::Accounts` (`max_values`: None, `max_size`: Some(108), added: 2583, mode:
+	/// `MaxEncodedLen`)
 	fn bind_evm_address() -> Weight {
 		// Proof Size summary in bytes:
 		//  Measured:  `479`
@@ -127,7 +132,8 @@ impl WeightInfo for () {
 			.saturating_add(RocksDbWeight::get().writes(1))
 	}
 	/// Storage: `EVMAccounts::ContractDeployer` (r:0 w:1)
-	/// Proof: `EVMAccounts::ContractDeployer` (`max_values`: None, `max_size`: Some(36), added: 2511, mode: `MaxEncodedLen`)
+	/// Proof: `EVMAccounts::ContractDeployer` (`max_values`: None, `max_size`: Some(36), added:
+	/// 2511, mode: `MaxEncodedLen`)
 	fn add_contract_deployer() -> Weight {
 		// Proof Size summary in bytes:
 		//  Measured:  `0`
@@ -136,7 +142,8 @@ impl WeightInfo for () {
 		Weight::from_parts(13_481_000, 0).saturating_add(RocksDbWeight::get().writes(1))
 	}
 	/// Storage: `EVMAccounts::ContractDeployer` (r:0 w:1)
-	/// Proof: `EVMAccounts::ContractDeployer` (`max_values`: None, `max_size`: Some(36), added: 2511, mode: `MaxEncodedLen`)
+	/// Proof: `EVMAccounts::ContractDeployer` (`max_values`: None, `max_size`: Some(36), added:
+	/// 2511, mode: `MaxEncodedLen`)
 	fn remove_contract_deployer() -> Weight {
 		// Proof Size summary in bytes:
 		//  Measured:  `0`
@@ -145,7 +152,8 @@ impl WeightInfo for () {
 		Weight::from_parts(13_517_000, 0).saturating_add(RocksDbWeight::get().writes(1))
 	}
 	/// Storage: `EVMAccounts::ContractDeployer` (r:0 w:1)
-	/// Proof: `EVMAccounts::ContractDeployer` (`max_values`: None, `max_size`: Some(36), added: 2511, mode: `MaxEncodedLen`)
+	/// Proof: `EVMAccounts::ContractDeployer` (`max_values`: None, `max_size`: Some(36), added:
+	/// 2511, mode: `MaxEncodedLen`)
 	fn renounce_contract_deployer() -> Weight {
 		// Proof Size summary in bytes:
 		//  Measured:  `0`
