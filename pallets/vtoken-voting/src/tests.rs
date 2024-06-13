@@ -178,6 +178,105 @@ fn unsuccessful_conviction_vote_balance_can_be_unlocked() {
 }
 
 #[test]
+fn ensure_balance_after_unlock() {
+	new_test_ext().execute_with(|| {
+		let poll_index = 3;
+		let poll_index_2 = 4;
+		let vtoken = VKSM;
+		let locking_period = 10;
+		assert_ok!(VtokenVoting::set_vote_locking_period(
+			RuntimeOrigin::root(),
+			vtoken,
+			locking_period,
+		));
+
+		assert_ok!(VtokenVoting::vote(
+			RuntimeOrigin::signed(ALICE),
+			vtoken,
+			poll_index,
+			aye(10, 1)
+		));
+		assert_ok!(VtokenVoting::notify_vote(origin_response(), 0, response_success()));
+		assert_ok!(VtokenVoting::vote(
+			RuntimeOrigin::signed(ALICE),
+			vtoken,
+			poll_index_2,
+			aye(10, 5)
+		));
+		assert_ok!(VtokenVoting::notify_vote(origin_response(), 1, response_success()));
+
+		assert_ok!(VtokenVoting::set_referendum_status(
+			RuntimeOrigin::root(),
+			vtoken,
+			poll_index,
+			ReferendumInfoOf::<Runtime>::Completed(3),
+		));
+		RelaychainDataProvider::set_block_number(13);
+		assert_ok!(VtokenVoting::unlock(RuntimeOrigin::signed(ALICE), vtoken, poll_index));
+		assert_eq!(usable_balance(vtoken, &ALICE), 0);
+		assert_eq!(Tokens::accounts(&ALICE, vtoken).frozen, 10);
+		assert_eq!(VotingFor::<Runtime>::get(&ALICE).locked_balance(), 10);
+	});
+}
+
+#[test]
+fn ensure_comprehensive_balance_after_unlock() {
+	new_test_ext().execute_with(|| {
+		let poll_index = 3;
+		let poll_index_2 = 4;
+		let poll_index_3 = 5;
+		let vtoken = VKSM;
+		let locking_period = 10;
+		assert_ok!(VtokenVoting::set_vote_locking_period(
+			RuntimeOrigin::root(),
+			vtoken,
+			locking_period,
+		));
+
+		assert_ok!(VtokenVoting::vote(RuntimeOrigin::signed(ALICE), vtoken, poll_index, aye(2, 1)));
+		assert_ok!(VtokenVoting::notify_vote(origin_response(), 0, response_success()));
+		assert_ok!(VtokenVoting::vote(
+			RuntimeOrigin::signed(ALICE),
+			vtoken,
+			poll_index_2,
+			aye(1, 5)
+		));
+		assert_ok!(VtokenVoting::notify_vote(origin_response(), 1, response_success()));
+		assert_ok!(VtokenVoting::vote(
+			RuntimeOrigin::signed(ALICE),
+			vtoken,
+			poll_index_3,
+			aye(2, 5)
+		));
+		assert_ok!(VtokenVoting::notify_vote(origin_response(), 2, response_success()));
+
+		assert_ok!(VtokenVoting::set_referendum_status(
+			RuntimeOrigin::root(),
+			vtoken,
+			poll_index,
+			ReferendumInfoOf::<Runtime>::Completed(3),
+		));
+		RelaychainDataProvider::set_block_number(13);
+		assert_ok!(VtokenVoting::unlock(RuntimeOrigin::signed(ALICE), vtoken, poll_index));
+		assert_eq!(usable_balance(vtoken, &ALICE), 8);
+		assert_eq!(Tokens::accounts(&ALICE, vtoken).frozen, 2);
+		assert_eq!(VotingFor::<Runtime>::get(&ALICE).locked_balance(), 2);
+
+		assert_ok!(VtokenVoting::vote(
+			RuntimeOrigin::signed(ALICE),
+			vtoken,
+			poll_index_2,
+			aye(10, 5)
+		));
+		assert_ok!(VtokenVoting::notify_vote(origin_response(), 3, response_success()));
+
+		assert_eq!(usable_balance(vtoken, &ALICE), 0);
+		assert_eq!(Tokens::accounts(&ALICE, vtoken).frozen, 10);
+		assert_eq!(VotingFor::<Runtime>::get(&ALICE).locked_balance(), 10);
+	});
+}
+
+#[test]
 fn successful_conviction_vote_balance_stays_locked_for_correct_time() {
 	new_test_ext().execute_with(|| {
 		let poll_index = 3;
