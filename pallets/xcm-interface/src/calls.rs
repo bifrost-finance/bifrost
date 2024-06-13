@@ -19,7 +19,7 @@
 use frame_support::sp_runtime::MultiSignature;
 use parity_scale_codec::{Decode, Encode};
 use sp_runtime::RuntimeDebug;
-use sp_std::vec::Vec;
+use sp_std::{boxed::Box, vec::Vec};
 use xcm::{VersionedAssets, VersionedLocation};
 
 use crate::ChainId;
