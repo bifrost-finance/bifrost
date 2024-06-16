@@ -111,7 +111,7 @@ where
 	R: pallet_evm::Config + bifrost_currencies::Config,
 	R::RuntimeCall: Dispatchable<PostInfo = PostDispatchInfo> + GetDispatchInfo + Decode,
 	<R::RuntimeCall as Dispatchable>::RuntimeOrigin: From<Option<R::AccountId>>,
-	// MultiCurrencyPrecompile<R>: Precompile,
+	MultiCurrencyPrecompile<R>: Precompile,
 {
 	fn execute(&self, handle: &mut impl PrecompileHandle) -> Option<PrecompileResult> {
 		let context = handle.context();
@@ -145,8 +145,8 @@ where
 			Some(Blake2F::execute(handle))
 		} else if address == DISPATCH_ADDR {
 			Some(pallet_evm_precompile_dispatch::Dispatch::<R>::execute(handle))
-		// } else if is_asset_address(address) {
-		// 	Some(MultiCurrencyPrecompile::<R>::execute(handle))
+		} else if is_asset_address(address) {
+			Some(MultiCurrencyPrecompile::<R>::execute(handle))
 		} else {
 			None
 		}

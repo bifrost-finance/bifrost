@@ -22,13 +22,14 @@
 
 use crate::evm::precompiles::EvmAddress;
 use bifrost_primitives::CurrencyId;
-use hex_literal::hex;
 use parity_scale_codec::{Decode, Encode};
 use primitive_types::H160;
 
+pub const CURRENCY_PRECOMPILE_ADDRESS_PREFIX: &[u8] = &[255u8; 4];
+
 /// A mapping between AssetId and Erc20 EVM address.
 pub trait Erc20Mapping {
-	fn encode_evm_address(asset_id: CurrencyId) -> Option<EvmAddress>;
+	fn encode_evm_address(currency_id: CurrencyId) -> Option<EvmAddress>;
 
 	fn decode_evm_address(evm_address: EvmAddress) -> Option<CurrencyId>;
 }
@@ -38,15 +39,27 @@ pub struct HydraErc20Mapping;
 /// Erc20Mapping logic for HydraDX
 /// The asset id (with type u32) is encoded in the last 4 bytes of EVM address
 impl Erc20Mapping for HydraErc20Mapping {
-	fn encode_evm_address(asset_id: CurrencyId) -> Option<EvmAddress> {
-		asset_id.encode().try_into().ok().map(|bytes: [u8; 20]| EvmAddress::from(bytes))
+	fn encode_evm_address(currency_id: CurrencyId) -> Option<EvmAddress> {
+		let asset_id_bytes = currency_id.encode();
+
+		let mut evm_address_bytes = [0u8; 20];
+
+		evm_address_bytes[0..4].copy_from_slice(CURRENCY_PRECOMPILE_ADDRESS_PREFIX);
+		evm_address_bytes[18..].copy_from_slice(asset_id_bytes.as_slice());
+
+		Some(EvmAddress::from(evm_address_bytes))
 	}
 
 	fn decode_evm_address(evm_address: EvmAddress) -> Option<CurrencyId> {
-		CurrencyId::decode(&mut evm_address.as_bytes()).ok()
+		if !is_asset_address(evm_address) {
+			return None;
+		}
+
+		let mut currency_id = &evm_address.to_fixed_bytes()[18..];
+		CurrencyId::decode(&mut currency_id).ok()
 	}
 }
 
 pub fn is_asset_address(address: H160) -> bool {
-	CurrencyId::decode(&mut address.as_bytes()).is_ok()
+	&address.to_fixed_bytes()[0..4] == CURRENCY_PRECOMPILE_ADDRESS_PREFIX
 }

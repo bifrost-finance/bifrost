@@ -2300,6 +2300,7 @@ impl fp_self_contained::SelfContainedCall for RuntimeCall {
 #[cfg(feature = "runtime-benchmarks")]
 #[macro_use]
 extern crate frame_benchmarking;
+extern crate core;
 
 #[cfg(feature = "runtime-benchmarks")]
 mod benches {

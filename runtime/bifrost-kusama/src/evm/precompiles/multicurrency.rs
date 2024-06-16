@@ -32,7 +32,8 @@ use crate::{
 	},
 	Currencies,
 };
-use bifrost_primitives::{Balance, CurrencyId};
+use bifrost_asset_registry::AssetIdMaps;
+use bifrost_primitives::{AssetIds, Balance, CurrencyId, CurrencyIdMapping};
 use frame_support::traits::OriginTrait;
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 use orml_traits::{MultiCurrency as MultiCurrencyT, MultiCurrency};
@@ -42,8 +43,6 @@ use pallet_evm::{
 use primitive_types::H160;
 use sp_runtime::{traits::Dispatchable, RuntimeDebug};
 use sp_std::{marker::PhantomData, prelude::*};
-use bifrost_asset_registry::AssetIdMaps;
-use bifrost_primitives::{AssetIds, CurrencyIdMapping};
 
 #[module_evm_utility_macro::generate_function_selector]
 #[derive(RuntimeDebug, Eq, PartialEq, TryFromPrimitive, IntoPrimitive)]
@@ -128,8 +127,9 @@ where
 		input.expect_arguments(0)?;
 
 		let asset_id = match currency_id {
-			CurrencyId::ForeignAsset(foreign_asset_id) => AssetIds::ForeignAssetId(foreign_asset_id),
-			_=> AssetIds::NativeAssetId(currency_id)
+			CurrencyId::ForeignAsset(foreign_asset_id) =>
+				AssetIds::ForeignAssetId(foreign_asset_id),
+			_ => AssetIds::NativeAssetId(currency_id),
 		};
 
 		match AssetIdMaps::<Runtime>::get_asset_metadata(asset_id) {
@@ -151,8 +151,9 @@ where
 		input.expect_arguments(0)?;
 
 		let asset_id = match currency_id {
-			CurrencyId::ForeignAsset(foreign_asset_id) => AssetIds::ForeignAssetId(foreign_asset_id),
-			_=> AssetIds::NativeAssetId(currency_id)
+			CurrencyId::ForeignAsset(foreign_asset_id) =>
+				AssetIds::ForeignAssetId(foreign_asset_id),
+			_ => AssetIds::NativeAssetId(currency_id),
 		};
 
 		match AssetIdMaps::<Runtime>::get_asset_metadata(asset_id) {
@@ -174,8 +175,9 @@ where
 		input.expect_arguments(0)?;
 
 		let asset_id = match currency_id {
-			CurrencyId::ForeignAsset(foreign_asset_id) => AssetIds::ForeignAssetId(foreign_asset_id),
-			_=> AssetIds::NativeAssetId(currency_id)
+			CurrencyId::ForeignAsset(foreign_asset_id) =>
+				AssetIds::ForeignAssetId(foreign_asset_id),
+			_ => AssetIds::NativeAssetId(currency_id),
 		};
 
 		match AssetIdMaps::<Runtime>::get_asset_metadata(asset_id) {
@@ -189,7 +191,10 @@ where
 		}
 	}
 
-	fn total_supply(currency_id: CurrencyId, handle: &mut impl PrecompileHandle) -> PrecompileResult {
+	fn total_supply(
+		currency_id: CurrencyId,
+		handle: &mut impl PrecompileHandle,
+	) -> PrecompileResult {
 		handle.record_cost(RuntimeHelper::<Runtime>::db_read_gas_cost())?;
 
 		// Parse input

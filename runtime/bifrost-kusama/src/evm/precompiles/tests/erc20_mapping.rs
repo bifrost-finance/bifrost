@@ -1,6 +1,12 @@
 use crate::evm::precompiles::erc20_mapping::{Erc20Mapping, HydraErc20Mapping};
+use bifrost_primitives::{
+	CurrencyId,
+	TokenSymbol::{BNC, KSM},
+};
 use hex_literal::hex;
+use parity_scale_codec::{Decode, Encode};
 use primitive_types::H160;
+use sp_core::bytes::to_hex;
 
 macro_rules! encode {
 	($asset_id:expr) => {{
@@ -22,15 +28,11 @@ macro_rules! decode_optional {
 
 #[test]
 fn decode_asset_id_from_evm_address_should_work() {
-	assert_eq!(decode!(hex!("0000000000000000000000000000000100000000")), 0);
-	assert_eq!(decode!(hex!("0000000000000000000000000000000100000001")), 1);
-	assert_eq!(decode!(hex!("0000000000000000000000000000000100000002")), 2);
-	assert_eq!(decode!(hex!("0000000000000000000000000000000100000003")), 3);
-	assert_eq!(decode!(hex!("0000000000000000000000000000000100000009")), 9);
-	assert_eq!(decode!(hex!("000000000000000000000000000000010000000a")), 10);
-	assert_eq!(decode!(hex!("000000000000000000000000000000010000000b")), 11);
-	assert_eq!(decode!(hex!("00000000000000000000000000000001000000ff")), 255);
-	assert_eq!(decode!(hex!("00000000000000000000000000000001ffffffff")), 4294967295);
+	assert_eq!(decode!(hex!("ffffffff00000000000000000000000000000001")), CurrencyId::Native(BNC));
+	assert_eq!(decode!(hex!("ffffffff00000000000000000000000000000800")), CurrencyId::Token2(0));
+	assert_eq!(decode!(hex!("ffffffff00000000000000000000000000000900")), CurrencyId::VToken2(0));
+	assert_eq!(decode!(hex!("ffffffff00000000000000000000000000000204")), CurrencyId::Token(KSM));
+	assert_eq!(decode!(hex!("ffffffff00000000000000000000000000000104")), CurrencyId::VToken(KSM));
 }
 
 #[test]
@@ -45,13 +47,24 @@ fn decode_asset_id_from_evm_address_should_not_work_with_invalid_asset_addresses
 
 #[test]
 fn encode_asset_id_to_evm_address_should_work() {
-	assert_eq!(encode!(0), H160::from(hex!("0000000000000000000000000000000100000000")));
-	assert_eq!(encode!(1), H160::from(hex!("0000000000000000000000000000000100000001")));
-	assert_eq!(encode!(2), H160::from(hex!("0000000000000000000000000000000100000002")));
-	assert_eq!(encode!(3), H160::from(hex!("0000000000000000000000000000000100000003")));
-	assert_eq!(encode!(9), H160::from(hex!("0000000000000000000000000000000100000009")));
-	assert_eq!(encode!(10), H160::from(hex!("000000000000000000000000000000010000000a")));
-	assert_eq!(encode!(11), H160::from(hex!("000000000000000000000000000000010000000b")));
-	assert_eq!(encode!(255), H160::from(hex!("00000000000000000000000000000001000000ff")));
-	assert_eq!(encode!(4294967295), H160::from(hex!("00000000000000000000000000000001ffffffff")));
+	assert_eq!(
+		encode!(CurrencyId::Native(BNC)),
+		H160::from(hex!("ffffffff00000000000000000000000000000001"))
+	);
+	assert_eq!(
+		encode!(CurrencyId::Token2(0)),
+		H160::from(hex!("ffffffff00000000000000000000000000000800"))
+	);
+	assert_eq!(
+		encode!(CurrencyId::VToken2(0)),
+		H160::from(hex!("ffffffff00000000000000000000000000000900"))
+	);
+	assert_eq!(
+		encode!(CurrencyId::Token(KSM)),
+		H160::from(hex!("ffffffff00000000000000000000000000000204"))
+	);
+	assert_eq!(
+		encode!(CurrencyId::VToken(KSM)),
+		H160::from(hex!("ffffffff00000000000000000000000000000104"))
+	);
 }
