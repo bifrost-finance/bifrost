@@ -32,18 +32,18 @@ use crate::{
 	},
 	Currencies,
 };
-use bifrost_primitives::{AssetId, Balance};
+use bifrost_primitives::{Balance, CurrencyId};
 use frame_support::traits::OriginTrait;
-// use hydradx_traits::registry::Inspect as InspectRegistry;
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 use orml_traits::{MultiCurrency as MultiCurrencyT, MultiCurrency};
 use pallet_evm::{
 	AddressMapping, ExitRevert, Precompile, PrecompileFailure, PrecompileHandle, PrecompileResult,
 };
-// use parity_scale_codec::EncodeLike;
 use primitive_types::H160;
 use sp_runtime::{traits::Dispatchable, RuntimeDebug};
 use sp_std::{marker::PhantomData, prelude::*};
+use bifrost_asset_registry::AssetIdMaps;
+use bifrost_primitives::{AssetIds, CurrencyIdMapping};
 
 #[module_evm_utility_macro::generate_function_selector]
 #[derive(RuntimeDebug, Eq, PartialEq, TryFromPrimitive, IntoPrimitive)]
@@ -65,14 +65,12 @@ impl<Runtime> Precompile for MultiCurrencyPrecompile<Runtime>
 where
 	Runtime: frame_system::Config
 		+ pallet_evm::Config
-		// + pallet_asset_registry::Config
+		+ bifrost_asset_registry::Config
 		+ bifrost_currencies::Config,
-	// AssetId: EncodeLike<<Runtime as pallet_asset_registry::Config>::AssetId>,
 	<<Runtime as frame_system::Config>::RuntimeCall as Dispatchable>::RuntimeOrigin: OriginTrait,
-	// <Runtime as pallet_asset_registry::Config>::AssetId: core::convert::From<AssetId>,
-	Currencies: MultiCurrency<Runtime::AccountId, CurrencyId = AssetId, Balance = Balance>,
+	Currencies: MultiCurrency<Runtime::AccountId, CurrencyId = CurrencyId, Balance = Balance>,
 	bifrost_currencies::Pallet<Runtime>:
-		MultiCurrency<Runtime::AccountId, CurrencyId = AssetId, Balance = Balance>,
+		MultiCurrency<Runtime::AccountId, CurrencyId = CurrencyId, Balance = Balance>,
 	<Runtime as frame_system::Config>::AccountId: core::convert::From<sp_runtime::AccountId32>,
 	<<Runtime as frame_system::Config>::RuntimeCall as Dispatchable>::RuntimeOrigin: OriginTrait,
 {
@@ -114,96 +112,91 @@ impl<Runtime> MultiCurrencyPrecompile<Runtime>
 where
 	Runtime: frame_system::Config
 		+ pallet_evm::Config
-		// + pallet_asset_registry::Config
+		+ bifrost_asset_registry::Config
 		+ bifrost_currencies::Config,
-	// AssetId: EncodeLike<<Runtime as pallet_asset_registry::Config>::AssetId>,
-	// <Runtime as pallet_asset_registry::Config>::AssetId: core::convert::From<AssetId>,
-	Currencies: MultiCurrency<Runtime::AccountId, CurrencyId = AssetId, Balance = Balance>,
+	Currencies: MultiCurrency<Runtime::AccountId, CurrencyId = CurrencyId, Balance = Balance>,
 	bifrost_currencies::Pallet<Runtime>:
-		MultiCurrency<Runtime::AccountId, CurrencyId = AssetId, Balance = Balance>,
+		MultiCurrency<Runtime::AccountId, CurrencyId = CurrencyId, Balance = Balance>,
 	<Runtime as frame_system::Config>::AccountId: core::convert::From<sp_runtime::AccountId32>,
 	<<Runtime as frame_system::Config>::RuntimeCall as Dispatchable>::RuntimeOrigin: OriginTrait,
 {
-	fn name(asset_id: AssetId, handle: &mut impl PrecompileHandle) -> PrecompileResult {
+	fn name(currency_id: CurrencyId, handle: &mut impl PrecompileHandle) -> PrecompileResult {
 		handle.record_cost(RuntimeHelper::<Runtime>::db_read_gas_cost())?;
 
 		// Parse input
 		let input = handle.read_input()?;
 		input.expect_arguments(0)?;
 
-		// match <pallet_asset_registry::Pallet<Runtime>>::asset_name(asset_id.into()) {
-		// 	Some(name) => {
-		// 		log::debug!(target: "evm", "multicurrency: symbol: {:?}", name);
-		//
-		// 		let encoded = Output::encode_bytes(name.as_slice());
-		//
-		// 		Ok(succeed(encoded))
-		// 	},
-		// 	None => Err(PrecompileFailure::Error {
-		// 		exit_status: pallet_evm::ExitError::Other("Non-existing asset.".into()),
-		// 	}),
-		// }
-		Err(PrecompileFailure::Error {
-			exit_status: pallet_evm::ExitError::Other("Non-existing asset.".into()),
-		})
+		let asset_id = match currency_id {
+			CurrencyId::ForeignAsset(foreign_asset_id) => AssetIds::ForeignAssetId(foreign_asset_id),
+			_=> AssetIds::NativeAssetId(currency_id)
+		};
+
+		match AssetIdMaps::<Runtime>::get_asset_metadata(asset_id) {
+			Some(metadata) => {
+				let encoded = Output::encode_bytes(metadata.name.as_slice());
+				Ok(succeed(encoded))
+			},
+			None => Err(PrecompileFailure::Error {
+				exit_status: pallet_evm::ExitError::Other("Non-existing asset.".into()),
+			}),
+		}
 	}
 
-	fn symbol(asset_id: AssetId, handle: &mut impl PrecompileHandle) -> PrecompileResult {
+	fn symbol(currency_id: CurrencyId, handle: &mut impl PrecompileHandle) -> PrecompileResult {
 		handle.record_cost(RuntimeHelper::<Runtime>::db_read_gas_cost())?;
 
 		// Parse input
 		let input = handle.read_input()?;
 		input.expect_arguments(0)?;
 
-		// match <pallet_asset_registry::Pallet<Runtime>>::asset_symbol(asset_id.into()) {
-		// 	Some(symbol) => {
-		// 		log::debug!(target: "evm", "multicurrency: name: {:?}", symbol);
-		//
-		// 		let encoded = Output::encode_bytes(symbol.as_slice());
-		//
-		// 		Ok(succeed(encoded))
-		// 	},
-		// 	None => Err(PrecompileFailure::Error {
-		// 		exit_status: pallet_evm::ExitError::Other("Non-existing asset.".into()),
-		// 	}),
-		// }
-		Err(PrecompileFailure::Error {
-			exit_status: pallet_evm::ExitError::Other("Non-existing asset.".into()),
-		})
+		let asset_id = match currency_id {
+			CurrencyId::ForeignAsset(foreign_asset_id) => AssetIds::ForeignAssetId(foreign_asset_id),
+			_=> AssetIds::NativeAssetId(currency_id)
+		};
+
+		match AssetIdMaps::<Runtime>::get_asset_metadata(asset_id) {
+			Some(metadata) => {
+				let encoded = Output::encode_bytes(metadata.symbol.as_slice());
+				Ok(succeed(encoded))
+			},
+			None => Err(PrecompileFailure::Error {
+				exit_status: pallet_evm::ExitError::Other("Non-existing asset.".into()),
+			}),
+		}
 	}
 
-	fn decimals(asset_id: AssetId, handle: &mut impl PrecompileHandle) -> PrecompileResult {
+	fn decimals(currency_id: CurrencyId, handle: &mut impl PrecompileHandle) -> PrecompileResult {
 		handle.record_cost(RuntimeHelper::<Runtime>::db_read_gas_cost())?;
 
 		// Parse input
 		let input = handle.read_input()?;
 		input.expect_arguments(0)?;
 
-		// match <pallet_asset_registry::Pallet<Runtime>>::decimals(asset_id.into()) {
-		// 	Some(decimals) => {
-		// 		log::debug!(target: "evm", "multicurrency: decimals: {:?}", decimals);
-		//
-		// 		let encoded = Output::encode_uint::<u8>(decimals);
-		//
-		// 		Ok(succeed(encoded))
-		// 	},
-		// 	None => Err(PrecompileFailure::Error {
-		// 		exit_status: pallet_evm::ExitError::Other("Non-existing asset.".into()),
-		// 	}),
-		// }
-		Err(PrecompileFailure::Error {
-			exit_status: pallet_evm::ExitError::Other("Non-existing asset.".into()),
-		})
+		let asset_id = match currency_id {
+			CurrencyId::ForeignAsset(foreign_asset_id) => AssetIds::ForeignAssetId(foreign_asset_id),
+			_=> AssetIds::NativeAssetId(currency_id)
+		};
+
+		match AssetIdMaps::<Runtime>::get_asset_metadata(asset_id) {
+			Some(metadata) => {
+				let encoded = Output::encode_uint::<u8>(metadata.decimals);
+				Ok(succeed(encoded))
+			},
+			None => Err(PrecompileFailure::Error {
+				exit_status: pallet_evm::ExitError::Other("Non-existing asset.".into()),
+			}),
+		}
 	}
 
-	fn total_supply(asset_id: AssetId, handle: &mut impl PrecompileHandle) -> PrecompileResult {
+	fn total_supply(currency_id: CurrencyId, handle: &mut impl PrecompileHandle) -> PrecompileResult {
 		handle.record_cost(RuntimeHelper::<Runtime>::db_read_gas_cost())?;
 
 		// Parse input
 		let input = handle.read_input()?;
 		input.expect_arguments(0)?;
 
-		let total_issuance = Currencies::total_issuance(asset_id);
+		let total_issuance = Currencies::total_issuance(currency_id);
 
 		log::debug!(target: "evm", "multicurrency: totalSupply: {:?}", total_issuance);
 
@@ -212,7 +205,7 @@ where
 		Ok(succeed(encoded))
 	}
 
-	fn balance_of(asset_id: AssetId, handle: &mut impl PrecompileHandle) -> PrecompileResult {
+	fn balance_of(currency_id: CurrencyId, handle: &mut impl PrecompileHandle) -> PrecompileResult {
 		handle.record_cost(RuntimeHelper::<Runtime>::db_read_gas_cost())?;
 
 		// Parse input
@@ -222,7 +215,7 @@ where
 		let owner: H160 = input.read::<Address>()?.into();
 		let who: Runtime::AccountId = ExtendedAddressMapping::into_account_id(owner).into(); //TODO: use pallet?
 
-		let free_balance = Currencies::free_balance(asset_id, &who);
+		let free_balance = Currencies::free_balance(currency_id, &who);
 
 		log::debug!(target: "evm", "multicurrency: balanceOf: {:?}", free_balance);
 
@@ -231,7 +224,7 @@ where
 		Ok(succeed(encoded))
 	}
 
-	fn transfer(asset_id: AssetId, handle: &mut impl PrecompileHandle) -> PrecompileResult {
+	fn transfer(currency_id: CurrencyId, handle: &mut impl PrecompileHandle) -> PrecompileResult {
 		handle.record_cost(RuntimeHelper::<Runtime>::db_read_gas_cost())?;
 
 		// Parse input
@@ -247,7 +240,7 @@ where
 		log::debug!(target: "evm", "multicurrency: transfer from: {:?}, to: {:?}, amount: {:?}", origin, to, amount);
 
 		<bifrost_currencies::Pallet<Runtime> as MultiCurrency<Runtime::AccountId>>::transfer(
-			asset_id,
+			currency_id,
 			&(<sp_runtime::AccountId32 as Into<Runtime::AccountId>>::into(origin)),
 			&(<sp_runtime::AccountId32 as Into<Runtime::AccountId>>::into(to)),
 			amount,
@@ -260,7 +253,7 @@ where
 		Ok(succeed(EvmDataWriter::new().write(true).build()))
 	}
 
-	fn not_supported(_: AssetId, _: &mut impl PrecompileHandle) -> PrecompileResult {
+	fn not_supported(_: CurrencyId, _: &mut impl PrecompileHandle) -> PrecompileResult {
 		Err(PrecompileFailure::Error {
 			exit_status: pallet_evm::ExitError::Other("not supported".into()),
 		})
