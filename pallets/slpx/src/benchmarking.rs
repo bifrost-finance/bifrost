@@ -111,6 +111,21 @@ mod benchmarks {
 	}
 
 	#[benchmark]
+	fn mint_with_channel_id() {
+		let (caller, receiver) = init_whitelist::<T>();
+
+		#[extrinsic_call]
+		_(
+			RawOrigin::Signed(caller),
+			receiver,
+			KSM,
+			TargetChain::Astar(receiver),
+			BoundedVec::default(),
+			0u32
+		);
+	}
+
+	#[benchmark]
 	fn redeem() {
 		let (caller, receiver) = init_whitelist::<T>();
 		#[extrinsic_call]

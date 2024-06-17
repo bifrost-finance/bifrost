@@ -749,6 +749,39 @@ pub mod pallet {
 				Ok(().into())
 			})
 		}
+
+		#[pallet::call_index(13)]
+		#[pallet::weight(<T as Config>::WeightInfo::mint_with_channel_id())]
+		pub fn mint_with_channel_id(
+			origin: OriginFor<T>,
+			evm_caller: H160,
+			currency_id: CurrencyIdOf<T>,
+			target_chain: TargetChain<AccountIdOf<T>>,
+			remark: BoundedVec<u8, ConstU32<32>>,
+			channel_id: u32,
+		) -> DispatchResultWithPostInfo {
+			let (source_chain_caller, derivative_account, bifrost_chain_caller) =
+				Self::ensure_singer_on_whitelist(origin.clone(), evm_caller, &target_chain)?;
+
+			let order = Order {
+				create_block_number: <frame_system::Pallet<T>>::block_number(),
+				order_type: OrderType::Mint,
+				currency_amount: Default::default(),
+				source_chain_caller,
+				bifrost_chain_caller,
+				derivative_account,
+				currency_id,
+				remark,
+				target_chain,
+				channel_id: Some(channel_id),
+			};
+
+			OrderQueue::<T>::mutate(|order_queue| -> DispatchResultWithPostInfo {
+				order_queue.try_push(order.clone()).map_err(|_| Error::<T>::ArgumentsError)?;
+				Self::deposit_event(Event::<T>::CreateOrder { order });
+				Ok(().into())
+			})
+		}
 	}
 }
 
