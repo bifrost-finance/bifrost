@@ -1189,6 +1189,7 @@ dependencies = [
  "bifrost-fee-share",
  "bifrost-flexible-fee",
  "bifrost-flexible-fee-rpc-runtime-api",
+ "bifrost-parachain-staking",
  "bifrost-primitives",
  "bifrost-runtime-common",
  "bifrost-salp",

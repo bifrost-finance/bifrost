@@ -329,6 +329,7 @@ parameter_types! {
 	pub const FarmingGaugeRewardIssuerPalletId: PalletId = PalletId(*b"bf/fmgar");
 	pub const BuyBackAccount: PalletId = PalletId(*b"bf/bybck");
 	pub const LiquidityAccount: PalletId = PalletId(*b"bf/liqdt");
+	pub const ParachainStakingPalletId: PalletId = PalletId(*b"bf/stake");
 }
 
 impl frame_system::Config for Runtime {
@@ -422,6 +423,7 @@ pub enum ProxyType {
 	Governance = 2,
 	CancelProxy = 3,
 	IdentityJudgement = 4,
+	Staking = 5,
 }
 
 impl Default for ProxyType {
@@ -456,8 +458,12 @@ impl InstanceFilter<RuntimeCall> for ProxyType {
 				// Specifically omitting Vesting `vested_transfer`, and `force_vested_transfer`
 				RuntimeCall::Utility(..) |
 				RuntimeCall::Proxy(..) |
-				RuntimeCall::Multisig(..)
+				RuntimeCall::Multisig(..) |
+				RuntimeCall::ParachainStaking(..)
 			),
+			ProxyType::Staking => {
+				matches!(c, RuntimeCall::ParachainStaking(..) | RuntimeCall::Utility(..))
+			},
 			ProxyType::Governance => matches!(
 				c,
 				RuntimeCall::Democracy(..) |
@@ -886,6 +892,87 @@ impl parachain_info::Config for Runtime {}
 impl cumulus_pallet_aura_ext::Config for Runtime {}
 
 parameter_types! {
+	/// Minimum round length is 2 minutes (10 * 12 second block times)
+	pub const MinBlocksPerRound: u32 = 10;
+	/// Blocks per round
+	pub const DefaultBlocksPerRound: u32 = prod_or_fast!(2 * HOURS, 10);
+	/// Rounds before the collator leaving the candidates request can be executed
+	pub const LeaveCandidatesDelay: u32 = 84;
+	/// Rounds before the candidate bond increase/decrease can be executed
+	pub const CandidateBondLessDelay: u32 = 84;
+	/// Rounds before the delegator exit can be executed
+	pub const LeaveDelegatorsDelay: u32 = 84;
+	/// Rounds before the delegator revocation can be executed
+	pub const RevokeDelegationDelay: u32 = 84;
+	/// Rounds before the delegator bond increase/decrease can be executed
+	pub const DelegationBondLessDelay: u32 = 84;
+	/// Rounds before the reward is paid
+	pub const RewardPaymentDelay: u32 = 2;
+	/// Minimum collators selected per round, default at genesis and minimum forever after
+	pub const MinSelectedCandidates: u32 = prod_or_fast!(16,6);
+	/// Maximum top delegations per candidate
+	pub const MaxTopDelegationsPerCandidate: u32 = 300;
+	/// Maximum bottom delegations per candidate
+	pub const MaxBottomDelegationsPerCandidate: u32 = 50;
+	/// Maximum delegations per delegator
+	pub const MaxDelegationsPerDelegator: u32 = 100;
+	/// Default fixed percent a collator takes off the top of due rewards
+	pub const DefaultCollatorCommission: Perbill = Perbill::from_percent(10);
+	/// Default percent of inflation set aside for parachain bond every round
+	pub const DefaultParachainBondReservePercent: Percent = Percent::from_percent(0);
+	/// Minimum stake required to become a collator
+	pub MinCollatorStk: u128 = 5000 * BNCS;
+	/// Minimum stake required to be reserved to be a candidate
+	pub MinCandidateStk: u128 = 5000 * BNCS;
+	/// Minimum stake required to be reserved to be a delegator
+	pub MinDelegatorStk: u128 = 50 * BNCS;
+	pub AllowInflation: bool = false;
+	pub ToMigrateInvulnables: Vec<AccountId> = prod_or_fast!(vec![
+		hex!["8cf80f0bafcd0a3d80ca61cb688e4400e275b39d3411b4299b47e712e9dab809"].into(),
+		hex!["40ac4effe39181731a8feb8a8ee0780e177bdd0d752b09c8fd71047e67189022"].into(),
+		hex!["624d6a004c72a1abcf93131e185515ebe1410e43a301fe1f25d20d8da345376e"].into(),
+		hex!["985d2738e512909c81289e6055e60a6824818964535ecfbf10e4d69017084756"].into(),
+	],vec![
+		hex!["d43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d"].into(),
+		hex!["8eaf04151687736326c9fea17e25fc5287613693c912909cb226aa4794f26a48"].into(),
+	]);
+	pub PaymentInRound: u128 = 180 * BNCS;
+	pub InitSeedStk: u128 = 5000 * BNCS;
+}
+impl bifrost_parachain_staking::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type Currency = Balances;
+	type MonetaryGovernanceOrigin =
+		EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
+	type MinBlocksPerRound = MinBlocksPerRound;
+	type DefaultBlocksPerRound = DefaultBlocksPerRound;
+	type LeaveCandidatesDelay = LeaveCandidatesDelay;
+	type CandidateBondLessDelay = CandidateBondLessDelay;
+	type LeaveDelegatorsDelay = LeaveDelegatorsDelay;
+	type RevokeDelegationDelay = RevokeDelegationDelay;
+	type DelegationBondLessDelay = DelegationBondLessDelay;
+	type RewardPaymentDelay = RewardPaymentDelay;
+	type MinSelectedCandidates = MinSelectedCandidates;
+	type MaxTopDelegationsPerCandidate = MaxTopDelegationsPerCandidate;
+	type MaxBottomDelegationsPerCandidate = MaxBottomDelegationsPerCandidate;
+	type MaxDelegationsPerDelegator = MaxDelegationsPerDelegator;
+	type DefaultCollatorCommission = DefaultCollatorCommission;
+	type DefaultParachainBondReservePercent = DefaultParachainBondReservePercent;
+	type MinCollatorStk = MinCollatorStk;
+	type MinCandidateStk = MinCandidateStk;
+	type MinDelegation = MinDelegatorStk;
+	type MinDelegatorStk = MinDelegatorStk;
+	type AllowInflation = AllowInflation;
+	type PaymentInRound = PaymentInRound;
+	type ToMigrateInvulnables = ToMigrateInvulnables;
+	type PalletId = ParachainStakingPalletId;
+	type InitSeedStk = InitSeedStk;
+	type OnCollatorPayout = ();
+	type OnNewRound = ();
+	type WeightInfo = bifrost_parachain_staking::weights::SubstrateWeight<Runtime>;
+}
+
+parameter_types! {
 	pub const Period: u32 = 6 * HOURS;
 	pub const Offset: u32 = 0;
 }
@@ -893,11 +980,10 @@ parameter_types! {
 impl pallet_session::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type Keys = SessionKeys;
-	type NextSessionRotation = pallet_session::PeriodicSessions<Period, Offset>;
-	// Essentially just Aura, but lets be pedantic.
+	type NextSessionRotation = ParachainStaking;
 	type SessionHandler = <SessionKeys as sp_runtime::traits::OpaqueKeys>::KeyTypeIdProviders;
-	type SessionManager = CollatorSelection;
-	type ShouldEndSession = pallet_session::PeriodicSessions<Period, Offset>;
+	type SessionManager = ParachainStaking;
+	type ShouldEndSession = ParachainStaking;
 	type ValidatorId = <Self as frame_system::Config>::AccountId;
 	// we don't have stash and controller, thus we don't need the convert as well.
 	type ValidatorIdOf = pallet_collator_selection::IdentityCollator;
@@ -905,7 +991,7 @@ impl pallet_session::Config for Runtime {
 }
 
 impl pallet_authorship::Config for Runtime {
-	type EventHandler = CollatorSelection;
+	type EventHandler = ParachainStaking;
 	type FindAuthor = pallet_session::FindAccountFromAuthorIndex<Self, Aura>;
 }
 
@@ -1215,7 +1301,7 @@ impl bifrost_slp::Config for Runtime {
 	type MaxTypeEntryPerBlock = MaxTypeEntryPerBlock;
 	type MaxRefundPerBlock = MaxRefundPerBlock;
 	type OnRefund = OnRefund;
-	type ParachainStaking = ();
+	type ParachainStaking = ParachainStaking;
 	type XcmTransfer = XTokens;
 	type MaxLengthLimit = MaxLengthLimit;
 	type XcmWeightAndFeeHandler = XcmInterface;
@@ -1833,6 +1919,7 @@ construct_runtime! {
 		ChannelCommission: bifrost_channel_commission = 136,
 		CloudsConvert: bifrost_clouds_convert = 137,
 		BuyBack: bifrost_buy_back = 138,
+		ParachainStaking: bifrost_parachain_staking = 139,
 	}
 }
 
