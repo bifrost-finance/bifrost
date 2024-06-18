@@ -144,7 +144,6 @@ pallet-authority-discovery                 = { version = "29.0.0", default-featu
 pallet-authorship                          = { version = "29.0.0", default-features = false }
 pallet-balances                            = { version = "29.0.0", default-features = false }
 pallet-bounties                            = { version = "28.0.0", default-features = false }
-pallet-collator-selection                  = { version = "10.0.0", default-features = false }
 pallet-collective                          = { version = "29.0.0", default-features = false }
 pallet-conviction-voting                   = { version = "29.0.0", default-features = false }
 pallet-democracy                           = { version = "29.0.0", default-features = false }

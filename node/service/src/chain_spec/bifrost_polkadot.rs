@@ -314,3 +314,63 @@ pub fn chainspec_config() -> ChainSpec {
 	.with_protocol_id(DEFAULT_PROTOCOL_ID)
 	.build()
 }
+
+pub fn testnet_config() -> ChainSpec {
+	let invulnerables: Vec<(AccountId, AuraId)> = vec![
+		(
+			// cxXb4sZAnwMRchQVRoMUkfFGF52Li6YqZRcuQd8XnaEQXKC
+			hex!["3695a262bb68cf0c23e1f849bf036993ae9ceb7b6d1dd300cc0d6777ec8de520"].into(),
+			hex!["3695a262bb68cf0c23e1f849bf036993ae9ceb7b6d1dd300cc0d6777ec8de520"]
+				.unchecked_into(),
+		),
+		(
+			// cjQkMaTsHJm27cEcAwN1ghF6UpwmHLyq5pY12qxiMHDNwKv
+			hex!["2c946b45e851b62582b6a2b8b304e3cda8392c8ec6da550b4426b7c60833956c"].into(),
+			hex!["2c946b45e851b62582b6a2b8b304e3cda8392c8ec6da550b4426b7c60833956c"]
+				.unchecked_into(),
+		),
+		(
+			// bjGo3QQWnf2HpBTrRC4YRDYqyeJmzsZgxr8mvbtLfkqXvYM
+			hex!["003d693ed5403785569498d899593bb74119bacca39d226dd37853e21190ca65"].into(),
+			hex!["003d693ed5403785569498d899593bb74119bacca39d226dd37853e21190ca65"]
+				.unchecked_into(),
+		),
+		(
+			// eBghkPPpcM5aiQsN7jPFG2dGtiaJb3PazebaiDyDXhT6aw1
+			hex!["6cdabe150eac14ba3700ce14fda9d5d595857690f40031cda41bcf775004d426"].into(),
+			hex!["6cdabe150eac14ba3700ce14fda9d5d595857690f40031cda41bcf775004d426"]
+				.unchecked_into(),
+		),
+	];
+
+	let endowed_accounts: Vec<AccountId> = vec![
+		// gfF1Z4KNG7735MgtDQkbJTw7Z3P2W9p7Qquf3eqiy54zrt9
+		hex!["da57971eb1a094247cc83f5b3775058bf82df535f214fecac2d1840df646252c"].into(),
+	];
+	let balances = endowed_accounts.iter().cloned().map(|x| (x, ENDOWMENT())).collect();
+
+	let salp_multisig: AccountId =
+		hex!["e4da05f08e89bf6c43260d96f26fffcfc7deae5b465da08669a9d008e64c2c63"].into();
+
+	ChainSpec::builder(
+		bifrost_polkadot_runtime::WASM_BINARY.expect("WASM binary was not built, please build it!"),
+		RelayExtensions { relay_chain: "polkadot".into(), para_id: PARA_ID },
+	)
+	.with_name("Bifrost Polkadot Testnet")
+	.with_id("bifrost_polkadot_testnet")
+	.with_chain_type(ChainType::Live)
+	.with_genesis_config_patch(bifrost_polkadot_genesis(
+		invulnerables,
+		balances,
+		vec![],
+		PARA_ID.into(),
+		vec![],
+		vec![],
+		salp_multisig,
+		(vec![], vec![], vec![]),
+		vec![],
+	))
+	.with_properties(bifrost_polkadot_properties())
+	.with_protocol_id(DEFAULT_PROTOCOL_ID)
+	.build()
+}

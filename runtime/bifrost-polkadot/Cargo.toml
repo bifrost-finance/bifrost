@@ -78,7 +78,6 @@ cumulus-pallet-xcmp-queue = { workspace = true }
 cumulus-primitives-core = { workspace = true }
 cumulus-primitives-timestamp = { workspace = true }
 cumulus-primitives-utility = { workspace = true }
-pallet-collator-selection = { workspace = true }
 parachain-info = { workspace = true }
 parachains-common = { workspace = true }
 
@@ -136,6 +135,7 @@ bifrost-vstoken-conversion = { workspace = true }
 bifrost-vtoken-minting = { workspace = true }
 bifrost-vtoken-voting = { workspace = true, features = [ "polkadot" ] }
 bifrost-xcm-interface = { workspace = true }
+bifrost-parachain-staking = { workspace = true }
 lend-market = { workspace = true }
 lend-market-rpc-runtime-api = { workspace = true }
 pallet-prices = { workspace = true }
@@ -163,7 +163,6 @@ std = [
 	"pallet-aura/std",
 	"pallet-balances/std",
 	"pallet-bounties/std",
-	"pallet-collator-selection/std",
 	"pallet-collective/std",
 	"pallet-conviction-voting/std",
 	"pallet-democracy/std",
@@ -258,6 +257,7 @@ std = [
 	"bifrost-channel-commission/std",
 	"bifrost-clouds-convert/std",
 	"bifrost-vtoken-minting-rpc-runtime-api/std",
+	"bifrost-parachain-staking/std",
 
 	"substrate-wasm-builder"
 ]
@@ -298,6 +298,7 @@ runtime-benchmarks = [
 	"bifrost-channel-commission/runtime-benchmarks",
 	"bifrost-clouds-convert/runtime-benchmarks",
 	"bifrost-buy-back/runtime-benchmarks",
+	"bifrost-parachain-staking/runtime-benchmarks",
 ]
 
 try-runtime = [
@@ -346,7 +347,6 @@ try-runtime = [
 	"pallet-authorship/try-runtime",
 	"pallet-balances/try-runtime",
 	"pallet-bounties/try-runtime",
-	"pallet-collator-selection/try-runtime",
 	"pallet-collective/try-runtime",
 	"pallet-conviction-voting/try-runtime",
 	"pallet-democracy/try-runtime",
@@ -370,6 +370,7 @@ try-runtime = [
 	"pallet-whitelist/try-runtime",
 	"parachain-info/try-runtime",
 	"zenlink-protocol/try-runtime",
+	"bifrost-parachain-staking/try-runtime",
 ]
 
 # When enabled, the runtime API will not be build.
