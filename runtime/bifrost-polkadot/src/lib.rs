@@ -986,7 +986,7 @@ impl pallet_session::Config for Runtime {
 	type ShouldEndSession = ParachainStaking;
 	type ValidatorId = <Self as frame_system::Config>::AccountId;
 	// we don't have stash and controller, thus we don't need the convert as well.
-	type ValidatorIdOf = pallet_collator_selection::IdentityCollator;
+	type ValidatorIdOf = ConvertInto;
 	type WeightInfo = pallet_session::weights::SubstrateWeight<Runtime>;
 }
 
@@ -1000,28 +1000,6 @@ impl pallet_aura::Config for Runtime {
 	type DisabledValidators = ();
 	type MaxAuthorities = ConstU32<100_000>;
 	type AllowMultipleBlocksPerSlot = ConstBool<false>;
-}
-
-parameter_types! {
-	pub const PotId: PalletId = PalletId(*b"PotStake");
-	pub const SessionLength: BlockNumber = 6 * HOURS;
-	pub const MaxInvulnerables: u32 = 100;
-}
-
-impl pallet_collator_selection::Config for Runtime {
-	type Currency = Balances;
-	type RuntimeEvent = RuntimeEvent;
-	// should be a multiple of session or things will get inconsistent
-	type KickThreshold = Period;
-	type MaxCandidates = MaxCandidates;
-	type MaxInvulnerables = MaxInvulnerables;
-	type PotId = PotId;
-	type UpdateOrigin = EnsureRoot<AccountId>;
-	type ValidatorId = <Self as frame_system::Config>::AccountId;
-	type ValidatorIdOf = pallet_collator_selection::IdentityCollator;
-	type ValidatorRegistration = Session;
-	type WeightInfo = ();
-	type MinEligibleCollators = ConstU32<5>;
 }
 
 // culumus runtime end
@@ -1843,7 +1821,6 @@ construct_runtime! {
 
 		// Collator support. the order of these 4 are important and shall not change.
 		Authorship: pallet_authorship = 20,
-		CollatorSelection: pallet_collator_selection = 21,
 		Session: pallet_session = 22,
 		Aura: pallet_aura = 23,
 		AuraExt: cumulus_pallet_aura_ext = 24,

@@ -455,15 +455,6 @@ pub mod asset_hub_polkadot {
 				parachain_id: PARA_ID.into(),
 				..Default::default()
 			},
-			collator_selection: asset_hub_polkadot_runtime::CollatorSelectionConfig {
-				invulnerables: collators::invulnerables_asset_hub_polkadot()
-					.iter()
-					.cloned()
-					.map(|(acc, _)| acc)
-					.collect(),
-				candidacy_bond: ED * 16,
-				..Default::default()
-			},
 			session: asset_hub_polkadot_runtime::SessionConfig {
 				keys: collators::invulnerables_asset_hub_polkadot()
 					.into_iter()
@@ -510,15 +501,6 @@ pub mod asset_hub_kusama {
 			},
 			parachain_info: asset_hub_kusama_runtime::ParachainInfoConfig {
 				parachain_id: PARA_ID.into(),
-				..Default::default()
-			},
-			collator_selection: asset_hub_kusama_runtime::CollatorSelectionConfig {
-				invulnerables: collators::invulnerables()
-					.iter()
-					.cloned()
-					.map(|(acc, _)| acc)
-					.collect(),
-				candidacy_bond: ED * 16,
 				..Default::default()
 			},
 			session: asset_hub_kusama_runtime::SessionConfig {
@@ -569,15 +551,6 @@ pub mod bridge_hub_polkadot {
 				parachain_id: PARA_ID.into(),
 				..Default::default()
 			},
-			collator_selection: bridge_hub_polkadot_runtime::CollatorSelectionConfig {
-				invulnerables: collators::invulnerables()
-					.iter()
-					.cloned()
-					.map(|(acc, _)| acc)
-					.collect(),
-				candidacy_bond: ED * 16,
-				..Default::default()
-			},
 			session: bridge_hub_polkadot_runtime::SessionConfig {
 				keys: collators::invulnerables()
 					.into_iter()
@@ -624,15 +597,6 @@ pub mod bridge_hub_kusama {
 			},
 			parachain_info: bridge_hub_kusama_runtime::ParachainInfoConfig {
 				parachain_id: PARA_ID.into(),
-				..Default::default()
-			},
-			collator_selection: bridge_hub_kusama_runtime::CollatorSelectionConfig {
-				invulnerables: collators::invulnerables()
-					.iter()
-					.cloned()
-					.map(|(acc, _)| acc)
-					.collect(),
-				candidacy_bond: ED * 16,
 				..Default::default()
 			},
 			session: bridge_hub_kusama_runtime::SessionConfig {
@@ -683,15 +647,6 @@ pub mod bifrost_polkadot {
 			},
 			parachain_info: bifrost_polkadot_runtime::ParachainInfoConfig {
 				parachain_id: PARA_ID.into(),
-				..Default::default()
-			},
-			collator_selection: bifrost_polkadot_runtime::CollatorSelectionConfig {
-				invulnerables: collators::invulnerables_asset_hub_polkadot()
-					.iter()
-					.cloned()
-					.map(|(acc, _)| acc)
-					.collect(),
-				candidacy_bond: ED * 16,
 				..Default::default()
 			},
 			session: bifrost_polkadot_runtime::SessionConfig {
