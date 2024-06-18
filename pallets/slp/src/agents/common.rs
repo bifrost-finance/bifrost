@@ -583,7 +583,7 @@ impl<T: Config> Pallet<T> {
 			require_weight_at_most: transact_weight,
 			call: call.into(),
 		};
-		xcm_message.push(transact);
+		xcm_message.insert(2, transact);
 		match (query_id, notify_call_weight) {
 			(Some(query_id), Some(notify_call_weight)) => {
 				let report_transact_status_instruct = Self::get_report_transact_status_instruct(
@@ -591,7 +591,7 @@ impl<T: Config> Pallet<T> {
 					notify_call_weight,
 					currency_id,
 				);
-				xcm_message.push(report_transact_status_instruct);
+				xcm_message.insert(3, report_transact_status_instruct);
 			},
 			_ => {},
 		};
