@@ -149,7 +149,8 @@ pub fn migrate_to_v1<T: Config>() -> Weight {
 				order_type: old_order.order_type,
 				remark: old_order.remark,
 				target_chain: old_order.target_chain,
-				channel_id: None,
+				// default to 0
+				channel_id: 0u32,
 			})
 			.expect("BoundedVec should not overflow");
 		weight = weight.saturating_add(T::DbWeight::get().reads_writes(0, 1));

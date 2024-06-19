@@ -459,7 +459,8 @@ pub mod pallet {
 				currency_id,
 				remark,
 				target_chain,
-				channel_id: None,
+				// default to 0
+				channel_id: 0u32,
 			};
 
 			OrderQueue::<T>::mutate(|order_queue| -> DispatchResultWithPostInfo {
@@ -519,7 +520,8 @@ pub mod pallet {
 				bifrost_chain_caller,
 				derivative_account,
 				target_chain,
-				channel_id: None,
+				// default to 0
+				channel_id: 0u32,
 			};
 
 			OrderQueue::<T>::mutate(|order_queue| -> DispatchResultWithPostInfo {
@@ -743,7 +745,8 @@ pub mod pallet {
 				currency_id,
 				remark,
 				target_chain,
-				channel_id: None,
+				// default to 0
+				channel_id: 0u32,
 			};
 
 			OrderQueue::<T>::mutate(|order_queue| -> DispatchResultWithPostInfo {
@@ -776,7 +779,7 @@ pub mod pallet {
 				currency_id,
 				remark,
 				target_chain,
-				channel_id: Some(channel_id),
+				channel_id,
 			};
 
 			OrderQueue::<T>::mutate(|order_queue| -> DispatchResultWithPostInfo {
@@ -1039,7 +1042,7 @@ impl<T: Config> Pallet<T> {
 					order.currency_id,
 					currency_amount,
 					order.remark.clone(),
-					order.channel_id,
+					Some(order.channel_id),
 				)
 				.map_err(|_| Error::<T>::ArgumentsError)?;
 				let vtoken_id = T::VtokenMintingInterface::vtoken_id(order.currency_id)
