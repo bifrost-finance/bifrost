@@ -114,7 +114,7 @@ use polkadot_runtime_common::prod_or_fast;
 use sp_runtime::traits::{IdentityLookup, Verify};
 use static_assertions::const_assert;
 use xcm::{v3::MultiLocation, v4::prelude::*};
-use xcm_config::{
+pub use xcm_config::{
 	parachains, BifrostCurrencyIdConvert, BifrostTreasuryAccount, MultiCurrency, SelfParaChainId,
 };
 use xcm_executor::{

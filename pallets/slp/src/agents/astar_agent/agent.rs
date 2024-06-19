@@ -152,10 +152,8 @@ impl<T: Config>
 		)?;
 
 		// Send out the xcm message.
-		let dest = Pallet::<T>::get_para_multilocation_by_currency_id(currency_id)?;
-		let v4_dest = dest.try_into().map_err(|()| Error::<T>::FailToConvert)?;
-		let v4_message = xcm_message.try_into().map_err(|()| Error::<T>::FailToConvert)?;
-		xcm::v4::send_xcm::<T::XcmRouter>(v4_dest, v4_message)
+		let dest_location = Pallet::<T>::convert_currency_to_dest_location(currency_id)?;
+		xcm::v4::send_xcm::<T::XcmRouter>(dest_location, xcm_message)
 			.map_err(|_e| Error::<T>::XcmFailure)?;
 
 		Ok(query_id)
@@ -254,10 +252,8 @@ impl<T: Config>
 		)?;
 
 		// Send out the xcm message.
-		let dest = Pallet::<T>::get_para_multilocation_by_currency_id(currency_id)?;
-		let v4_dest = dest.try_into().map_err(|()| Error::<T>::FailToConvert)?;
-		let v4_message = xcm_message.try_into().map_err(|()| Error::<T>::FailToConvert)?;
-		xcm::v4::send_xcm::<T::XcmRouter>(v4_dest, v4_message)
+		let dest_location = Pallet::<T>::convert_currency_to_dest_location(currency_id)?;
+		xcm::v4::send_xcm::<T::XcmRouter>(dest_location, xcm_message)
 			.map_err(|_e| Error::<T>::XcmFailure)?;
 
 		Ok(query_id)
@@ -400,10 +396,8 @@ impl<T: Config>
 		)?;
 
 		// Send out the xcm message.
-		let dest = Pallet::<T>::get_para_multilocation_by_currency_id(currency_id)?;
-		let v4_dest = dest.try_into().map_err(|()| Error::<T>::FailToConvert)?;
-		let v4_message = xcm_message.try_into().map_err(|()| Error::<T>::FailToConvert)?;
-		xcm::v4::send_xcm::<T::XcmRouter>(v4_dest, v4_message)
+		let dest_location = Pallet::<T>::convert_currency_to_dest_location(currency_id)?;
+		xcm::v4::send_xcm::<T::XcmRouter>(dest_location, xcm_message)
 			.map_err(|_e| Error::<T>::XcmFailure)?;
 
 		Ok(query_id)

@@ -1020,6 +1020,55 @@ dependencies = [
 ]
 
 [[package]]
+name = "bifrost-integration-tests"
+version = "0.8.0"
+dependencies = [
+ "bifrost-asset-registry",
+ "bifrost-currencies",
+ "bifrost-polkadot-runtime",
+ "bifrost-primitives",
+ "bifrost-runtime-common",
+ "bifrost-slp",
+ "bifrost-vtoken-voting",
+ "bifrost-xcm-interface",
+ "cumulus-primitives-core",
+ "env_logger",
+ "frame-support",
+ "frame-system",
+ "hex-literal 0.4.1",
+ "log",
+ "orml-tokens",
+ "orml-traits",
+ "orml-xtokens",
+ "pallet-assets",
+ "pallet-balances",
+ "pallet-conviction-voting",
+ "pallet-message-queue",
+ "pallet-referenda",
+ "pallet-staking",
+ "pallet-xcm",
+ "parachains-common",
+ "parity-scale-codec",
+ "polkadot-core-primitives",
+ "polkadot-parachain-primitives",
+ "polkadot-runtime-common",
+ "polkadot-runtime-parachains",
+ "scale-info",
+ "serde",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-staking",
+ "sp-std",
+ "staging-parachain-info",
+ "staging-xcm",
+ "staging-xcm-builder",
+ "staging-xcm-executor",
+ "xcm-emulator",
+ "xcm-simulator",
+]
+
+[[package]]
 name = "bifrost-kusama-runtime"
 version = "0.8.0"
 dependencies = [
@@ -7506,11 +7555,13 @@ version = "29.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9ed783679921ad8b96807d683d320c314e305753b230d5c04dc713bab7aca64c"
 dependencies = [
+ "frame-benchmarking",
  "frame-support",
  "frame-system",
  "pallet-transaction-payment",
  "parity-scale-codec",
  "scale-info",
+ "serde",
  "sp-core",
  "sp-io",
  "sp-runtime",
@@ -16078,6 +16129,41 @@ dependencies = [
  "rusticata-macros",
  "thiserror",
  "time",
+]
+
+[[package]]
+name = "xcm-emulator"
+version = "0.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8b49681988880dd6d08a4d5f6b7cb612a0f12172270349655c1e2f870b3526fd"
+dependencies = [
+ "cumulus-pallet-parachain-system",
+ "cumulus-pallet-xcmp-queue",
+ "cumulus-primitives-core",
+ "cumulus-primitives-parachain-inherent",
+ "cumulus-test-relay-sproof-builder",
+ "frame-support",
+ "frame-system",
+ "impl-trait-for-tuples",
+ "lazy_static",
+ "log",
+ "pallet-balances",
+ "pallet-message-queue",
+ "parachains-common",
+ "parity-scale-codec",
+ "paste",
+ "polkadot-parachain-primitives",
+ "polkadot-primitives",
+ "polkadot-runtime-parachains",
+ "sp-arithmetic",
+ "sp-core",
+ "sp-crypto-hashing",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+ "sp-tracing",
+ "staging-xcm",
+ "staging-xcm-executor",
 ]
 
 [[package]]

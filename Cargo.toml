@@ -36,6 +36,8 @@ members = [
 
 	"runtime/bifrost-kusama",
 	"runtime/bifrost-polkadot",
+
+	"integration-tests"
 ]
 resolver = "2"
 
