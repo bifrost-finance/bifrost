@@ -97,9 +97,7 @@ use frame_support::{
 		Currency, EitherOf, EitherOfDiverse, Get, LinearStoragePrice,
 	},
 };
-use frame_system::{
-	pallet_prelude::BlockNumberFor, EnsureRoot, EnsureRootWithSuccess, EnsureSigned,
-};
+use frame_system::{EnsureRoot, EnsureRootWithSuccess, EnsureSigned};
 use hex_literal::hex;
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 // zenlink imports
@@ -1881,11 +1879,6 @@ pub type SignedPayload = generic::SignedPayload<RuntimeCall, SignedExtra>;
 /// upgrades in case governance decides to do so. THE ORDER IS IMPORTANT.
 pub type Migrations = migrations::Unreleased;
 
-parameter_types! {
-	pub const TipsPalletName: &'static str = "Tips";
-	pub const BountiesPalletName: &'static str = "Bounties";
-}
-
 /// The runtime migrations per release.
 pub mod migrations {
 	#[allow(unused_imports)]
@@ -1894,34 +1887,12 @@ pub mod migrations {
 	/// Unreleased migrations. Add new ones here:
 	pub type Unreleased = (
 		// Unlock & unreserve funds
-		pallet_tips::migrations::unreserve_deposits::UnreserveDeposits<UnlockConfigForTips, ()>,
 		cumulus_pallet_xcmp_queue::migration::v4::MigrationToV4<Runtime>,
 		migration::slpx_migrates_whitelist::UpdateWhitelist,
-		frame_support::migrations::RemovePallet<
-			TipsPalletName,
-			<Runtime as frame_system::Config>::DbWeight,
-		>,
-		frame_support::migrations::RemovePallet<
-			BountiesPalletName,
-			<Runtime as frame_system::Config>::DbWeight,
-		>,
 		pallet_identity::migration::versioned::V0ToV1<Runtime, 100>,
 		pallet_collator_selection::migration::v2::MigrationToV2<Runtime>,
+		bifrost_slpx::migration::v1::MigrateToV1<Runtime>,
 	);
-}
-
-// Special Config for tips pallets, allowing us to run migrations for them without
-// implementing their configs on [`Runtime`].
-pub struct UnlockConfigForTips;
-impl pallet_tips::migrations::unreserve_deposits::UnlockConfig<()> for UnlockConfigForTips {
-	type Currency = Balances;
-	type Hash = Hash;
-	type DataDepositPerByte = DataDepositPerByte;
-	type TipReportDepositBase = TipReportDepositBase;
-	type AccountId = AccountId;
-	type BlockNumber = BlockNumberFor<Runtime>;
-	type DbWeight = <Runtime as frame_system::Config>::DbWeight;
-	type PalletName = TipsPalletName;
 }
 
 /// Executive: handles dispatch to the various modules.

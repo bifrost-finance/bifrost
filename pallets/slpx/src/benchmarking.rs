@@ -121,7 +121,7 @@ mod benchmarks {
 			KSM,
 			TargetChain::Astar(receiver),
 			BoundedVec::default(),
-			0u32
+			0u32,
 		);
 	}
 

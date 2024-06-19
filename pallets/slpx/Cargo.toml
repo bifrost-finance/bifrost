@@ -36,6 +36,7 @@ bifrost-asset-registry = { workspace = true }
 bifrost-stable-pool = { workspace = true }
 bifrost-stable-asset = { workspace = true }
 orml-tokens = { workspace = true }
+log = { workspace = true }
 
 [dev-dependencies]
 hex = { workspace = true }
@@ -77,6 +78,7 @@ std = [
 	"bifrost-asset-registry/std",
 	"bifrost-stable-pool/std",
 	"bifrost-stable-asset/std",
+	"log/std",
 ]
 runtime-benchmarks = [
 	"frame-benchmarking/runtime-benchmarks",
