@@ -77,11 +77,9 @@ impl<T: Config> OnRuntimeUpgrade for BifrostPolkadotAddCurrencyToSupportXcmFee<T
 }
 
 mod v0 {
-	use frame_support::pallet_prelude::ValueQuery;
-
-	use crate::types::OldOrder;
-
 	use super::*;
+	use frame_support::pallet_prelude::ValueQuery;
+	use parity_scale_codec::{Decode, Encode};
 
 	#[storage_alias]
 	pub(super) type OrderQueue<T: Config> = StorageValue<
@@ -92,6 +90,19 @@ mod v0 {
 		>,
 		ValueQuery,
 	>;
+
+	#[derive(Encode, Decode)]
+	pub struct OldOrder<AccountId, CurrencyId, Balance, BlockNumber> {
+		pub source_chain_caller: OrderCaller<AccountId>,
+		pub bifrost_chain_caller: AccountId,
+		pub derivative_account: AccountId,
+		pub create_block_number: BlockNumber,
+		pub currency_id: CurrencyId,
+		pub currency_amount: Balance,
+		pub order_type: OrderType,
+		pub remark: BoundedVec<u8, ConstU32<32>>,
+		pub target_chain: TargetChain<AccountId>,
+	}
 }
 
 pub mod v1 {
