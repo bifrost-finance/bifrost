@@ -75,12 +75,6 @@ where
 	(who, value)
 }
 
-pub fn lookup_of_account<T: Config>(
-	who: T::AccountId,
-) -> <<T as frame_system::Config>::Lookup as StaticLookup>::Source {
-	<T as frame_system::Config>::Lookup::unlookup(who)
-}
-
 #[benchmarks(
 where T: Config + bifrost_stable_pool::Config + bifrost_stable_asset::Config + orml_tokens::Config<CurrencyId = CurrencyId> + bifrost_vtoken_minting::Config + bifrost_xcm_interface::Config + zenlink_protocol::Config<AssetId = zenlink_protocol::AssetId>,
 <<T as bifrost_xcm_interface::Config>::MultiCurrency as MultiCurrency<<T as frame_system::Config>::AccountId>>::CurrencyId: From<CurrencyId>
@@ -375,11 +369,13 @@ mod benchmarks {
 		let relay_vstoken_id =
 			<T as Config>::CurrencyIdConversion::convert_to_vstoken(relay_currency_id).unwrap();
 
+		let caller_lookup: <T::Lookup as StaticLookup>::Source =
+			T::Lookup::unlookup(caller.clone());
 		assert_ok!(zenlink_protocol::Pallet::<T>::create_pair(
 			RawOrigin::Root.into(),
 			zenlink_protocol::AssetId { chain_id: 2001, asset_type: 2, asset_index: 516 },
 			zenlink_protocol::AssetId { chain_id: 2001, asset_type: 2, asset_index: 1028 },
-			lookup_of_account::<T>(caller.clone()),
+			caller_lookup
 		));
 
 		let buybck_caller = T::BuybackPalletId::get().into_account_truncating();

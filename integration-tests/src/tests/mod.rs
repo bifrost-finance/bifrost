@@ -16,4 +16,5 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-#![cfg(test)]
+mod send_relay_chain_asset;
+mod slp;

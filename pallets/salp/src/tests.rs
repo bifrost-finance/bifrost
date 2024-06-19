@@ -1347,7 +1347,7 @@ fn refund_meanwhile_issue_should_work() {
 			RuntimeOrigin::root(),
 			asset_0_currency_id,
 			asset_1_currency_id,
-			ALICE,
+			ALICE
 		));
 		let deadline: BlockNumberFor<Test> =
 			<frame_system::Pallet<Test>>::block_number() + BlockNumberFor::<Test>::from(100u32);

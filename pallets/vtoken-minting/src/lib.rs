@@ -33,10 +33,11 @@ pub mod traits;
 pub mod weights;
 pub use weights::WeightInfo;
 
+use bifrost_asset_registry::AssetMetadata;
 use bifrost_primitives::{
-	CurrencyId, CurrencyIdConversion, CurrencyIdExt, CurrencyIdRegister, RedeemType, SlpOperator,
-	SlpxOperator, TimeUnit, VTokenMintRedeemProvider, VTokenSupplyProvider, VtokenMintingInterface,
-	VtokenMintingOperator,
+	CurrencyId, CurrencyIdConversion, CurrencyIdExt, CurrencyIdMapping, CurrencyIdRegister,
+	RedeemType, SlpOperator, SlpxOperator, TimeUnit, VTokenMintRedeemProvider,
+	VTokenSupplyProvider, VtokenMintingInterface, VtokenMintingOperator,
 };
 use bifrost_ve_minting::traits::VeMintingInterface;
 use frame_support::{
@@ -57,6 +58,7 @@ pub use pallet::*;
 use sp_core::U256;
 use sp_std::{vec, vec::Vec};
 pub use traits::*;
+use xcm::v3::MultiLocation;
 
 pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
 
@@ -77,7 +79,7 @@ pub mod pallet {
 	use bifrost_primitives::{currency::BNC, FIL};
 	use frame_support::pallet_prelude::DispatchResultWithPostInfo;
 	use orml_traits::XcmTransfer;
-	use xcm::{prelude::*, v3::MultiLocation};
+	use xcm::{prelude::*, v4::Location};
 
 	#[pallet::pallet]
 	pub struct Pallet<T>(_);
@@ -164,6 +166,12 @@ pub mod pallet {
 		type CurrencyIdRegister: CurrencyIdRegister<CurrencyId>;
 
 		type ChannelCommission: VTokenMintRedeemProvider<CurrencyId, BalanceOf<Self>>;
+
+		type AssetIdMaps: CurrencyIdMapping<
+			CurrencyId,
+			MultiLocation,
+			AssetMetadata<BalanceOf<Self>>,
+		>;
 
 		/// Set default weight.
 		type WeightInfo: WeightInfo;
@@ -1261,16 +1269,16 @@ pub mod pallet {
 				match redeem_type {
 					RedeemType::Native => {},
 					RedeemType::Astar(receiver) => {
-						let dest = MultiLocation {
-							parents: 1,
-							interior: X2(
+						let dest = Location::new(
+							1,
+							[
 								Parachain(T::AstarParachainId::get()),
 								AccountId32 {
 									network: None,
 									id: receiver.encode().try_into().unwrap(),
 								},
-							),
-						};
+							],
+						);
 						T::XcmTransfer::transfer(
 							account.clone(),
 							token_id,
@@ -1281,16 +1289,16 @@ pub mod pallet {
 						redeem_to = RedeemTo::Astar(receiver);
 					},
 					RedeemType::Hydradx(receiver) => {
-						let dest = MultiLocation {
-							parents: 1,
-							interior: X2(
+						let dest = Location::new(
+							1,
+							[
 								Parachain(T::HydradxParachainId::get()),
 								AccountId32 {
 									network: None,
 									id: receiver.encode().try_into().unwrap(),
 								},
-							),
-						};
+							],
+						);
 						T::XcmTransfer::transfer(
 							account.clone(),
 							token_id,
@@ -1301,16 +1309,16 @@ pub mod pallet {
 						redeem_to = RedeemTo::Hydradx(receiver);
 					},
 					RedeemType::Interlay(receiver) => {
-						let dest = MultiLocation {
-							parents: 1,
-							interior: X2(
+						let dest = Location::new(
+							1,
+							[
 								Parachain(T::InterlayParachainId::get()),
 								AccountId32 {
 									network: None,
 									id: receiver.encode().try_into().unwrap(),
 								},
-							),
-						};
+							],
+						);
 						T::XcmTransfer::transfer(
 							account.clone(),
 							token_id,
@@ -1321,16 +1329,16 @@ pub mod pallet {
 						redeem_to = RedeemTo::Interlay(receiver);
 					},
 					RedeemType::Manta(receiver) => {
-						let dest = MultiLocation {
-							parents: 1,
-							interior: X2(
+						let dest = Location::new(
+							1,
+							[
 								Parachain(T::MantaParachainId::get()),
 								AccountId32 {
 									network: None,
 									id: receiver.encode().try_into().unwrap(),
 								},
-							),
-						};
+							],
+						);
 						T::XcmTransfer::transfer(
 							account.clone(),
 							token_id,
@@ -1341,13 +1349,13 @@ pub mod pallet {
 						redeem_to = RedeemTo::Manta(receiver);
 					},
 					RedeemType::Moonbeam(receiver) => {
-						let dest = MultiLocation {
-							parents: 1,
-							interior: X2(
+						let dest = Location::new(
+							1,
+							[
 								Parachain(T::MoonbeamParachainId::get()),
 								AccountKey20 { network: None, key: receiver.to_fixed_bytes() },
-							),
-						};
+							],
+						);
 						if token_id == FIL {
 							let assets = vec![
 								(token_id, unlock_amount),
@@ -1917,6 +1925,52 @@ pub mod pallet {
 					.ok_or(Error::<T>::CalculationOverflow)?;
 
 			Ok(incentive_amount)
+		}
+
+		pub fn get_exchange_rate(
+			token_id: Option<CurrencyId>,
+		) -> Result<Vec<(CurrencyIdOf<T>, U256)>, DispatchError> {
+			let mut result: Vec<(CurrencyIdOf<T>, U256)> = Vec::new();
+
+			match token_id {
+				Some(token_id) => {
+					let vtoken_amount = Self::get_vtoken_amount(token_id, 1u128)?;
+					result.push((token_id, vtoken_amount));
+				},
+				None =>
+					for token_id in T::AssetIdMaps::get_all_currency() {
+						if token_id.is_vtoken() {
+							let vtoken_id = token_id;
+							let token_id = T::CurrencyIdConversion::convert_to_token(vtoken_id)
+								.map_err(|_| Error::<T>::NotSupportTokenType)?;
+
+							let vtoken_amount = Self::get_vtoken_amount(token_id, 1u128)?;
+							result.push((token_id, vtoken_amount));
+						}
+					},
+			}
+			Ok(result)
+		}
+
+		fn get_vtoken_amount(token: CurrencyIdOf<T>, amount: u128) -> Result<U256, DispatchError> {
+			let vtoken_id = T::CurrencyIdConversion::convert_to_vtoken(token)
+				.map_err(|_| Error::<T>::NotSupportTokenType)?;
+
+			let token_pool_amount = Self::token_pool(token);
+			let vtoken_total_issuance = T::MultiCurrency::total_issuance(vtoken_id);
+
+			let mut vtoken_amount = U256::from(amount);
+			if token_pool_amount != BalanceOf::<T>::zero() {
+				let vtoken_total_issuance_u256 =
+					U256::from(vtoken_total_issuance.saturated_into::<u128>());
+				let token_pool_amount_u256 = U256::from(token_pool_amount.saturated_into::<u128>());
+
+				vtoken_amount = vtoken_amount
+					.saturating_mul(vtoken_total_issuance_u256)
+					.checked_div(token_pool_amount_u256)
+					.ok_or(Error::<T>::CalculationOverflow)?;
+			}
+			Ok(vtoken_amount)
 		}
 	}
 }

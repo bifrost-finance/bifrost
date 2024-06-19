@@ -24,6 +24,7 @@ cumulus-primitives-core = { workspace = true }
 sp-core = { workspace = true }
 sp-runtime = { workspace = true }
 bifrost-ve-minting = { workspace = true }
+bifrost-asset-registry = { workspace = true }
 
 [dev-dependencies]
 orml-tokens = { workspace = true }

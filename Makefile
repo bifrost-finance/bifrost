@@ -51,10 +51,14 @@ copy-genesis-config-release:
 
 .PHONY: format # cargo fmt
 format:
+	cargo +nightly fmt --all
+
+.PHONY: format-check # cargo fmt check
+format-check:
 	cargo +nightly fmt --all -- --check
 
 .PHONY: clippy # cargo clippy
-clippy:
+clippy: format-check
 	SKIP_WASM_BUILD= cargo clippy --all --all-targets --features=with-all-runtime -- -D warnings
 
 .PHONY: benchmarking-staking # benchmarking staking pallet

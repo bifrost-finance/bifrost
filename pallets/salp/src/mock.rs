@@ -121,7 +121,6 @@ impl pallet_balances::Config for Test {
 	type RuntimeHoldReason = RuntimeHoldReason;
 	type RuntimeFreezeReason = RuntimeFreezeReason;
 	type FreezeIdentifier = ();
-	type MaxHolds = ConstU32<0>;
 	type MaxFreezes = ConstU32<0>;
 }
 
@@ -378,13 +377,13 @@ impl SlpxOperator<Balance> for SlpxInterface {
 }
 
 parameter_type_with_key! {
-	pub ParachainMinFee: |_location: MultiLocation| -> Option<u128> {
+	pub ParachainMinFee: |_location: Location| -> Option<u128> {
 		Some(u128::MAX)
 	};
 }
 
 parameter_types! {
-	pub SelfRelativeLocation: MultiLocation = MultiLocation::here();
+	pub SelfRelativeLocation: Location = Location::here();
 	pub const MaxAssetsForTransfer: usize = 2;
 }
 
@@ -393,7 +392,7 @@ impl orml_xtokens::Config for Test {
 	type Balance = Balance;
 	type CurrencyId = CurrencyId;
 	type CurrencyIdConvert = ();
-	type AccountIdToMultiLocation = ();
+	type AccountIdToLocation = ();
 	type UniversalLocation = UniversalLocation;
 	type SelfLocation = SelfRelativeLocation;
 	type XcmExecutor = XcmExecutor<XcmConfig>;
@@ -401,8 +400,10 @@ impl orml_xtokens::Config for Test {
 	type BaseXcmWeight = ();
 	type MaxAssetsForTransfer = MaxAssetsForTransfer;
 	type MinXcmFee = ParachainMinFee;
-	type MultiLocationsFilter = Everything;
+	type LocationsFilter = Everything;
 	type ReserveProvider = RelativeReserveProvider;
+	type RateLimiter = ();
+	type RateLimiterId = ();
 }
 
 pub struct Slp;
@@ -440,6 +441,7 @@ impl bifrost_vtoken_minting::Config for Test {
 	type MaxLockRecords = ConstU32<100>;
 	type IncentivePoolAccount = IncentivePoolAccount;
 	type VeMinting = ();
+	type AssetIdMaps = AssetIdMaps<Test>;
 }
 
 parameter_types! {
@@ -480,7 +482,7 @@ parameter_types! {
 	// One XCM operation is 200_000_000 XcmWeight, cross-chain transfer ~= 2x of transfer = 3_000_000_000
 	pub UnitWeightCost: Weight = Weight::from_parts(200_000_000, 0);
 	pub const MaxInstructions: u32 = 100;
-	pub UniversalLocation: InteriorMultiLocation = X1(Parachain(2001));
+	pub UniversalLocation: InteriorLocation = Parachain(2001).into();
 	pub const RelayNetwork: NetworkId = NetworkId::Kusama;
 }
 
@@ -515,7 +517,7 @@ impl xcm_executor::Config for XcmConfig {
 
 #[cfg(feature = "runtime-benchmarks")]
 parameter_types! {
-	pub ReachableDest: Option<MultiLocation> = Some(Parent.into());
+	pub ReachableDest: Option<Location> = Some(Parent.into());
 }
 
 impl pallet_xcm::Config for Test {
@@ -545,9 +547,9 @@ impl pallet_xcm::Config for Test {
 }
 
 pub struct BifrostAccountIdToMultiLocation;
-impl Convert<AccountId, MultiLocation> for BifrostAccountIdToMultiLocation {
-	fn convert(account: AccountId) -> MultiLocation {
-		X1(AccountId32 { network: None, id: account.into() }).into()
+impl Convert<AccountId, Location> for BifrostAccountIdToMultiLocation {
+	fn convert(account: AccountId) -> Location {
+		(AccountId32 { network: None, id: account.into() }).into()
 	}
 }
 
@@ -559,7 +561,7 @@ impl bifrost_xcm_interface::Config for Test {
 	type RelaychainCurrencyId = RelayCurrencyId;
 	type ParachainSovereignAccount = TreasuryAccount;
 	type XcmExecutor = DoNothingExecuteXcm;
-	type AccountIdToMultiLocation = BifrostAccountIdToMultiLocation;
+	type AccountIdToLocation = BifrostAccountIdToMultiLocation;
 	type SalpHelper = Salp;
 	type ParachainId = ParaInfo;
 	type CallBackTimeOut = ConstU64<10>;

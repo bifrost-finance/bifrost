@@ -21,7 +21,7 @@ use bifrost_primitives::{CurrencyId, BNC};
 use frame_support::traits::{Get, OnRuntimeUpgrade};
 #[cfg(feature = "try-runtime")]
 use sp_runtime::TryRuntimeError;
-use xcm::prelude::{GeneralKey, X1};
+use xcm::v3::prelude::{GeneralKey, X1};
 
 const LOG_TARGET: &str = "asset-registry::migration";
 
@@ -42,7 +42,7 @@ pub fn update_blp_metadata<T: Config>(pool_count: u32) -> Weight {
 	T::DbWeight::get().reads(pool_count.into()) + T::DbWeight::get().writes(pool_count.into())
 }
 
-const BNC_LOCATION: MultiLocation = MultiLocation {
+const BNC_LOCATION: xcm::v3::Location = xcm::v3::Location {
 	parents: 0,
 	interior: X1(GeneralKey {
 		length: 2,

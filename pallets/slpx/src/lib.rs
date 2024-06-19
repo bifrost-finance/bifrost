@@ -51,7 +51,7 @@ use sp_runtime::{
 	BoundedVec, DispatchError,
 };
 use sp_std::{vec, vec::Vec};
-use xcm::{latest::prelude::*, v3::MultiLocation};
+use xcm::v4::{prelude::*, Location};
 use zenlink_protocol::AssetBalance;
 
 pub mod migration;
@@ -118,10 +118,10 @@ pub mod pallet {
 		///
 		type XcmSender: SendXcm;
 
-		/// Convert MultiLocation to `T::CurrencyId`.
+		/// Convert Location to `T::CurrencyId`.
 		type CurrencyIdConvert: CurrencyIdMapping<
 			CurrencyId,
-			MultiLocation,
+			xcm::v3::MultiLocation,
 			AssetMetadata<BalanceOf<Self>>,
 		>;
 
@@ -445,6 +445,7 @@ pub mod pallet {
 			currency_id: CurrencyIdOf<T>,
 			target_chain: TargetChain<AccountIdOf<T>>,
 			remark: BoundedVec<u8, ConstU32<32>>,
+			channel_id: Option<u32>,
 		) -> DispatchResultWithPostInfo {
 			let (source_chain_caller, derivative_account, bifrost_chain_caller) =
 				Self::ensure_singer_on_whitelist(origin.clone(), evm_caller, &target_chain)?;
@@ -797,14 +798,12 @@ impl<T: Config> Pallet<T> {
 		xcm_weight: Weight,
 		xcm_fee: u128,
 	) -> DispatchResult {
-		let dest = MultiLocation {
-			parents: 1,
-			interior: X1(Parachain(T::VtokenMintingInterface::get_moonbeam_parachain_id())),
-		};
+		let dest =
+			Location::new(1, [Parachain(T::VtokenMintingInterface::get_moonbeam_parachain_id())]);
 
 		// Moonbeam Native Token
-		let asset = MultiAsset {
-			id: Concrete(MultiLocation { parents: 0, interior: X1(PalletInstance(10)) }),
+		let asset = Asset {
+			id: AssetId::from(Location::new(0, [PalletInstance(10)])),
 			fun: Fungible(xcm_fee),
 		};
 
@@ -819,13 +818,13 @@ impl<T: Config> Pallet<T> {
 			RefundSurplus,
 			DepositAsset {
 				assets: AllCounted(8).into(),
-				beneficiary: MultiLocation {
-					parents: 0,
-					interior: X1(AccountKey20 {
+				beneficiary: Location::new(
+					0,
+					[AccountKey20 {
 						network: None,
 						key: Sibling::from(T::ParachainId::get()).into_account_truncating(),
-					}),
-				},
+					}],
+				),
 			},
 		]);
 
@@ -941,57 +940,57 @@ impl<T: Config> Pallet<T> {
 		match target_chain {
 			TargetChain::Astar(receiver) => {
 				let receiver = Self::h160_to_account_id(*receiver);
-				let dest = MultiLocation {
-					parents: 1,
-					interior: X2(
+				let dest = Location::new(
+					1,
+					[
 						Parachain(T::VtokenMintingInterface::get_astar_parachain_id()),
 						AccountId32 { network: None, id: receiver.encode().try_into().unwrap() },
-					),
-				};
+					],
+				);
 
 				T::XcmTransfer::transfer(caller, currency_id, amount, dest, Unlimited)?;
 			},
 			TargetChain::Hydradx(receiver) => {
-				let dest = MultiLocation {
-					parents: 1,
-					interior: X2(
+				let dest = Location::new(
+					1,
+					[
 						Parachain(T::VtokenMintingInterface::get_hydradx_parachain_id()),
 						AccountId32 { network: None, id: receiver.encode().try_into().unwrap() },
-					),
-				};
+					],
+				);
 
 				T::XcmTransfer::transfer(caller, currency_id, amount, dest, Unlimited)?;
 			},
 			TargetChain::Interlay(receiver) => {
-				let dest = MultiLocation {
-					parents: 1,
-					interior: X2(
+				let dest = Location::new(
+					1,
+					[
 						Parachain(T::VtokenMintingInterface::get_interlay_parachain_id()),
 						AccountId32 { network: None, id: receiver.encode().try_into().unwrap() },
-					),
-				};
+					],
+				);
 
 				T::XcmTransfer::transfer(caller, currency_id, amount, dest, Unlimited)?;
 			},
 			TargetChain::Manta(receiver) => {
-				let dest = MultiLocation {
-					parents: 1,
-					interior: X2(
+				let dest = Location::new(
+					1,
+					[
 						Parachain(T::VtokenMintingInterface::get_manta_parachain_id()),
 						AccountId32 { network: None, id: receiver.encode().try_into().unwrap() },
-					),
-				};
+					],
+				);
 
 				T::XcmTransfer::transfer(caller, currency_id, amount, dest, Unlimited)?;
 			},
 			TargetChain::Moonbeam(receiver) => {
-				let dest = MultiLocation {
-					parents: 1,
-					interior: X2(
+				let dest = Location::new(
+					1,
+					[
 						Parachain(T::VtokenMintingInterface::get_moonbeam_parachain_id()),
 						AccountKey20 { network: None, key: receiver.to_fixed_bytes() },
-					),
-				};
+					],
+				);
 				if SupportXcmFeeList::<T>::get().contains(&currency_id) {
 					T::XcmTransfer::transfer(caller, currency_id, amount, dest, Unlimited)?;
 				} else {

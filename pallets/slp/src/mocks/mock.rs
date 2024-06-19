@@ -46,7 +46,7 @@ use sp_runtime::{
 	AccountId32, BuildStorage, Percent,
 };
 use sp_std::{boxed::Box, vec::Vec};
-use xcm::v3::{prelude::*, Weight};
+use xcm::v3::{prelude::*, MultiLocation, Weight};
 use xcm_builder::{FixedWeightBounds, FrameTransactionalProcessor};
 use xcm_executor::XcmExecutor;
 
@@ -119,7 +119,6 @@ impl pallet_balances::Config for Runtime {
 	type RuntimeHoldReason = RuntimeHoldReason;
 	type RuntimeFreezeReason = RuntimeFreezeReason;
 	type FreezeIdentifier = ();
-	type MaxHolds = ConstU32<0>;
 	type MaxFreezes = ConstU32<0>;
 }
 
@@ -153,13 +152,13 @@ impl bifrost_currencies::Config for Runtime {
 }
 
 parameter_type_with_key! {
-	pub ParachainMinFee: |_location: MultiLocation| -> Option<u128> {
+	pub ParachainMinFee: |_location: xcm::v4::Location| -> Option<u128> {
 		Some(u128::MAX)
 	};
 }
 
 parameter_types! {
-	pub SelfRelativeLocation: MultiLocation = MultiLocation::here();
+	pub SelfRelativeLocation: xcm::v4::Location = xcm::v4::Location::here();
 	pub const BaseXcmWeight: Weight = Weight::from_parts(1000_000_000u64, 0);
 	pub const MaxAssetsForTransfer: usize = 2;
 }
@@ -169,7 +168,7 @@ impl orml_xtokens::Config for Runtime {
 	type Balance = Balance;
 	type CurrencyId = CurrencyId;
 	type CurrencyIdConvert = ();
-	type AccountIdToMultiLocation = ();
+	type AccountIdToLocation = ();
 	type UniversalLocation = UniversalLocation;
 	type SelfLocation = SelfRelativeLocation;
 	type XcmExecutor = XcmExecutor<XcmConfig>;
@@ -177,8 +176,10 @@ impl orml_xtokens::Config for Runtime {
 	type BaseXcmWeight = BaseXcmWeight;
 	type MaxAssetsForTransfer = MaxAssetsForTransfer;
 	type MinXcmFee = ParachainMinFee;
-	type MultiLocationsFilter = Everything;
+	type LocationsFilter = Everything;
 	type ReserveProvider = RelativeReserveProvider;
+	type RateLimiter = ();
+	type RateLimiterId = ();
 }
 
 parameter_types! {
@@ -217,6 +218,7 @@ impl bifrost_vtoken_minting::Config for Runtime {
 	type MaxLockRecords = ConstU32<100>;
 	type IncentivePoolAccount = IncentivePoolAccount;
 	type VeMinting = ();
+	type AssetIdMaps = AssetIdMaps<Runtime>;
 }
 
 parameter_types! {
@@ -393,12 +395,12 @@ parameter_types! {
 	pub BifrostTreasuryAccount: AccountId = PalletId(*b"bf/trsry").into_account_truncating();
 }
 
-impl QueryResponseManager<QueryId, MultiLocation, u64, RuntimeCall> for () {
+impl QueryResponseManager<QueryId, Location, u64, RuntimeCall> for () {
 	fn get_query_response_record(_query_id: QueryId) -> bool {
 		Default::default()
 	}
 	fn create_query_record(
-		_responder: &MultiLocation,
+		_responder: Location,
 		_call_back: Option<RuntimeCall>,
 		_timeout: u64,
 	) -> u64 {
@@ -410,19 +412,19 @@ impl QueryResponseManager<QueryId, MultiLocation, u64, RuntimeCall> for () {
 }
 
 pub struct BifrostCurrencyIdConvert;
-impl Convert<CurrencyId, Option<MultiLocation>> for BifrostCurrencyIdConvert {
-	fn convert(id: CurrencyId) -> Option<MultiLocation> {
+impl Convert<CurrencyId, Option<Location>> for BifrostCurrencyIdConvert {
+	fn convert(id: CurrencyId) -> Option<Location> {
 		use CurrencyId::*;
 		use TokenSymbol::*;
 
 		match id {
-			Token(MOVR) => Some(MultiLocation::new(1, X2(Parachain(2023), PalletInstance(10)))),
-			Token(KSM) => Some(MultiLocation::parent()),
-			Native(BNC) => Some(MultiLocation::new(
+			Token(MOVR) => Some(Location::new(1, [Parachain(2023), PalletInstance(10)])),
+			Token(KSM) => Some(Location::parent()),
+			Native(BNC) => Some(Location::new(
 				0,
-				X1(Junction::from(BoundedVec::try_from("0x0001".encode()).unwrap())),
+				Junction::from(BoundedVec::try_from("0x0001".encode()).unwrap()),
 			)),
-			Token(PHA) => Some(MultiLocation::new(1, X1(Parachain(2004)))),
+			Token(PHA) => Some(Location::new(1, [Parachain(2004)])),
 			_ => None,
 		}
 	}
@@ -431,6 +433,25 @@ impl Convert<CurrencyId, Option<MultiLocation>> for BifrostCurrencyIdConvert {
 pub struct SlpxInterface;
 impl SlpxOperator<Balance> for SlpxInterface {
 	fn get_moonbeam_transfer_to_fee() -> Balance {
+		Default::default()
+	}
+}
+
+pub struct SubstrateResponseManager;
+impl QueryResponseManager<QueryId, xcm::v4::Location, u64, RuntimeCall>
+	for SubstrateResponseManager
+{
+	fn get_query_response_record(_query_id: QueryId) -> bool {
+		Default::default()
+	}
+	fn create_query_record(
+		_responder: xcm::v4::Location,
+		_call_back: Option<RuntimeCall>,
+		_timeout: u64,
+	) -> u64 {
+		Default::default()
+	}
+	fn remove_query_record(_query_id: QueryId) -> bool {
 		Default::default()
 	}
 }
@@ -446,7 +467,7 @@ impl Config for Runtime {
 	type BifrostSlpx = SlpxInterface;
 	type AccountConverter = SubAccountIndexMultiLocationConvertor;
 	type ParachainId = ParachainId;
-	type SubstrateResponseManager = ();
+	type SubstrateResponseManager = SubstrateResponseManager;
 	type MaxTypeEntryPerBlock = MaxTypeEntryPerBlock;
 	type MaxRefundPerBlock = MaxRefundPerBlock;
 	type OnRefund = ();
@@ -483,7 +504,7 @@ parameter_types! {
 	// One XCM operation is 200_000_000 XcmWeight, cross-chain transfer ~= 2x of transfer = 3_000_000_000
 	pub UnitWeightCost: Weight = Weight::from_parts(200_000_000, 0);
 	pub const MaxInstructions: u32 = 100;
-	pub UniversalLocation: InteriorMultiLocation = X1(Parachain(2001));
+	pub UniversalLocation: xcm::v4::InteriorLocation = xcm::v4::Junction::Parachain(2001).into();
 }
 
 pub struct XcmConfig;
@@ -517,7 +538,7 @@ impl xcm_executor::Config for XcmConfig {
 
 #[cfg(feature = "runtime-benchmarks")]
 parameter_types! {
-	pub ReachableDest: Option<MultiLocation> = Some(Parent.into());
+	pub ReachableDest: Option<Location> = Some(Parent.into());
 }
 
 impl pallet_xcm::Config for Runtime {

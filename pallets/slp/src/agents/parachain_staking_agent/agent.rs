@@ -53,7 +53,7 @@ use xcm::{
 		MultiLocation, WeightLimit,
 	},
 	v3::prelude::*,
-	VersionedMultiLocation,
+	VersionedLocation,
 };
 
 /// StakingAgent implementation for Moonriver/Moonbeam
@@ -307,8 +307,9 @@ impl<T: Config>
 			)?;
 
 			// Send out the xcm message.
-			let dest = Pallet::<T>::get_para_multilocation_by_currency_id(currency_id)?;
-			send_xcm::<T::XcmRouter>(dest, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
+			let dest_location = Pallet::<T>::convert_currency_to_dest_location(currency_id)?;
+			xcm::v4::send_xcm::<T::XcmRouter>(dest_location, xcm_message)
+				.map_err(|_e| Error::<T>::XcmFailure)?;
 
 			query_index = query_id;
 		}
@@ -455,8 +456,9 @@ impl<T: Config>
 			)?;
 
 			// Send out the xcm message.
-			let dest = Pallet::<T>::get_para_multilocation_by_currency_id(currency_id)?;
-			send_xcm::<T::XcmRouter>(dest, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
+			let dest_location = Pallet::<T>::convert_currency_to_dest_location(currency_id)?;
+			xcm::v4::send_xcm::<T::XcmRouter>(dest_location, xcm_message)
+				.map_err(|_e| Error::<T>::XcmFailure)?;
 			query_index = query_id;
 		}
 
@@ -619,8 +621,9 @@ impl<T: Config>
 			)?;
 
 			// Send out the xcm message.
-			let dest = Pallet::<T>::get_para_multilocation_by_currency_id(currency_id)?;
-			send_xcm::<T::XcmRouter>(dest, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
+			let dest_location = Pallet::<T>::convert_currency_to_dest_location(currency_id)?;
+			xcm::v4::send_xcm::<T::XcmRouter>(dest_location, xcm_message)
+				.map_err(|_e| Error::<T>::XcmFailure)?;
 			query_index = query_id;
 		}
 
@@ -835,8 +838,9 @@ impl<T: Config>
 			)?;
 
 			// Send out the xcm message.
-			let dest = Pallet::<T>::get_para_multilocation_by_currency_id(currency_id)?;
-			send_xcm::<T::XcmRouter>(dest, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
+			let dest_location = Pallet::<T>::convert_currency_to_dest_location(currency_id)?;
+			xcm::v4::send_xcm::<T::XcmRouter>(dest_location, xcm_message)
+				.map_err(|_e| Error::<T>::XcmFailure)?;
 			query_index = query_id;
 		}
 
@@ -983,8 +987,9 @@ impl<T: Config>
 			)?;
 
 			// Send out the xcm message.
-			let dest = Pallet::<T>::get_para_multilocation_by_currency_id(currency_id)?;
-			send_xcm::<T::XcmRouter>(dest, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
+			let dest_location = Pallet::<T>::convert_currency_to_dest_location(currency_id)?;
+			xcm::v4::send_xcm::<T::XcmRouter>(dest_location, xcm_message)
+				.map_err(|_e| Error::<T>::XcmFailure)?;
 
 			query_index = query_id;
 		}
@@ -1328,8 +1333,9 @@ impl<T: Config>
 			}
 
 			// Send out the xcm message.
-			let dest = Pallet::<T>::get_para_multilocation_by_currency_id(currency_id)?;
-			send_xcm::<T::XcmRouter>(dest, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
+			let dest_location = Pallet::<T>::convert_currency_to_dest_location(currency_id)?;
+			xcm::v4::send_xcm::<T::XcmRouter>(dest_location, xcm_message)
+				.map_err(|_e| Error::<T>::XcmFailure)?;
 
 			query_index = query_id;
 		}
@@ -1375,7 +1381,7 @@ impl<T: Config>
 		} else {
 			// Prepare parameter dest and beneficiary.
 			let to_32: [u8; 32] = Pallet::<T>::multilocation_to_account_32(&to)?;
-			let dest = Box::new(VersionedMultiLocation::from(MultiLocation {
+			let dest = Box::new(VersionedLocation::V3(MultiLocation {
 				parents: 1,
 				interior: X2(
 					Parachain(T::ParachainId::get().into()),

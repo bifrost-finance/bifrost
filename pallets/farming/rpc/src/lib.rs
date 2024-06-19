@@ -23,7 +23,7 @@ use bifrost_primitives::Balance;
 use jsonrpsee::{
 	core::{async_trait, RpcResult},
 	proc_macros::rpc,
-	types::error::{CallError, ErrorCode, ErrorObject},
+	types::error::{ErrorCode, ErrorObject},
 };
 use parity_scale_codec::Codec;
 use sp_api::ProvideRuntimeApi;
@@ -92,13 +92,12 @@ where
 				.into_iter()
 				.map(|(token, amount)| (token, NumberOrHex::Hex(amount.into())))
 				.collect()),
-			Err(e) => Err(CallError::Custom(ErrorObject::owned(
+			Err(e) => Err(ErrorObject::owned(
 				ErrorCode::InternalError.code(),
 				"Failed to get farming rewards.",
 				Some(format!("{:?}", e)),
-			))),
+			)),
 		}
-		.map_err(|e| jsonrpsee::core::Error::Call(e))
 	}
 
 	fn get_gauge_rewards(
@@ -117,12 +116,11 @@ where
 				.into_iter()
 				.map(|(token, amount)| (token, NumberOrHex::Hex(amount.into())))
 				.collect()),
-			Err(e) => Err(CallError::Custom(ErrorObject::owned(
+			Err(e) => Err(ErrorObject::owned(
 				ErrorCode::InternalError.code(),
 				"Failed to get gauge rewards.",
 				Some(format!("{:?}", e)),
-			))),
+			)),
 		}
-		.map_err(|e| jsonrpsee::core::Error::Call(e))
 	}
 }
