@@ -58,6 +58,7 @@ pub trait WeightInfo {
 	fn set_execution_fee() -> Weight;
 	fn set_transfer_to_fee() -> Weight;
 	fn mint() -> Weight;
+	fn mint_with_channel_id() -> Weight;
 	fn redeem() -> Weight;
 	fn zenlink_swap() -> Weight;
 	fn stable_pool_swap() -> Weight;
@@ -137,6 +138,19 @@ impl WeightInfo for () {
 		Weight::from_parts(367_522_000, 11362)
 			.saturating_add(RocksDbWeight::get().reads(16_u64))
 			.saturating_add(RocksDbWeight::get().writes(8_u64))
+	}
+	/// Storage: `Slpx::WhitelistAccountId` (r:1 w:0)
+	/// Proof: `Slpx::WhitelistAccountId` (`max_values`: None, `max_size`: Some(338), added: 2813, mode: `MaxEncodedLen`)
+	/// Storage: `Slpx::OrderQueue` (r:1 w:1)
+	/// Proof: `Slpx::OrderQueue` (`max_values`: Some(1), `max_size`: Some(203002), added: 203497, mode: `MaxEncodedLen`)
+	fn mint_with_channel_id() -> Weight {
+		// Proof Size summary in bytes:
+		//  Measured:  `81`
+		//  Estimated: `204487`
+		// Minimum execution time: 12_000_000 picoseconds.
+		Weight::from_parts(12_000_000, 204487)
+			.saturating_add(RocksDbWeight::get().reads(2_u64))
+			.saturating_add(RocksDbWeight::get().writes(1_u64))
 	}
 	/// Storage: Slpx WhitelistAccountId (r:1 w:0)
 	/// Proof: Slpx WhitelistAccountId (max_values: None, max_size: Some(338), added: 2813, mode: MaxEncodedLen)

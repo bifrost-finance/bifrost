@@ -354,8 +354,7 @@ fn test_add_order() {
 			source_chain_caller,
 			DOT,
 			TargetChain::Astar(source_chain_caller),
-			BoundedVec::default(),
-			None
+			BoundedVec::default()
 		));
 		assert_eq!(OrderQueue::<Test>::get().len(), 1usize);
 		assert_ok!(Slpx::redeem(
@@ -381,6 +380,30 @@ fn test_add_order() {
 }
 
 #[test]
+fn test_mint_with_channel_id() {
+	sp_io::TestExternalities::default().execute_with(|| {
+		assert_ok!(Slpx::add_whitelist(RuntimeOrigin::root(), SupportChain::Astar, ALICE));
+		let source_chain_caller = H160::default();
+		assert_ok!(Slpx::mint_with_channel_id(
+			RuntimeOrigin::signed(ALICE),
+			source_chain_caller,
+			DOT,
+			TargetChain::Astar(source_chain_caller),
+			BoundedVec::default(),
+			0u32
+		));
+		assert_eq!(OrderQueue::<Test>::get().len(), 1usize);
+		assert_ok!(Slpx::redeem(
+			RuntimeOrigin::signed(ALICE),
+			source_chain_caller,
+			VDOT,
+			TargetChain::Astar(source_chain_caller)
+		));
+		assert_eq!(OrderQueue::<Test>::get().len(), 2usize);
+	})
+}
+
+#[test]
 fn test_hook() {
 	sp_io::TestExternalities::default().execute_with(|| {
 		assert_ok!(Slpx::add_whitelist(RuntimeOrigin::root(), SupportChain::Astar, ALICE));
@@ -390,8 +413,7 @@ fn test_hook() {
 			source_chain_caller,
 			DOT,
 			TargetChain::Astar(source_chain_caller),
-			BoundedVec::default(),
-			None
+			BoundedVec::default()
 		));
 		assert_eq!(OrderQueue::<Test>::get().len(), 1usize);
 		<frame_system::Pallet<Test>>::set_block_number(2u32.into());

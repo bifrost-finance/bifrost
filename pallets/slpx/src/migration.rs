@@ -16,11 +16,13 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-use crate::*;
-use bifrost_primitives::currency::{ASTR, BNC, DOT, GLMR, KSM, MANTA, MOVR};
-use frame_support::traits::OnRuntimeUpgrade;
+use frame_support::{storage_alias, traits::OnRuntimeUpgrade};
 #[cfg(feature = "try-runtime")]
 use sp_runtime::TryRuntimeError;
+
+use bifrost_primitives::currency::{ASTR, BNC, DOT, GLMR, KSM, MANTA, MOVR};
+
+use crate::*;
 
 pub struct BifrostKusamaAddCurrencyToSupportXcmFee<T>(sp_std::marker::PhantomData<T>);
 impl<T: Config> OnRuntimeUpgrade for BifrostKusamaAddCurrencyToSupportXcmFee<T> {
@@ -72,4 +74,104 @@ impl<T: Config> OnRuntimeUpgrade for BifrostPolkadotAddCurrencyToSupportXcmFee<T
 
 		Ok(())
 	}
+}
+
+mod v0 {
+	use super::*;
+	use frame_support::pallet_prelude::ValueQuery;
+	use parity_scale_codec::{Decode, Encode};
+
+	#[storage_alias]
+	pub(super) type OrderQueue<T: Config> = StorageValue<
+		Pallet<T>,
+		BoundedVec<
+			OldOrder<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>, BlockNumberFor<T>>,
+			ConstU32<1000>,
+		>,
+		ValueQuery,
+	>;
+
+	#[derive(Encode, Decode)]
+	pub struct OldOrder<AccountId, CurrencyId, Balance, BlockNumber> {
+		pub source_chain_caller: OrderCaller<AccountId>,
+		pub bifrost_chain_caller: AccountId,
+		pub derivative_account: AccountId,
+		pub create_block_number: BlockNumber,
+		pub currency_id: CurrencyId,
+		pub currency_amount: Balance,
+		pub order_type: OrderType,
+		pub remark: BoundedVec<u8, ConstU32<32>>,
+		pub target_chain: TargetChain<AccountId>,
+	}
+}
+
+pub mod v1 {
+	use frame_support::traits::StorageVersion;
+
+	use super::*;
+
+	pub struct MigrateToV1<T>(sp_std::marker::PhantomData<T>);
+	impl<T: Config> OnRuntimeUpgrade for MigrateToV1<T> {
+		fn on_runtime_upgrade() -> Weight {
+			if StorageVersion::get::<Pallet<T>>() == 0 {
+				let weight_consumed = migrate_to_v1::<T>();
+				log::info!("Migrating slpx storage to v1");
+				StorageVersion::new(1).put::<Pallet<T>>();
+				weight_consumed.saturating_add(T::DbWeight::get().writes(1))
+			} else {
+				log::warn!("slpx migration should be removed.");
+				T::DbWeight::get().reads(1)
+			}
+		}
+
+		#[cfg(feature = "try-runtime")]
+		fn pre_upgrade() -> Result<Vec<u8>, sp_runtime::DispatchError> {
+			log::info!("slpx before migration: version: {:?}", StorageVersion::get::<Pallet<T>>());
+			log::info!("slpx before migration: v0 count: {}", v0::OrderQueue::<T>::get().len());
+
+			Ok(Vec::new())
+		}
+
+		#[cfg(feature = "try-runtime")]
+		fn post_upgrade(_: Vec<u8>) -> Result<(), sp_runtime::DispatchError> {
+			log::info!("slpx after migration: version: {:?}", StorageVersion::get::<Pallet<T>>());
+			log::info!("slpx after migration: v1 count: {}", OrderQueue::<T>::get().len());
+
+			Ok(())
+		}
+	}
+}
+
+pub fn migrate_to_v1<T: Config>() -> Weight {
+	let mut weight: Weight = Weight::zero();
+
+	let old_orders = v0::OrderQueue::<T>::get();
+
+	let mut new_orders: BoundedVec<_, ConstU32<1000>> = BoundedVec::default();
+	for old_order in old_orders.into_iter() {
+		new_orders
+			.try_push(Order {
+				source_chain_caller: old_order.source_chain_caller,
+				bifrost_chain_caller: old_order.bifrost_chain_caller,
+				derivative_account: old_order.derivative_account,
+				create_block_number: old_order.create_block_number,
+				currency_id: old_order.currency_id,
+				currency_amount: old_order.currency_amount,
+				order_type: old_order.order_type,
+				remark: old_order.remark,
+				target_chain: old_order.target_chain,
+				// default to 0
+				channel_id: 0u32,
+			})
+			.expect("BoundedVec should not overflow");
+		weight = weight.saturating_add(T::DbWeight::get().reads_writes(0, 1));
+	}
+
+	OrderQueue::<T>::put(new_orders);
+	weight = weight.saturating_add(T::DbWeight::get().writes(1));
+
+	v0::OrderQueue::<T>::kill();
+	weight = weight.saturating_add(T::DbWeight::get().writes(1));
+
+	weight
 }

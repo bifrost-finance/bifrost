@@ -1885,7 +1885,7 @@ pub mod migrations {
 	use super::*;
 
 	/// Unreleased migrations. Add new ones here:
-	pub type Unreleased = ();
+	pub type Unreleased = (bifrost_slpx::migration::v1::MigrateToV1<Runtime>,);
 }
 
 /// Executive: handles dispatch to the various modules.
