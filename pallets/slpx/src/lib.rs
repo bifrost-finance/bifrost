@@ -445,7 +445,6 @@ pub mod pallet {
 			currency_id: CurrencyIdOf<T>,
 			target_chain: TargetChain<AccountIdOf<T>>,
 			remark: BoundedVec<u8, ConstU32<32>>,
-			channel_id: Option<u32>,
 		) -> DispatchResultWithPostInfo {
 			let (source_chain_caller, derivative_account, bifrost_chain_caller) =
 				Self::ensure_singer_on_whitelist(origin.clone(), evm_caller, &target_chain)?;
