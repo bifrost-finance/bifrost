@@ -1934,7 +1934,7 @@ pub mod pallet {
 
 			match token_id {
 				Some(token_id) => {
-					let vtoken_amount = Self::get_vtoken_amount(token_id, 1u128)?;
+					let vtoken_amount = Self::get_vtoken_amount(token_id, 1000u128)?;
 					result.push((token_id, vtoken_amount));
 				},
 				None =>
