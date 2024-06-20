@@ -93,10 +93,6 @@ pub fn bifrost_polkadot_genesis(
 		"parachainInfo": {
 			"parachainId": id
 		},
-		"collatorSelection": {
-			"invulnerables": invulnerables.iter().cloned().map(|(acc, _)| acc).collect::<Vec<_>>(),
-			"candidacyBond": 0
-		},
 		"session": {
 			"keys": invulnerables
 				.iter()
