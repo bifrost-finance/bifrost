@@ -44,6 +44,8 @@ use bifrost_stable_pool_rpc::{StablePoolRpc, StablePoolRpcApiServer};
 use bifrost_stable_pool_rpc_runtime_api::StablePoolRuntimeApi;
 use bifrost_ve_minting_rpc::{VeMintingRpc, VeMintingRpcApiServer};
 use bifrost_ve_minting_rpc_runtime_api::VeMintingRuntimeApi;
+use bifrost_vtoken_minting_rpc::{VtokenMintingRpc, VtokenMintingRpcApiServer};
+use bifrost_vtoken_minting_rpc_runtime_api::VtokenMintingRuntimeApi;
 use lend_market_rpc::{LendMarket, LendMarketApiServer};
 use lend_market_rpc_runtime_api::LendMarketApi;
 use pallet_transaction_payment_rpc::{TransactionPayment, TransactionPaymentApiServer};
@@ -89,6 +91,7 @@ where
 	C::Api: SalpRuntimeApi<Block, ParaId, AccountId>,
 	C::Api: StablePoolRuntimeApi<Block>,
 	C::Api: LendMarketApi<Block, AccountId, Balance>,
+	C::Api: VtokenMintingRuntimeApi<Block, CurrencyId>,
 	C::Api: ZenlinkProtocolRuntimeApi<Block, AccountId, AssetId>,
 	C::Api:
 		zenlink_stable_amm_runtime_api::StableAmmApi<Block, CurrencyId, Balance, AccountId, PoolId>,
@@ -107,7 +110,8 @@ where
 	module.merge(ZenlinkProtocol::new(client.clone()).into_rpc())?;
 	module.merge(StableAmm::new(client.clone()).into_rpc())?;
 	module.merge(StablePoolRpc::new(client.clone()).into_rpc())?;
-	module.merge(LendMarket::new(client).into_rpc())?;
+	module.merge(LendMarket::new(client.clone()).into_rpc())?;
+	module.merge(VtokenMintingRpc::new(client).into_rpc())?;
 
 	Ok(module)
 }
@@ -131,6 +135,7 @@ where
 	C::Api: SalpRuntimeApi<Block, ParaId, AccountId>,
 	C::Api: VeMintingRuntimeApi<Block, AccountId>,
 	C::Api: LendMarketApi<Block, AccountId, Balance>,
+	C::Api: VtokenMintingRuntimeApi<Block, CurrencyId>,
 	C::Api: ZenlinkProtocolRuntimeApi<Block, AccountId, AssetId>,
 	C::Api: StablePoolRuntimeApi<Block>,
 	C::Api: BlockBuilder<Block>,
@@ -148,7 +153,8 @@ where
 	module.merge(VeMintingRpc::new(client.clone()).into_rpc())?;
 	module.merge(ZenlinkProtocol::new(client.clone()).into_rpc())?;
 	module.merge(StablePoolRpc::new(client.clone()).into_rpc())?;
-	module.merge(LendMarket::new(client).into_rpc())?;
+	module.merge(LendMarket::new(client.clone()).into_rpc())?;
+	module.merge(VtokenMintingRpc::new(client).into_rpc())?;
 
 	Ok(module)
 }

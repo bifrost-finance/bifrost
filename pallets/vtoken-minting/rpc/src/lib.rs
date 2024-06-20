@@ -18,8 +18,7 @@
 
 use std::{marker::PhantomData, sync::Arc};
 
-use bifrost_primitives::Balance;
-pub use bifrost_vtoken_minting_rpc_runtime_api::{self as runtime_api, VtokenMintingRuntimeApi};
+pub use bifrost_vtoken_minting_rpc_runtime_api::VtokenMintingRuntimeApi;
 use jsonrpsee::{
 	core::{async_trait, RpcResult},
 	proc_macros::rpc,
@@ -30,11 +29,7 @@ use sp_api::ProvideRuntimeApi;
 use sp_blockchain::HeaderBackend;
 use sp_core::U256;
 use sp_rpc::number::NumberOrHex;
-use sp_runtime::{
-	generic::BlockId,
-	traits::{Block as BlockT, BlockIdTo},
-	SaturatedConversion,
-};
+use sp_runtime::traits::Block as BlockT;
 
 #[rpc(client, server)]
 pub trait VtokenMintingRpcApi<CurrencyId, BlockHash> {
@@ -53,23 +48,19 @@ pub struct VtokenMintingRpc<C, Block> {
 	_marker: PhantomData<Block>,
 }
 
-impl<C, Block> VtokenMintingRpc<C, Block>
-where
-	Block: BlockT,
-	C: BlockIdTo<Block>,
-{
+impl<C, Block> VtokenMintingRpc<C, Block> {
 	pub fn new(client: Arc<C>) -> Self {
 		Self { client, _marker: PhantomData }
 	}
 }
 
 #[async_trait]
-impl<C, Block, CurrencyId> VtokenMintingRpcApiServer<<Block as BlockT>::Hash, AccountId>
+impl<C, Block, CurrencyId> VtokenMintingRpcApiServer<CurrencyId, <Block as BlockT>::Hash>
 	for VtokenMintingRpc<C, Block>
 where
 	Block: BlockT,
-	C: Send + Sync + 'static + ProvideRuntimeApi<Block> + HeaderBackend<Block> + BlockIdTo<Block>,
-	C::Api: VeMintingRuntimeApi<Block, AccountId>,
+	C: Send + Sync + 'static + ProvideRuntimeApi<Block> + HeaderBackend<Block>,
+	C::Api: VtokenMintingRuntimeApi<Block, CurrencyId>,
 	CurrencyId: Codec,
 {
 	fn get_exchange_rate(
@@ -77,16 +68,19 @@ where
 		token_id: Option<CurrencyId>,
 		at: Option<<Block as BlockT>::Hash>,
 	) -> RpcResult<Vec<(CurrencyId, NumberOrHex)>> {
-		let lm_rpc_api = self.client.runtime_api();
+		let api = self.client.runtime_api();
 		let at = at.unwrap_or_else(|| self.client.info().best_hash);
 
-		let rs: Result<U256, _> = lm_rpc_api.get_exchange_rate(at, token_id, max_epoch);
+		let rs: Result<Vec<(CurrencyId, U256)>, _> = api.get_exchange_rate(at, token_id);
 
 		match rs {
-			Ok(epoch) => Ok(NumberOrHex::Hex(epoch.into())),
+			Ok(data) => Ok(data
+				.into_iter()
+				.map(|(token, rate)| (token, NumberOrHex::Hex(rate.into())))
+				.collect()),
 			Err(e) => Err(CallError::Custom(ErrorObject::owned(
 				ErrorCode::InternalError.code(),
-				"Failed to get exchange rate.",
+				"Failed to get vtoken exchange rate.",
 				Some(format!("{:?}", e)),
 			))),
 		}
