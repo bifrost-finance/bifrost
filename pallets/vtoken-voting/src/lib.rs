@@ -30,7 +30,7 @@ mod tests;
 mod call;
 mod vote;
 
-pub mod migration;
+// pub mod migration;
 pub mod weights;
 
 use crate::vote::{Casting, Tally, Voting};
@@ -61,7 +61,7 @@ use sp_runtime::{
 };
 use sp_std::prelude::*;
 pub use weights::WeightInfo;
-use xcm::v3::{prelude::*, Weight as XcmWeight};
+use xcm::v4::{prelude::*, Weight as XcmWeight};
 
 const CONVICTION_VOTING_ID: LockIdentifier = *b"vtvoting";
 
@@ -109,7 +109,7 @@ pub mod pallet {
 
 		type ResponseOrigin: EnsureOrigin<
 			<Self as frame_system::Config>::RuntimeOrigin,
-			Success = MultiLocation,
+			Success = xcm::v4::Location,
 		>;
 
 		type XcmDestWeightAndFee: XcmDestWeightAndFeeHandler<CurrencyIdOf<Self>, BalanceOf<Self>>;
@@ -194,7 +194,7 @@ pub mod pallet {
 			success: bool,
 		},
 		ResponseReceived {
-			responder: MultiLocation,
+			responder: xcm::v4::Location,
 			query_id: QueryId,
 			response: Response,
 		},
@@ -1010,7 +1010,7 @@ pub mod pallet {
 			extra_fee: BalanceOf<T>,
 			f: impl FnOnce(QueryId) -> (),
 		) -> DispatchResult {
-			let responder = MultiLocation::parent();
+			let responder = xcm::v4::Location::parent();
 			let now = frame_system::Pallet::<T>::block_number();
 			let timeout = now.saturating_add(T::QueryTimeout::get());
 			let notify_runtime_call = <T as Config>::RuntimeCall::from(notify_call);
@@ -1019,7 +1019,7 @@ pub mod pallet {
 				responder,
 				notify_runtime_call,
 				timeout,
-				Here,
+				xcm::v4::Junctions::Here,
 			);
 			f(query_id);
 
@@ -1032,8 +1032,8 @@ pub mod pallet {
 				query_id,
 			)?;
 
-			send_xcm::<T::XcmRouter>(Parent.into(), xcm_message)
-				.map_err(|_| Error::<T>::XcmFailure)?;
+			xcm::v4::send_xcm::<T::XcmRouter>(Parent.into(), xcm_message)
+				.map_err(|_e| Error::<T>::XcmFailure)?;
 
 			Ok(())
 		}
@@ -1046,11 +1046,11 @@ pub mod pallet {
 			query_id: QueryId,
 		) -> Result<Xcm<()>, Error<T>> {
 			let para_id = T::ParachainId::get().into();
-			let asset = MultiAsset {
-				id: Concrete(MultiLocation::here()),
+			let asset = Asset {
+				id: AssetId(Location::here()),
 				fun: Fungible(UniqueSaturatedInto::<u128>::unique_saturated_into(extra_fee)),
 			};
-			let xcm_message = vec![
+			let xcm_message = sp_std::vec![
 				WithdrawAsset(asset.clone().into()),
 				BuyExecution { fees: asset, weight_limit: Unlimited },
 				Transact {
@@ -1059,14 +1059,14 @@ pub mod pallet {
 					call: call.into(),
 				},
 				ReportTransactStatus(QueryResponseInfo {
-					destination: MultiLocation::from(X1(Parachain(para_id))),
+					destination: Location::from(Parachain(para_id)),
 					query_id,
 					max_weight: notify_call_weight,
 				}),
 				RefundSurplus,
 				DepositAsset {
 					assets: All.into(),
-					beneficiary: MultiLocation { parents: 0, interior: X1(Parachain(para_id)) },
+					beneficiary: Location::new(0, [Parachain(para_id)]),
 				},
 			];
 
@@ -1154,9 +1154,10 @@ pub mod pallet {
 
 		fn ensure_xcm_response_or_governance(
 			origin: OriginFor<T>,
-		) -> Result<MultiLocation, DispatchError> {
-			let responder = T::ResponseOrigin::ensure_origin(origin.clone())
-				.or_else(|_| T::ControlOrigin::ensure_origin(origin).map(|_| Here.into()))?;
+		) -> Result<xcm::v4::Location, DispatchError> {
+			let responder = T::ResponseOrigin::ensure_origin(origin.clone()).or_else(|_| {
+				T::ControlOrigin::ensure_origin(origin).map(|_| xcm::v4::Junctions::Here.into())
+			})?;
 			Ok(responder)
 		}
 

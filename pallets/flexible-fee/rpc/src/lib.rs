@@ -23,7 +23,7 @@ use bifrost_primitives::{Balance, CurrencyId};
 use jsonrpsee::{
 	core::{async_trait, RpcResult},
 	proc_macros::rpc,
-	types::error::{CallError, ErrorObject},
+	types::error::ErrorObject,
 };
 pub use pallet_transaction_payment_rpc_runtime_api::TransactionPaymentApi as TransactionPaymentRuntimeApi;
 use parity_scale_codec::{Codec, Decode};
@@ -100,19 +100,19 @@ where
 		let encoded_len = encoded_xt.len() as u32;
 
 		let uxt: Block::Extrinsic = Decode::decode(&mut &*encoded_xt).map_err(|e| {
-			CallError::Custom(ErrorObject::owned(
+			ErrorObject::owned(
 				Error::DecodeError.into(),
 				"Unable to query fee details.",
 				Some(format!("{:?}", e)),
-			))
+			)
 		})?;
 
 		let fee_details = api.query_fee_details(at, uxt.clone(), encoded_len).map_err(|e| {
-			CallError::Custom(ErrorObject::owned(
+			ErrorObject::owned(
 				Error::RuntimeError.into(),
 				"Unable to query fee details.",
 				Some(format!("{:?}", e)),
-			))
+			)
 		})?;
 
 		let total_inclusion_fee: Balance = {
@@ -131,22 +131,21 @@ where
 
 		let try_into_rpc_balance = |value: Balance| {
 			value.try_into().map_err(|e| {
-				CallError::Custom(ErrorObject::owned(
+				ErrorObject::owned(
 					Error::RuntimeError.into(),
 					format!("{} doesn't fit in NumberOrHex representation", value),
 					Some(format!("{:?}", e)),
-				))
+				)
 			})
 		};
 
 		match rs {
 			Ok((id, val)) => try_into_rpc_balance(val).map(|value| (id, value)),
-			Err(e) => Err(CallError::Custom(ErrorObject::owned(
+			Err(e) => Err(ErrorObject::owned(
 				Error::RuntimeError.into(),
 				"Unable to query fee token and amount.",
 				Some(format!("{:?}", e)),
-			))),
+			)),
 		}
-		.map_err(|e| jsonrpsee::core::Error::Call(e))
 	}
 }

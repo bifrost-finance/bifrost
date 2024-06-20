@@ -235,7 +235,7 @@ pub trait QueryResponseManager<QueryId, AccountId, BlockNumber, RuntimeCall> {
 	// False is returned.
 	fn get_query_response_record(query_id: QueryId) -> bool;
 	fn create_query_record(
-		responder: &AccountId,
+		responder: AccountId,
 		call_back: Option<RuntimeCall>,
 		timeout: BlockNumber,
 	) -> u64;

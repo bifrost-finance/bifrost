@@ -40,10 +40,7 @@ use std::{
 	collections::HashMap,
 	hash::{Hash, Hasher},
 };
-use xcm::{
-	prelude::*,
-	v3::{MultiLocation, Weight},
-};
+use xcm::{prelude::*, v3::Weight};
 use xcm_builder::{FixedWeightBounds, FrameTransactionalProcessor};
 use xcm_executor::XcmExecutor;
 
@@ -133,7 +130,7 @@ parameter_types! {
 	// One XCM operation is 200_000_000 XcmWeight, cross-chain transfer ~= 2x of transfer = 3_000_000_000
 	pub UnitWeightCost: Weight = Weight::from_parts(200_000_000, 0);
 	pub const MaxInstructions: u32 = 100;
-	pub UniversalLocation: InteriorMultiLocation = X1(Parachain(2001));
+	pub UniversalLocation: InteriorLocation = Parachain(2001).into();
 }
 
 pub struct XcmConfig;
@@ -166,16 +163,16 @@ impl xcm_executor::Config for XcmConfig {
 }
 
 parameter_type_with_key! {
-	pub ParachainMinFee: |_location: MultiLocation| -> Option<u128> {
+	pub ParachainMinFee: |_location: xcm::v4::Location| -> Option<u128> {
 		Some(u128::MAX)
 	};
 }
 
 parameter_types! {
-	pub SelfRelativeLocation: MultiLocation = MultiLocation::here();
+	pub SelfRelativeLocation: xcm::v4::Location = xcm::v4::Location::here();
 	// pub const BaseXcmWeight: Weight = Weight::from_ref_time(1000_000_000u64);
 	pub const MaxAssetsForTransfer: usize = 2;
-	// pub UniversalLocation: InteriorMultiLocation = X1(Parachain(2001));
+	// pub UniversalLocation: InteriorLocation = Parachain(2001).into();
 }
 
 impl orml_xtokens::Config for Test {
@@ -183,7 +180,7 @@ impl orml_xtokens::Config for Test {
 	type Balance = Balance;
 	type CurrencyId = CurrencyId;
 	type CurrencyIdConvert = ();
-	type AccountIdToMultiLocation = ();
+	type AccountIdToLocation = ();
 	type UniversalLocation = UniversalLocation;
 	type SelfLocation = SelfRelativeLocation;
 	type XcmExecutor = XcmExecutor<XcmConfig>;
@@ -191,8 +188,10 @@ impl orml_xtokens::Config for Test {
 	type BaseXcmWeight = ();
 	type MaxAssetsForTransfer = MaxAssetsForTransfer;
 	type MinXcmFee = ParachainMinFee;
-	type MultiLocationsFilter = Everything;
+	type LocationsFilter = Everything;
 	type ReserveProvider = RelativeReserveProvider;
+	type RateLimiter = ();
+	type RateLimiterId = ();
 }
 
 parameter_types! {
@@ -210,7 +209,6 @@ impl pallet_balances::Config for Test {
 	type ReserveIdentifier = [u8; 8];
 	type WeightInfo = ();
 	type FreezeIdentifier = ();
-	type MaxHolds = ConstU32<0>;
 	type MaxFreezes = ConstU32<0>;
 	type RuntimeHoldReason = RuntimeHoldReason;
 	type RuntimeFreezeReason = RuntimeFreezeReason;
@@ -449,11 +447,6 @@ impl pallet_prices::Config for Test {
 	type Assets = Currencies;
 	type CurrencyIdConvert = AssetIdMaps<Test>;
 	type WeightInfo = ();
-}
-
-#[cfg(feature = "runtime-benchmarks")]
-parameter_types! {
-	pub ReachableDest: Option<MultiLocation> = Some(Parent.into());
 }
 
 impl pallet_xcm::Config for Test {

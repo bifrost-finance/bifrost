@@ -26,14 +26,7 @@ use frame_support::ensure;
 use parity_scale_codec::Encode;
 use sp_core::Get;
 use sp_std::prelude::*;
-use xcm::{
-	opaque::v3::{
-		Junction::{AccountId32, Parachain},
-		Junctions::X1,
-		MultiLocation,
-	},
-	v3::prelude::*,
-};
+use xcm::v3::{prelude::*, MultiLocation};
 
 // Some untilities.
 impl<T: Config> Pallet<T> {
@@ -322,20 +315,25 @@ impl<T: Config> Pallet<T> {
 		H160::from_slice(sub_id.as_slice())
 	}
 
-	pub fn get_para_multilocation_by_currency_id(
+	pub fn convert_currency_to_dest_location(
 		currency_id: CurrencyId,
-	) -> Result<MultiLocation, Error<T>> {
+	) -> Result<xcm::v4::Location, Error<T>> {
 		match currency_id {
-			KSM | DOT => Ok(MultiLocation::parent()),
-			MOVR =>
-				Ok(MultiLocation { parents: 1, interior: X1(Parachain(parachains::moonriver::ID)) }),
-			GLMR =>
-				Ok(MultiLocation { parents: 1, interior: X1(Parachain(parachains::moonbeam::ID)) }),
+			KSM | DOT => Ok(xcm::v4::Location::parent()),
+			MOVR => Ok(xcm::v4::Location::new(
+				1,
+				[xcm::v4::prelude::Parachain(parachains::moonriver::ID)],
+			)),
+			GLMR => Ok(xcm::v4::Location::new(
+				1,
+				[xcm::v4::prelude::Parachain(parachains::moonbeam::ID)],
+			)),
 			ASTR =>
-				Ok(MultiLocation { parents: 1, interior: X1(Parachain(parachains::astar::ID)) }),
+				Ok(xcm::v4::Location::new(1, [xcm::v4::prelude::Parachain(parachains::astar::ID)])),
 			MANTA =>
-				Ok(MultiLocation { parents: 1, interior: X1(Parachain(parachains::manta::ID)) }),
-			PHA => Ok(MultiLocation { parents: 1, interior: X1(Parachain(parachains::phala::ID)) }),
+				Ok(xcm::v4::Location::new(1, [xcm::v4::prelude::Parachain(parachains::manta::ID)])),
+			PHA =>
+				Ok(xcm::v4::Location::new(1, [xcm::v4::prelude::Parachain(parachains::phala::ID)])),
 			_ => Err(Error::<T>::NotSupportedCurrencyId),
 		}
 	}
@@ -364,18 +362,17 @@ impl<T: Config> Pallet<T> {
 		}
 	}
 
-	pub fn get_currency_local_multilocation(currency_id: CurrencyId) -> MultiLocation {
+	pub fn convert_currency_to_remote_fee_location(currency_id: CurrencyId) -> xcm::v4::Location {
 		match currency_id {
-			KSM | DOT | PHA | MANTA | ASTR => MultiLocation::here(),
-			MOVR => MultiLocation {
-				parents: 0,
-				interior: X1(PalletInstance(parachains::moonriver::PALLET_ID)),
-			},
-			GLMR => MultiLocation {
-				parents: 0,
-				interior: X1(PalletInstance(parachains::moonbeam::PALLET_ID)),
-			},
-			_ => MultiLocation::here(),
+			MOVR => xcm::v4::Location::new(
+				0,
+				[xcm::v4::prelude::PalletInstance(parachains::moonriver::PALLET_ID)],
+			),
+			GLMR => xcm::v4::Location::new(
+				0,
+				[xcm::v4::prelude::PalletInstance(parachains::moonbeam::PALLET_ID)],
+			),
+			_ => xcm::v4::Location::here(),
 		}
 	}
 }

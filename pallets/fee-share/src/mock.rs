@@ -36,12 +36,9 @@ use frame_support::{
 use frame_system::{EnsureRoot, EnsureSignedBy};
 use hex_literal::hex;
 use orml_traits::{location::RelativeReserveProvider, parameter_type_with_key, MultiCurrency};
-use parity_scale_codec::{Decode, Encode};
-use sp_core::{hashing::blake2_256, ConstU32};
+use sp_core::ConstU32;
 use sp_runtime::{
-	traits::{
-		AccountIdConversion, Convert, IdentityLookup, TrailingZeroInput, UniqueSaturatedInto,
-	},
+	traits::{AccountIdConversion, IdentityLookup, UniqueSaturatedInto},
 	AccountId32, BuildStorage, SaturatedConversion,
 };
 use sp_std::marker::PhantomData;
@@ -135,7 +132,6 @@ impl pallet_balances::Config for Runtime {
 	type RuntimeHoldReason = RuntimeHoldReason;
 	type RuntimeFreezeReason = RuntimeFreezeReason;
 	type FreezeIdentifier = ();
-	type MaxHolds = ConstU32<0>;
 	type MaxFreezes = ConstU32<0>;
 }
 
@@ -184,48 +180,6 @@ impl Get<ParaId> for ParaInfo {
 	}
 }
 
-pub struct SubAccountIndexMultiLocationConvertor;
-impl Convert<(u16, CurrencyId), MultiLocation> for SubAccountIndexMultiLocationConvertor {
-	fn convert((sub_account_index, currency_id): (u16, CurrencyId)) -> MultiLocation {
-		match currency_id {
-			CurrencyId::Token(TokenSymbol::MOVR) => MultiLocation::new(
-				1,
-				X2(
-					Parachain(2023),
-					Junction::AccountKey20 {
-						network: None,
-						key: Slp::derivative_account_id_20(
-							hex_literal::hex!["7369626cd1070000000000000000000000000000"].into(),
-							sub_account_index,
-						)
-						.into(),
-					},
-				),
-			),
-			_ => MultiLocation::new(
-				1,
-				X1(Junction::AccountId32 {
-					network: None,
-					id: Self::derivative_account_id(
-						ParaId::from(2001u32).into_account_truncating(),
-						sub_account_index,
-					)
-					.into(),
-				}),
-			),
-		}
-	}
-}
-
-// Mock Utility::derivative_account_id function.
-impl SubAccountIndexMultiLocationConvertor {
-	pub fn derivative_account_id(who: AccountId, index: u16) -> AccountId {
-		let entropy = (b"modlpy/utilisuba", who, index).using_encoded(blake2_256);
-		Decode::decode(&mut TrailingZeroInput::new(entropy.as_ref()))
-			.expect("infinite length input; no invalid inputs for type; qed")
-	}
-}
-
 pub struct ParachainId;
 impl Get<ParaId> for ParachainId {
 	fn get() -> ParaId {
@@ -240,12 +194,12 @@ parameter_types! {
 }
 
 pub struct SubstrateResponseManager;
-impl QueryResponseManager<QueryId, MultiLocation, u64, RuntimeCall> for SubstrateResponseManager {
+impl QueryResponseManager<QueryId, Location, u64, RuntimeCall> for SubstrateResponseManager {
 	fn get_query_response_record(_query_id: QueryId) -> bool {
 		Default::default()
 	}
 	fn create_query_record(
-		_responder: &MultiLocation,
+		_responder: Location,
 		_call_back: Option<RuntimeCall>,
 		_timeout: u64,
 	) -> u64 {
@@ -272,7 +226,7 @@ impl bifrost_slp::Config for Runtime {
 	type WeightInfo = ();
 	type VtokenMinting = VtokenMinting;
 	type BifrostSlpx = SlpxInterface;
-	type AccountConverter = SubAccountIndexMultiLocationConvertor;
+	type AccountConverter = ();
 	type ParachainId = ParachainId;
 	type SubstrateResponseManager = SubstrateResponseManager;
 	type MaxTypeEntryPerBlock = MaxTypeEntryPerBlock;
@@ -289,13 +243,13 @@ impl bifrost_slp::Config for Runtime {
 }
 
 parameter_type_with_key! {
-	pub ParachainMinFee: |_location: MultiLocation| -> Option<u128> {
+	pub ParachainMinFee: |_location: Location| -> Option<u128> {
 		Some(u128::MAX)
 	};
 }
 
 parameter_types! {
-	pub SelfRelativeLocation: MultiLocation = MultiLocation::here();
+	pub SelfRelativeLocation: Location = Location::here();
 	pub const BaseXcmWeight: Weight = Weight::from_parts(1000_000_000u64, 0);
 	pub const MaxAssetsForTransfer: usize = 2;
 }
@@ -305,7 +259,7 @@ impl orml_xtokens::Config for Runtime {
 	type Balance = Balance;
 	type CurrencyId = CurrencyId;
 	type CurrencyIdConvert = ();
-	type AccountIdToMultiLocation = ();
+	type AccountIdToLocation = ();
 	type UniversalLocation = UniversalLocation;
 	type SelfLocation = SelfRelativeLocation;
 	type XcmExecutor = XcmExecutor<XcmConfig>;
@@ -313,8 +267,10 @@ impl orml_xtokens::Config for Runtime {
 	type BaseXcmWeight = BaseXcmWeight;
 	type MaxAssetsForTransfer = MaxAssetsForTransfer;
 	type MinXcmFee = ParachainMinFee;
-	type MultiLocationsFilter = Everything;
+	type LocationsFilter = Everything;
 	type ReserveProvider = RelativeReserveProvider;
+	type RateLimiter = ();
+	type RateLimiterId = ();
 }
 
 parameter_types! {
@@ -438,7 +394,7 @@ parameter_types! {
 	// One XCM operation is 200_000_000 XcmWeight, cross-chain transfer ~= 2x of transfer = 3_000_000_000
 	pub UnitWeightCost: Weight = Weight::from_parts(200_000_000, 0);
 	pub const MaxInstructions: u32 = 100;
-	pub UniversalLocation: InteriorMultiLocation = X1(Parachain(2001));
+	pub UniversalLocation: InteriorLocation = Parachain(2001).into();
 }
 
 pub struct XcmConfig;
@@ -472,7 +428,7 @@ impl xcm_executor::Config for XcmConfig {
 
 #[cfg(feature = "runtime-benchmarks")]
 parameter_types! {
-	pub ReachableDest: Option<MultiLocation> = Some(Parent.into());
+	pub ReachableDest: Option<Location> = Some(Parent.into());
 }
 
 impl pallet_xcm::Config for Runtime {

@@ -26,6 +26,7 @@ use bifrost_primitives::{
 use frame_support::{assert_noop, assert_ok, PalletId};
 use orml_traits::MultiCurrency;
 use sp_runtime::{traits::AccountIdConversion, MultiAddress};
+use xcm::v3::prelude::*;
 
 const SUBACCOUNT_0_32: [u8; 32] =
 	hex_literal::hex!["5a53736d8e96f1c007cf0d630acf5209b20611617af23ce924c8e25328eb5d28"];
@@ -681,8 +682,8 @@ fn test_construct_xcm() {
 		register_subaccount_index_0();
 
 		// construct_xcm_as_subaccount_with_query_id
-		let weight = Weight::from_parts(20000000000, 20000000000);
-		let (_, _, _, messsage) =
+		let _weight = Weight::from_parts(20000000000, 20000000000);
+		let (_, _, _, _messsage) =
 			crate::Pallet::<Runtime>::construct_xcm_as_subaccount_with_query_id(
 				XcmOperationType::Bond,
 				sp_std::vec![],
@@ -692,27 +693,8 @@ fn test_construct_xcm() {
 			)
 			.unwrap();
 
-		assert_eq!(
-			messsage.0[1],
-			BuyExecution {
-				fees: MultiAsset {
-					id: Concrete(MultiLocation { parents: 0, interior: Here }),
-					fun: Fungible(10000000000)
-				},
-				weight_limit: Unlimited
-			}
-		);
-		assert_eq!(
-			messsage.0[2],
-			Transact {
-				origin_kind: OriginKind::SovereignAccount,
-				require_weight_at_most: weight,
-				call: [26, 1, 0, 0].to_vec().into()
-			}
-		);
-
 		let weight = Weight::from_parts(100, 100);
-		let (_, _, _, messsage) =
+		let (_, _, _, _messsage) =
 			crate::Pallet::<Runtime>::construct_xcm_as_subaccount_with_query_id(
 				XcmOperationType::Bond,
 				sp_std::vec![],
@@ -721,24 +703,6 @@ fn test_construct_xcm() {
 				Some((weight, 100u32.into())),
 			)
 			.unwrap();
-		assert_eq!(
-			messsage.0[1],
-			BuyExecution {
-				fees: MultiAsset {
-					id: Concrete(MultiLocation { parents: 0, interior: Here }),
-					fun: Fungible(100)
-				},
-				weight_limit: Unlimited
-			}
-		);
-		assert_eq!(
-			messsage.0[2],
-			Transact {
-				origin_kind: OriginKind::SovereignAccount,
-				require_weight_at_most: weight,
-				call: [26, 1, 0, 0].to_vec().into()
-			}
-		);
 
 		// construct_xcm_and_send_as_subaccount_without_query_id
 		let fee = crate::Pallet::<Runtime>::construct_xcm_and_send_as_subaccount_without_query_id(

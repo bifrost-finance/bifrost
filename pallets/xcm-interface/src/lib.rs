@@ -63,7 +63,7 @@ pub mod pallet {
 	use sp_runtime::{traits::Convert, DispatchError};
 	use sp_std::{convert::From, prelude::*, vec, vec::Vec};
 	use xcm::{
-		v3::{prelude::*, ExecuteXcm, Parent},
+		v4::{prelude::*, Asset, ExecuteXcm, Location},
 		DoubleEncoded, VersionedXcm,
 	};
 
@@ -92,8 +92,8 @@ pub mod pallet {
 		/// XCM executor.
 		type XcmExecutor: ExecuteXcm<<Self as frame_system::Config>::RuntimeCall>;
 
-		/// Convert `T::AccountId` to `MultiLocation`.
-		type AccountIdToMultiLocation: Convert<AccountIdOf<Self>, MultiLocation>;
+		/// Convert `T::AccountId` to `Location`.
+		type AccountIdToLocation: Convert<AccountIdOf<Self>, Location>;
 
 		/// Salp call encode
 		type SalpHelper: SalpHelper<
@@ -102,10 +102,10 @@ pub mod pallet {
 			BalanceOf<Self>,
 		>;
 
-		/// Convert MultiLocation to `T::CurrencyId`.
+		/// Convert Location to `T::CurrencyId`.
 		type CurrencyIdConvert: CurrencyIdMapping<
 			CurrencyIdOf<Self>,
-			MultiLocation,
+			xcm::v3::MultiLocation,
 			AssetMetadata<BalanceOf<Self>>,
 		>;
 
@@ -126,6 +126,8 @@ pub mod pallet {
 		XcmSendFailed,
 		OperationWeightAndFeeNotExist,
 		FailToConvert,
+		UnweighableMessage,
+		LocalExecutionIncomplete,
 	}
 
 	#[pallet::event]
@@ -219,13 +221,13 @@ pub mod pallet {
 				TryInto::<u128>::try_into(amount).map_err(|_| Error::<T>::FeeConvertFailed)?;
 
 			// get currency_id from asset_id
-			let asset_location = MultiLocation::new(
+			let asset_location = Location::new(
 				1,
-				X3(
+				[
 					Parachain(parachains::Statemine::ID),
 					PalletInstance(parachains::Statemine::PALLET_ID),
 					GeneralIndex(asset_id.into()),
-				),
+				],
 			);
 			let currency_id = T::CurrencyIdConvert::get_currency_id(asset_location)
 				.ok_or(Error::<T>::FailToConvert)?;
@@ -233,7 +235,7 @@ pub mod pallet {
 			// first, we need to withdraw the statemine asset from the user's account
 			T::MultiCurrency::withdraw(currency_id, &who, amount)?;
 
-			let dst_location = T::AccountIdToMultiLocation::convert(dest.clone());
+			let dst_location = T::AccountIdToLocation::convert(dest.clone());
 
 			let (dest_weight, xcm_fee) = Self::xcm_dest_weight_and_fee(
 				T::RelaychainCurrencyId::get(),
@@ -244,35 +246,30 @@ pub mod pallet {
 			let xcm_fee_u128 =
 				TryInto::<u128>::try_into(xcm_fee).map_err(|_| Error::<T>::FeeConvertFailed)?;
 
-			let mut assets = MultiAssets::new();
-			let statemine_asset = MultiAsset {
-				id: Concrete(MultiLocation::new(
+			let mut assets = Assets::new();
+			let statemine_asset = Asset {
+				id: AssetId(Location::new(
 					0,
-					X2(
+					[
 						PalletInstance(parachains::Statemine::PALLET_ID),
 						GeneralIndex(asset_id.into()),
-					),
+					],
 				)),
 				fun: Fungible(amount_u128),
 			};
-			let fee_asset = MultiAsset {
-				id: Concrete(MultiLocation::new(1, Junctions::Here)),
-				fun: Fungible(xcm_fee_u128),
-			};
+			let fee_asset =
+				Asset { id: AssetId(Location::new(1, Here)), fun: Fungible(xcm_fee_u128) };
 			assets.push(statemine_asset.clone());
 			assets.push(fee_asset.clone());
 			let msg = Xcm(vec![
 				WithdrawAsset(assets),
-				BuyExecution {
-					fees: fee_asset,
-					weight_limit: cumulus_primitives_core::Limited(dest_weight),
-				},
+				BuyExecution { fees: fee_asset, weight_limit: Limited(dest_weight) },
 				DepositAsset { assets: AllCounted(2).into(), beneficiary: dst_location },
 			]);
 
 			pallet_xcm::Pallet::<T>::send_xcm(
 				Here,
-				MultiLocation::new(1, X1(Parachain(parachains::Statemine::ID))),
+				Location::new(1, Parachain(parachains::Statemine::ID)),
 				msg,
 			)
 			.map_err(|_| Error::<T>::XcmExecutionFailed)?;
@@ -301,10 +298,10 @@ pub mod pallet {
 			let confirm_contribute_call = T::SalpHelper::confirm_contribute_call();
 			// Generate query_id
 			let query_id = pallet_xcm::Pallet::<T>::new_notify_query(
-				MultiLocation::parent(),
+				Location::parent(),
 				confirm_contribute_call,
 				T::CallBackTimeOut::get(),
-				Here,
+				xcm::v4::Junctions::Here,
 			);
 
 			// Bind query_id and contribution
@@ -313,7 +310,11 @@ pub mod pallet {
 			let (msg_id, msg) =
 				Self::build_ump_transact(query_id, contribute_call, dest_weight, xcm_fee)?;
 
-			let result = pallet_xcm::Pallet::<T>::send_xcm(Here, Parent, msg);
+			let result = pallet_xcm::Pallet::<T>::send_xcm(
+				xcm::v4::Junctions::Here,
+				xcm::v4::Parent,
+				xcm::v4::Xcm::try_from(msg).unwrap(),
+			);
 			ensure!(result.is_ok(), Error::<T>::XcmSendFailed);
 			Ok(msg_id)
 		}
@@ -354,14 +355,11 @@ pub mod pallet {
 			fee: BalanceOf<T>,
 		) -> Result<(MessageId, Xcm<()>), Error<T>> {
 			let sovereign_account: AccountIdOf<T> = T::ParachainSovereignAccount::get();
-			let sovereign_location: MultiLocation =
-				T::AccountIdToMultiLocation::convert(sovereign_account);
+			let sovereign_location: Location = T::AccountIdToLocation::convert(sovereign_account);
 			let fee_amount =
 				TryInto::<u128>::try_into(fee).map_err(|_| Error::<T>::FeeConvertFailed)?;
-			let asset: MultiAsset = MultiAsset {
-				id: Concrete(MultiLocation::here()),
-				fun: Fungibility::from(fee_amount),
-			};
+			let asset: Asset =
+				Asset { id: AssetId(Location::here()), fun: Fungibility::from(fee_amount) };
 			let message = Xcm(vec![
 				WithdrawAsset(asset.clone().into()),
 				BuyExecution { fees: asset, weight_limit: Unlimited },
@@ -371,9 +369,7 @@ pub mod pallet {
 					call,
 				},
 				ReportTransactStatus(QueryResponseInfo {
-					destination: MultiLocation::from(X1(Parachain(u32::from(
-						T::ParachainId::get(),
-					)))),
+					destination: Location::from([Parachain(u32::from(T::ParachainId::get()))]),
 					query_id,
 					max_weight: weight,
 				}),

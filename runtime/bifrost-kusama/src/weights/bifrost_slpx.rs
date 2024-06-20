@@ -127,6 +127,19 @@ impl<T: frame_system::Config> bifrost_slpx::WeightInfo for BifrostWeight<T> {
 			.saturating_add(T::DbWeight::get().reads(16))
 			.saturating_add(T::DbWeight::get().writes(8))
 	}
+	// Storage: `Slpx::WhitelistAccountId` (r:1 w:0)
+	// Proof: `Slpx::WhitelistAccountId` (`max_values`: None, `max_size`: Some(338), added: 2813, mode: `MaxEncodedLen`)
+	// Storage: `Slpx::OrderQueue` (r:1 w:1)
+	// Proof: `Slpx::OrderQueue` (`max_values`: Some(1), `max_size`: Some(203002), added: 203497, mode: `MaxEncodedLen`)
+	fn mint_with_channel_id() -> Weight {
+		// Proof Size summary in bytes:
+		//  Measured:  `81`
+		//  Estimated: `204487`
+		// Minimum execution time: 12_000 nanoseconds.
+		Weight::from_parts(13_000_000, 204487)
+			.saturating_add(T::DbWeight::get().reads(2))
+			.saturating_add(T::DbWeight::get().writes(1))
+	}
 	// Storage: Slpx WhitelistAccountId (r:1 w:0)
 	// Proof: Slpx WhitelistAccountId (max_values: None, max_size: Some(338), added: 2813, mode: MaxEncodedLen)
 	// Storage: Tokens Accounts (r:2 w:2)
