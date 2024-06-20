@@ -34,8 +34,8 @@ use bifrost_polkadot_runtime::{
 		ParachainMinFee, SelfRelativeLocation, UniversalLocation,
 	},
 	BifrostCurrencyIdConvert, BifrostTreasuryAccount, MaxLengthLimit, MaxRefundPerBlock,
-	MaxTypeEntryPerBlock, NativeCurrencyId, OnRefund, SelfParaChainId, Slpx,
-	SubAccountIndexMultiLocationConvertor, VtokenMinting, XcmInterface,
+	MaxTypeEntryPerBlock, NativeCurrencyId, SelfParaChainId, SubAccountIndexMultiLocationConvertor,
+	VtokenMinting, XcmInterface,
 };
 use bifrost_primitives::CurrencyId;
 use bifrost_slp::QueryResponseManager;
@@ -293,13 +293,11 @@ impl bifrost_slp::Config for Runtime {
 	type ControlOrigin = EnsureRoot<AccountId>;
 	type WeightInfo = ();
 	type VtokenMinting = VtokenMinting;
-	type BifrostSlpx = Slpx;
 	type AccountConverter = SubAccountIndexMultiLocationConvertor;
 	type ParachainId = SelfParaChainId;
 	type SubstrateResponseManager = SubstrateResponseManager;
 	type MaxTypeEntryPerBlock = MaxTypeEntryPerBlock;
 	type MaxRefundPerBlock = MaxRefundPerBlock;
-	type OnRefund = OnRefund;
 	type ParachainStaking = ();
 	type XcmTransfer = XTokens;
 	type MaxLengthLimit = MaxLengthLimit;

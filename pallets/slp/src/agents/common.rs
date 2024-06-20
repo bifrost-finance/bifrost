@@ -21,7 +21,7 @@ use crate::{
 		ParachainStakingLedgerUpdateEntry, ParachainStakingLedgerUpdateOperation, TIMEOUT_BLOCKS,
 	},
 	traits::QueryResponseManager,
-	vec, AccountIdOf, BalanceOf, BlockNumberFor, BoundedVec, Box, Config, CurrencyDelays,
+	vec, AccountIdOf, BalanceOf, BlockNumberFor, BoundedVec, Config, CurrencyDelays,
 	DelegationsOccupied, DelegatorLatestTuneRecord, DelegatorLedgerXcmUpdateQueue,
 	DelegatorLedgers, DelegatorNextIndex, DelegatorsIndex2Multilocation,
 	DelegatorsMultilocation2Index, Encode, Event, FeeSources, Ledger, LedgerUpdateEntry,
@@ -37,10 +37,7 @@ use sp_runtime::{
 	traits::{AccountIdConversion, CheckedAdd, UniqueSaturatedFrom, UniqueSaturatedInto},
 	DispatchResult, Saturating,
 };
-use xcm::{
-	v3::{prelude::*, MultiLocation},
-	VersionedLocation,
-};
+use xcm::v3::{prelude::*, MultiLocation};
 
 // Some common business functions for all agents
 impl<T: Config> Pallet<T> {
@@ -205,35 +202,6 @@ impl<T: Config> Pallet<T> {
 		T::MultiCurrency::deposit(depoist_currency, &beneficiary, charge_amount)?;
 
 		Ok(())
-	}
-
-	pub(crate) fn get_transfer_back_dest_and_beneficiary(
-		from: &MultiLocation,
-		to: &MultiLocation,
-		currency_id: CurrencyId,
-	) -> Result<(Box<VersionedLocation>, Box<VersionedLocation>), Error<T>> {
-		// Check if from is one of our delegators. If not, return error.
-		DelegatorsMultilocation2Index::<T>::get(currency_id, from)
-			.ok_or(Error::<T>::DelegatorNotExist)?;
-
-		// Make sure the receiving account is the Exit_account from vtoken-minting module.
-		let to_account_id = Self::multilocation_to_account(to)?;
-		let (_, exit_account) = T::VtokenMinting::get_entrance_and_exit_accounts();
-		ensure!(to_account_id == exit_account, Error::<T>::InvalidAccount);
-
-		// Prepare parameter dest and beneficiary.
-		let to_32: [u8; 32] = Self::multilocation_to_account_32(to)?;
-
-		let dest = Box::new(VersionedLocation::V3(Location::from([Parachain(
-			T::ParachainId::get().into(),
-		)])));
-
-		let beneficiary = Box::new(VersionedLocation::V3(Location::from([AccountId32 {
-			network: None,
-			id: to_32,
-		}])));
-
-		Ok((dest, beneficiary))
 	}
 
 	pub(crate) fn tune_vtoken_exchange_rate_without_update_ledger(

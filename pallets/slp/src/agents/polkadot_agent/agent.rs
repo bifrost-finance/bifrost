@@ -36,12 +36,13 @@ use bifrost_primitives::{
 use core::marker::PhantomData;
 use frame_support::{ensure, traits::Get};
 use frame_system::pallet_prelude::BlockNumberFor;
+use parity_scale_codec::Encode;
 use sp_runtime::{
 	traits::{CheckedAdd, CheckedSub, Convert, StaticLookup, UniqueSaturatedInto, Zero},
 	DispatchResult,
 };
 use sp_std::prelude::*;
-use xcm::{opaque::v3::MultiLocation, v3::prelude::*, VersionedAssets};
+use xcm::{opaque::v3::MultiLocation, v3::prelude::*, VersionedAssets, VersionedLocation};
 
 /// StakingAgent implementation for Kusama/Polkadot
 pub struct PolkadotAgent<T>(PhantomData<T>);
@@ -788,7 +789,7 @@ impl<T: Config>
 	fn transfer_back(
 		&self,
 		from: &MultiLocation,
-		to: &MultiLocation,
+		_to: &MultiLocation,
 		amount: BalanceOf<T>,
 		currency_id: CurrencyId,
 		weight_and_fee: Option<(Weight, BalanceOf<T>)>,
@@ -796,8 +797,22 @@ impl<T: Config>
 		// Ensure amount is greater than zero.
 		ensure!(!amount.is_zero(), Error::<T>::AmountZero);
 
-		let (dest, beneficiary) =
-			Pallet::<T>::get_transfer_back_dest_and_beneficiary(from, to, currency_id)?;
+		// Check if from is one of our delegators. If not, return error.
+		DelegatorsMultilocation2Index::<T>::get(currency_id, from)
+			.ok_or(Error::<T>::DelegatorNotExist)?;
+
+		// Make sure the receiving account is the Exit_account from vtoken-minting module.
+		let (entrance_account, _) = T::VtokenMinting::get_entrance_and_exit_accounts();
+
+		// Prepare parameter dest and beneficiary.
+		let dest = Box::new(VersionedLocation::V3(Location::from([Parachain(
+			T::ParachainId::get().into(),
+		)])));
+
+		let beneficiary = Box::new(VersionedLocation::V3(Location::from([AccountId32 {
+			network: None,
+			id: entrance_account.encode().try_into().map_err(|_| Error::<T>::FailToConvert)?,
+		}])));
 
 		// Prepare parameter assets.
 		let asset = MultiAsset {

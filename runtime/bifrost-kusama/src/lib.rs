@@ -1367,13 +1367,6 @@ impl QueryResponseManager<QueryId, Location, BlockNumber, RuntimeCall>
 	}
 }
 
-pub struct OnRefund;
-impl bifrost_slp::OnRefund<AccountId, CurrencyId, Balance> for OnRefund {
-	fn on_refund(token_id: CurrencyId, to: AccountId, token_amount: Balance) -> u64 {
-		SystemStaking::on_refund(token_id, to, token_amount).ref_time()
-	}
-}
-
 impl bifrost_slp::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type RuntimeOrigin = RuntimeOrigin;
@@ -1382,13 +1375,11 @@ impl bifrost_slp::Config for Runtime {
 	type ControlOrigin = EitherOfDiverse<TechAdminOrCouncil, LiquidStaking>;
 	type WeightInfo = weights::bifrost_slp::BifrostWeight<Runtime>;
 	type VtokenMinting = VtokenMinting;
-	type BifrostSlpx = Slpx;
 	type AccountConverter = SubAccountIndexMultiLocationConvertor;
 	type ParachainId = SelfParaChainId;
 	type SubstrateResponseManager = SubstrateResponseManager;
 	type MaxTypeEntryPerBlock = MaxTypeEntryPerBlock;
 	type MaxRefundPerBlock = MaxRefundPerBlock;
-	type OnRefund = OnRefund;
 	type ParachainStaking = ParachainStaking;
 	type XcmTransfer = XTokens;
 	type MaxLengthLimit = MaxLengthLimit;
