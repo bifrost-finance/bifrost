@@ -22,7 +22,7 @@ pub use bifrost_vtoken_minting_rpc_runtime_api::VtokenMintingRuntimeApi;
 use jsonrpsee::{
 	core::{async_trait, RpcResult},
 	proc_macros::rpc,
-	types::error::{CallError, ErrorCode, ErrorObject},
+	types::error::{ErrorCode, ErrorObject},
 };
 use parity_scale_codec::Codec;
 use sp_api::ProvideRuntimeApi;
@@ -78,12 +78,11 @@ where
 				.into_iter()
 				.map(|(token, rate)| (token, NumberOrHex::Hex(rate.into())))
 				.collect()),
-			Err(e) => Err(CallError::Custom(ErrorObject::owned(
+			Err(e) => Err(ErrorObject::owned(
 				ErrorCode::InternalError.code(),
-				"Failed to get vtoken exchange rate.",
+				"Failed to get find_block_epoch.",
 				Some(format!("{:?}", e)),
-			))),
+			)),
 		}
-		.map_err(|e| jsonrpsee::core::Error::Call(e))
 	}
 }
