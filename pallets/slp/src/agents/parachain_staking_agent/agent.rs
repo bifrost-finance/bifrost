@@ -40,7 +40,7 @@ use bifrost_primitives::{
 use core::marker::PhantomData;
 use frame_support::{ensure, traits::Get};
 use orml_traits::MultiCurrency;
-use parity_scale_codec::alloc::collections::BTreeMap;
+use parity_scale_codec::{alloc::collections::BTreeMap, Encode};
 use sp_arithmetic::Percent;
 use sp_runtime::{
 	traits::{CheckedAdd, CheckedSub, Convert, UniqueSaturatedInto, Zero},
@@ -50,7 +50,7 @@ use sp_std::prelude::*;
 use xcm::{
 	opaque::v3::{
 		Junction::{AccountId32, Parachain},
-		MultiLocation, WeightLimit,
+		MultiLocation,
 	},
 	v3::prelude::*,
 	VersionedLocation,
@@ -1356,7 +1356,7 @@ impl<T: Config>
 	fn transfer_back(
 		&self,
 		from: &MultiLocation,
-		to: &MultiLocation,
+		_to: &MultiLocation,
 		amount: BalanceOf<T>,
 		currency_id: CurrencyId,
 		weight_and_fee: Option<(Weight, BalanceOf<T>)>,
@@ -1369,23 +1369,25 @@ impl<T: Config>
 			.ok_or(Error::<T>::DelegatorNotExist)?;
 
 		// Make sure the receiving account is the Exit_account from vtoken-minting module.
-		let to_account_id = Pallet::<T>::multilocation_to_account(&to)?;
-
-		let (_, exit_account) = T::VtokenMinting::get_entrance_and_exit_accounts();
-		ensure!(to_account_id == exit_account, Error::<T>::InvalidAccount);
+		let (entrance_account, _) = T::VtokenMinting::get_entrance_and_exit_accounts();
 
 		if currency_id == BNC {
 			let from_account = Pallet::<T>::multilocation_to_account(from)?;
-			T::MultiCurrency::transfer(currency_id, &from_account, &to_account_id, amount)
+			T::MultiCurrency::transfer(currency_id, &from_account, &entrance_account, amount)
 				.map_err(|_| Error::<T>::Unexpected)?;
 		} else {
 			// Prepare parameter dest and beneficiary.
-			let to_32: [u8; 32] = Pallet::<T>::multilocation_to_account_32(&to)?;
 			let dest = Box::new(VersionedLocation::V3(MultiLocation {
 				parents: 1,
 				interior: X2(
 					Parachain(T::ParachainId::get().into()),
-					AccountId32 { network: None, id: to_32 },
+					AccountId32 {
+						network: None,
+						id: entrance_account
+							.encode()
+							.try_into()
+							.map_err(|_| Error::<T>::FailToConvert)?,
+					},
 				),
 			}));
 
@@ -1395,7 +1397,7 @@ impl<T: Config>
 					MoonbeamCurrencyId::SelfReserve,
 					amount.unique_saturated_into(),
 					dest,
-					WeightLimit::Unlimited,
+					Unlimited,
 				))
 				.encode()
 				.into(),
@@ -1403,7 +1405,7 @@ impl<T: Config>
 					MantaCurrencyId::MantaCurrency(1),
 					amount.unique_saturated_into(),
 					dest,
-					WeightLimit::Unlimited,
+					Unlimited,
 				))
 				.encode()
 				.into(),

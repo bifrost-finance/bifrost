@@ -711,26 +711,6 @@ mod benchmarks {
 	}
 
 	#[benchmark]
-	fn refund_currency_due_unbond() -> Result<(), BenchmarkError> {
-		let origin = <T as Config>::ControlOrigin::try_successful_origin()
-			.map_err(|_| BenchmarkError::Weightless)?;
-		init_ongoing_time::<T>(origin.clone());
-
-		let (_, exit_account) = <T as Config>::VtokenMinting::get_entrance_and_exit_accounts();
-		orml_tokens::Pallet::<T>::deposit(
-			KSM,
-			&exit_account,
-			<T as orml_tokens::Config>::Balance::saturated_from(1_000_000_000_000u128),
-		)
-		.unwrap();
-
-		#[extrinsic_call]
-		_(origin as <T as frame_system::Config>::RuntimeOrigin, KSM);
-
-		Ok(())
-	}
-
-	#[benchmark]
 	fn supplement_fee_reserve() -> Result<(), BenchmarkError> {
 		let origin = <T as Config>::ControlOrigin::try_successful_origin()
 			.map_err(|_| BenchmarkError::Weightless)?;
