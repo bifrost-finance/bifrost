@@ -106,7 +106,7 @@ mod v0 {
 }
 
 pub mod v1 {
-	use frame_support::traits::StorageVersion;
+	use frame_support::pallet_prelude::StorageVersion;
 
 	use super::*;
 
@@ -146,32 +146,29 @@ pub fn migrate_to_v1<T: Config>() -> Weight {
 	let mut weight: Weight = Weight::zero();
 
 	let old_orders = v0::OrderQueue::<T>::get();
-
-	let mut new_orders: BoundedVec<_, ConstU32<1000>> = BoundedVec::default();
 	for old_order in old_orders.into_iter() {
-		new_orders
-			.try_push(Order {
-				source_chain_caller: old_order.source_chain_caller,
-				bifrost_chain_caller: old_order.bifrost_chain_caller,
-				derivative_account: old_order.derivative_account,
-				create_block_number: old_order.create_block_number,
-				currency_id: old_order.currency_id,
-				currency_amount: old_order.currency_amount,
-				order_type: old_order.order_type,
-				remark: old_order.remark,
-				target_chain: old_order.target_chain,
-				// default to 0
-				channel_id: 0u32,
-			})
-			.expect("BoundedVec should not overflow");
-		weight = weight.saturating_add(T::DbWeight::get().reads_writes(0, 1));
+		let order = Order {
+			source_chain_caller: old_order.source_chain_caller,
+			bifrost_chain_caller: old_order.bifrost_chain_caller,
+			derivative_account: old_order.derivative_account,
+			create_block_number: old_order.create_block_number,
+			currency_id: old_order.currency_id,
+			currency_amount: old_order.currency_amount,
+			order_type: old_order.order_type,
+			remark: old_order.remark,
+			target_chain: old_order.target_chain,
+			// default to 0
+			channel_id: 0u32,
+		};
+
+		OrderQueue::<T>::mutate(|order_queue| -> DispatchResultWithPostInfo {
+			order_queue.try_push(order.clone()).map_err(|_| Error::<T>::ArgumentsError)?;
+			Ok(().into())
+		})
+		.expect("BoundedVec should not overflow");
+
+		weight = weight.saturating_add(T::DbWeight::get().writes(1));
 	}
-
-	OrderQueue::<T>::put(new_orders);
-	weight = weight.saturating_add(T::DbWeight::get().writes(1));
-
-	v0::OrderQueue::<T>::kill();
-	weight = weight.saturating_add(T::DbWeight::get().writes(1));
 
 	weight
 }

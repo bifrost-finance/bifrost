@@ -56,9 +56,6 @@ pub type Block = frame_system::mocking::MockBlock<Runtime>;
 
 pub const ALICE: AccountId = AccountId32::new([1u8; 32]);
 pub const BOB: AccountId = AccountId32::new([2u8; 32]);
-pub const CHARLIE: AccountId = AccountId32::new([3u8; 32]);
-pub const DAVE: AccountId = AccountId32::new([4u8; 32]);
-pub const EDDIE: AccountId = AccountId32::new([5u8; 32]);
 
 construct_runtime!(
 	pub enum Runtime {
@@ -539,13 +536,11 @@ impl Config for Runtime {
 	type ControlOrigin = EnsureSignedBy<One, AccountId>;
 	type WeightInfo = ();
 	type VtokenMinting = VtokenMinting;
-	type BifrostSlpx = SlpxInterface;
 	type AccountConverter = SubAccountIndexMultiLocationConvertor;
 	type ParachainId = ParachainId;
 	type SubstrateResponseManager = SubstrateResponseManager;
 	type MaxTypeEntryPerBlock = MaxTypeEntryPerBlock;
 	type MaxRefundPerBlock = MaxRefundPerBlock;
-	type OnRefund = ();
 	type ParachainStaking = ParachainStaking;
 	type XcmTransfer = XTokens;
 	type MaxLengthLimit = MaxLengthLimit;

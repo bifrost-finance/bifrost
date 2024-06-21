@@ -423,13 +423,11 @@ impl bifrost_slp::Config for Test {
 	type ControlOrigin = EnsureSignedBy<One, AccountId>;
 	type WeightInfo = ();
 	type VtokenMinting = VtokenMinting;
-	type BifrostSlpx = Slpx;
 	type AccountConverter = ();
 	type ParachainId = ParachainId;
 	type SubstrateResponseManager = SubstrateResponseManager;
 	type MaxTypeEntryPerBlock = MaxTypeEntryPerBlock;
 	type MaxRefundPerBlock = MaxRefundPerBlock;
-	type OnRefund = ();
 	type ParachainStaking = ();
 	type XcmTransfer = XTokens;
 	type MaxLengthLimit = MaxLengthLimit;
