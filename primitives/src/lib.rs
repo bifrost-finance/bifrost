@@ -329,6 +329,7 @@ pub enum XcmOperationType {
 	RemoveVote,
 	Any,
 	SupplementaryFee,
+	EthereumTransfer,
 }
 
 pub struct ExtraFeeInfo {
