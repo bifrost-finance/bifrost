@@ -1103,7 +1103,6 @@ dependencies = [
  "bifrost-vtoken-voting",
  "bifrost-xcm-interface",
  "cumulus-pallet-aura-ext",
- "cumulus-pallet-dmp-queue",
  "cumulus-pallet-parachain-system",
  "cumulus-pallet-xcm",
  "cumulus-pallet-xcmp-queue",
@@ -1257,7 +1256,6 @@ dependencies = [
  "bifrost-vtoken-voting",
  "bifrost-xcm-interface",
  "cumulus-pallet-aura-ext",
- "cumulus-pallet-dmp-queue",
  "cumulus-pallet-parachain-system",
  "cumulus-pallet-xcm",
  "cumulus-pallet-xcmp-queue",
@@ -1412,7 +1410,6 @@ dependencies = [
  "bifrost-asset-registry",
  "bifrost-primitives",
  "bifrost-xcm-interface",
- "cumulus-pallet-dmp-queue",
  "cumulus-pallet-parachain-system",
  "cumulus-pallet-xcm",
  "cumulus-pallet-xcmp-queue",
@@ -3258,25 +3255,6 @@ dependencies = [
  "sp-consensus-aura",
  "sp-runtime",
  "sp-std",
-]
-
-[[package]]
-name = "cumulus-pallet-dmp-queue"
-version = "0.8.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "06ebf036bcb1e61c943cf588d14b903234594fb2538f2d7dae36e20fcc3c86e8"
-dependencies = [
- "cumulus-primitives-core",
- "frame-benchmarking",
- "frame-support",
- "frame-system",
- "log",
- "parity-scale-codec",
- "scale-info",
- "sp-io",
- "sp-runtime",
- "sp-std",
- "staging-xcm",
 ]
 
 [[package]]

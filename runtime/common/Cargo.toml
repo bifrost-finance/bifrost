@@ -44,7 +44,6 @@ cumulus-pallet-parachain-system = { workspace = true }
 cumulus-primitives-core = { workspace = true }
 cumulus-primitives-timestamp = { workspace = true }
 cumulus-primitives-utility = { workspace = true }
-cumulus-pallet-dmp-queue = { workspace = true }
 cumulus-pallet-xcmp-queue = { workspace = true }
 cumulus-pallet-xcm = { workspace = true }
 parachain-info = { workspace = true }
@@ -98,7 +97,6 @@ std = [
 	"pallet-treasury/std",
 	"pallet-scheduler/std",
 	"pallet-transaction-payment/std",
-	"cumulus-pallet-dmp-queue/std",
 	"cumulus-pallet-parachain-system/std",
 	"cumulus-pallet-xcmp-queue/std",
 	"cumulus-pallet-xcm/std",
