@@ -124,7 +124,6 @@ orml-oracle         = { git = "https://github.com/bifrost-finance/open-runtime-m
 cumulus-client-collator                    = { version = "0.8.0", default-features = false }
 cumulus-client-consensus-proposer          = { version = "0.8.0", default-features = false }
 cumulus-pallet-aura-ext                    = { version = "0.8.0", default-features = false }
-cumulus-pallet-dmp-queue                   = { version = "0.8.0", default-features = false }
 cumulus-pallet-parachain-system            = { version = "0.8.0", default-features = false, features = ["parameterized-consensus-hook"] }
 cumulus-pallet-xcm                         = { version = "0.8.0", default-features = false }
 cumulus-pallet-xcmp-queue                  = { version = "0.8.0", default-features = false }
