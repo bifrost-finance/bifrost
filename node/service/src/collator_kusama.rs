@@ -18,6 +18,7 @@
 
 //! Service implementation. Specialized wrapper over substrate service.
 use std::{
+	cell::RefCell,
 	collections::BTreeMap,
 	path::Path,
 	sync::{Arc, Mutex},
@@ -26,7 +27,7 @@ use std::{
 
 #[cfg(any(feature = "with-bifrost-kusama-runtime", feature = "with-bifrost-runtime"))]
 pub use bifrost_kusama_runtime;
-use bifrost_kusama_runtime::{RuntimeApi, TransactionConverter};
+use bifrost_kusama_runtime::{RuntimeApi, TransactionConverter, SLOT_DURATION};
 use cumulus_client_cli::CollatorOptions;
 use cumulus_client_collator::service::CollatorService;
 use cumulus_client_consensus_aura::collators::basic::{
@@ -35,7 +36,15 @@ use cumulus_client_consensus_aura::collators::basic::{
 
 use cumulus_client_consensus_common::ParachainBlockImport as TParachainBlockImport;
 use cumulus_client_consensus_proposer::Proposer;
+use cumulus_primitives_parachain_inherent::{
+	MockValidationDataInherentDataProvider, MockXcmConfig,
+};
+use jsonrpsee::core::async_trait;
 
+use crate::{
+	eth::{db_config_dir, spawn_frontier_tasks, BackendType, EthConfiguration, FrontierBackend},
+	IdentifyVariant,
+};
 use bifrost_primitives::Block;
 use cumulus_client_service::{
 	build_network, build_relay_chain_interface, prepare_node_config, start_relay_chain_tasks,
@@ -43,9 +52,11 @@ use cumulus_client_service::{
 };
 use cumulus_primitives_core::{relay_chain::Hash, ParaId};
 use cumulus_relay_chain_interface::{OverseerHandle, RelayChainInterface};
+use futures::channel::mpsc::{self, Receiver};
 use polkadot_primitives::CollatorPair;
 use sc_client_api::backend::Backend;
 use sc_consensus::{ImportQueue, LongestChain};
+use sc_consensus_manual_seal::{EngineCommand, ManualSealParams};
 use sc_executor::{HeapAllocStrategy, WasmExecutor, DEFAULT_HEAP_ALLOC_STRATEGY};
 use sc_network::NetworkBlock;
 use sc_network_sync::SyncingService;
@@ -55,10 +66,6 @@ use sc_transaction_pool_api::OffchainTransactionPoolFactory;
 use sp_core::U256;
 use sp_keystore::KeystorePtr;
 use substrate_prometheus_endpoint::Registry;
-
-use crate::eth::{
-	db_config_dir, spawn_frontier_tasks, BackendType, EthConfiguration, FrontierBackend,
-};
 
 #[cfg(not(feature = "runtime-benchmarks"))]
 type HostFunctions = sp_io::SubstrateHostFunctions;
@@ -90,7 +97,7 @@ type ParachainBlockImport = TParachainBlockImport<Block, Arc<FullClient>, FullBa
 pub fn new_partial(
 	config: &Configuration,
 	eth_config: &EthConfiguration,
-	dev: bool,
+	enable_manual_seal: bool,
 ) -> Result<
 	PartialComponents<
 		FullClient,
@@ -150,7 +157,8 @@ pub fn new_partial(
 		client.clone(),
 	);
 
-	let select_chain = if dev { Some(LongestChain::new(backend.clone())) } else { None };
+	let select_chain =
+		if enable_manual_seal { Some(LongestChain::new(backend.clone())) } else { None };
 
 	let overrides = fc_storage::overrides_handle(client.clone());
 	let frontier_backend = match eth_config.frontier_backend_type {
@@ -184,9 +192,9 @@ pub fn new_partial(
 
 	let block_import = ParachainBlockImport::new(client.clone(), backend.clone());
 
-	let import_queue = if dev {
+	let import_queue = if enable_manual_seal {
 		sc_consensus_manual_seal::import_queue(
-			Box::new(client.clone()),
+			Box::new(block_import.clone()),
 			&task_manager.spawn_essential_handle(),
 			registry,
 		)
@@ -248,6 +256,94 @@ fn build_import_queue(
 		telemetry,
 	})
 	.map_err(Into::into)
+}
+
+fn start_manual_seal(
+	eth_config: EthConfiguration,
+	client: Arc<FullClient>,
+	prometheus_registry: Option<&Registry>,
+	telemetry: Option<TelemetryHandle>,
+	task_manager: &TaskManager,
+	transaction_pool: Arc<sc_transaction_pool::FullPool<Block, FullClient>>,
+	select_chain: MaybeFullSelectChain,
+	commands_stream: Receiver<EngineCommand<Hash>>,
+) -> Result<(), sc_service::Error> {
+	let select_chain = select_chain
+		.expect("In `manual seal` mode, `new_partial` will return some `select_chain`; qed");
+
+	thread_local!(static TIMESTAMP: RefCell<u64> = const { RefCell::new(0) });
+
+	/// Provide a mock duration starting at 0 in millisecond for timestamp inherent.
+	/// Each call will increment timestamp by slot_duration making Aura think time has passed.
+	struct MockTimestampInherentDataProvider;
+
+	#[async_trait]
+	impl sp_inherents::InherentDataProvider for MockTimestampInherentDataProvider {
+		async fn provide_inherent_data(
+			&self,
+			inherent_data: &mut sp_inherents::InherentData,
+		) -> Result<(), sp_inherents::Error> {
+			TIMESTAMP.with(|x| {
+				*x.borrow_mut() += SLOT_DURATION;
+				inherent_data.put_data(sp_timestamp::INHERENT_IDENTIFIER, &*x.borrow())
+			})
+		}
+
+		async fn try_handle_error(
+			&self,
+			_identifier: &sp_inherents::InherentIdentifier,
+			_error: &[u8],
+		) -> Option<Result<(), sp_inherents::Error>> {
+			// The pallet never reports error.
+			None
+		}
+	}
+
+	fn default_mock_parachain_inherent_data_provider() -> MockValidationDataInherentDataProvider {
+		MockValidationDataInherentDataProvider {
+			current_para_block: 0,
+			relay_offset: 1000,
+			relay_blocks_per_para_block: 2,
+			xcm_config: Default::default(),
+			raw_downward_messages: vec![],
+			raw_horizontal_messages: vec![],
+			para_blocks_per_relay_epoch: 0,
+			relay_randomness_config: (),
+		}
+	}
+
+	let target_gas_price = eth_config.target_gas_price;
+	let create_inherent_data_providers = move |_, ()| async move {
+		let timestamp = MockTimestampInherentDataProvider;
+		// let timestamp = sp_timestamp::InherentDataProvider::from_system_time();
+		Ok((timestamp, default_mock_parachain_inherent_data_provider()))
+	};
+
+	let proposer_factory = sc_basic_authorship::ProposerFactory::new(
+		task_manager.spawn_handle(),
+		client.clone(),
+		transaction_pool.clone(),
+		prometheus_registry,
+		None,
+	);
+
+	let fut = sc_consensus_manual_seal::run_manual_seal(ManualSealParams {
+		block_import: client.clone(),
+		env: proposer_factory,
+		client: client.clone(),
+		commands_stream,
+		select_chain,
+		consensus_data_provider: None,
+		create_inherent_data_providers,
+		pool: transaction_pool,
+	});
+
+	task_manager.spawn_essential_handle().spawn_blocking(
+		"manual-seal",
+		Some("block-authoring"),
+		fut,
+	);
+	Ok(())
 }
 
 fn start_consensus(
@@ -327,10 +423,11 @@ async fn start_node_impl(
 	sybil_resistance_level: CollatorSybilResistance,
 	para_id: ParaId,
 	hwbench: Option<sc_sysinfo::HwBench>,
+	enable_manual_seal: bool,
 ) -> sc_service::error::Result<(TaskManager, Arc<FullClient>)> {
 	let parachain_config = prepare_node_config(parachain_config);
 
-	let params = new_partial(&parachain_config, &eth_config, false)?;
+	let params = new_partial(&parachain_config, &eth_config, enable_manual_seal)?;
 	let (block_import, mut telemetry, telemetry_worker_handle, frontier_backend) = params.other;
 
 	let client = params.client.clone();
@@ -415,6 +512,9 @@ async fn start_node_impl(
 	// let fee_history_cache_limit = parachain_config.fee_history_limit;
 	let fee_history_cache_limit = 2048;
 
+	// Channel for the rpc handler to communicate with the authorship task.
+	let (command_sink, commands_stream) = mpsc::channel(1024);
+
 	let rpc_builder = {
 		let client = client.clone();
 		let pool = transaction_pool.clone();
@@ -480,7 +580,7 @@ async fn start_node_impl(
 				client: client.clone(),
 				pool: pool.clone(),
 				deny_unsafe,
-				// command_sink: if sealing.is_some() { Some(command_sink.clone()) } else { None },
+				command_sink: if enable_manual_seal { Some(command_sink.clone()) } else { None },
 				eth: eth_deps,
 			};
 			crate::rpc::create_full(
@@ -563,22 +663,35 @@ async fn start_node_impl(
 	})?;
 
 	if validator {
-		start_consensus(
-			client.clone(),
-			block_import,
-			prometheus_registry.as_ref(),
-			telemetry.as_ref().map(|t| t.handle()),
-			&task_manager,
-			relay_chain_interface.clone(),
-			transaction_pool,
-			sync_service.clone(),
-			params.keystore_container.keystore(),
-			relay_chain_slot_duration,
-			para_id,
-			collator_key.expect("Command line arguments do not allow this. qed"),
-			overseer_handle,
-			announce_block,
-		)?;
+		if enable_manual_seal {
+			start_manual_seal(
+				eth_config,
+				client.clone(),
+				prometheus_registry.as_ref(),
+				telemetry.as_ref().map(|t| t.handle()),
+				&task_manager,
+				transaction_pool.clone(),
+				params.select_chain,
+				commands_stream,
+			);
+		} else {
+			start_consensus(
+				client.clone(),
+				block_import,
+				prometheus_registry.as_ref(),
+				telemetry.as_ref().map(|t| t.handle()),
+				&task_manager,
+				relay_chain_interface.clone(),
+				transaction_pool,
+				sync_service.clone(),
+				params.keystore_container.keystore(),
+				relay_chain_slot_duration,
+				para_id,
+				collator_key.expect("Command line arguments do not allow this. qed"),
+				overseer_handle,
+				announce_block,
+			)?;
+		}
 	}
 
 	start_network.start_network();
@@ -594,6 +707,7 @@ pub async fn start_node(
 	collator_options: CollatorOptions,
 	para_id: ParaId,
 	hwbench: Option<sc_sysinfo::HwBench>,
+	enable_manual_seal: bool,
 ) -> sc_service::error::Result<(TaskManager, Arc<FullClient>)> {
 	start_node_impl(
 		parachain_config,
@@ -603,6 +717,7 @@ pub async fn start_node(
 		CollatorSybilResistance::Resistant,
 		para_id,
 		hwbench,
+		enable_manual_seal,
 	)
 	.await
 }

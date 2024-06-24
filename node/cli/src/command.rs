@@ -25,7 +25,10 @@ use sc_cli::{
 	NetworkParams, Result, SharedParams, SubstrateCli,
 };
 use sc_executor::{sp_wasm_interface::ExtendedHostFunctions, NativeExecutionDispatch};
-use sc_service::config::{BasePath, PrometheusConfig};
+use sc_service::{
+	config::{BasePath, PrometheusConfig},
+	ChainType,
+};
 use sp_runtime::traits::AccountIdConversion;
 
 use crate::{Cli, RelayChainCli, Subcommand};
@@ -79,7 +82,7 @@ fn load_spec(id: &str) -> std::result::Result<Box<dyn ChainSpec>, String> {
 		#[cfg(any(feature = "with-bifrost-polkadot-runtime", feature = "with-bifrost-runtime"))]
 		"bifrost-polkadot-local" =>
 			Box::new(service::chain_spec::bifrost_polkadot::local_testnet_config()?),
-		#[cfg(feature = "with-bifrost-kusama-runtime")]
+		#[cfg(any(feature = "with-bifrost-kusama-runtime", feature = "with-bifrost-runtime"))]
 		"dev" => Box::new(service::chain_spec::bifrost_kusama::development_config()?),
 		#[cfg(feature = "with-bifrost-polkadot-runtime")]
 		"bifrost-polkadot-dev" => Box::new(service::chain_spec::bifrost_polkadot::development_config()?),
@@ -460,6 +463,13 @@ pub fn run() -> Result<()> {
 				info!("Parachain Account: {}", parachain_account);
 				info!("Is collating: {}", if config.role.is_authority() { "yes" } else { "no" });
 
+				let is_dev_or_local = [ChainType::Development, ChainType::Local]
+					.contains(&config.chain_spec.chain_type());
+				if !is_dev_or_local && cli.manual_seal {
+					info!("WARNING: --manual-seal is ignored as this is not a local nor development chain");
+				}
+				let enable_manual_seal = cli.manual_seal && is_dev_or_local;
+
 				with_runtime_or_err!(config.chain_spec, {
 					{
 						start_node(
@@ -469,6 +479,7 @@ pub fn run() -> Result<()> {
 							collator_options,
 							id,
 							hwbench,
+							enable_manual_seal,
 						)
 						.await
 						.map(|r| r.0)

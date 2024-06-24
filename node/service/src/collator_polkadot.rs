@@ -454,6 +454,7 @@ pub async fn start_node(
 	collator_options: CollatorOptions,
 	para_id: ParaId,
 	hwbench: Option<sc_sysinfo::HwBench>,
+	enable_manual_seal: bool,
 ) -> sc_service::error::Result<(TaskManager, Arc<FullClient>)> {
 	start_node_impl(
 		parachain_config,

@@ -251,7 +251,10 @@ pub fn bifrost_genesis(
 			..Default::default()
 		},
 		ethereum: Default::default(),
-		dynamic_fee: DynamicFeeConfig { min_gas_price: 6335128000000u64.into(), ..Default::default() },
+		dynamic_fee: DynamicFeeConfig {
+			min_gas_price: 6335128000000u64.into(),
+			..Default::default()
+		},
 	}
 }
 
@@ -316,7 +319,7 @@ pub fn development_config() -> Result<ChainSpec, String> {
 		Some(DEFAULT_PROTOCOL_ID),
 		None,
 		Some(bifrost_kusama_properties()),
-		RelayExtensions { relay_chain: "westend-dev".into(), para_id: PARA_ID },
+		RelayExtensions { relay_chain: "kusama".into(), para_id: PARA_ID },
 	))
 }
 

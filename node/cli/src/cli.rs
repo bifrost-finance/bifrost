@@ -105,6 +105,10 @@ pub struct Cli {
 	#[arg(raw = true)]
 	pub relay_chain_args: Vec<String>,
 
+	/// Enable manual seal (Only work for dev/local chain)
+	#[arg(long, value_enum, ignore_case = true)]
+	pub manual_seal: bool,
+
 	#[command(flatten)]
 	pub eth_config: EthConfiguration,
 }

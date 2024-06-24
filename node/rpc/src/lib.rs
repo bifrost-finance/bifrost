@@ -37,7 +37,7 @@ use bifrost_farming_rpc::{FarmingRpc, FarmingRpcApiServer};
 use bifrost_farming_rpc_runtime_api::FarmingRuntimeApi;
 use bifrost_flexible_fee_rpc::{FeeRpcApiServer, FlexibleFeeRpc};
 use bifrost_flexible_fee_rpc_runtime_api::FlexibleFeeRuntimeApi as FeeRuntimeApi;
-use bifrost_kusama_runtime::opaque::Block as BlockK;
+use bifrost_kusama_runtime::{opaque::Block as BlockK, Hash};
 use bifrost_primitives::{AccountId, Balance, Block, CurrencyId, Nonce, ParaId, PoolId};
 use bifrost_salp_rpc::{SalpRpc, SalpRpcApiServer};
 use bifrost_salp_rpc_runtime_api::SalpRuntimeApi;
@@ -45,6 +45,7 @@ use bifrost_stable_pool_rpc::{StablePoolRpc, StablePoolRpcApiServer};
 use bifrost_stable_pool_rpc_runtime_api::StablePoolRuntimeApi;
 use bifrost_ve_minting_rpc::{VeMintingRpc, VeMintingRpcApiServer};
 use bifrost_ve_minting_rpc_runtime_api::VeMintingRuntimeApi;
+use futures::channel::mpsc;
 use lend_market_rpc::{LendMarket, LendMarketApiServer};
 use lend_market_rpc_runtime_api::LendMarketApi;
 use pallet_transaction_payment_rpc::{TransactionPayment, TransactionPaymentApiServer};
@@ -53,6 +54,7 @@ use sc_client_api::{
 	client::BlockchainEvents,
 	AuxStore, UsageProvider,
 };
+use sc_consensus_manual_seal::rpc::{EngineCommand, ManualSeal, ManualSealApiServer};
 use sc_rpc::SubscriptionTaskExecutor;
 use sc_rpc_api::DenyUnsafe;
 use sc_transaction_pool::ChainApi;
@@ -82,6 +84,8 @@ pub struct FullDeps<C, P, A: ChainApi, CT, CIDP> {
 	pub deny_unsafe: DenyUnsafe,
 	/// Ethereum-compatibility specific dependencies.
 	pub eth: EthDeps<BlockK, C, P, A, CT, CIDP>,
+	/// Manual seal command sink
+	pub command_sink: Option<mpsc::Sender<EngineCommand<Hash>>>,
 }
 
 pub struct DefaultEthConfig<C, BE>(std::marker::PhantomData<(C, BE)>);
@@ -155,7 +159,7 @@ where
 	CT: fp_rpc::ConvertTransaction<<Block as BlockT>::Extrinsic> + Send + Sync + 'static,
 {
 	let mut module = RpcExtension::new(());
-	let FullDeps { client, pool, deny_unsafe, eth } = deps;
+	let FullDeps { client, pool, deny_unsafe, eth, command_sink } = deps;
 
 	module.merge(System::new(client.clone(), pool.clone(), deny_unsafe).into_rpc())?;
 	module.merge(TransactionPayment::new(client.clone()).into_rpc())?;
@@ -167,6 +171,14 @@ where
 	module.merge(StableAmm::new(client.clone()).into_rpc())?;
 	module.merge(StablePoolRpc::new(client.clone()).into_rpc())?;
 	module.merge(LendMarket::new(client).into_rpc())?;
+
+	if let Some(command_sink) = command_sink {
+		module.merge(
+			// We provide the rpc handler with the sending end of the channel to allow the rpc
+			// send EngineCommands to the background block authorship task.
+			ManualSeal::new(command_sink).into_rpc(),
+		)?;
+	}
 
 	// Ethereum compatibility RPCs
 	let module = create_eth::<_, _, _, _, _, _, _, DefaultEthConfig<C, BE>>(

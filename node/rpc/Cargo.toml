@@ -8,10 +8,12 @@ edition = "2021"
 targets = ["x86_64-unknown-linux-gnu"]
 
 [dependencies]
+futures = { workspace = true }
 jsonrpsee = { workspace = true, features = ["macros", "server"] }
 sc-client-api = { workspace = true }
 sc-consensus = { workspace = true }
 sc-consensus-aura = { workspace = true }
+sc-consensus-manual-seal = { workspace = true }
 sc-network = { workspace = true }
 sc-network-sync = { workspace = true }
 sc-rpc-api = { workspace = true }
@@ -56,4 +58,3 @@ fc-mapping-sync = { workspace = true, features = ["sql"] }
 fc-rpc-core = { workspace = true }
 fc-storage = { workspace = true }
 fp-rpc = { workspace = true, features = ["default"] }
-
