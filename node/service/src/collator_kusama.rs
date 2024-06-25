@@ -707,17 +707,21 @@ pub async fn start_node(
 	collator_options: CollatorOptions,
 	para_id: ParaId,
 	hwbench: Option<sc_sysinfo::HwBench>,
-	enable_manual_seal: bool,
+	is_dev: bool,
 ) -> sc_service::error::Result<(TaskManager, Arc<FullClient>)> {
-	start_node_impl(
-		parachain_config,
-		polkadot_config,
-		eth_config,
-		collator_options,
-		CollatorSybilResistance::Resistant,
-		para_id,
-		hwbench,
-		enable_manual_seal,
-	)
-	.await
+	if is_dev {
+		crate::dev::start_node(parachain_config, eth_config).await
+	} else {
+		start_node_impl(
+			parachain_config,
+			polkadot_config,
+			eth_config,
+			collator_options,
+			CollatorSybilResistance::Resistant,
+			para_id,
+			hwbench,
+			is_dev,
+		)
+		.await
+	}
 }

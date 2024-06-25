@@ -465,11 +465,6 @@ pub fn run() -> Result<()> {
 
 				let is_dev_or_local = [ChainType::Development, ChainType::Local]
 					.contains(&config.chain_spec.chain_type());
-				if !is_dev_or_local && cli.manual_seal {
-					info!("WARNING: --manual-seal is ignored as this is not a local nor development chain");
-				}
-				let enable_manual_seal = cli.manual_seal && is_dev_or_local;
-
 				with_runtime_or_err!(config.chain_spec, {
 					{
 						start_node(
@@ -479,7 +474,7 @@ pub fn run() -> Result<()> {
 							collator_options,
 							id,
 							hwbench,
-							enable_manual_seal,
+							config.chain_spec.is_dev(),
 						)
 						.await
 						.map(|r| r.0)
