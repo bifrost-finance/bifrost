@@ -371,36 +371,44 @@ pub fn testnet_config() -> ChainSpec {
 			hex!["3695a262bb68cf0c23e1f849bf036993ae9ceb7b6d1dd300cc0d6777ec8de520"].into(),
 			hex!["3695a262bb68cf0c23e1f849bf036993ae9ceb7b6d1dd300cc0d6777ec8de520"]
 				.unchecked_into(),
-			ENDOWMENT(),
+			ENDOWMENT() / 4,
 		),
 		(
 			// cjQkMaTsHJm27cEcAwN1ghF6UpwmHLyq5pY12qxiMHDNwKv
 			hex!["2c946b45e851b62582b6a2b8b304e3cda8392c8ec6da550b4426b7c60833956c"].into(),
 			hex!["2c946b45e851b62582b6a2b8b304e3cda8392c8ec6da550b4426b7c60833956c"]
 				.unchecked_into(),
-			ENDOWMENT(),
+			ENDOWMENT() / 4,
 		),
 		(
 			// bjGo3QQWnf2HpBTrRC4YRDYqyeJmzsZgxr8mvbtLfkqXvYM
 			hex!["003d693ed5403785569498d899593bb74119bacca39d226dd37853e21190ca65"].into(),
 			hex!["003d693ed5403785569498d899593bb74119bacca39d226dd37853e21190ca65"]
 				.unchecked_into(),
-			ENDOWMENT(),
+			ENDOWMENT() / 4,
 		),
 		(
 			// eBghkPPpcM5aiQsN7jPFG2dGtiaJb3PazebaiDyDXhT6aw1
 			hex!["6cdabe150eac14ba3700ce14fda9d5d595857690f40031cda41bcf775004d426"].into(),
 			hex!["6cdabe150eac14ba3700ce14fda9d5d595857690f40031cda41bcf775004d426"]
 				.unchecked_into(),
-			ENDOWMENT(),
+			ENDOWMENT() / 4,
 		),
 	];
 
 	let endowed_accounts: Vec<AccountId> = vec![
 		// gfF1Z4KNG7735MgtDQkbJTw7Z3P2W9p7Qquf3eqiy54zrt9
 		hex!["da57971eb1a094247cc83f5b3775058bf82df535f214fecac2d1840df646252c"].into(),
+		// cxXb4sZAnwMRchQVRoMUkfFGF52Li6YqZRcuQd8XnaEQXKC
+		hex!["3695a262bb68cf0c23e1f849bf036993ae9ceb7b6d1dd300cc0d6777ec8de520"].into(),
+		// cjQkMaTsHJm27cEcAwN1ghF6UpwmHLyq5pY12qxiMHDNwKv
+		hex!["2c946b45e851b62582b6a2b8b304e3cda8392c8ec6da550b4426b7c60833956c"].into(),
+		// bjGo3QQWnf2HpBTrRC4YRDYqyeJmzsZgxr8mvbtLfkqXvYM
+		hex!["003d693ed5403785569498d899593bb74119bacca39d226dd37853e21190ca65"].into(),
+		// eBghkPPpcM5aiQsN7jPFG2dGtiaJb3PazebaiDyDXhT6aw1
+		hex!["6cdabe150eac14ba3700ce14fda9d5d595857690f40031cda41bcf775004d426"].into(),
 	];
-	let balances = endowed_accounts.iter().cloned().map(|x| (x, ENDOWMENT())).collect();
+	let balances = endowed_accounts.iter().cloned().map(|x| (x, ENDOWMENT() * 100)).collect();
 
 	let salp_multisig: AccountId =
 		hex!["e4da05f08e89bf6c43260d96f26fffcfc7deae5b465da08669a9d008e64c2c63"].into();
