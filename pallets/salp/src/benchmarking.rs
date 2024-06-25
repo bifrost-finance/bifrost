@@ -26,7 +26,7 @@ use frame_benchmarking::v2::*;
 use frame_support::assert_ok;
 use frame_system::{pallet_prelude::BlockNumberFor, RawOrigin};
 use sp_runtime::{
-	traits::{AccountIdConversion, Bounded, UniqueSaturatedFrom},
+	traits::{AccountIdConversion, Bounded, StaticLookup, UniqueSaturatedFrom},
 	SaturatedConversion,
 };
 use sp_std::prelude::*;
@@ -369,10 +369,13 @@ mod benchmarks {
 		let relay_vstoken_id =
 			<T as Config>::CurrencyIdConversion::convert_to_vstoken(relay_currency_id).unwrap();
 
+		let caller_lookup: <T::Lookup as StaticLookup>::Source =
+			T::Lookup::unlookup(caller.clone());
 		assert_ok!(zenlink_protocol::Pallet::<T>::create_pair(
 			RawOrigin::Root.into(),
 			zenlink_protocol::AssetId { chain_id: 2001, asset_type: 2, asset_index: 516 },
 			zenlink_protocol::AssetId { chain_id: 2001, asset_type: 2, asset_index: 1028 },
+			caller_lookup
 		));
 
 		let buybck_caller = T::BuybackPalletId::get().into_account_truncating();

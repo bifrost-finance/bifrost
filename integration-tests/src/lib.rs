@@ -17,12 +17,6 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 #![cfg(test)]
-mod account_id;
-mod dollor_tests;
-mod general_key;
-mod transact;
-// mod salp;
-mod slp;
-mod total_issuance;
-mod vtoken_minting;
-mod vtoken_voting;
+
+mod mock;
+mod tests;

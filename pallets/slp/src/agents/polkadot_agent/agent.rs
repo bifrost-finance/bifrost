@@ -36,12 +36,13 @@ use bifrost_primitives::{
 use core::marker::PhantomData;
 use frame_support::{ensure, traits::Get};
 use frame_system::pallet_prelude::BlockNumberFor;
+use parity_scale_codec::Encode;
 use sp_runtime::{
 	traits::{CheckedAdd, CheckedSub, Convert, StaticLookup, UniqueSaturatedInto, Zero},
 	DispatchResult,
 };
 use sp_std::prelude::*;
-use xcm::{opaque::v3::MultiLocation, v3::prelude::*, VersionedMultiAssets};
+use xcm::{opaque::v3::MultiLocation, v3::prelude::*, VersionedAssets, VersionedLocation};
 
 /// StakingAgent implementation for Kusama/Polkadot
 pub struct PolkadotAgent<T>(PhantomData<T>);
@@ -154,7 +155,8 @@ impl<T: Config>
 		)?;
 
 		// Send out the xcm message.
-		send_xcm::<T::XcmRouter>(Parent.into(), xcm_message)
+		let dest_location = Pallet::<T>::convert_currency_to_dest_location(currency_id)?;
+		xcm::v4::send_xcm::<T::XcmRouter>(dest_location, xcm_message)
 			.map_err(|_e| Error::<T>::XcmFailure)?;
 
 		Ok(query_id)
@@ -223,7 +225,8 @@ impl<T: Config>
 		)?;
 
 		// Send out the xcm message.
-		send_xcm::<T::XcmRouter>(Parent.into(), xcm_message)
+		let dest_location = Pallet::<T>::convert_currency_to_dest_location(currency_id)?;
+		xcm::v4::send_xcm::<T::XcmRouter>(dest_location, xcm_message)
 			.map_err(|_e| Error::<T>::XcmFailure)?;
 
 		Ok(query_id)
@@ -300,7 +303,8 @@ impl<T: Config>
 		)?;
 
 		// Send out the xcm message.
-		send_xcm::<T::XcmRouter>(Parent.into(), xcm_message)
+		let dest_location = Pallet::<T>::convert_currency_to_dest_location(currency_id)?;
+		xcm::v4::send_xcm::<T::XcmRouter>(dest_location, xcm_message)
 			.map_err(|_e| Error::<T>::XcmFailure)?;
 
 		Ok(query_id)
@@ -353,7 +357,8 @@ impl<T: Config>
 			)?;
 
 			// Send out the xcm message.
-			send_xcm::<T::XcmRouter>(Parent.into(), xcm_message)
+			let dest_location = Pallet::<T>::convert_currency_to_dest_location(currency_id)?;
+			xcm::v4::send_xcm::<T::XcmRouter>(dest_location, xcm_message)
 				.map_err(|_e| Error::<T>::XcmFailure)?;
 
 			Ok(query_id)
@@ -428,7 +433,8 @@ impl<T: Config>
 		)?;
 
 		// Send out the xcm message.
-		send_xcm::<T::XcmRouter>(Parent.into(), xcm_message)
+		let dest_location = Pallet::<T>::convert_currency_to_dest_location(currency_id)?;
+		xcm::v4::send_xcm::<T::XcmRouter>(dest_location, xcm_message)
 			.map_err(|_e| Error::<T>::XcmFailure)?;
 
 		Ok(query_id)
@@ -499,7 +505,8 @@ impl<T: Config>
 		)?;
 
 		// Send out the xcm message.
-		send_xcm::<T::XcmRouter>(Parent.into(), xcm_message)
+		let dest_location = Pallet::<T>::convert_currency_to_dest_location(currency_id)?;
+		xcm::v4::send_xcm::<T::XcmRouter>(dest_location, xcm_message)
 			.map_err(|_e| Error::<T>::XcmFailure)?;
 
 		Ok(query_id)
@@ -577,7 +584,8 @@ impl<T: Config>
 		)?;
 
 		// Send out the xcm message.
-		send_xcm::<T::XcmRouter>(Parent.into(), xcm_message)
+		let dest_location = Pallet::<T>::convert_currency_to_dest_location(currency_id)?;
+		xcm::v4::send_xcm::<T::XcmRouter>(dest_location, xcm_message)
 			.map_err(|_e| Error::<T>::XcmFailure)?;
 
 		Ok(query_id)
@@ -705,7 +713,8 @@ impl<T: Config>
 		)?;
 
 		// Send out the xcm message.
-		send_xcm::<T::XcmRouter>(Parent.into(), xcm_message)
+		let dest_location = Pallet::<T>::convert_currency_to_dest_location(currency_id)?;
+		xcm::v4::send_xcm::<T::XcmRouter>(dest_location, xcm_message)
 			.map_err(|_e| Error::<T>::XcmFailure)?;
 
 		Ok(query_id)
@@ -769,7 +778,8 @@ impl<T: Config>
 		}
 
 		// Send out the xcm message.
-		send_xcm::<T::XcmRouter>(Parent.into(), xcm_message)
+		let dest_location = Pallet::<T>::convert_currency_to_dest_location(currency_id)?;
+		xcm::v4::send_xcm::<T::XcmRouter>(dest_location, xcm_message)
 			.map_err(|_e| Error::<T>::XcmFailure)?;
 
 		Ok(query_id)
@@ -779,7 +789,7 @@ impl<T: Config>
 	fn transfer_back(
 		&self,
 		from: &MultiLocation,
-		to: &MultiLocation,
+		_to: &MultiLocation,
 		amount: BalanceOf<T>,
 		currency_id: CurrencyId,
 		weight_and_fee: Option<(Weight, BalanceOf<T>)>,
@@ -787,16 +797,29 @@ impl<T: Config>
 		// Ensure amount is greater than zero.
 		ensure!(!amount.is_zero(), Error::<T>::AmountZero);
 
-		let (dest, beneficiary) =
-			Pallet::<T>::get_transfer_back_dest_and_beneficiary(from, to, currency_id)?;
+		// Check if from is one of our delegators. If not, return error.
+		DelegatorsMultilocation2Index::<T>::get(currency_id, from)
+			.ok_or(Error::<T>::DelegatorNotExist)?;
+
+		// Make sure the receiving account is the Exit_account from vtoken-minting module.
+		let (entrance_account, _) = T::VtokenMinting::get_entrance_and_exit_accounts();
+
+		// Prepare parameter dest and beneficiary.
+		let dest = Box::new(VersionedLocation::V3(Location::from([Parachain(
+			T::ParachainId::get().into(),
+		)])));
+
+		let beneficiary = Box::new(VersionedLocation::V3(Location::from([AccountId32 {
+			network: None,
+			id: entrance_account.encode().try_into().map_err(|_| Error::<T>::FailToConvert)?,
+		}])));
 
 		// Prepare parameter assets.
 		let asset = MultiAsset {
 			fun: Fungible(amount.unique_saturated_into()),
 			id: Concrete(MultiLocation { parents: 0, interior: Here }),
 		};
-		let assets: Box<VersionedMultiAssets> =
-			Box::new(VersionedMultiAssets::from(MultiAssets::from(asset)));
+		let assets: Box<VersionedAssets> = Box::new(VersionedAssets::V3(MultiAssets::from(asset)));
 
 		// Prepare parameter fee_asset_item.
 		let fee_asset_item: u32 = 0;

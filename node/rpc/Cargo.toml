@@ -37,4 +37,6 @@ zenlink-protocol-rpc = { workspace = true }
 zenlink-protocol-runtime-api = { workspace = true }
 zenlink-stable-amm-rpc = { workspace = true }
 zenlink-stable-amm-runtime-api = { workspace = true }
+bifrost-vtoken-minting-rpc = { workspace = true }
+bifrost-vtoken-minting-rpc-runtime-api = { workspace = true }
 

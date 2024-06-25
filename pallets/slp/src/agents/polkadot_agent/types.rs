@@ -21,7 +21,7 @@ use parity_scale_codec::{Decode, Encode};
 use scale_info::TypeInfo;
 use sp_runtime::{traits::StaticLookup, RuntimeDebug};
 use sp_std::{boxed::Box, vec::Vec};
-use xcm::{v3::prelude::*, VersionedMultiAssets, VersionedMultiLocation};
+use xcm::{v3::prelude::*, VersionedAssets, VersionedLocation};
 
 #[derive(Encode, Decode, RuntimeDebug)]
 pub enum KusamaCall<T: Config> {
@@ -116,9 +116,9 @@ pub enum StakingCall<T: Config> {
 pub enum XcmCall {
 	#[codec(index = 8)]
 	LimitedReserveTransferAssets(
-		Box<VersionedMultiLocation>,
-		Box<VersionedMultiLocation>,
-		Box<VersionedMultiAssets>,
+		Box<VersionedLocation>,
+		Box<VersionedLocation>,
+		Box<VersionedAssets>,
 		u32,
 		WeightLimit,
 	),

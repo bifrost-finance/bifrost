@@ -75,7 +75,7 @@ pub mod pallet {
 		#[pallet::constant]
 		type RelayCurrency: Get<CurrencyId>;
 
-		/// Convert MultiLocation to `T::CurrencyId`.
+		/// Convert Location to `T::CurrencyId`.
 		type CurrencyIdConvert: CurrencyIdMapping<
 			CurrencyId,
 			MultiLocation,

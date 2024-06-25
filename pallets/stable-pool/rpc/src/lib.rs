@@ -23,7 +23,7 @@ pub use bifrost_stable_pool_rpc_runtime_api::{self as runtime_api, StablePoolRun
 use jsonrpsee::{
 	core::{async_trait, RpcResult},
 	proc_macros::rpc,
-	types::error::{CallError, ErrorCode, ErrorObject},
+	types::error::{ErrorCode, ErrorObject},
 };
 use sp_api::ProvideRuntimeApi;
 use sp_blockchain::HeaderBackend;
@@ -87,13 +87,12 @@ where
 
 		match rs {
 			Ok(amount) => Ok(NumberOrHex::Hex(amount.into())),
-			Err(e) => Err(CallError::Custom(ErrorObject::owned(
+			Err(e) => Err(ErrorObject::owned(
 				ErrorCode::InternalError.code(),
 				"Failed to get stable_pool swap output amount.",
 				Some(format!("{:?}", e)),
-			))),
+			)),
 		}
-		.map_err(|e| jsonrpsee::core::Error::Call(e))
 	}
 
 	fn add_liquidity_amount(
@@ -109,12 +108,11 @@ where
 
 		match rs {
 			Ok(amount) => Ok(NumberOrHex::Hex(amount.into())),
-			Err(e) => Err(CallError::Custom(ErrorObject::owned(
+			Err(e) => Err(ErrorObject::owned(
 				ErrorCode::InternalError.code(),
 				"Failed to get stable_pool add liquidity amount.",
 				Some(format!("{:?}", e)),
-			))),
+			)),
 		}
-		.map_err(|e| jsonrpsee::core::Error::Call(e))
 	}
 }

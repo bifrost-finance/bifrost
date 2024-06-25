@@ -170,8 +170,9 @@ impl<T: Config>
 		)?;
 
 		// Send out the xcm message.
-		let dest = Pallet::<T>::get_para_multilocation_by_currency_id(currency_id)?;
-		send_xcm::<T::XcmRouter>(dest, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
+		let dest_location = Pallet::<T>::convert_currency_to_dest_location(currency_id)?;
+		xcm::v4::send_xcm::<T::XcmRouter>(dest_location, xcm_message)
+			.map_err(|_e| Error::<T>::XcmFailure)?;
 
 		Ok(query_id)
 	}
@@ -280,8 +281,9 @@ impl<T: Config>
 		)?;
 
 		// Send out the xcm message.
-		let dest = Pallet::<T>::get_para_multilocation_by_currency_id(currency_id)?;
-		send_xcm::<T::XcmRouter>(dest, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
+		let dest_location = Pallet::<T>::convert_currency_to_dest_location(currency_id)?;
+		xcm::v4::send_xcm::<T::XcmRouter>(dest_location, xcm_message)
+			.map_err(|_e| Error::<T>::XcmFailure)?;
 
 		Ok(query_id)
 	}
@@ -508,8 +510,9 @@ impl<T: Config>
 		Pallet::<T>::burn_fee_from_source_account(fee, currency_id)?;
 
 		// Send out the xcm message.
-		let dest = Pallet::<T>::get_para_multilocation_by_currency_id(currency_id)?;
-		send_xcm::<T::XcmRouter>(dest, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
+		let dest_location = Pallet::<T>::convert_currency_to_dest_location(currency_id)?;
+		xcm::v4::send_xcm::<T::XcmRouter>(dest_location, xcm_message)
+			.map_err(|_e| Error::<T>::XcmFailure)?;
 
 		Ok(query_id)
 	}
@@ -588,10 +591,14 @@ impl<T: Config>
 			T::ParachainId::get().into(),
 		)?;
 
-		let locat = Pallet::<T>::get_para_multilocation_by_currency_id(currency_id)?;
+		let dest_location = Pallet::<T>::convert_currency_to_dest_location(currency_id)?;
+		let dest_location =
+			xcm::v3::Location::try_from(dest_location).map_err(|_| Error::<T>::FailToConvert)?;
 		// Prepare parameter assets.
-		let asset =
-			MultiAsset { fun: Fungible(amount.unique_saturated_into()), id: Concrete(locat) };
+		let asset = MultiAsset {
+			fun: Fungible(amount.unique_saturated_into()),
+			id: Concrete(dest_location),
+		};
 
 		// Construct xcm message.
 		let call: PhalaCall<T> =
@@ -690,8 +697,9 @@ impl<T: Config>
 		Pallet::<T>::burn_fee_from_source_account(fee, currency_id)?;
 
 		// Send out the xcm message.
-		let dest = Pallet::<T>::get_para_multilocation_by_currency_id(currency_id)?;
-		send_xcm::<T::XcmRouter>(dest, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
+		let dest_location = Pallet::<T>::convert_currency_to_dest_location(currency_id)?;
+		xcm::v4::send_xcm::<T::XcmRouter>(dest_location, xcm_message)
+			.map_err(|_e| Error::<T>::XcmFailure)?;
 
 		Ok(query_id)
 	}
@@ -918,10 +926,7 @@ impl<T: Config> PhalaAgent<T> {
 		DelegatorLedgerXcmUpdateQueue::<T>::remove(query_id);
 
 		// Delete the query in pallet_xcm.
-		ensure!(
-			T::SubstrateResponseManager::remove_query_record(query_id),
-			Error::<T>::QueryResponseRemoveError
-		);
+		T::SubstrateResponseManager::remove_query_record(query_id);
 
 		Ok(())
 	}

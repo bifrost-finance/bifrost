@@ -46,8 +46,8 @@ fn init_whitelist<T: Config + bifrost_asset_registry::Config>() -> (T::AccountId
 		BalanceOf::<T>::unique_saturated_from(100_000_000_000_000u128),
 	));
 
-	CurrencyIdToLocations::<T>::insert(KSM, MultiLocation::default());
-	CurrencyIdToLocations::<T>::insert(VKSM, MultiLocation::default());
+	CurrencyIdToLocations::<T>::insert(KSM, xcm::v3::Location::default());
+	CurrencyIdToLocations::<T>::insert(VKSM, xcm::v3::Location::default());
 
 	(caller, receiver)
 }
@@ -107,6 +107,21 @@ mod benchmarks {
 			KSM,
 			TargetChain::Astar(receiver),
 			BoundedVec::default(),
+		);
+	}
+
+	#[benchmark]
+	fn mint_with_channel_id() {
+		let (caller, receiver) = init_whitelist::<T>();
+
+		#[extrinsic_call]
+		_(
+			RawOrigin::Signed(caller),
+			receiver,
+			KSM,
+			TargetChain::Astar(receiver),
+			BoundedVec::default(),
+			0u32,
 		);
 	}
 

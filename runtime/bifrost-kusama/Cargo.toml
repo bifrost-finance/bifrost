@@ -72,7 +72,6 @@ sp-genesis-builder = { workspace = true }
 
 # Cumulus dependencies
 cumulus-pallet-aura-ext = { workspace = true }
-cumulus-pallet-dmp-queue = { workspace = true }
 cumulus-pallet-parachain-system = { workspace = true }
 cumulus-pallet-xcm = { workspace = true }
 cumulus-pallet-xcmp-queue = { workspace = true }
@@ -144,6 +143,7 @@ lend-market-rpc-runtime-api = { workspace = true }
 pallet-prices = { workspace = true }
 leverage-staking = { workspace = true }
 bifrost-channel-commission = { workspace = true }
+bifrost-vtoken-minting-rpc-runtime-api = { workspace = true }
 
 [build-dependencies]
 substrate-wasm-builder = { workspace = true, optional = true }
@@ -205,7 +205,6 @@ std = [
 	"sp-version/std",
 
 	"cumulus-pallet-aura-ext/std",
-	"cumulus-pallet-dmp-queue/std",
 	"cumulus-pallet-parachain-system/std",
 	"cumulus-pallet-xcm/std",
 	"cumulus-pallet-xcmp-queue/std",
@@ -263,6 +262,7 @@ std = [
 	"bifrost-vtoken-voting/std",
 	"lend-market/std",
 	"lend-market-rpc-runtime-api/std",
+	"bifrost-vtoken-minting-rpc-runtime-api/std",
 	"pallet-prices/std",
 	"leverage-staking/std",
 	"bifrost-stable-asset/std",
@@ -346,7 +346,6 @@ try-runtime = [
 	"cumulus-pallet-xcmp-queue/try-runtime",
 	"pallet-xcm/try-runtime",
 	"cumulus-pallet-xcm/try-runtime",
-	"cumulus-pallet-dmp-queue/try-runtime",
 	"pallet-utility/try-runtime",
 	"pallet-scheduler/try-runtime",
 	"pallet-proxy/try-runtime",

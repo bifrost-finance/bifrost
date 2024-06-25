@@ -97,9 +97,7 @@ use frame_support::{
 		Currency, EitherOf, EitherOfDiverse, Get, LinearStoragePrice,
 	},
 };
-use frame_system::{
-	pallet_prelude::BlockNumberFor, EnsureRoot, EnsureRootWithSuccess, EnsureSigned,
-};
+use frame_system::{EnsureRoot, EnsureRootWithSuccess, EnsureSigned};
 use hex_literal::hex;
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 // zenlink imports
@@ -115,8 +113,8 @@ use pallet_xcm::{EnsureResponse, QueryStatus};
 use polkadot_runtime_common::prod_or_fast;
 use sp_runtime::traits::{IdentityLookup, Verify};
 use static_assertions::const_assert;
-use xcm::v3::prelude::*;
-use xcm_config::{
+use xcm::{v3::MultiLocation, v4::prelude::*};
+pub use xcm_config::{
 	parachains, BifrostCurrencyIdConvert, BifrostTreasuryAccount, MultiCurrency, SelfParaChainId,
 };
 use xcm_executor::{
@@ -143,7 +141,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: create_runtime_str!("bifrost_polkadot"),
 	impl_name: create_runtime_str!("bifrost_polkadot"),
 	authoring_version: 0,
-	spec_version: 10000,
+	spec_version: 11000,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 1,
@@ -329,6 +327,8 @@ parameter_types! {
 	pub const CloudsPalletId: PalletId = PalletId(*b"bf/cloud");
 	pub IncentivePoolAccount: PalletId = PalletId(*b"bf/inpoo");
 	pub const FarmingGaugeRewardIssuerPalletId: PalletId = PalletId(*b"bf/fmgar");
+	pub const BuyBackAccount: PalletId = PalletId(*b"bf/bybck");
+	pub const LiquidityAccount: PalletId = PalletId(*b"bf/liqdt");
 }
 
 impl frame_system::Config for Runtime {
@@ -632,7 +632,6 @@ impl pallet_balances::Config for Runtime {
 	type MaxReserves = ConstU32<50>;
 	type ReserveIdentifier = [u8; 8];
 	type FreezeIdentifier = ();
-	type MaxHolds = ConstU32<1>;
 	type MaxFreezes = ConstU32<0>;
 	type WeightInfo = pallet_balances::weights::SubstrateWeight<Runtime>;
 	type RuntimeHoldReason = RuntimeHoldReason;
@@ -1016,9 +1015,9 @@ pub fn create_x2_multilocation(index: u16, currency_id: CurrencyId) -> MultiLoca
 	match currency_id {
 		CurrencyId::Token2(GLMR_TOKEN_ID) => MultiLocation::new(
 			1,
-			X2(
-				Parachain(parachains::moonbeam::ID.into()),
-				AccountKey20 {
+			xcm::v3::Junctions::X2(
+				xcm::v3::Junction::Parachain(parachains::moonbeam::ID.into()),
+				xcm::v3::Junction::AccountKey20 {
 					network: None,
 					key: Slp::derivative_account_id_20(
 						polkadot_parachain_primitives::primitives::Sibling::from(
@@ -1032,9 +1031,9 @@ pub fn create_x2_multilocation(index: u16, currency_id: CurrencyId) -> MultiLoca
 			),
 		),
 		// Only relay chain use the Bifrost para account with "para"
-		CurrencyId::Token2(DOT_TOKEN_ID) => MultiLocation::new(
+		CurrencyId::Token2(DOT_TOKEN_ID) => xcm::v3::Location::new(
 			1,
-			X1(AccountId32 {
+			xcm::v3::Junctions::X1(xcm::v3::Junction::AccountId32 {
 				network: None,
 				id: Utility::derivative_account_id(
 					ParachainInfo::get().into_account_truncating(),
@@ -1044,9 +1043,9 @@ pub fn create_x2_multilocation(index: u16, currency_id: CurrencyId) -> MultiLoca
 			}),
 		),
 		// Bifrost Polkadot Native token
-		CurrencyId::Native(TokenSymbol::BNC) => MultiLocation::new(
+		CurrencyId::Native(TokenSymbol::BNC) => xcm::v3::Location::new(
 			0,
-			X1(AccountId32 {
+			xcm::v3::Junctions::X1(xcm::v3::Junction::AccountId32 {
 				network: None,
 				id: Utility::derivative_account_id(
 					polkadot_parachain_primitives::primitives::Sibling::from(ParachainInfo::get())
@@ -1063,11 +1062,11 @@ pub fn create_x2_multilocation(index: u16, currency_id: CurrencyId) -> MultiLoca
 				BifrostCurrencyIdConvert::<SelfParaChainId>::convert(currency_id)
 			{
 				if let Some(Parachain(para_id)) = location.interior().first() {
-					MultiLocation::new(
+					xcm::v3::Location::new(
 						1,
-						X2(
-							Parachain(*para_id),
-							AccountId32 {
+						xcm::v3::Junctions::X2(
+							xcm::v3::Junction::Parachain(*para_id),
+							xcm::v3::Junction::AccountId32 {
 								network: None,
 								id: Utility::derivative_account_id(
 									polkadot_parachain_primitives::primitives::Sibling::from(
@@ -1081,10 +1080,10 @@ pub fn create_x2_multilocation(index: u16, currency_id: CurrencyId) -> MultiLoca
 						),
 					)
 				} else {
-					MultiLocation::default()
+					xcm::v3::Location::default()
 				}
 			} else {
-				MultiLocation::default()
+				xcm::v3::Location::default()
 			}
 		},
 	}
@@ -1160,7 +1159,7 @@ parameter_types! {
 }
 
 pub struct SubstrateResponseManager;
-impl QueryResponseManager<QueryId, MultiLocation, BlockNumber, RuntimeCall>
+impl QueryResponseManager<QueryId, Location, BlockNumber, RuntimeCall>
 	for SubstrateResponseManager
 {
 	fn get_query_response_record(query_id: QueryId) -> bool {
@@ -1172,14 +1171,14 @@ impl QueryResponseManager<QueryId, MultiLocation, BlockNumber, RuntimeCall>
 	}
 
 	fn create_query_record(
-		responder: &MultiLocation,
+		responder: Location,
 		call_back: Option<RuntimeCall>,
 		timeout: BlockNumber,
 	) -> u64 {
 		if let Some(call_back) = call_back {
-			PolkadotXcm::new_notify_query(*responder, call_back, timeout, Here)
+			PolkadotXcm::new_notify_query(responder.clone(), call_back, timeout, Here)
 		} else {
-			PolkadotXcm::new_query(*responder, timeout, Here)
+			PolkadotXcm::new_query(responder, timeout, Here)
 		}
 	}
 
@@ -1194,13 +1193,6 @@ impl QueryResponseManager<QueryId, MultiLocation, BlockNumber, RuntimeCall>
 	}
 }
 
-pub struct OnRefund;
-impl bifrost_slp::OnRefund<AccountId, CurrencyId, Balance> for OnRefund {
-	fn on_refund(token_id: CurrencyId, to: AccountId, token_amount: Balance) -> u64 {
-		SystemStaking::on_refund(token_id, to, token_amount).ref_time()
-	}
-}
-
 impl bifrost_slp::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type RuntimeOrigin = RuntimeOrigin;
@@ -1209,13 +1201,11 @@ impl bifrost_slp::Config for Runtime {
 	type ControlOrigin = EitherOfDiverse<TechAdminOrCouncil, LiquidStaking>;
 	type WeightInfo = weights::bifrost_slp::BifrostWeight<Runtime>;
 	type VtokenMinting = VtokenMinting;
-	type BifrostSlpx = Slpx;
 	type AccountConverter = SubAccountIndexMultiLocationConvertor;
 	type ParachainId = SelfParaChainId;
 	type SubstrateResponseManager = SubstrateResponseManager;
 	type MaxTypeEntryPerBlock = MaxTypeEntryPerBlock;
 	type MaxRefundPerBlock = MaxRefundPerBlock;
-	type OnRefund = OnRefund;
 	type ParachainStaking = ();
 	type XcmTransfer = XTokens;
 	type MaxLengthLimit = MaxLengthLimit;
@@ -1479,6 +1469,7 @@ impl bifrost_vtoken_minting::Config for Runtime {
 	type MaxLockRecords = ConstU32<100>;
 	type IncentivePoolAccount = IncentivePoolAccount;
 	type VeMinting = VeMinting;
+	type AssetIdMaps = AssetIdMaps<Runtime>;
 }
 
 parameter_types! {
@@ -1632,6 +1623,22 @@ impl bifrost_clouds_convert::Config for Runtime {
 	type LockedBlocks = MaxBlock;
 }
 
+impl bifrost_buy_back::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type MultiCurrency = Currencies;
+	type ControlOrigin = EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
+	type WeightInfo = weights::bifrost_buy_back::BifrostWeight<Runtime>;
+	type DexOperator = ZenlinkProtocol;
+	type CurrencyIdConversion = AssetIdMaps<Runtime>;
+	type TreasuryAccount = BifrostTreasuryAccount;
+	type RelayChainToken = RelayCurrencyId;
+	type BuyBackAccount = BuyBackAccount;
+	type LiquidityAccount = LiquidityAccount;
+	type ParachainId = ParachainInfo;
+	type CurrencyIdRegister = AssetIdMaps<Runtime>;
+	type VeMinting = VeMinting;
+}
+
 // Below is the implementation of tokens manipulation functions other than native token.
 pub struct LocalAssetAdaptor<Local>(PhantomData<Local>);
 
@@ -1762,7 +1769,6 @@ construct_runtime! {
 		XcmpQueue: cumulus_pallet_xcmp_queue = 40,
 		PolkadotXcm: pallet_xcm = 41,
 		CumulusXcm: cumulus_pallet_xcm = 42,
-		DmpQueue: cumulus_pallet_dmp_queue = 43,
 		MessageQueue: pallet_message_queue = 44,
 
 		// utilities
@@ -1816,6 +1822,7 @@ construct_runtime! {
 		LeverageStaking: leverage_staking = 135,
 		ChannelCommission: bifrost_channel_commission = 136,
 		CloudsConvert: bifrost_clouds_convert = 137,
+		BuyBack: bifrost_buy_back = 138,
 	}
 }
 
@@ -1856,16 +1863,15 @@ pub type CheckedExtrinsic = generic::CheckedExtrinsic<AccountId, RuntimeCall, Si
 /// The payload being signed in transactions.
 pub type SignedPayload = generic::SignedPayload<RuntimeCall, SignedExtra>;
 
+parameter_types! {
+	pub const DmpQueuePalletName: &'static str = "DmpQueue";
+}
+
 /// All migrations that will run on the next runtime upgrade.
 ///
 /// This contains the combined migrations of the last 10 releases. It allows to skip runtime
 /// upgrades in case governance decides to do so. THE ORDER IS IMPORTANT.
 pub type Migrations = migrations::Unreleased;
-
-parameter_types! {
-	pub const TipsPalletName: &'static str = "Tips";
-	pub const BountiesPalletName: &'static str = "Bounties";
-}
 
 /// The runtime migrations per release.
 pub mod migrations {
@@ -1874,35 +1880,13 @@ pub mod migrations {
 
 	/// Unreleased migrations. Add new ones here:
 	pub type Unreleased = (
-		// Unlock & unreserve funds
-		pallet_tips::migrations::unreserve_deposits::UnreserveDeposits<UnlockConfigForTips, ()>,
-		cumulus_pallet_xcmp_queue::migration::v4::MigrationToV4<Runtime>,
-		migration::slpx_migrates_whitelist::UpdateWhitelist,
+		bifrost_slpx::migration::v1::MigrateToV1<Runtime>,
 		frame_support::migrations::RemovePallet<
-			TipsPalletName,
+			DmpQueuePalletName,
 			<Runtime as frame_system::Config>::DbWeight,
 		>,
-		frame_support::migrations::RemovePallet<
-			BountiesPalletName,
-			<Runtime as frame_system::Config>::DbWeight,
-		>,
-		pallet_identity::migration::versioned::V0ToV1<Runtime, 100>,
-		pallet_collator_selection::migration::v2::MigrationToV2<Runtime>,
+		pallet_xcm::migration::MigrateToLatestXcmVersion<Runtime>,
 	);
-}
-
-// Special Config for tips pallets, allowing us to run migrations for them without
-// implementing their configs on [`Runtime`].
-pub struct UnlockConfigForTips;
-impl pallet_tips::migrations::unreserve_deposits::UnlockConfig<()> for UnlockConfigForTips {
-	type Currency = Balances;
-	type Hash = Hash;
-	type DataDepositPerByte = DataDepositPerByte;
-	type TipReportDepositBase = TipReportDepositBase;
-	type AccountId = AccountId;
-	type BlockNumber = BlockNumberFor<Runtime>;
-	type DbWeight = <Runtime as frame_system::Config>::DbWeight;
-	type PalletName = TipsPalletName;
 }
 
 /// Executive: handles dispatch to the various modules.
@@ -1921,7 +1905,10 @@ extern crate frame_benchmarking;
 
 #[cfg(feature = "runtime-benchmarks")]
 mod benches {
-	define_benchmarks!([bifrost_ve_minting, VeMinting]);
+	define_benchmarks!(
+		[bifrost_ve_minting, VeMinting]
+		[bifrost_buy_back, BuyBack]
+	);
 }
 
 impl_runtime_apis! {
@@ -2189,6 +2176,12 @@ impl_runtime_apis! {
 			amounts: Vec<Balance>,
 		) -> Balance {
 			StablePool::add_liquidity_amount(pool_id, amounts).unwrap_or(Zero::zero())
+		}
+	}
+
+	impl bifrost_vtoken_minting_rpc_runtime_api::VtokenMintingRuntimeApi<Block, CurrencyId> for Runtime {
+		fn get_exchange_rate(token_id: Option<CurrencyId>) -> Vec<(CurrencyId, U256)> {
+			VtokenMinting::get_exchange_rate(token_id).unwrap_or(Vec::new())
 		}
 	}
 

@@ -55,6 +55,7 @@ std = [
 	"zenlink-protocol/std",
 	"bifrost-slp/std",
 	"bifrost-asset-registry/std",
+	"orml-xtokens/std",
 ]
 
 runtime-benchmarks = [

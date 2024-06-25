@@ -23,7 +23,7 @@ pub use bifrost_ve_minting_rpc_runtime_api::{self as runtime_api, VeMintingRunti
 use jsonrpsee::{
 	core::{async_trait, RpcResult},
 	proc_macros::rpc,
-	types::error::{CallError, ErrorCode, ErrorObject},
+	types::error::{ErrorCode, ErrorObject},
 };
 use parity_scale_codec::Codec;
 use sp_api::ProvideRuntimeApi;
@@ -90,24 +90,23 @@ where
 				None => None,
 			})
 			.map_err(|e| {
-				jsonrpsee::core::Error::Call(CallError::Custom(ErrorObject::owned(
+				ErrorObject::owned(
 					ErrorCode::InternalError.code(),
 					"Failed to get balance_of.",
 					Some(format!("{:?}", e)),
-				)))
+				)
 			})?;
 
 		let rs: Result<Balance, _> = lm_rpc_api.balance_of(at, who, block_number);
 
 		match rs {
 			Ok(balane) => Ok(NumberOrHex::Hex(balane.into())),
-			Err(e) => Err(CallError::Custom(ErrorObject::owned(
+			Err(e) => Err(ErrorObject::owned(
 				ErrorCode::InternalError.code(),
 				"Failed to get balance_of.",
 				Some(format!("{:?}", e)),
-			))),
+			)),
 		}
-		.map_err(|e| jsonrpsee::core::Error::Call(e))
 	}
 
 	fn total_supply(&self, at: Option<<Block as BlockT>::Hash>) -> RpcResult<NumberOrHex> {
@@ -121,24 +120,23 @@ where
 				None => None,
 			})
 			.map_err(|e| {
-				jsonrpsee::core::Error::Call(CallError::Custom(ErrorObject::owned(
+				ErrorObject::owned(
 					ErrorCode::InternalError.code(),
 					"Failed to get total_supply.",
 					Some(format!("{:?}", e)),
-				)))
+				)
 			})?;
 		let rs: Result<Balance, _> =
 			lm_rpc_api.total_supply(at, block_number.expect("no block found"));
 
 		match rs {
 			Ok(supply) => Ok(NumberOrHex::Hex(supply.into())),
-			Err(e) => Err(CallError::Custom(ErrorObject::owned(
+			Err(e) => Err(ErrorObject::owned(
 				ErrorCode::InternalError.code(),
 				"Failed to get total_supply.",
 				Some(format!("{:?}", e)),
-			))),
+			)),
 		}
-		.map_err(|e| jsonrpsee::core::Error::Call(e))
 	}
 
 	fn find_block_epoch(
@@ -156,23 +154,22 @@ where
 				None => None,
 			})
 			.map_err(|e| {
-				jsonrpsee::core::Error::Call(CallError::Custom(ErrorObject::owned(
+				ErrorObject::owned(
 					ErrorCode::InternalError.code(),
 					"Failed to get find_block_epoch.",
 					Some(format!("{:?}", e)),
-				)))
+				)
 			})?;
 		let rs: Result<U256, _> =
 			lm_rpc_api.find_block_epoch(at, block_number.expect("no block found"), max_epoch);
 
 		match rs {
 			Ok(epoch) => Ok(NumberOrHex::Hex(epoch.into())),
-			Err(e) => Err(CallError::Custom(ErrorObject::owned(
+			Err(e) => Err(ErrorObject::owned(
 				ErrorCode::InternalError.code(),
 				"Failed to get find_block_epoch.",
 				Some(format!("{:?}", e)),
-			))),
+			)),
 		}
-		.map_err(|e| jsonrpsee::core::Error::Call(e))
 	}
 }
