@@ -66,6 +66,7 @@ use xcm::v4::{prelude::*, Weight as XcmWeight};
 const CONVICTION_VOTING_ID: LockIdentifier = *b"vtvoting";
 
 type PollIndex = u32;
+type PollClass = u16;
 
 pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
 
