@@ -1,0 +1,1 @@
+genesis: https://raw.githubusercontent.com/AcalaNetwork/Acala/master/resources/mandala-dist.jsonimport-storage:  Sudo:    Key: 5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY # Alice  System:    Account:      -        -          - 5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY        - providers: 1          data:            free: 1000000000000000

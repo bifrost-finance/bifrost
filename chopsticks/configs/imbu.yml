@@ -1,0 +1,1 @@
+endpoint: wss://imbue-kusama.imbue.networkmock-signature-host: trueblock: ${env.IMBUE_BLOCK_NUMBER}db: ./db.sqliteimport-storage:  Sudo:    Key: 5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY # Alice  System:    Account:      -        -          - 5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY        - data:            free: 1000000000000000

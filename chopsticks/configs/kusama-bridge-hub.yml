@@ -1,0 +1,1 @@
+endpoint: wss://kusama-bridge-hub-rpc.polkadot.iomock-signature-host: trueblock: ${env.KUSAMA_BRIDGEHUB_BLOCK_NUMBER}db: ./db.sqliteimport-storage:  System:    Account:      -        -          - 5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY        - providers: 1          data:            free: 1000000000000000

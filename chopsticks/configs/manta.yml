@@ -1,0 +1,1 @@
+endpoint: wss://ws.manta.systemsmock-signature-host: trueblock: ${env.MANTA_BLOCK_NUMBER}db: ./db.sqliteimport-storage:  Sudo:   Key: dfbMFtQXqiKHH4d2y4CFcVQCpopqKcaEiYv2DCUpVCphoz8kB  System:    Account:      -        -          - dfbMFtQXqiKHH4d2y4CFcVQCpopqKcaEiYv2DCUpVCphoz8kB        - providers: 1          data:            free: '1000000000000000000000000'
