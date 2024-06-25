@@ -180,6 +180,7 @@ mod benchmarks {
 		whitelist_account!(caller);
 		let origin = RawOrigin::Signed(caller);
 		let vtoken = VKSM;
+		let class = 0u16;
 		let poll_index = 0u32;
 		let vote = account_vote::<T>(100u32.into());
 		let derivative_index = 0u16;
@@ -208,7 +209,7 @@ mod benchmarks {
 		)?;
 
 		#[extrinsic_call]
-		_(origin, vtoken, poll_index, derivative_index);
+		_(origin, vtoken, class, poll_index, derivative_index);
 
 		Ok(())
 	}

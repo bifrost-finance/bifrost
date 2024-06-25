@@ -558,6 +558,7 @@ pub mod pallet {
 		pub fn remove_delegator_vote(
 			origin: OriginFor<T>,
 			vtoken: CurrencyIdOf<T>,
+			#[pallet::compact] class: PollClass,
 			#[pallet::compact] poll_index: PollIndex,
 			#[pallet::compact] derivative_index: DerivativeIndex,
 		) -> DispatchResult {
@@ -571,7 +572,7 @@ pub mod pallet {
 				response: Default::default(),
 			};
 			let remove_vote_call =
-				<RelayCall<T> as ConvictionVotingCall<T>>::remove_vote(None, poll_index);
+				<RelayCall<T> as ConvictionVotingCall<T>>::remove_vote(Some(class), poll_index);
 			let (weight, extra_fee) = T::XcmDestWeightAndFee::get_operation_weight_and_fee(
 				CurrencyId::to_token(&vtoken).map_err(|_| Error::<T>::NoData)?,
 				XcmOperationType::RemoveVote,
