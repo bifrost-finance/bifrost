@@ -29,6 +29,7 @@ include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 use bifrost_slp::{DerivativeAccountProvider, QueryResponseManager};
 use core::convert::TryInto;
 // A few exports that help ease life for downstream crates.
+pub use bifrost_parachain_staking::{InflationInfo, Range};
 use cumulus_pallet_parachain_system::{RelayNumberStrictlyIncreases, RelaychainDataProvider};
 pub use frame_support::{
 	construct_runtime, match_types, parameter_types,
@@ -927,15 +928,7 @@ parameter_types! {
 	/// Minimum stake required to be reserved to be a delegator
 	pub MinDelegatorStk: u128 = 50 * BNCS;
 	pub AllowInflation: bool = false;
-	pub ToMigrateInvulnables: Vec<AccountId> = prod_or_fast!(vec![
-		hex!["8cf80f0bafcd0a3d80ca61cb688e4400e275b39d3411b4299b47e712e9dab809"].into(),
-		hex!["40ac4effe39181731a8feb8a8ee0780e177bdd0d752b09c8fd71047e67189022"].into(),
-		hex!["624d6a004c72a1abcf93131e185515ebe1410e43a301fe1f25d20d8da345376e"].into(),
-		hex!["985d2738e512909c81289e6055e60a6824818964535ecfbf10e4d69017084756"].into(),
-	],vec![
-		hex!["d43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d"].into(),
-		hex!["8eaf04151687736326c9fea17e25fc5287613693c912909cb226aa4794f26a48"].into(),
-	]);
+	pub ToMigrateInvulnables: Vec<AccountId> = prod_or_fast!(vec![],vec![]);
 	pub PaymentInRound: u128 = 180 * BNCS;
 	pub InitSeedStk: u128 = 5000 * BNCS;
 }
