@@ -39,7 +39,6 @@ jobs:
         with:
           push: true
           tags: |
-            bifrostnetwork/bifrost:latest
             bifrostnetwork/bifrost:${{ github.ref_name }}
           build-args: |
             BIFROST_VERSION=${{ github.ref_name }}
