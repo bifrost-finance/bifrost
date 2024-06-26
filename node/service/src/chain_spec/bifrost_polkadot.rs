@@ -407,8 +407,23 @@ pub fn testnet_config() -> ChainSpec {
 		hex!["003d693ed5403785569498d899593bb74119bacca39d226dd37853e21190ca65"].into(),
 		// eBghkPPpcM5aiQsN7jPFG2dGtiaJb3PazebaiDyDXhT6aw1
 		hex!["6cdabe150eac14ba3700ce14fda9d5d595857690f40031cda41bcf775004d426"].into(),
+		// eCSrvbA5gGNQr7VZ48fkCX5vkt1H16F8Np9g2hYssRXHZJF
+		hex!["6d6f646c62662f7374616b650000000000000000000000000000000000000000"].into(),
 	];
 	let balances = endowed_accounts.iter().cloned().map(|x| (x, ENDOWMENT() * 100)).collect();
+
+	let council_membership = vec![
+		// ffm75STKAACSqbnc6j16Nkm9h9i2VtjTvHXpkZy32QxsD2s
+		hex!["ae80aa9d42b30abf2c67510ed2410e76f749329606d1a79354b772dc73522d35"].into(),
+	];
+	let technical_committee_membership = vec![
+		// ffm75STKAACSqbnc6j16Nkm9h9i2VtjTvHXpkZy32QxsD2s
+		hex!["ae80aa9d42b30abf2c67510ed2410e76f749329606d1a79354b772dc73522d35"].into(),
+	];
+	let oracle_membership = vec![
+		// ffm75STKAACSqbnc6j16Nkm9h9i2VtjTvHXpkZy32QxsD2s
+		hex!["ae80aa9d42b30abf2c67510ed2410e76f749329606d1a79354b772dc73522d35"].into(),
+	];
 
 	let salp_multisig: AccountId =
 		hex!["e4da05f08e89bf6c43260d96f26fffcfc7deae5b465da08669a9d008e64c2c63"].into();
@@ -426,11 +441,11 @@ pub fn testnet_config() -> ChainSpec {
 		balances,
 		vec![],
 		PARA_ID.into(),
-		vec![],
-		vec![],
+		council_membership,
+		technical_committee_membership,
 		salp_multisig,
 		(vec![], vec![], vec![]),
-		vec![],
+		oracle_membership,
 	))
 	.with_properties(bifrost_polkadot_properties())
 	.with_protocol_id(DEFAULT_PROTOCOL_ID)
