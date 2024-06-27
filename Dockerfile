@@ -45,9 +45,8 @@ RUN rm -rf /usr/share  && \
 
 USER bifrost
 COPY --from=builder /app/target/production/bifrost /usr/local/bin
-COPY ./node/service/res/bifrost-kusama.json /spec/bifrost.json
-COPY ./node/service/res/bifrost-kusama.json /spec
-COPY ./node/service/res/bifrost-polkadot.json /spec
+COPY ./node/service/res/bifrost-polkadot-testnet-raw.json /spec/bifrost-polkadot-testnet-raw.json
+COPY ./node/service/res/rococo-local.json /spec/rococo-local.json
 
 # checks
 RUN ldd /usr/local/bin/bifrost && \
