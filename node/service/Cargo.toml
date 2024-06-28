@@ -71,6 +71,7 @@ cumulus-primitives-core = { workspace = true }
 cumulus-client-service = { workspace = true }
 cumulus-primitives-parachain-inherent = { workspace = true }
 cumulus-relay-chain-interface = { workspace = true }
+cumulus-test-relay-sproof-builder = { workspace = true }
 
 # Polkadot dependencies
 polkadot-cli = { workspace = true }
@@ -86,6 +87,7 @@ hex-literal = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }
 log = { workspace = true }
+flume = { workspace = true }
 futures = { workspace = true, features = ["compat"] }
 
 # Runtimes

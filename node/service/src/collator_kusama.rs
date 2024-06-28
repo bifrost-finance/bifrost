@@ -35,6 +35,8 @@ use cumulus_client_consensus_aura::collators::basic::{
 
 use cumulus_client_consensus_common::ParachainBlockImport as TParachainBlockImport;
 use cumulus_client_consensus_proposer::Proposer;
+use cumulus_primitives_parachain_inherent::ParachainInherentData;
+use cumulus_test_relay_sproof_builder::RelayStateSproofBuilder;
 
 use bifrost_primitives::Block;
 use cumulus_client_service::{
@@ -43,7 +45,8 @@ use cumulus_client_service::{
 };
 use cumulus_primitives_core::{relay_chain::Hash, ParaId};
 use cumulus_relay_chain_interface::{OverseerHandle, RelayChainInterface};
-use polkadot_primitives::CollatorPair;
+use polkadot_cli::IdentifyVariant;
+use polkadot_primitives::{CollatorPair, PersistedValidationData};
 use sc_client_api::backend::Backend;
 use sc_consensus::{ImportQueue, LongestChain};
 use sc_executor::{HeapAllocStrategy, WasmExecutor, DEFAULT_HEAP_ALLOC_STRATEGY};
@@ -56,8 +59,9 @@ use sp_core::U256;
 use sp_keystore::KeystorePtr;
 use substrate_prometheus_endpoint::Registry;
 
-use crate::eth::{
-	db_config_dir, spawn_frontier_tasks, BackendType, EthConfiguration, FrontierBackend,
+use crate::{
+	dev,
+	eth::{db_config_dir, spawn_frontier_tasks, BackendType, EthConfiguration, FrontierBackend},
 };
 
 #[cfg(not(feature = "runtime-benchmarks"))]
@@ -449,7 +453,26 @@ async fn start_node_impl(
 				slot_duration,
 			);
 			let dynamic_fee = fp_dynamic_fee::InherentDataProvider(U256::from(target_gas_price));
-			Ok((slot, timestamp, dynamic_fee))
+			// Create a dummy parachain inherent data provider which is required to pass
+			// the checks by the para chain system. We use dummy values because in the 'pending
+			// context' neither do we have access to the real values nor do we need them.
+			let (relay_parent_storage_root, relay_chain_state) =
+				RelayStateSproofBuilder::default().into_state_root_and_proof();
+			let vfp = PersistedValidationData {
+				// This is a hack to make
+				// `cumulus_pallet_parachain_system::RelayNumberStrictlyIncreases` happy. Relay
+				// parent number can't be bigger than u32::MAX.
+				relay_parent_number: u32::MAX,
+				relay_parent_storage_root,
+				..Default::default()
+			};
+			let parachain_inherent_data = ParachainInherentData {
+				validation_data: vfp,
+				relay_chain_state,
+				downward_messages: Default::default(),
+				horizontal_messages: Default::default(),
+			};
+			Ok((slot, timestamp, dynamic_fee, parachain_inherent_data))
 		};
 
 		Box::new(move |deny_unsafe, subscription_task_executor| {
@@ -480,7 +503,7 @@ async fn start_node_impl(
 				client: client.clone(),
 				pool: pool.clone(),
 				deny_unsafe,
-				// command_sink: if sealing.is_some() { Some(command_sink.clone()) } else { None },
+				command_sink: None,
 				eth: eth_deps,
 			};
 			crate::rpc::create_full(
@@ -595,14 +618,18 @@ pub async fn start_node(
 	para_id: ParaId,
 	hwbench: Option<sc_sysinfo::HwBench>,
 ) -> sc_service::error::Result<(TaskManager, Arc<FullClient>)> {
-	start_node_impl(
-		parachain_config,
-		polkadot_config,
-		eth_config,
-		collator_options,
-		CollatorSybilResistance::Resistant,
-		para_id,
-		hwbench,
-	)
-	.await
+	if parachain_config.chain_spec.is_dev() {
+		dev::start_node(parachain_config, eth_config).await
+	} else {
+		start_node_impl(
+			parachain_config,
+			polkadot_config,
+			eth_config,
+			collator_options,
+			CollatorSybilResistance::Resistant,
+			para_id,
+			hwbench,
+		)
+		.await
+	}
 }

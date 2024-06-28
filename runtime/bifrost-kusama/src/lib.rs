@@ -420,7 +420,8 @@ impl pallet_timestamp::Config for Runtime {
 	type MinimumPeriod = ConstU64<{ SLOT_DURATION / 2 }>;
 	/// A timestamp: milliseconds since the unix epoch.
 	type Moment = Moment;
-	type OnTimestampSet = Aura;
+	//TODO: REMOVE me before release, only for evm test
+	type OnTimestampSet = ();
 	type WeightInfo = pallet_timestamp::weights::SubstrateWeight<Runtime>;
 }
 
