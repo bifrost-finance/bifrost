@@ -88,3 +88,4 @@ impl<BalanceOf> Default for ContributionStatus<BalanceOf> {
 }
 
 pub type MessageId = [u8; 32];
+// pub use crate::MessageId;

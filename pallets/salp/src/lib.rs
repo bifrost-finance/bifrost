@@ -100,7 +100,7 @@ pub mod pallet {
 	use bifrost_primitives::{
 		BancorHandler, CurrencyId, CurrencyId::VSBond, LeasePeriod, MessageId, Nonce, ParaId,
 	};
-	use bifrost_xcm_interface::traits::XcmHelper;
+	use bifrost_primitives::XcmHelper;
 	use frame_support::{
 		pallet_prelude::{storage::child, *},
 		sp_runtime::traits::{AccountIdConversion, CheckedAdd, Hash, Saturating, Zero},

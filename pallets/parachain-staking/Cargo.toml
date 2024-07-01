@@ -8,6 +8,8 @@ version = "3.0.1"
 [dependencies]
 log = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
+#bifrost-primitives = { path = "../../primitives" }
+bifrost-primitives = { workspace = true }
 
 # Substrate
 frame-benchmarking = { workspace = true, optional = true }

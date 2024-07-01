@@ -37,7 +37,7 @@ use bifrost_asset_registry::AssetMetadata;
 use bifrost_primitives::{
 	CurrencyId, CurrencyIdConversion, CurrencyIdExt, CurrencyIdMapping, CurrencyIdRegister,
 	RedeemType, SlpOperator, SlpxOperator, TimeUnit, VTokenMintRedeemProvider,
-	VTokenSupplyProvider, VtokenMintingInterface, VtokenMintingOperator,
+	VTokenSupplyProvider, VtokenMintingInterface, VtokenMintingOperator, RedeemTo
 };
 use bifrost_ve_minting::traits::VeMintingInterface;
 use frame_support::{
@@ -57,7 +57,7 @@ use orml_traits::{MultiCurrency, MultiLockableCurrency};
 pub use pallet::*;
 use sp_core::U256;
 use sp_std::{vec, vec::Vec};
-pub use traits::*;
+pub use bifrost_primitives::vtoken_minting::*;
 use xcm::v3::MultiLocation;
 
 pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;

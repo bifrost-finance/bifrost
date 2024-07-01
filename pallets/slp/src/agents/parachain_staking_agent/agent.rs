@@ -27,7 +27,7 @@ use crate::{
 		OneToManyScheduledRequest, ParachainStakingLedgerUpdateEntry,
 		ParachainStakingLedgerUpdateOperation, QueryId,
 	},
-	traits::{QueryResponseManager, StakingAgent},
+	// traits::{QueryResponseManager, StakingAgent},
 	AccountIdOf, BalanceOf, Config, DelegatorLedgerXcmUpdateQueue, DelegatorLedgers,
 	DelegatorsMultilocation2Index, LedgerUpdateEntry, MinimumsAndMaximums, Pallet, TimeUnit,
 	Validators, ValidatorsByDelegatorUpdateEntry, BNC,
@@ -36,6 +36,8 @@ use bifrost_parachain_staking::ParachainStakingInterface;
 use bifrost_primitives::{
 	currency::{GLMR, MANTA, MOVR},
 	CurrencyId, VtokenMintingOperator, XcmOperationType,
+	QueryResponseManager, 
+	StakingAgent
 };
 use core::marker::PhantomData;
 use frame_support::{ensure, traits::Get};

@@ -21,7 +21,8 @@ use crate::{
 	KSM, MANTA, MOVR, PHA,
 };
 use bifrost_primitives::CurrencyId;
-use bifrost_xcm_interface::traits::parachains;
+// use bifrost_xcm_interface::traits::parachains;
+use bifrost_primitives::parachains;
 use frame_support::ensure;
 use parity_scale_codec::Encode;
 use sp_core::Get;

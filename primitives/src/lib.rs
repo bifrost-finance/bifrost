@@ -21,12 +21,13 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use parity_scale_codec::MaxEncodedLen;
-use scale_info::TypeInfo;
-use sp_core::{Decode, Encode, RuntimeDebug, H160};
+use scale_info::{TypeInfo, prelude::collections::BTreeMap};
+use sp_core::{Decode, Encode, RuntimeDebug, H160, U256};
 use sp_runtime::{
 	generic,
 	traits::{BlakeTwo256, IdentifyAccount, Verify},
 	FixedU128, MultiSignature, OpaqueExtrinsic, Permill,
+	DispatchResult, DispatchError
 };
 use xcm::v4::{prelude::*, Asset, Location};
 use xcm_executor::traits::{AssetTransferError, TransferType, XcmAssetTransfers};
@@ -35,6 +36,9 @@ pub mod currency;
 mod salp;
 pub mod traits;
 pub use salp::*;
+pub use frame_support::{dispatch::Parameter, storage::types::StorageMap};
+use sp_std::{vec::Vec, boxed::Box};
+use core::ops::{Add, Mul};
 
 #[cfg(test)]
 mod tests;
@@ -154,6 +158,17 @@ pub const SECONDS_PER_YEAR: Timestamp = 365 * 24 * 60 * 60;
 pub type DerivativeIndex = u16;
 
 pub type TimeStampedPrice = orml_oracle::TimestampedValue<Price, Moment>;
+
+pub type PoolTokenIndex = u32;
+
+pub type StableAssetPoolId = u32;
+
+pub type ChainId = u32;
+
+pub type RoundIndex = u32; 
+
+pub type QueryId = u64;
+
 
 #[derive(
 	Encode, Decode, Eq, PartialEq, Copy, Clone, RuntimeDebug, PartialOrd, Ord, scale_info::TypeInfo,
@@ -343,4 +358,37 @@ impl Default for ExtraFeeInfo {
 			extra_fee_currency: CurrencyId::Native(TokenSymbol::BNC),
 		}
 	}
+}
+
+pub struct Point<Balance, BlockNumber> {
+	bias: i128,  // i128
+	slope: i128, // dweight / dt
+	block: BlockNumber,
+	amount: Balance,
+}
+
+pub struct IncentiveConfig<CurrencyId, Balance, BlockNumber, AccountId> {
+	pub reward_rate: BTreeMap<CurrencyId, Balance>,
+	pub reward_per_token_stored: BTreeMap<CurrencyId, Balance>,
+	pub rewards_duration: BlockNumber,
+	pub period_finish: BlockNumber,
+	pub last_update_time: BlockNumber,
+	pub incentive_controller: Option<AccountId>,
+	pub last_reward: Vec<(CurrencyId, Balance)>,
+}
+
+#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, scale_info::TypeInfo)]
+pub enum RedeemTo<AccountId> {
+	/// Native chain.
+	Native(AccountId),
+	/// Astar chain.
+	Astar(AccountId),
+	/// Moonbeam chain.
+	Moonbeam(H160),
+	/// Hydradx chain.
+	Hydradx(AccountId),
+	/// Interlay chain.
+	Interlay(AccountId),
+	/// Manta chain.
+	Manta(AccountId),
 }

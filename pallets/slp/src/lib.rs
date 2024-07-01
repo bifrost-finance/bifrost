@@ -27,10 +27,11 @@ pub use crate::{
 		Delays, LedgerUpdateEntry, MinimumsMaximums, QueryId, SubstrateLedger,
 		ValidatorsByDelegatorUpdateEntry,
 	},
-	traits::{OnRefund, QueryResponseManager, StakingAgent},
+	// traits::{OnRefund, QueryResponseManager, StakingAgent},
 	Junction::AccountId32,
 	Junctions::X1,
 };
+pub use bifrost_primitives::slp::{OnRefund, QueryResponseManager, StakingAgent}; // add
 use bifrost_asset_registry::AssetMetadata;
 use bifrost_parachain_staking::ParachainStakingInterface;
 use bifrost_primitives::{

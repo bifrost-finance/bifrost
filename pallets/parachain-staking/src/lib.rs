@@ -52,9 +52,11 @@
 mod delegation_requests;
 pub mod inflation;
 pub mod migrations;
-pub mod traits;
+// pub mod traits; // to be delleted
 pub mod types;
 pub mod weights;
+//pub mod bifrost_primitives::parachain_staking;
+// pub mod parachain_staking;
 
 #[cfg(any(test, feature = "runtime-benchmarks"))]
 mod benchmarks;
@@ -68,12 +70,14 @@ pub use delegation_requests::{CancelledScheduledRequest, DelegationAction, Sched
 use frame_support::pallet;
 pub use inflation::{InflationInfo, Range};
 pub use pallet::*;
-pub use traits::*;
+// pub use traits::*; // to be delleted
 pub use types::*;
 use weights::WeightInfo;
-pub use RoundIndex;
+// pub use RoundIndex;
+pub use pallet::RoundIndex;
 pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
 use frame_support::pallet_prelude::DispatchResultWithPostInfo;
+pub use bifrost_primitives::parachain_staking::*; //add
 
 #[pallet]
 pub mod pallet {
@@ -99,10 +103,11 @@ pub mod pallet {
 	use crate::{
 		delegation_requests::{CancelledScheduledRequest, DelegationAction, ScheduledRequest},
 		set::OrderedSet,
-		traits::*,
+		// traits::*,
 		types::*,
 		InflationInfo, Range, WeightInfo,
 	};
+	use bifrost_primitives::parachain_staking::*; // add
 
 	/// Pallet for parachain staking
 	#[pallet::pallet]
