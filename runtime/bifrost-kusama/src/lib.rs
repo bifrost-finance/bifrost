@@ -2045,14 +2045,7 @@ pub mod migrations {
 	use super::*;
 
 	/// Unreleased migrations. Add new ones here:
-	pub type Unreleased = (
-		bifrost_slpx::migration::v1::MigrateToV1<Runtime>,
-		frame_support::migrations::RemovePallet<
-			DmpQueuePalletName,
-			<Runtime as frame_system::Config>::DbWeight,
-		>,
-		pallet_xcm::migration::MigrateToLatestXcmVersion<Runtime>,
-	);
+	pub type Unreleased = ();
 }
 
 /// Executive: handles dispatch to the various modules.
