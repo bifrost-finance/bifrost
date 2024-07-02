@@ -22,7 +22,6 @@ use cumulus_primitives_parachain_inherent::{
 	MockValidationDataInherentDataProvider, MockXcmConfig, ParachainInherentData,
 };
 use cumulus_test_relay_sproof_builder::RelayStateSproofBuilder;
-use futures::StreamExt;
 use jsonrpsee::core::async_trait;
 use sc_client_api::Backend;
 use sc_executor::NativeElseWasmExecutor;

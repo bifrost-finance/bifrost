@@ -111,7 +111,7 @@ zenlink-stable-amm-runtime-api = { workspace = true }
 fc-consensus = { workspace = true }
 fc-db = { workspace = true, features = ["default", "sql"] }
 fc-mapping-sync = { workspace = true, features = ["sql"] }
-fc-rpc = { workspace = true }
+fc-rpc = { workspace = true, features = ["txpool"] }
 fc-rpc-core = { workspace = true }
 fc-storage = { workspace = true }
 fp-account = { workspace = true }

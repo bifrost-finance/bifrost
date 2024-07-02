@@ -442,17 +442,8 @@ async fn start_node_impl(
 			prometheus_registry.clone(),
 		));
 
-		let slot_duration = sc_consensus_aura::slot_duration(&*client)?;
-		let target_gas_price = eth_config.target_gas_price;
-		let pending_create_inherent_data_providers = move |_, ()| async move {
-			let current = sp_timestamp::InherentDataProvider::from_system_time();
-			let next_slot = current.timestamp().as_millis() + slot_duration.as_millis();
-			let timestamp = sp_timestamp::InherentDataProvider::new(next_slot.into());
-			let slot = sp_consensus_aura::inherents::InherentDataProvider::from_timestamp_and_slot_duration(
-				*timestamp,
-				slot_duration,
-			);
-			let dynamic_fee = fp_dynamic_fee::InherentDataProvider(U256::from(target_gas_price));
+		let pending_create_inherent_data_providers = move |_, _| async move {
+			let timestamp = sp_timestamp::InherentDataProvider::from_system_time();
 			// Create a dummy parachain inherent data provider which is required to pass
 			// the checks by the para chain system. We use dummy values because in the 'pending
 			// context' neither do we have access to the real values nor do we need them.
@@ -472,7 +463,7 @@ async fn start_node_impl(
 				downward_messages: Default::default(),
 				horizontal_messages: Default::default(),
 			};
-			Ok((slot, timestamp, dynamic_fee, parachain_inherent_data))
+			Ok((timestamp, parachain_inherent_data))
 		};
 
 		Box::new(move |deny_unsafe, subscription_task_executor| {
