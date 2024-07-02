@@ -143,7 +143,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: create_runtime_str!("bifrost"),
 	impl_name: create_runtime_str!("bifrost"),
 	authoring_version: 1,
-	spec_version: 11000,
+	spec_version: 12000,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 1,
@@ -2045,14 +2045,7 @@ pub mod migrations {
 	use super::*;
 
 	/// Unreleased migrations. Add new ones here:
-	pub type Unreleased = (
-		bifrost_slpx::migration::v1::MigrateToV1<Runtime>,
-		frame_support::migrations::RemovePallet<
-			DmpQueuePalletName,
-			<Runtime as frame_system::Config>::DbWeight,
-		>,
-		pallet_xcm::migration::MigrateToLatestXcmVersion<Runtime>,
-	);
+	pub type Unreleased = ();
 }
 
 /// Executive: handles dispatch to the various modules.
