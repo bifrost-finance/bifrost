@@ -22,7 +22,7 @@
 
 use crate::{
 	AssetIds, DerivativeIndex, ExtraFeeInfo, LeasePeriod, ParaId, PoolId, RedeemType, TokenId,
-	TokenSymbol, XcmOperationType,
+	TokenSymbol, XcmOperationType, Vec
 };
 use frame_support::pallet_prelude::{DispatchResultWithPostInfo, Weight};
 use parity_scale_codec::{Decode, Encode, FullCodec};
@@ -32,7 +32,7 @@ use sp_runtime::{
 	},
 	BoundedVec, DispatchError, DispatchResult, TokenError, TypeId,
 };
-use sp_std::{fmt::Debug, vec::Vec};
+use sp_std::fmt::Debug;
 
 pub trait TokenInfo {
 	fn name(&self) -> Option<&str>;
@@ -81,11 +81,11 @@ pub trait MultiCurrencyExt<AccountId> {
 }
 
 pub trait BancorHandler<Balance> {
-	fn add_token(currency_id: super::CurrencyId, amount: Balance) -> DispatchResult;
+	fn add_token(currency_id: super::super::CurrencyId, amount: Balance) -> DispatchResult;
 }
 
 impl<Balance> BancorHandler<Balance> for () {
-	fn add_token(_currency_id: super::CurrencyId, _amount: Balance) -> DispatchResult {
+	fn add_token(_currency_id: super::super::CurrencyId, _amount: Balance) -> DispatchResult {
 		DispatchResult::from(DispatchError::Token(TokenError::FundsUnavailable))
 	}
 }
