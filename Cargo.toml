@@ -180,7 +180,7 @@ polkadot-parachain-primitives              = { version = "7.0.0", default-featur
 polkadot-primitives                        = { version = "8.0.0", default-features = false }
 polkadot-runtime-common                    = { version = "8.0.0", default-features = false }
 polkadot-runtime-parachains                = { version = "8.0.0", default-features = false }
-sp-api                                     = { version = "27.0.0", default-features = false }
+sp-api                                     = { version = "27.0.1", default-features = false }
 sp-application-crypto                      = { version = "31.0.0", default-features = false }
 sp-arithmetic                              = { version = "24.0.0", default-features = false }
 sp-authority-discovery                     = { version = "27.0.0", default-features = false }
