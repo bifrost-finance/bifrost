@@ -22,7 +22,7 @@
 
 use crate::{
 	AssetIds, DerivativeIndex, ExtraFeeInfo, LeasePeriod, ParaId, PoolId, RedeemType, TokenId,
-	TokenSymbol, XcmOperationType, Vec
+	TokenSymbol, Vec, XcmOperationType,
 };
 use frame_support::pallet_prelude::{DispatchResultWithPostInfo, Weight};
 use parity_scale_codec::{Decode, Encode, FullCodec};

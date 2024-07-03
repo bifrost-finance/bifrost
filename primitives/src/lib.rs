@@ -21,13 +21,12 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use parity_scale_codec::MaxEncodedLen;
-use scale_info::{TypeInfo, prelude::collections::BTreeMap};
+use scale_info::{prelude::collections::BTreeMap, TypeInfo};
 use sp_core::{Decode, Encode, RuntimeDebug, H160, U256};
 use sp_runtime::{
 	generic,
 	traits::{BlakeTwo256, IdentifyAccount, Verify},
-	FixedU128, MultiSignature, OpaqueExtrinsic, Permill,
-	DispatchResult, DispatchError
+	DispatchError, DispatchResult, FixedU128, MultiSignature, OpaqueExtrinsic, Permill,
 };
 use xcm::v4::{prelude::*, Asset, Location};
 use xcm_executor::traits::{AssetTransferError, TransferType, XcmAssetTransfers};
@@ -35,10 +34,10 @@ use xcm_executor::traits::{AssetTransferError, TransferType, XcmAssetTransfers};
 pub mod currency;
 mod salp;
 pub mod traits;
-pub use salp::*;
-pub use frame_support::{dispatch::Parameter, storage::types::StorageMap};
-use sp_std::{vec::Vec, boxed::Box};
 use core::ops::{Add, Mul};
+pub use frame_support::{dispatch::Parameter, storage::types::StorageMap};
+pub use salp::*;
+use sp_std::{boxed::Box, vec::Vec};
 
 #[cfg(test)]
 mod tests;
@@ -165,10 +164,9 @@ pub type StableAssetPoolId = u32;
 
 pub type ChainId = u32;
 
-pub type RoundIndex = u32; 
+pub type RoundIndex = u32;
 
 pub type QueryId = u64;
-
 
 #[derive(
 	Encode, Decode, Eq, PartialEq, Copy, Clone, RuntimeDebug, PartialOrd, Ord, scale_info::TypeInfo,

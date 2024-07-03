@@ -66,13 +66,12 @@ mod tests;
 pub use delegation_requests::{CancelledScheduledRequest, DelegationAction, ScheduledRequest};
 use frame_support::pallet;
 pub use inflation::{InflationInfo, Range};
-pub use pallet::*;
+pub use pallet::{RoundIndex, *};
 pub use types::*;
 use weights::WeightInfo;
-pub use pallet::RoundIndex;
 pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
+pub use bifrost_primitives::parachain_staking::*;
 use frame_support::pallet_prelude::DispatchResultWithPostInfo;
-pub use bifrost_primitives::parachain_staking::*; 
 
 #[pallet]
 pub mod pallet {
@@ -86,7 +85,6 @@ pub mod pallet {
 	};
 	use frame_system::pallet_prelude::*;
 	use pallet_session::ShouldEndSession;
-	// use parity_scale_codec::Decode;
 	use sp_runtime::{
 		traits::{AccountIdConversion, Saturating, Zero},
 		Perbill, Percent, Permill,
@@ -98,10 +96,13 @@ pub mod pallet {
 	use crate::{
 		delegation_requests::{CancelledScheduledRequest, DelegationAction, ScheduledRequest},
 		set::OrderedSet,
+		// traits::*,
 		types::*,
-		InflationInfo, Range, WeightInfo,
+		InflationInfo,
+		Range,
+		WeightInfo,
 	};
-	use bifrost_primitives::parachain_staking::*; 
+	use bifrost_primitives::parachain_staking::*; // add
 
 	/// Pallet for parachain staking
 	#[pallet::pallet]
