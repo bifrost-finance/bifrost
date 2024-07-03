@@ -1188,7 +1188,7 @@ dependencies = [
  "staging-xcm-executor",
  "static_assertions",
  "strum 0.26.2",
- "strum_macros 0.25.3",
+ "strum_macros 0.26.2",
  "substrate-wasm-builder",
  "zenlink-protocol",
  "zenlink-protocol-runtime-api",
@@ -1342,7 +1342,7 @@ dependencies = [
  "staging-xcm-executor",
  "static_assertions",
  "strum 0.26.2",
- "strum_macros 0.25.3",
+ "strum_macros 0.26.2",
  "substrate-wasm-builder",
  "zenlink-protocol",
  "zenlink-protocol-runtime-api",
@@ -14128,19 +14128,6 @@ dependencies = [
  "quote",
  "rustversion",
  "syn 1.0.109",
-]
-
-[[package]]
-name = "strum_macros"
-version = "0.25.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "23dc1fa9ac9c169a78ba62f0b841814b7abae11bdd047b9c58f893439e309ea0"
-dependencies = [
- "heck 0.4.1",
- "proc-macro2",
- "quote",
- "rustversion",
- "syn 2.0.60",
 ]
 
 [[package]]
