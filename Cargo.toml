@@ -284,8 +284,8 @@ hex-literal           = { version = "0.4.1" }
 impl-trait-for-tuples = { version = "0.2.2" }
 jsonrpsee             = { version = "0.20.3" }
 log                   = { version = "0.4.21", default-features = false }
-num-bigint            = { version = "0.4.3", default-features = false }
-num-traits            = { version = "0.2.18", default-features = false }
+num-bigint            = { version = "0.4.6", default-features = false }
+num-traits            = { version = "0.2.19", default-features = false }
 parity-scale-codec    = { version = "3.6.12", default-features = false }
 paste                 = { version = "1.0.14" }
 scale-info            = { version = "2.11.0", default-features = false }
@@ -294,7 +294,7 @@ serde_json            = { version = "1.0.109", default-features = false }
 similar-asserts       = { version = "1.1.0" }
 smallvec              = { version = "1.13.1" }
 static_assertions     = { version = "1.1.0" }
-strum                 = { version = "0.25.0", default-features = false, features = ["derive"] }
+strum                 = { version = "0.26.2", default-features = false, features = ["derive"] }
 strum_macros          = { version = "0.25.3" }
 tiny-keccak           = { version = "2.0", features = ["fips202"] }
 
