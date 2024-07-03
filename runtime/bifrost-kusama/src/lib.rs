@@ -137,8 +137,10 @@ use xcm_executor::{traits::QueryHandler, XcmExecutor};
 
 // Frontier
 // use fp_account::EthereumSignature;
+use bifrost_primitives::CurrencyId::Token2;
 use fp_evm::weight_per_gas;
 use fp_rpc::TransactionStatus;
+use orml_tokens::CurrencyAdapter;
 use pallet_ethereum::{
 	Call::transact, PostLogContent, Transaction as EthereumTransaction, TransactionAction,
 	TransactionData,
@@ -336,13 +338,6 @@ impl Contains<RuntimeCall> for CallFilter {
 	}
 }
 
-pub struct BaseFilter;
-impl Contains<RuntimeCall> for BaseFilter {
-	fn contains(_c: &RuntimeCall) -> bool {
-		true
-	}
-}
-
 parameter_types! {
 	pub const NativeCurrencyId: CurrencyId = CurrencyId::Native(TokenSymbol::BNC);
 	pub const RelayCurrencyId: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
@@ -421,7 +416,7 @@ impl pallet_timestamp::Config for Runtime {
 	/// A timestamp: milliseconds since the unix epoch.
 	type Moment = Moment;
 	//TODO: REMOVE me before release, only for evm test
-	type OnTimestampSet = ();
+	type OnTimestampSet = Aura;
 	type WeightInfo = pallet_timestamp::weights::SubstrateWeight<Runtime>;
 }
 
@@ -1183,6 +1178,15 @@ parameter_types! {
 	pub SuicideQuickClearLimit: u32 = 0;
 }
 
+pub struct WethCurrencyId;
+impl Get<CurrencyId> for WethCurrencyId {
+	fn get() -> CurrencyId {
+		Token2(0)
+	}
+}
+
+type WethCurrency = CurrencyAdapter<Runtime, WethCurrencyId>;
+
 impl pallet_evm::Config for Runtime {
 	type FeeCalculator = DynamicFee;
 	type GasWeightMapping = pallet_evm::FixedGasWeightMapping<Self>;
@@ -1191,7 +1195,7 @@ impl pallet_evm::Config for Runtime {
 	type CallOrigin = EnsureAddressTruncated;
 	type WithdrawOrigin = EnsureAddressTruncated;
 	type AddressMapping = evm::ExtendedAddressMapping;
-	type Currency = Balances;
+	type Currency = WethCurrency;
 	type RuntimeEvent = RuntimeEvent;
 	type PrecompilesType = evm::precompiles::BifrostPrecompiles<Self>;
 	type PrecompilesValue = PrecompilesValue;

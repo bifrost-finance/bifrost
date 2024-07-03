@@ -114,9 +114,8 @@ where
 	use fc_rpc::{
 		pending::AuraConsensusDataProvider, Debug, DebugApiServer, Eth, EthApiServer, EthDevSigner,
 		EthFilter, EthFilterApiServer, EthPubSub, EthPubSubApiServer, EthSigner, Net, NetApiServer,
-		Web3, Web3ApiServer,
+		TxPool, TxPoolApiServer, Web3, Web3ApiServer,
 	};
-	use fc_rpc::{TxPool, TxPoolApiServer};
 
 	let EthDeps {
 		client,

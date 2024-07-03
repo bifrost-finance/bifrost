@@ -358,6 +358,7 @@ fn local_config_genesis(id: ParaId) -> RuntimeGenesisConfig {
 				(x.clone(), Token(KAR), ENDOWMENT() * 10_000),
 				(x.clone(), Token(KSM), ENDOWMENT() * 4_000_000),
 				(x.clone(), VSToken(KSM), ENDOWMENT() * 4_000_000),
+				(x.clone(), Token2(0), ENDOWMENT() * 4_000_000),
 				(
 					x.clone(),
 					CurrencyId::VSBond(TokenSymbol::KSM, 3000, 13, 20),
@@ -388,6 +389,7 @@ fn local_config_genesis(id: ParaId) -> RuntimeGenesisConfig {
 		(Token(RMRK), DOLLARS / 1000_000, None),
 		(Token(PHA), 4 * DOLLARS / 100, None),
 		(Token(MOVR), DOLLARS / 1000_000, None),
+		(Token2(0), 0, None),
 	];
 	let vcurrency = vec![VSToken(KSM), VToken(BNC), VToken(KSM), VToken(MOVR)];
 
