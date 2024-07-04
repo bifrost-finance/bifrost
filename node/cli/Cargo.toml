@@ -78,3 +78,4 @@ with-bifrost-polkadot-runtime = ["bifrost-service/with-bifrost-polkadot-runtime"
 with-all-runtime = ["with-bifrost-runtime"]
 try-runtime = ["bifrost-service/try-runtime", "try-runtime-cli/try-runtime"]
 fast-runtime = ["bifrost-service/fast-runtime"]
+metadata-hash = ["bifrost-service/metadata-hash"]

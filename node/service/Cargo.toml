@@ -138,4 +138,7 @@ fast-runtime = [
 	"bifrost-kusama-runtime/fast-runtime",
 	"bifrost-polkadot-runtime/fast-runtime",
 ]
-
+metadata-hash = [
+	"bifrost-kusama-runtime/metadata-hash",
+	"bifrost-polkadot-runtime/metadata-hash",
+]
