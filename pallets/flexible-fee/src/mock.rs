@@ -22,11 +22,10 @@ use super::*;
 use crate::{self as flexible_fee, tests::CHARLIE};
 use bifrost_asset_registry::AssetIdMaps;
 use bifrost_primitives::{
-	Balance, CurrencyId, DerivativeAccountHandler, DerivativeIndex, ExtraFeeInfo, MessageId,
-	ParaId, TokenSymbol, VTokenSupplyProvider, VKSM,
+	xcm_interface::XcmHelper, Balance, CurrencyId, DerivativeAccountHandler, DerivativeIndex,
+	ExtraFeeInfo, MessageId, ParaId, TokenSymbol, VTokenSupplyProvider, VKSM,
 };
 use bifrost_vtoken_voting::AccountVote;
-use bifrost_xcm_interface::traits::XcmHelper;
 use cumulus_primitives_core::ParaId as Pid;
 use frame_support::{
 	derive_impl, ord_parameter_types, parameter_types,
