@@ -15,14 +15,14 @@
 
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
-#[cfg(all(feature = "metadata-hash", feature = "std"))]
+#[cfg(all(feature = "std", feature = "metadata-hash"))]
 fn main() {
 	substrate_wasm_builder::WasmBuilder::init_with_defaults()
 		.enable_metadata_hash("BNC", 12)
 		.build()
 }
 
-#[cfg(all(not(feature = "metadata-hash"), feature = "std"))]
+#[cfg(all(feature = "std", not(feature = "metadata-hash")))]
 fn main() {
 	substrate_wasm_builder::WasmBuilder::build_using_defaults()
 }
