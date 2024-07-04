@@ -288,7 +288,7 @@ num-bigint            = { version = "0.4.6", default-features = false }
 num-traits            = { version = "0.2.19", default-features = false }
 parity-scale-codec    = { version = "3.6.12", default-features = false }
 paste                 = { version = "1.0.14" }
-scale-info            = { version = "2.11.0", default-features = false }
+scale-info            = { version = "2.11.3", default-features = false }
 serde                 = { version = "1.0.203", default-features = false }
 serde_json            = { version = "1.0.109", default-features = false }
 similar-asserts       = { version = "1.1.0" }
