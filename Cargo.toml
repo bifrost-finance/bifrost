@@ -274,7 +274,7 @@ xcm-simulator                                 = { version = "8.0.0" }
 # Other
 async-trait           = { version = "0.1.76" }
 bstringify            = { version = "0.1.2" }
-clap                  = { version = "4.4.14" }
+clap                  = { version = "4.5.8" }
 env_logger            = { version = "0.10.2" }
 ethabi                = { version = "18.0.0", default-features = false }
 ethereum              = { version = "0.14.0", default-features = false, features = ["with-codec"] }
@@ -288,14 +288,14 @@ num-bigint            = { version = "0.4.6", default-features = false }
 num-traits            = { version = "0.2.19", default-features = false }
 parity-scale-codec    = { version = "3.6.12", default-features = false }
 paste                 = { version = "1.0.14" }
-scale-info            = { version = "2.11.0", default-features = false }
+scale-info            = { version = "2.11.3", default-features = false }
 serde                 = { version = "1.0.203", default-features = false }
-serde_json            = { version = "1.0.109", default-features = false }
+serde_json            = { version = "1.0.120", default-features = false }
 similar-asserts       = { version = "1.1.0" }
 smallvec              = { version = "1.13.1" }
 static_assertions     = { version = "1.1.0" }
-strum                 = { version = "0.26.2", default-features = false, features = ["derive"] }
-strum_macros          = { version = "0.25.3" }
+strum                 = { version = "0.26.3", default-features = false, features = ["derive"] }
+strum_macros          = { version = "0.26.2" }
 tiny-keccak           = { version = "2.0", features = ["fips202"] }
 
 [profile.dev]
