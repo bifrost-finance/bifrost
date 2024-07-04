@@ -27,12 +27,12 @@ pub use crate::{
 		Delays, LedgerUpdateEntry, MinimumsMaximums, QueryId, SubstrateLedger,
 		ValidatorsByDelegatorUpdateEntry,
 	},
-	traits::{OnRefund, QueryResponseManager, StakingAgent},
 	Junction::AccountId32,
 	Junctions::X1,
 };
 use bifrost_asset_registry::AssetMetadata;
 use bifrost_parachain_staking::ParachainStakingInterface;
+pub use bifrost_primitives::slp::{OnRefund, QueryResponseManager, StakingAgent}; // add
 use bifrost_primitives::{
 	currency::{BNC, KSM, MANTA, MOVR, PHA},
 	traits::XcmDestWeightAndFeeHandler,
@@ -63,7 +63,6 @@ pub mod migrations;
 mod mocks;
 pub mod primitives;
 mod tests;
-pub mod traits;
 pub mod weights;
 
 #[cfg(feature = "runtime-benchmarks")]

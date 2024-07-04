@@ -18,8 +18,8 @@
 
 use super::*;
 use bifrost_asset_registry::{AssetIdMaps, FixedRateOfAsset};
+pub use bifrost_primitives::{parachains, XcmBaseWeight};
 use bifrost_primitives::{AccountId, CurrencyId, CurrencyIdMapping, TokenSymbol};
-pub use bifrost_xcm_interface::traits::{parachains, XcmBaseWeight};
 pub use cumulus_primitives_core::ParaId;
 use frame_support::{
 	ensure, parameter_types,

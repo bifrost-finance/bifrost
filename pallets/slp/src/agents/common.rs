@@ -20,7 +20,6 @@ use crate::{
 	primitives::{
 		ParachainStakingLedgerUpdateEntry, ParachainStakingLedgerUpdateOperation, TIMEOUT_BLOCKS,
 	},
-	traits::QueryResponseManager,
 	vec, AccountIdOf, BalanceOf, BlockNumberFor, BoundedVec, Config, CurrencyDelays,
 	DelegationsOccupied, DelegatorLatestTuneRecord, DelegatorLedgerXcmUpdateQueue,
 	DelegatorLedgers, DelegatorNextIndex, DelegatorsIndex2Multilocation,
@@ -28,7 +27,9 @@ use crate::{
 	MinimumsAndMaximums, Pallet, TimeUnit, Validators, Vec, Weight, XcmOperationType, Zero, ASTR,
 	BNC, DOT, GLMR, KSM, MANTA, MOVR, PHA,
 };
-use bifrost_primitives::{CurrencyId, VtokenMintingOperator, XcmDestWeightAndFeeHandler};
+use bifrost_primitives::{
+	CurrencyId, QueryResponseManager, VtokenMintingOperator, XcmDestWeightAndFeeHandler,
+};
 use frame_support::{dispatch::GetDispatchInfo, ensure, traits::Len};
 use orml_traits::{MultiCurrency, XcmTransfer};
 use polkadot_parachain_primitives::primitives::Sibling;

@@ -18,12 +18,11 @@
 use crate::{
 	pallet::{Error, Event},
 	primitives::{FilecoinLedger, Ledger},
-	traits::StakingAgent,
 	AccountIdOf, BalanceOf, BoundedVec, Config, DelegatorLatestTuneRecord, DelegatorLedgers,
 	LedgerUpdateEntry, MinimumsAndMaximums, Pallet, TimeUnit, Validators, ValidatorsByDelegator,
 	ValidatorsByDelegatorUpdateEntry,
 };
-use bifrost_primitives::{CurrencyId, VtokenMintingOperator};
+use bifrost_primitives::{CurrencyId, StakingAgent, VtokenMintingOperator};
 use core::marker::PhantomData;
 use frame_support::ensure;
 use orml_traits::MultiCurrency;

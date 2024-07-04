@@ -99,8 +99,8 @@ pub mod pallet {
 	// Import various types used to declare pallet in scope.
 	use bifrost_primitives::{
 		BancorHandler, CurrencyId, CurrencyId::VSBond, LeasePeriod, MessageId, Nonce, ParaId,
+		XcmHelper,
 	};
-	use bifrost_xcm_interface::traits::XcmHelper;
 	use frame_support::{
 		pallet_prelude::{storage::child, *},
 		sp_runtime::traits::{AccountIdConversion, CheckedAdd, Hash, Saturating, Zero},
