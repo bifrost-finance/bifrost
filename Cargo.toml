@@ -267,7 +267,7 @@ sp-rpc                                        = { version = "27.0.0" }
 substrate-build-script-utils                  = { version = "11.0.0" }
 substrate-frame-rpc-system                    = { version = "29.0.0" }
 substrate-prometheus-endpoint                 = { version = "0.17.0" }
-substrate-wasm-builder                        = { version = "18.0.1" , features = ["metadata-hash"] }
+substrate-wasm-builder                        = { version = "18.0.1" }
 try-runtime-cli                               = { version = "0.39.0" }
 xcm-emulator                                  = { version = "0.6.0" }
 xcm-simulator                                 = { version = "8.0.0" }
@@ -275,7 +275,7 @@ xcm-simulator                                 = { version = "8.0.0" }
 # Other
 async-trait           = { version = "0.1.76" }
 bstringify            = { version = "0.1.2" }
-clap                  = { version = "4.4.14" }
+clap                  = { version = "4.5.8" }
 env_logger            = { version = "0.10.2" }
 ethabi                = { version = "18.0.0", default-features = false }
 ethereum              = { version = "0.14.0", default-features = false, features = ["with-codec"] }
@@ -284,19 +284,19 @@ hex                   = { version = "0.4.3", default-features = false }
 hex-literal           = { version = "0.4.1" }
 impl-trait-for-tuples = { version = "0.2.2" }
 jsonrpsee             = { version = "0.20.3" }
-log                   = { version = "0.4.21", default-features = false }
-num-bigint            = { version = "0.4.3", default-features = false }
-num-traits            = { version = "0.2.18", default-features = false }
-parity-scale-codec    = { version = "3.6.5", default-features = false }
-paste                 = { version = "1.0.14" }
-scale-info            = { version = "2.11.0", default-features = false }
-serde                 = { version = "1.0.193", default-features = false }
-serde_json            = { version = "1.0.109", default-features = false }
+log                   = { version = "0.4.22", default-features = false }
+num-bigint            = { version = "0.4.6", default-features = false }
+num-traits            = { version = "0.2.19", default-features = false }
+parity-scale-codec    = { version = "3.6.12", default-features = false }
+paste                 = { version = "1.0.15" }
+scale-info            = { version = "2.11.3", default-features = false }
+serde                 = { version = "1.0.203", default-features = false }
+serde_json            = { version = "1.0.120", default-features = false }
 similar-asserts       = { version = "1.1.0" }
 smallvec              = { version = "1.13.1" }
 static_assertions     = { version = "1.1.0" }
-strum                 = { version = "0.25.0", default-features = false, features = ["derive"] }
-strum_macros          = { version = "0.25.3" }
+strum                 = { version = "0.26.3", default-features = false, features = ["derive"] }
+strum_macros          = { version = "0.26.2" }
 tiny-keccak           = { version = "2.0", features = ["fips202"] }
 
 [profile.dev]
