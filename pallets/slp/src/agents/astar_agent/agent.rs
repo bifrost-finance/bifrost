@@ -152,10 +152,8 @@ impl<T: Config>
 		)?;
 
 		// Send out the xcm message.
-		let dest = Pallet::<T>::get_para_multilocation_by_currency_id(currency_id)?;
-		let v4_dest = dest.try_into().map_err(|()| Error::<T>::FailToConvert)?;
-		let v4_message = xcm_message.try_into().map_err(|()| Error::<T>::FailToConvert)?;
-		xcm::v4::send_xcm::<T::XcmRouter>(v4_dest, v4_message)
+		let dest_location = Pallet::<T>::convert_currency_to_dest_location(currency_id)?;
+		xcm::v4::send_xcm::<T::XcmRouter>(dest_location, xcm_message)
 			.map_err(|_e| Error::<T>::XcmFailure)?;
 
 		Ok(query_id)
@@ -254,10 +252,8 @@ impl<T: Config>
 		)?;
 
 		// Send out the xcm message.
-		let dest = Pallet::<T>::get_para_multilocation_by_currency_id(currency_id)?;
-		let v4_dest = dest.try_into().map_err(|()| Error::<T>::FailToConvert)?;
-		let v4_message = xcm_message.try_into().map_err(|()| Error::<T>::FailToConvert)?;
-		xcm::v4::send_xcm::<T::XcmRouter>(v4_dest, v4_message)
+		let dest_location = Pallet::<T>::convert_currency_to_dest_location(currency_id)?;
+		xcm::v4::send_xcm::<T::XcmRouter>(dest_location, xcm_message)
 			.map_err(|_e| Error::<T>::XcmFailure)?;
 
 		Ok(query_id)
@@ -400,10 +396,8 @@ impl<T: Config>
 		)?;
 
 		// Send out the xcm message.
-		let dest = Pallet::<T>::get_para_multilocation_by_currency_id(currency_id)?;
-		let v4_dest = dest.try_into().map_err(|()| Error::<T>::FailToConvert)?;
-		let v4_message = xcm_message.try_into().map_err(|()| Error::<T>::FailToConvert)?;
-		xcm::v4::send_xcm::<T::XcmRouter>(v4_dest, v4_message)
+		let dest_location = Pallet::<T>::convert_currency_to_dest_location(currency_id)?;
+		xcm::v4::send_xcm::<T::XcmRouter>(dest_location, xcm_message)
 			.map_err(|_e| Error::<T>::XcmFailure)?;
 
 		Ok(query_id)
@@ -425,7 +419,7 @@ impl<T: Config>
 	fn transfer_back(
 		&self,
 		from: &MultiLocation,
-		to: &MultiLocation,
+		_to: &MultiLocation,
 		amount: BalanceOf<T>,
 		currency_id: CurrencyId,
 		weight_and_fee: Option<(Weight, BalanceOf<T>)>,
@@ -437,14 +431,10 @@ impl<T: Config>
 		DelegatorsMultilocation2Index::<T>::get(currency_id, from)
 			.ok_or(Error::<T>::DelegatorNotExist)?;
 
-		// Make sure the receiving account is the Exit_account from vtoken-minting module.
-		let to_account_id = Pallet::<T>::multilocation_to_account(to)?;
-		let (_, exit_account) = T::VtokenMinting::get_entrance_and_exit_accounts();
-		ensure!(to_account_id == exit_account, Error::<T>::InvalidAccount);
+		// Make sure the receiving account is the entrance_account from vtoken-minting module.
+		let (entrance_account, _) = T::VtokenMinting::get_entrance_and_exit_accounts();
 
 		// Prepare parameter dest and beneficiary.
-		let to_32: [u8; 32] = Pallet::<T>::multilocation_to_account_32(to)?;
-
 		let dest = Box::new(VersionedLocation::V3(MultiLocation::new(
 			1,
 			X1(Parachain(T::ParachainId::get().into())),
@@ -452,7 +442,7 @@ impl<T: Config>
 
 		let beneficiary = Box::new(VersionedLocation::V3(MultiLocation::from(X1(AccountId32 {
 			network: None,
-			id: to_32,
+			id: entrance_account.encode().try_into().map_err(|_| Error::<T>::FailToConvert)?,
 		}))));
 
 		// Prepare parameter assets.

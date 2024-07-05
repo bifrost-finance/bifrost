@@ -290,7 +290,8 @@ impl BlockNumberProvider for RelaychainDataProvider {
 }
 
 parameter_types! {
-	pub static VTokenSupply: Balance = u64::MAX.into();
+	// modify TokenSupply to be twice that of VTokenSupply, making the exchange rate for vtokenming 1:2
+	pub static VTokenSupply: Balance = u64::MAX.checked_div(2u64).unwrap().into();
 	pub static TokenSupply: Balance = u64::MAX.into();
 }
 

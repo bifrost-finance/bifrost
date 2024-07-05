@@ -114,7 +114,7 @@ use polkadot_runtime_common::prod_or_fast;
 use sp_runtime::traits::{IdentityLookup, Verify};
 use static_assertions::const_assert;
 use xcm::{v3::MultiLocation, v4::prelude::*};
-use xcm_config::{
+pub use xcm_config::{
 	parachains, BifrostCurrencyIdConvert, BifrostTreasuryAccount, MultiCurrency, SelfParaChainId,
 };
 use xcm_executor::{
@@ -141,7 +141,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: create_runtime_str!("bifrost_polkadot"),
 	impl_name: create_runtime_str!("bifrost_polkadot"),
 	authoring_version: 0,
-	spec_version: 10001,
+	spec_version: 11000,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 1,
@@ -1193,13 +1193,6 @@ impl QueryResponseManager<QueryId, Location, BlockNumber, RuntimeCall>
 	}
 }
 
-pub struct OnRefund;
-impl bifrost_slp::OnRefund<AccountId, CurrencyId, Balance> for OnRefund {
-	fn on_refund(token_id: CurrencyId, to: AccountId, token_amount: Balance) -> u64 {
-		SystemStaking::on_refund(token_id, to, token_amount).ref_time()
-	}
-}
-
 impl bifrost_slp::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type RuntimeOrigin = RuntimeOrigin;
@@ -1208,13 +1201,11 @@ impl bifrost_slp::Config for Runtime {
 	type ControlOrigin = EitherOfDiverse<TechAdminOrCouncil, LiquidStaking>;
 	type WeightInfo = weights::bifrost_slp::BifrostWeight<Runtime>;
 	type VtokenMinting = VtokenMinting;
-	type BifrostSlpx = Slpx;
 	type AccountConverter = SubAccountIndexMultiLocationConvertor;
 	type ParachainId = SelfParaChainId;
 	type SubstrateResponseManager = SubstrateResponseManager;
 	type MaxTypeEntryPerBlock = MaxTypeEntryPerBlock;
 	type MaxRefundPerBlock = MaxRefundPerBlock;
-	type OnRefund = OnRefund;
 	type ParachainStaking = ();
 	type XcmTransfer = XTokens;
 	type MaxLengthLimit = MaxLengthLimit;
@@ -1778,7 +1769,6 @@ construct_runtime! {
 		XcmpQueue: cumulus_pallet_xcmp_queue = 40,
 		PolkadotXcm: pallet_xcm = 41,
 		CumulusXcm: cumulus_pallet_xcm = 42,
-		DmpQueue: cumulus_pallet_dmp_queue = 43,
 		MessageQueue: pallet_message_queue = 44,
 
 		// utilities
@@ -1874,6 +1864,10 @@ pub type CheckedExtrinsic = generic::CheckedExtrinsic<AccountId, RuntimeCall, Si
 /// The payload being signed in transactions.
 pub type SignedPayload = generic::SignedPayload<RuntimeCall, SignedExtra>;
 
+parameter_types! {
+	pub const DmpQueuePalletName: &'static str = "DmpQueue";
+}
+
 /// All migrations that will run on the next runtime upgrade.
 ///
 /// This contains the combined migrations of the last 10 releases. It allows to skip runtime
@@ -1886,7 +1880,14 @@ pub mod migrations {
 	use super::*;
 
 	/// Unreleased migrations. Add new ones here:
-	pub type Unreleased = ();
+	pub type Unreleased = (
+		bifrost_slpx::migration::v1::MigrateToV1<Runtime>,
+		frame_support::migrations::RemovePallet<
+			DmpQueuePalletName,
+			<Runtime as frame_system::Config>::DbWeight,
+		>,
+		pallet_xcm::migration::MigrateToLatestXcmVersion<Runtime>,
+	);
 }
 
 /// Executive: handles dispatch to the various modules.

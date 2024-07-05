@@ -84,7 +84,10 @@ pub mod pallet {
 	use frame_system::ensure_root;
 	use zenlink_protocol::{AssetId, ExportZenlink};
 
+	const STORAGE_VERSION: StorageVersion = StorageVersion::new(1);
+
 	#[pallet::pallet]
+	#[pallet::storage_version(STORAGE_VERSION)]
 	pub struct Pallet<T>(_);
 
 	#[pallet::config]
@@ -442,7 +445,6 @@ pub mod pallet {
 			currency_id: CurrencyIdOf<T>,
 			target_chain: TargetChain<AccountIdOf<T>>,
 			remark: BoundedVec<u8, ConstU32<32>>,
-			channel_id: Option<u32>,
 		) -> DispatchResultWithPostInfo {
 			let (source_chain_caller, derivative_account, bifrost_chain_caller) =
 				Self::ensure_singer_on_whitelist(origin.clone(), evm_caller, &target_chain)?;
@@ -457,7 +459,8 @@ pub mod pallet {
 				currency_id,
 				remark,
 				target_chain,
-				channel_id,
+				// default to 0
+				channel_id: 0u32,
 			};
 
 			OrderQueue::<T>::mutate(|order_queue| -> DispatchResultWithPostInfo {
@@ -517,7 +520,8 @@ pub mod pallet {
 				bifrost_chain_caller,
 				derivative_account,
 				target_chain,
-				channel_id: None,
+				// default to 0
+				channel_id: 0u32,
 			};
 
 			OrderQueue::<T>::mutate(|order_queue| -> DispatchResultWithPostInfo {
@@ -741,7 +745,41 @@ pub mod pallet {
 				currency_id,
 				remark,
 				target_chain,
-				channel_id: None,
+				// default to 0
+				channel_id: 0u32,
+			};
+
+			OrderQueue::<T>::mutate(|order_queue| -> DispatchResultWithPostInfo {
+				order_queue.try_push(order.clone()).map_err(|_| Error::<T>::ArgumentsError)?;
+				Self::deposit_event(Event::<T>::CreateOrder { order });
+				Ok(().into())
+			})
+		}
+
+		#[pallet::call_index(13)]
+		#[pallet::weight(<T as Config>::WeightInfo::mint_with_channel_id())]
+		pub fn mint_with_channel_id(
+			origin: OriginFor<T>,
+			evm_caller: H160,
+			currency_id: CurrencyIdOf<T>,
+			target_chain: TargetChain<AccountIdOf<T>>,
+			remark: BoundedVec<u8, ConstU32<32>>,
+			channel_id: u32,
+		) -> DispatchResultWithPostInfo {
+			let (source_chain_caller, derivative_account, bifrost_chain_caller) =
+				Self::ensure_singer_on_whitelist(origin.clone(), evm_caller, &target_chain)?;
+
+			let order = Order {
+				create_block_number: <frame_system::Pallet<T>>::block_number(),
+				order_type: OrderType::Mint,
+				currency_amount: Default::default(),
+				source_chain_caller,
+				bifrost_chain_caller,
+				derivative_account,
+				currency_id,
+				remark,
+				target_chain,
+				channel_id,
 			};
 
 			OrderQueue::<T>::mutate(|order_queue| -> DispatchResultWithPostInfo {
@@ -1002,7 +1040,7 @@ impl<T: Config> Pallet<T> {
 					order.currency_id,
 					currency_amount,
 					order.remark.clone(),
-					order.channel_id,
+					Some(order.channel_id),
 				)
 				.map_err(|_| Error::<T>::ArgumentsError)?;
 				let vtoken_id = T::VtokenMintingInterface::vtoken_id(order.currency_id)

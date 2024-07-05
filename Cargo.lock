@@ -778,7 +778,7 @@ dependencies = [
 
 [[package]]
 name = "bifrost-cli"
-version = "0.10.1"
+version = "0.11.0"
 dependencies = [
  "bifrost-primitives",
  "bifrost-service",
@@ -1020,6 +1020,55 @@ dependencies = [
 ]
 
 [[package]]
+name = "bifrost-integration-tests"
+version = "0.8.0"
+dependencies = [
+ "bifrost-asset-registry",
+ "bifrost-currencies",
+ "bifrost-polkadot-runtime",
+ "bifrost-primitives",
+ "bifrost-runtime-common",
+ "bifrost-slp",
+ "bifrost-vtoken-voting",
+ "bifrost-xcm-interface",
+ "cumulus-primitives-core",
+ "env_logger",
+ "frame-support",
+ "frame-system",
+ "hex-literal 0.4.1",
+ "log",
+ "orml-tokens",
+ "orml-traits",
+ "orml-xtokens",
+ "pallet-assets",
+ "pallet-balances",
+ "pallet-conviction-voting",
+ "pallet-message-queue",
+ "pallet-referenda",
+ "pallet-staking",
+ "pallet-xcm",
+ "parachains-common",
+ "parity-scale-codec",
+ "polkadot-core-primitives",
+ "polkadot-parachain-primitives",
+ "polkadot-runtime-common",
+ "polkadot-runtime-parachains",
+ "scale-info",
+ "serde",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-staking",
+ "sp-std",
+ "staging-parachain-info",
+ "staging-xcm",
+ "staging-xcm-builder",
+ "staging-xcm-executor",
+ "xcm-emulator",
+ "xcm-simulator",
+]
+
+[[package]]
 name = "bifrost-kusama-runtime"
 version = "0.8.0"
 dependencies = [
@@ -1054,7 +1103,6 @@ dependencies = [
  "bifrost-vtoken-voting",
  "bifrost-xcm-interface",
  "cumulus-pallet-aura-ext",
- "cumulus-pallet-dmp-queue",
  "cumulus-pallet-parachain-system",
  "cumulus-pallet-xcm",
  "cumulus-pallet-xcmp-queue",
@@ -1209,7 +1257,6 @@ dependencies = [
  "bifrost-vtoken-voting",
  "bifrost-xcm-interface",
  "cumulus-pallet-aura-ext",
- "cumulus-pallet-dmp-queue",
  "cumulus-pallet-parachain-system",
  "cumulus-pallet-xcm",
  "cumulus-pallet-xcmp-queue",
@@ -1336,6 +1383,8 @@ dependencies = [
  "bifrost-stable-pool-rpc-runtime-api",
  "bifrost-ve-minting-rpc",
  "bifrost-ve-minting-rpc-runtime-api",
+ "bifrost-vtoken-minting-rpc",
+ "bifrost-vtoken-minting-rpc-runtime-api",
  "jsonrpsee",
  "lend-market-rpc",
  "lend-market-rpc-runtime-api",
@@ -1363,7 +1412,6 @@ dependencies = [
  "bifrost-asset-registry",
  "bifrost-primitives",
  "bifrost-xcm-interface",
- "cumulus-pallet-dmp-queue",
  "cumulus-pallet-parachain-system",
  "cumulus-pallet-xcm",
  "cumulus-pallet-xcmp-queue",
@@ -1619,6 +1667,7 @@ dependencies = [
  "frame-system",
  "hex",
  "hex-literal 0.4.1",
+ "log",
  "orml-tokens",
  "orml-traits",
  "orml-xtokens",
@@ -1963,6 +2012,22 @@ dependencies = [
  "staging-xcm",
  "staging-xcm-builder",
  "staging-xcm-executor",
+]
+
+[[package]]
+name = "bifrost-vtoken-minting-rpc"
+version = "0.8.0"
+dependencies = [
+ "bifrost-primitives",
+ "bifrost-vtoken-minting-rpc-runtime-api",
+ "jsonrpsee",
+ "parity-scale-codec",
+ "serde",
+ "sp-api",
+ "sp-blockchain",
+ "sp-core",
+ "sp-rpc",
+ "sp-runtime",
 ]
 
 [[package]]
@@ -3192,25 +3257,6 @@ dependencies = [
  "sp-consensus-aura",
  "sp-runtime",
  "sp-std",
-]
-
-[[package]]
-name = "cumulus-pallet-dmp-queue"
-version = "0.8.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "06ebf036bcb1e61c943cf588d14b903234594fb2538f2d7dae36e20fcc3c86e8"
-dependencies = [
- "cumulus-primitives-core",
- "frame-benchmarking",
- "frame-support",
- "frame-system",
- "log",
- "parity-scale-codec",
- "scale-info",
- "sp-io",
- "sp-runtime",
- "sp-std",
- "staging-xcm",
 ]
 
 [[package]]
@@ -7538,11 +7584,13 @@ version = "29.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9ed783679921ad8b96807d683d320c314e305753b230d5c04dc713bab7aca64c"
 dependencies = [
+ "frame-benchmarking",
  "frame-support",
  "frame-system",
  "pallet-transaction-payment",
  "parity-scale-codec",
  "scale-info",
+ "serde",
  "sp-core",
  "sp-io",
  "sp-runtime",
@@ -16139,6 +16187,41 @@ dependencies = [
  "rusticata-macros",
  "thiserror",
  "time",
+]
+
+[[package]]
+name = "xcm-emulator"
+version = "0.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8b49681988880dd6d08a4d5f6b7cb612a0f12172270349655c1e2f870b3526fd"
+dependencies = [
+ "cumulus-pallet-parachain-system",
+ "cumulus-pallet-xcmp-queue",
+ "cumulus-primitives-core",
+ "cumulus-primitives-parachain-inherent",
+ "cumulus-test-relay-sproof-builder",
+ "frame-support",
+ "frame-system",
+ "impl-trait-for-tuples",
+ "lazy_static",
+ "log",
+ "pallet-balances",
+ "pallet-message-queue",
+ "parachains-common",
+ "parity-scale-codec",
+ "paste",
+ "polkadot-parachain-primitives",
+ "polkadot-primitives",
+ "polkadot-runtime-parachains",
+ "sp-arithmetic",
+ "sp-core",
+ "sp-crypto-hashing",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+ "sp-tracing",
+ "staging-xcm",
+ "staging-xcm-executor",
 ]
 
 [[package]]

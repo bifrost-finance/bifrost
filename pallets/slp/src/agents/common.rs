@@ -21,7 +21,7 @@ use crate::{
 		ParachainStakingLedgerUpdateEntry, ParachainStakingLedgerUpdateOperation, TIMEOUT_BLOCKS,
 	},
 	traits::QueryResponseManager,
-	vec, AccountIdOf, BalanceOf, BlockNumberFor, BoundedVec, Box, Config, CurrencyDelays,
+	vec, AccountIdOf, BalanceOf, BlockNumberFor, BoundedVec, Config, CurrencyDelays,
 	DelegationsOccupied, DelegatorLatestTuneRecord, DelegatorLedgerXcmUpdateQueue,
 	DelegatorLedgers, DelegatorNextIndex, DelegatorsIndex2Multilocation,
 	DelegatorsMultilocation2Index, Encode, Event, FeeSources, Ledger, LedgerUpdateEntry,
@@ -37,10 +37,7 @@ use sp_runtime::{
 	traits::{AccountIdConversion, CheckedAdd, UniqueSaturatedFrom, UniqueSaturatedInto},
 	DispatchResult, Saturating,
 };
-use xcm::{
-	v3::{prelude::*, MultiLocation},
-	VersionedLocation,
-};
+use xcm::v3::{prelude::*, MultiLocation};
 
 // Some common business functions for all agents
 impl<T: Config> Pallet<T> {
@@ -207,35 +204,6 @@ impl<T: Config> Pallet<T> {
 		Ok(())
 	}
 
-	pub(crate) fn get_transfer_back_dest_and_beneficiary(
-		from: &MultiLocation,
-		to: &MultiLocation,
-		currency_id: CurrencyId,
-	) -> Result<(Box<VersionedLocation>, Box<VersionedLocation>), Error<T>> {
-		// Check if from is one of our delegators. If not, return error.
-		DelegatorsMultilocation2Index::<T>::get(currency_id, from)
-			.ok_or(Error::<T>::DelegatorNotExist)?;
-
-		// Make sure the receiving account is the Exit_account from vtoken-minting module.
-		let to_account_id = Self::multilocation_to_account(to)?;
-		let (_, exit_account) = T::VtokenMinting::get_entrance_and_exit_accounts();
-		ensure!(to_account_id == exit_account, Error::<T>::InvalidAccount);
-
-		// Prepare parameter dest and beneficiary.
-		let to_32: [u8; 32] = Self::multilocation_to_account_32(to)?;
-
-		let dest = Box::new(VersionedLocation::V3(Location::from([Parachain(
-			T::ParachainId::get().into(),
-		)])));
-
-		let beneficiary = Box::new(VersionedLocation::V3(Location::from([AccountId32 {
-			network: None,
-			id: to_32,
-		}])));
-
-		Ok((dest, beneficiary))
-	}
-
 	pub(crate) fn tune_vtoken_exchange_rate_without_update_ledger(
 		who: &MultiLocation,
 		token_amount: BalanceOf<T>,
@@ -301,36 +269,42 @@ impl<T: Config> Pallet<T> {
 	pub(crate) fn inner_construct_xcm_message(
 		currency_id: CurrencyId,
 		extra_fee: BalanceOf<T>,
-	) -> Result<Vec<Instruction<()>>, Error<T>> {
-		let multi = Self::get_currency_local_multilocation(currency_id);
+	) -> Result<Vec<xcm::v4::Instruction<()>>, Error<T>> {
+		let remote_fee_location = Self::convert_currency_to_remote_fee_location(currency_id);
 
-		let asset =
-			MultiAsset { id: Concrete(multi), fun: Fungible(extra_fee.unique_saturated_into()) };
+		let asset = xcm::v4::Asset {
+			id: xcm::v4::AssetId(remote_fee_location),
+			fun: xcm::v4::prelude::Fungible(extra_fee.unique_saturated_into()),
+		};
 
-		let interior = Self::get_interior_by_currency_id(currency_id);
+		let refund_receiver = Self::convert_currency_to_refund_receiver(currency_id);
 
 		Ok(vec![
-			WithdrawAsset(asset.clone().into()),
-			BuyExecution { fees: asset, weight_limit: Unlimited },
-			RefundSurplus,
-			DepositAsset {
-				assets: AllCounted(8).into(),
-				beneficiary: Location { parents: 0, interior },
+			xcm::v4::prelude::WithdrawAsset(asset.clone().into()),
+			xcm::v4::prelude::BuyExecution { fees: asset, weight_limit: Unlimited },
+			xcm::v4::prelude::RefundSurplus,
+			xcm::v4::prelude::DepositAsset {
+				assets: xcm::v4::prelude::AllCounted(8).into(),
+				beneficiary: xcm::v4::prelude::Location { parents: 0, interior: refund_receiver },
 			},
 		])
 	}
 
-	pub(crate) fn get_interior_by_currency_id(currency_id: CurrencyId) -> Junctions {
+	pub(crate) fn convert_currency_to_refund_receiver(
+		currency_id: CurrencyId,
+	) -> xcm::v4::Junctions {
 		let interior = match currency_id {
-			KSM | DOT => X1(Parachain(T::ParachainId::get().into())),
-			MOVR | GLMR => X1(AccountKey20 {
+			KSM | DOT => xcm::v4::Junctions::from([xcm::v4::prelude::Parachain(
+				T::ParachainId::get().into(),
+			)]),
+			MOVR | GLMR => xcm::v4::Junctions::from([xcm::v4::prelude::AccountKey20 {
 				network: None,
 				key: Sibling::from(T::ParachainId::get()).into_account_truncating(),
-			}),
-			_ => X1(AccountId32 {
+			}]),
+			_ => xcm::v4::Junctions::from([xcm::v4::prelude::AccountId32 {
 				network: None,
 				id: Sibling::from(T::ParachainId::get()).into_account_truncating(),
-			}),
+			}]),
 		};
 
 		return interior;
@@ -372,7 +346,7 @@ impl<T: Config> Pallet<T> {
 		who: &MultiLocation,
 		currency_id: CurrencyId,
 		weight_and_fee: Option<(Weight, BalanceOf<T>)>,
-	) -> Result<(QueryId, BlockNumberFor<T>, BalanceOf<T>, Xcm<()>), Error<T>> {
+	) -> Result<(QueryId, BlockNumberFor<T>, BalanceOf<T>, xcm::v4::Xcm<()>), Error<T>> {
 		// prepare the query_id for reporting back transact status
 		let now = frame_system::Pallet::<T>::block_number();
 		let timeout = BlockNumberFor::<T>::from(TIMEOUT_BLOCKS).saturating_add(now);
@@ -405,10 +379,7 @@ impl<T: Config> Pallet<T> {
 	) -> Result<(QueryId, Weight), Error<T>> {
 		let now = frame_system::Pallet::<T>::block_number();
 		let timeout = BlockNumberFor::<T>::from(TIMEOUT_BLOCKS).saturating_add(now);
-		let responder: xcm::v4::Location =
-			Self::get_para_multilocation_by_currency_id(currency_id)?
-				.try_into()
-				.map_err(|_| Error::<T>::FailToConvert)?;
+		let responder = Self::convert_currency_to_dest_location(currency_id)?;
 
 		let (notify_call_weight, callback_option) = match (currency_id, operation) {
 			(DOT, &XcmOperationType::Delegate) |
@@ -454,10 +425,8 @@ impl<T: Config> Pallet<T> {
 			None,
 		)?;
 
-		let dest = Self::get_para_multilocation_by_currency_id(currency_id)?;
-		let v4_dest = dest.try_into().map_err(|()| Error::<T>::FailToConvert)?;
-		let v4_message = xcm_message.try_into().map_err(|()| Error::<T>::FailToConvert)?;
-		xcm::v4::send_xcm::<T::XcmRouter>(v4_dest, v4_message)
+		let dest_location = Self::convert_currency_to_dest_location(currency_id)?;
+		xcm::v4::send_xcm::<T::XcmRouter>(dest_location, xcm_message)
 			.map_err(|_e| Error::<T>::XcmFailure)?;
 
 		Ok(withdraw_fee)
@@ -467,13 +436,23 @@ impl<T: Config> Pallet<T> {
 		query_id: QueryId,
 		max_weight: Weight,
 		currency_id: CurrencyId,
-	) -> Instruction<()> {
+	) -> xcm::v4::Instruction<()> {
 		let dest_location = match currency_id {
-			DOT | KSM => MultiLocation::from(X1(Parachain(u32::from(T::ParachainId::get())))),
-			_ => MultiLocation::new(1, X1(Parachain(u32::from(T::ParachainId::get())))),
+			DOT | KSM => xcm::v4::Location::new(
+				0,
+				[xcm::v4::prelude::Parachain(u32::from(T::ParachainId::get()))],
+			),
+			_ => xcm::v4::Location::new(
+				1,
+				[xcm::v4::prelude::Parachain(u32::from(T::ParachainId::get()))],
+			),
 		};
 
-		ReportTransactStatus(QueryResponseInfo { destination: dest_location, query_id, max_weight })
+		xcm::v4::prelude::ReportTransactStatus(xcm::v4::prelude::QueryResponseInfo {
+			destination: dest_location,
+			query_id,
+			max_weight,
+		})
 	}
 
 	pub(crate) fn insert_delegator_ledger_update_entry(
@@ -565,9 +544,9 @@ impl<T: Config> Pallet<T> {
 		currency_id: CurrencyId,
 		query_id: Option<QueryId>,
 		notify_call_weight: Option<Weight>,
-	) -> Result<Xcm<()>, Error<T>> {
+	) -> Result<xcm::v4::Xcm<()>, Error<T>> {
 		let mut xcm_message = Self::inner_construct_xcm_message(currency_id, extra_fee)?;
-		let transact = Transact {
+		let transact = xcm::v4::prelude::Transact {
 			origin_kind: OriginKind::SovereignAccount,
 			require_weight_at_most: transact_weight,
 			call: call.into(),
@@ -584,7 +563,7 @@ impl<T: Config> Pallet<T> {
 			},
 			_ => {},
 		};
-		Ok(Xcm(xcm_message))
+		Ok(xcm::v4::Xcm(xcm_message))
 	}
 
 	pub(crate) fn get_unlocking_time_unit_from_current(

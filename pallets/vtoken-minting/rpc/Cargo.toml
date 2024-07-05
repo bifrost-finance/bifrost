@@ -14,4 +14,4 @@ sp-blockchain = { workspace = true }
 sp-core = { workspace = true }
 sp-rpc = { workspace = true }
 bifrost-primitives = { workspace = true }
-bifrost-ve-minting-rpc-runtime-api = { workspace = true }
+bifrost-vtoken-minting-rpc-runtime-api = { workspace = true }
