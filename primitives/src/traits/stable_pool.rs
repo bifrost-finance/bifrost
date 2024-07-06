@@ -16,23 +16,19 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-//! traits for stable-pool
 use crate::*;
-pub use bifrost_primitives::StablePoolHandler;
 
-impl<T: Config> StablePoolHandler for Pallet<T> {
-	type Balance = T::Balance;
-	type AccountId = T::AccountId;
-	type CurrencyId = T::CurrencyId;
+pub trait StablePoolHandler {
+	type Balance;
+	type AccountId;
+	type CurrencyId;
 
 	fn add_liquidity(
 		who: Self::AccountId,
 		pool_id: StableAssetPoolId,
 		amounts: Vec<Self::Balance>,
 		min_mint_amount: Self::Balance,
-	) -> DispatchResult {
-		Self::mint_inner(&who, pool_id, amounts, min_mint_amount)
-	}
+	) -> DispatchResult;
 
 	fn swap(
 		who: &Self::AccountId,
@@ -41,9 +37,7 @@ impl<T: Config> StablePoolHandler for Pallet<T> {
 		currency_id_out: PoolTokenIndex,
 		amount: Self::Balance,
 		min_dy: Self::Balance,
-	) -> DispatchResult {
-		Self::on_swap(who, pool_id, currency_id_in, currency_id_out, amount, min_dy)
-	}
+	) -> DispatchResult;
 
 	fn redeem_single(
 		who: Self::AccountId,
@@ -52,62 +46,43 @@ impl<T: Config> StablePoolHandler for Pallet<T> {
 		i: PoolTokenIndex,
 		min_redeem_amount: Self::Balance,
 		asset_length: u32,
-	) -> Result<(Self::Balance, Self::Balance), DispatchError> {
-		Self::redeem_single_inner(&who, pool_id, amount, i, min_redeem_amount, asset_length)
-	}
+	) -> Result<(Self::Balance, Self::Balance), DispatchError>;
 
 	fn redeem_multi(
 		who: Self::AccountId,
 		pool_id: StableAssetPoolId,
 		amounts: Vec<Self::Balance>,
 		max_redeem_amount: Self::Balance,
-	) -> DispatchResult {
-		Self::redeem_multi_inner(&who, pool_id, amounts, max_redeem_amount)
-	}
+	) -> DispatchResult;
 
 	fn redeem_proportion(
 		who: Self::AccountId,
 		pool_id: StableAssetPoolId,
 		amount: Self::Balance,
 		min_redeem_amounts: Vec<Self::Balance>,
-	) -> DispatchResult {
-		Self::redeem_proportion_inner(&who, pool_id, amount, min_redeem_amounts)
-	}
+	) -> DispatchResult;
 
 	fn get_pool_token_index(
 		pool_id: StableAssetPoolId,
 		currency_id: CurrencyId,
-	) -> Option<PoolTokenIndex> {
-		let pool_info = Pools::<T>::get(pool_id);
-		pool_info?
-			.assets
-			.iter()
-			.position(|&x| x == currency_id.into())
-			.map(|value| value as u32)
-	}
+	) -> Option<PoolTokenIndex>;
 
 	fn get_swap_output(
 		pool_id: StableAssetPoolId,
 		currency_id_in: PoolTokenIndex,
 		currency_id_out: PoolTokenIndex,
 		amount: Self::Balance,
-	) -> Result<Self::Balance, DispatchError> {
-		Self::get_swap_output(pool_id, currency_id_in, currency_id_out, amount)
-	}
+	) -> Result<Self::Balance, DispatchError>;
 
 	fn get_swap_input(
 		pool_id: StableAssetPoolId,
 		currency_id_in: PoolTokenIndex,
 		currency_id_out: PoolTokenIndex,
 		amount: Self::Balance,
-	) -> Result<Self::Balance, DispatchError> {
-		Self::get_swap_input(pool_id, currency_id_in, currency_id_out, amount)
-	}
+	) -> Result<Self::Balance, DispatchError>;
 
 	fn get_pool_id(
 		currency_id_in: &Self::CurrencyId,
 		currency_id_out: &Self::CurrencyId,
-	) -> Option<(StableAssetPoolId, PoolTokenIndex, PoolTokenIndex)> {
-		Self::get_pool_id(currency_id_in, currency_id_out)
-	}
+	) -> Option<(StableAssetPoolId, PoolTokenIndex, PoolTokenIndex)>;
 }

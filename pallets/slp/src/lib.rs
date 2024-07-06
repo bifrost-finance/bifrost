@@ -32,7 +32,7 @@ pub use crate::{
 };
 use bifrost_asset_registry::AssetMetadata;
 use bifrost_parachain_staking::ParachainStakingInterface;
-pub use bifrost_primitives::slp::{OnRefund, QueryResponseManager, StakingAgent}; // add
+pub use bifrost_primitives::slp::{OnRefund, QueryResponseManager, StakingAgent};
 use bifrost_primitives::{
 	currency::{BNC, KSM, MANTA, MOVR, PHA},
 	traits::XcmDestWeightAndFeeHandler,

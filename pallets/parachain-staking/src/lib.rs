@@ -102,7 +102,7 @@ pub mod pallet {
 		Range,
 		WeightInfo,
 	};
-	use bifrost_primitives::parachain_staking::*; // add
+	use bifrost_primitives::parachain_staking::*;
 
 	/// Pallet for parachain staking
 	#[pallet::pallet]

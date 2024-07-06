@@ -1,5 +1,4 @@
 {
   "makefile.extensionOutputFolder": "./.vscode",
   "rust-analyzer.cargo.features": "all",
-  "rust-analyzer.checkOnSave": false
 }
