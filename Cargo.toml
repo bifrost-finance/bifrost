@@ -289,7 +289,7 @@ num-traits            = { version = "0.2.19", default-features = false }
 parity-scale-codec    = { version = "3.6.12", default-features = false }
 paste                 = { version = "1.0.15" }
 scale-info            = { version = "2.11.3", default-features = false }
-serde                 = { version = "1.0.203", default-features = false }
+serde                 = { version = "1.0.204", default-features = false }
 serde_json            = { version = "1.0.120", default-features = false }
 similar-asserts       = { version = "1.1.0" }
 smallvec              = { version = "1.13.1" }
