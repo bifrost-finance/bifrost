@@ -251,10 +251,7 @@ pub fn bifrost_genesis(
 			..Default::default()
 		},
 		ethereum: Default::default(),
-		dynamic_fee: DynamicFeeConfig {
-			min_gas_price: 6335128000000u64.into(),
-			..Default::default()
-		},
+		dynamic_fee: DynamicFeeConfig { min_gas_price: 560174200u64.into(), ..Default::default() },
 	}
 }
 

@@ -31,6 +31,9 @@ use sp_runtime::{traits::Bounded, FixedPointNumber, Perquintill};
 
 pub mod constants;
 pub mod currency_adapter;
+pub mod ratio;
+
+pub use ratio::Ratio;
 
 #[cfg(test)]
 mod tests;

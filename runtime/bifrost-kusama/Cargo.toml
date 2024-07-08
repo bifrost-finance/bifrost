@@ -113,6 +113,7 @@ zenlink-swap-router = { workspace = true }
 bifrost-stable-asset = { workspace = true }
 
 # Frontier
+evm = { workspace = true, features = ["with-codec"] }
 fp-account = { workspace = true, features = ["serde"] }
 fp-evm = { workspace = true, features = ["serde"] }
 fp-rpc = { workspace = true }

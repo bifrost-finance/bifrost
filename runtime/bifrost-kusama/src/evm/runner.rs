@@ -17,19 +17,19 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 //! EVM stack-based runner.
-//! This runner is a wrapper around the default stack-based runner that adds possibility to charge fees in
-//! different currencies and to validate transactions based on the account's fee payment asset.
+//! This runner is a wrapper around the default stack-based runner that adds possibility to charge
+//! fees in different currencies and to validate transactions based on the account's fee payment
+//! asset.
 //!
 //! Shamelessly copied from pallet-evm and modified to support multi-currency fees.
-use crate::evm::WethAssetId;
-use fp_evm::{Account, InvalidEvmTransactionError};
+use crate::{evm::WethAssetId, Weight};
+use bifrost_primitives::{AccountFeeCurrencyBalanceInCurrency, Balance};
+use fp_evm::{Account, TransactionValidationError};
 use frame_support::traits::Get;
-use hydradx_traits::AccountFeeCurrencyBalanceInCurrency;
-use pallet_evm::runner::Runner;
-use pallet_evm::{AddressMapping, CallInfo, Config, CreateInfo, FeeCalculator, RunnerError};
-use pallet_genesis_history::migration::Weight;
+use pallet_evm::{
+	runner::Runner, AddressMapping, CallInfo, Config, CreateInfo, FeeCalculator, RunnerError,
+};
 use primitive_types::{H160, H256, U256};
-use primitives::{AssetId, Balance};
 use sp_runtime::traits::UniqueSaturatedInto;
 use sp_std::vec::Vec;
 
@@ -39,8 +39,8 @@ impl<T, R, B> Runner<T> for WrapRunner<T, R, B>
 where
 	T: Config,
 	R: Runner<T>,
-	<R as pallet_evm::Runner<T>>::Error: core::convert::From<InvalidEvmTransactionError>,
-	B: AccountFeeCurrencyBalanceInCurrency<AssetId, T::AccountId, Output = (Balance, Weight)>,
+	<R as pallet_evm::Runner<T>>::Error: core::convert::From<TransactionValidationError>,
+	B: AccountFeeCurrencyBalanceInCurrency<T::AccountId, Output = (Balance, Weight)>,
 {
 	type Error = R::Error;
 
@@ -68,7 +68,9 @@ where
 
 		let (source_account, inner_weight) = (
 			Account {
-				nonce: U256::from(UniqueSaturatedInto::<u128>::unique_saturated_into(account_nonce)),
+				nonce: U256::from(UniqueSaturatedInto::<u128>::unique_saturated_into(
+					account_nonce,
+				)),
 				balance: U256::from(UniqueSaturatedInto::<u128>::unique_saturated_into(balance)),
 			},
 			T::DbWeight::get().reads(1).saturating_add(b_weight),

@@ -70,7 +70,6 @@ use static_assertions::const_assert;
 pub mod constants;
 mod evm;
 mod migration;
-mod precompiles;
 pub mod weights;
 
 use bifrost_asset_registry::AssetIdMaps;
@@ -1162,92 +1161,6 @@ impl bifrost_vesting::Config for Runtime {
 	type WeightInfo = weights::bifrost_vesting::BifrostWeight<Runtime>;
 	type UnvestedFundsAllowedWithdrawReasons = UnvestedFundsAllowedWithdrawReasons;
 	const MAX_VESTING_SCHEDULES: u32 = 28;
-}
-
-impl pallet_evm_chain_id::Config for Runtime {}
-
-const BLOCK_GAS_LIMIT: u64 = 75_000_000;
-const MAX_POV_SIZE: u64 = 5 * 1024 * 1024;
-pub const WEIGHT_MILLISECS_PER_BLOCK: u64 = 2000;
-
-parameter_types! {
-	pub BlockGasLimit: U256 = U256::from(BLOCK_GAS_LIMIT);
-	pub const GasLimitPovSizeRatio: u64 = BLOCK_GAS_LIMIT.saturating_div(MAX_POV_SIZE);
-	pub PrecompilesValue: evm::precompiles::BifrostPrecompiles<Runtime> = evm::precompiles::BifrostPrecompiles::<_>::new();
-	pub WeightPerGas: Weight = Weight::from_parts(weight_per_gas(BLOCK_GAS_LIMIT, NORMAL_DISPATCH_RATIO, WEIGHT_MILLISECS_PER_BLOCK), 0);
-	pub SuicideQuickClearLimit: u32 = 0;
-}
-
-pub struct WethCurrencyId;
-impl Get<CurrencyId> for WethCurrencyId {
-	fn get() -> CurrencyId {
-		Token2(0)
-	}
-}
-
-type WethCurrency = CurrencyAdapter<Runtime, WethCurrencyId>;
-
-impl pallet_evm::Config for Runtime {
-	type FeeCalculator = DynamicFee;
-	type GasWeightMapping = pallet_evm::FixedGasWeightMapping<Self>;
-	type WeightPerGas = WeightPerGas;
-	type BlockHashMapping = pallet_ethereum::EthereumBlockHashMapping<Self>;
-	type CallOrigin = EnsureAddressTruncated;
-	type WithdrawOrigin = EnsureAddressTruncated;
-	type AddressMapping = evm::ExtendedAddressMapping;
-	type Currency = WethCurrency;
-	type RuntimeEvent = RuntimeEvent;
-	type PrecompilesType = evm::precompiles::BifrostPrecompiles<Self>;
-	type PrecompilesValue = PrecompilesValue;
-	type ChainId = EVMChainId;
-	type BlockGasLimit = BlockGasLimit;
-	type Runner = pallet_evm::runner::stack::Runner<Self>;
-	type OnChargeTransaction = ();
-	type OnCreate = ();
-	type FindAuthor = evm::FindAuthorTruncated<Aura>;
-	type GasLimitPovSizeRatio = GasLimitPovSizeRatio;
-	type SuicideQuickClearLimit = SuicideQuickClearLimit;
-	type Timestamp = Timestamp;
-	type WeightInfo = pallet_evm::weights::SubstrateWeight<Self>;
-}
-
-parameter_types! {
-	pub const PostBlockAndTxnHashes: PostLogContent = PostLogContent::BlockAndTxnHashes;
-}
-
-impl pallet_ethereum::Config for Runtime {
-	type RuntimeEvent = RuntimeEvent;
-	type StateRoot = pallet_ethereum::IntermediateStateRoot<Self>;
-	type PostLogContent = PostBlockAndTxnHashes;
-	type ExtraDataLength = ConstU32<30>;
-}
-
-pub struct EvmNonceProvider;
-impl pallet_evm_accounts::EvmNonceProvider for EvmNonceProvider {
-	fn get_nonce(evm_address: sp_core::H160) -> U256 {
-		EVM::account_basic(&evm_address).0.nonce
-	}
-}
-
-impl pallet_evm_accounts::Config for Runtime {
-	type RuntimeEvent = RuntimeEvent;
-	type FeeMultiplier = ConstU32<50>;
-	type EvmNonceProvider = EvmNonceProvider;
-	type ControllerOrigin = TechAdminOrCouncil;
-	type WeightInfo = ();
-}
-
-parameter_types! {
-	pub BoundDivision: U256 = U256::from(1024);
-}
-
-impl pallet_dynamic_fee::Config for Runtime {
-	type MinGasPriceBoundDivisor = BoundDivision;
-}
-
-parameter_types! {
-	pub DefaultBaseFeePerGas: U256 = U256::from(1_000_000_000);
-	pub DefaultElasticity: Permill = Permill::from_parts(125_000);
 }
 
 // Bifrost modules start
