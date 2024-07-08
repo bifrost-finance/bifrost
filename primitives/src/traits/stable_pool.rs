@@ -86,3 +86,90 @@ pub trait StablePoolHandler {
 		currency_id_out: &Self::CurrencyId,
 	) -> Option<(StableAssetPoolId, PoolTokenIndex, PoolTokenIndex)>;
 }
+
+impl StablePoolHandler for () {
+	type Balance = u128;
+	type AccountId = sp_runtime::AccountId32;
+	type CurrencyId = CurrencyId;
+
+	fn add_liquidity(
+		_who: Self::AccountId,
+		_pool_id: StableAssetPoolId,
+		_amounts: Vec<Self::Balance>,
+		_min_mint_amount: Self::Balance,
+	) -> DispatchResult {
+		Ok(())
+	}
+
+	fn swap(
+		_who: &Self::AccountId,
+		_pool_id: StableAssetPoolId,
+		_currency_id_in: PoolTokenIndex,
+		_currency_id_out: PoolTokenIndex,
+		_amount: Self::Balance,
+		_min_dy: Self::Balance,
+	) -> DispatchResult {
+		Ok(())
+	}
+
+	fn redeem_single(
+		_who: Self::AccountId,
+		_pool_id: StableAssetPoolId,
+		_amount: Self::Balance,
+		_i: PoolTokenIndex,
+		_min_redeem_amount: Self::Balance,
+		_asset_length: u32,
+	) -> Result<(Self::Balance, Self::Balance), DispatchError> {
+		Ok((0, 0))
+	}
+
+	fn redeem_multi(
+		_who: Self::AccountId,
+		_pool_id: StableAssetPoolId,
+		_amounts: Vec<Self::Balance>,
+		_max_redeem_amount: Self::Balance,
+	) -> DispatchResult {
+		Ok(())
+	}
+
+	fn redeem_proportion(
+		_who: Self::AccountId,
+		_pool_id: StableAssetPoolId,
+		_amount: Self::Balance,
+		_min_redeem_amounts: Vec<Self::Balance>,
+	) -> DispatchResult {
+		Ok(())
+	}
+
+	fn get_pool_token_index(
+		_pool_id: StableAssetPoolId,
+		_currency_id: CurrencyId,
+	) -> Option<PoolTokenIndex> {
+		None
+	}
+
+	fn get_swap_output(
+		_pool_id: StableAssetPoolId,
+		_currency_id_in: PoolTokenIndex,
+		_currency_id_out: PoolTokenIndex,
+		_amount: Self::Balance,
+	) -> Result<Self::Balance, DispatchError> {
+		Ok(0)
+	}
+
+	fn get_swap_input(
+		_pool_id: StableAssetPoolId,
+		_currency_id_in: PoolTokenIndex,
+		_currency_id_out: PoolTokenIndex,
+		_amount: Self::Balance,
+	) -> Result<Self::Balance, DispatchError> {
+		Ok(0)
+	}
+
+	fn get_pool_id(
+		_currency_id_in: &Self::CurrencyId,
+		_currency_id_out: &Self::CurrencyId,
+	) -> Option<(StableAssetPoolId, PoolTokenIndex, PoolTokenIndex)> {
+		None
+	}
+}
