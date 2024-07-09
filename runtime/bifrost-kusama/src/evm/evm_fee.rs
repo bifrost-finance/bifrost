@@ -32,6 +32,7 @@ use sp_runtime::{
 	Rounding,
 };
 use sp_std::marker::PhantomData;
+use zenlink_protocol::ExportZenlink;
 
 #[derive(Copy, Clone, Default)]
 pub struct EvmPaymentInfo {
@@ -81,6 +82,7 @@ where
 			AssetId = CurrencyId,
 			Balance = Balance,
 		>,
+	sp_runtime::AccountId32: From<<T as frame_system::Config>::AccountId>
 {
 	type LiquidityInfo = Option<EvmPaymentInfo>;
 
@@ -97,6 +99,14 @@ where
 		];
 		let amounts = ZenlinkProtocol::get_amount_in_by_path(fee.unique_saturated_into(), &path)
 			.map_err(|_| Error::<T>::BalanceLow)?;
+
+		ZenlinkProtocol::inner_swap_exact_assets_for_assets(
+			&account_id.clone().into(),
+			fee.unique_saturated_into(),
+			0u128,
+			&path,
+			&account_id.clone().into()
+		).map_err(|_| Error::<T>::BalanceLow)?;
 
 		// let amounts = sp_std::vec![
 		// 	fee.unique_saturated_into(),
