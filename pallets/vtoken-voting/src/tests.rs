@@ -892,6 +892,7 @@ fn notify_vote_with_no_data_works() {
 #[test]
 fn notify_remove_delegator_vote_success_works() {
 	new_test_ext().execute_with(|| {
+		let class = 0;
 		let poll_index = 3;
 		let vtoken = VKSM;
 		let mut query_id = 0;
@@ -939,6 +940,7 @@ fn notify_remove_delegator_vote_success_works() {
 		assert_ok!(VtokenVoting::remove_delegator_vote(
 			RuntimeOrigin::signed(ALICE),
 			vtoken,
+			class,
 			poll_index,
 			derivative_index,
 		));
@@ -967,6 +969,7 @@ fn notify_remove_delegator_vote_success_works() {
 #[test]
 fn notify_remove_delegator_vote_fail_works() {
 	new_test_ext().execute_with(|| {
+		let class = 0;
 		let poll_index = 3;
 		let vtoken = VKSM;
 		let mut query_id = 0;
@@ -1014,6 +1017,7 @@ fn notify_remove_delegator_vote_fail_works() {
 		assert_ok!(VtokenVoting::remove_delegator_vote(
 			RuntimeOrigin::signed(ALICE),
 			vtoken,
+			class,
 			poll_index,
 			derivative_index,
 		));
