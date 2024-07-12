@@ -340,7 +340,7 @@ pub mod pallet {
 				},
 			]);
 			let (ticket, _) = <T as pallet_xcm::Config>::XcmRouter::validate(
-				&mut Some(Location::new(1, [Parachain(1000)])),
+				&mut Some(Location::new(1, [Parachain(parachains::Statemine::ID)])),
 				&mut Some(remote_xcm),
 			)
 			.map_err(|_| Error::<T>::UnweighableMessage)?;
