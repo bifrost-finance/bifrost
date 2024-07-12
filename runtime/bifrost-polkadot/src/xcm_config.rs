@@ -483,6 +483,38 @@ impl Contains<RuntimeCall> for SafeCallFilter {
 	}
 }
 
+/// Asset filter that allows all assets from a certain location matching asset id.
+pub struct AssetPrefixFrom<Prefix, Origin>(PhantomData<(Prefix, Origin)>);
+impl<Prefix, Origin> ContainsPair<Asset, Location> for AssetPrefixFrom<Prefix, Origin>
+where
+	Prefix: Get<Location>,
+	Origin: Get<Location>,
+{
+	fn contains(asset: &Asset, origin: &Location) -> bool {
+		let loc = Origin::get();
+		&loc == origin &&
+			matches!(asset, Asset { id: AssetId(asset_loc), fun: Fungible(_a) }
+			if asset_loc.starts_with(&Prefix::get()))
+	}
+}
+
+/// Asset filter that allows native/relay asset if coming from a certain location.
+pub struct NativeAssetFrom<T>(PhantomData<T>);
+impl<T: Get<Location>> ContainsPair<Asset, Location> for NativeAssetFrom<T> {
+	fn contains(asset: &Asset, origin: &Location) -> bool {
+		let loc = T::get();
+		&loc == origin &&
+			matches!(asset, Asset { id: AssetId(asset_loc), fun: Fungible(_a) }
+			if *asset_loc == Location::from(Parent))
+	}
+}
+
+parameter_types! {
+  /// Location of Asset Hub
+  pub AssetHubLocation: Location = (Parent, Parachain(1000)).into();
+	pub EthereumLocation: Location = Location::new(2, [GlobalConsensus(Ethereum { chain_id: 1 })]);
+}
+
 pub struct XcmConfig;
 impl xcm_executor::Config for XcmConfig {
 	type AssetClaims = PolkadotXcm;
@@ -490,7 +522,11 @@ impl xcm_executor::Config for XcmConfig {
 	type AssetTrap = BifrostDropAssets<ToTreasury>;
 	type Barrier = Barrier;
 	type RuntimeCall = RuntimeCall;
-	type IsReserve = MultiNativeAsset<RelativeReserveProvider>;
+	type IsReserve = (
+		NativeAssetFrom<AssetHubLocation>,
+		AssetPrefixFrom<EthereumLocation, AssetHubLocation>,
+		MultiNativeAsset<RelativeReserveProvider>,
+	);
 	type IsTeleporter = ();
 	type UniversalLocation = UniversalLocation;
 	type OriginConverter = XcmOriginToTransactDispatchOrigin;
