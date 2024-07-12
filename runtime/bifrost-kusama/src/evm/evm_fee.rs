@@ -100,14 +100,6 @@ where
 		let amounts = ZenlinkProtocol::get_amount_in_by_path(fee.unique_saturated_into(), &path)
 			.map_err(|_| Error::<T>::BalanceLow)?;
 
-		ZenlinkProtocol::inner_swap_exact_assets_for_assets(
-			&account_id.clone().into(),
-			fee.unique_saturated_into(),
-			0u128,
-			&path,
-			&account_id.clone().into()
-		).map_err(|_| Error::<T>::BalanceLow)?;
-
 		// let amounts = sp_std::vec![
 		// 	fee.unique_saturated_into(),
 		// 	180000000000u128
