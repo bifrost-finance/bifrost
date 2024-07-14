@@ -982,6 +982,7 @@ dependencies = [
  "pallet-transaction-payment",
  "pallet-xcm",
  "parity-scale-codec",
+ "polkadot-parachain-primitives",
  "scale-info",
  "sp-arithmetic",
  "sp-core",
