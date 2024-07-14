@@ -193,15 +193,6 @@ pub trait StakingAgent<
 		currency_id: CurrencyId,
 	) -> DispatchResult;
 
-	/// Deposit some amount as fee to nominator accounts.
-	fn supplement_fee_reserve(
-		&self,
-		amount: Balance,
-		from: &MultiLocation,
-		to: &MultiLocation,
-		currency_id: CurrencyId,
-	) -> Result<(), Error>;
-
 	/// Remove an existing serving delegator for a particular currency.
 	fn remove_delegator(&self, who: &MultiLocation, currency_id: CurrencyId) -> DispatchResult;
 
