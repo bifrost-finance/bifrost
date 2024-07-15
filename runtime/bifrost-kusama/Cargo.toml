@@ -49,6 +49,7 @@ pallet-scheduler = { workspace = true }
 pallet-session = { workspace = true }
 pallet-timestamp = { workspace = true }
 pallet-tips = { workspace = true }
+pallet-tx-pause = { workspace = true }
 pallet-transaction-payment = { workspace = true }
 pallet-transaction-payment-rpc-runtime-api = { workspace = true }
 pallet-treasury = { workspace = true }
@@ -113,7 +114,6 @@ bifrost-stable-asset = { workspace = true }
 
 # Bifrost
 bifrost-asset-registry = { workspace = true }
-bifrost-call-switchgear = { workspace = true }
 bifrost-cross-in-out = { workspace = true }
 bifrost-currencies = { workspace = true }
 bifrost-farming = { workspace = true }
@@ -185,6 +185,7 @@ std = [
 	"pallet-session/std",
 	"pallet-timestamp/std",
 	"pallet-tips/std",
+	"pallet-tx-pause/std",
 	"pallet-transaction-payment-rpc-runtime-api/std",
 	"pallet-transaction-payment/std",
 	"pallet-treasury/std",
@@ -239,7 +240,6 @@ std = [
 
 	"bifrost-primitives/std",
 	"bifrost-asset-registry/std",
-	"bifrost-call-switchgear/std",
 	"bifrost-cross-in-out/std",
 	"bifrost-currencies/std",
 	"bifrost-farming-rpc-runtime-api/std",
@@ -304,7 +304,6 @@ runtime-benchmarks = [
 	"bifrost-salp/runtime-benchmarks",
 	"bifrost-vsbond-auction/runtime-benchmarks",
 	"bifrost-token-issuer/runtime-benchmarks",
-	"bifrost-call-switchgear/runtime-benchmarks",
 	"bifrost-vtoken-minting/runtime-benchmarks",
 	"bifrost-farming/runtime-benchmarks",
 	"bifrost-system-staking/runtime-benchmarks",
@@ -374,7 +373,6 @@ try-runtime = [
 	"bifrost-flexible-fee/try-runtime",
 	"bifrost-salp/try-runtime",
 	"bifrost-token-issuer/try-runtime",
-	"bifrost-call-switchgear/try-runtime",
 	"bifrost-vsbond-auction/try-runtime",
 	"bifrost-asset-registry/try-runtime",
 	"bifrost-vtoken-minting/try-runtime",

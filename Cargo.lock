@@ -1073,7 +1073,6 @@ name = "bifrost-kusama-runtime"
 version = "0.8.0"
 dependencies = [
  "bifrost-asset-registry",
- "bifrost-call-switchgear",
  "bifrost-channel-commission",
  "bifrost-cross-in-out",
  "bifrost-currencies",
@@ -1156,6 +1155,7 @@ dependencies = [
  "pallet-transaction-payment",
  "pallet-transaction-payment-rpc-runtime-api",
  "pallet-treasury",
+ "pallet-tx-pause",
  "pallet-utility",
  "pallet-whitelist",
  "pallet-xcm",
@@ -1227,7 +1227,6 @@ version = "0.8.0"
 dependencies = [
  "bifrost-asset-registry",
  "bifrost-buy-back",
- "bifrost-call-switchgear",
  "bifrost-channel-commission",
  "bifrost-clouds-convert",
  "bifrost-cross-in-out",
@@ -1311,6 +1310,7 @@ dependencies = [
  "pallet-transaction-payment",
  "pallet-transaction-payment-rpc-runtime-api",
  "pallet-treasury",
+ "pallet-tx-pause",
  "pallet-utility",
  "pallet-whitelist",
  "pallet-xcm",
@@ -8687,6 +8687,25 @@ dependencies = [
  "scale-info",
  "serde",
  "sp-core",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
+name = "pallet-tx-pause"
+version = "10.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "26ee3c04e718d399c43effb666c82ced0fc0303f3c57e930571035b59722021e"
+dependencies = [
+ "docify",
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "pallet-balances",
+ "pallet-proxy",
+ "pallet-utility",
+ "parity-scale-codec",
+ "scale-info",
  "sp-runtime",
  "sp-std",
 ]
