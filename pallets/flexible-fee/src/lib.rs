@@ -72,7 +72,6 @@ pub type CallOf<T> = <T as frame_system::Config>::RuntimeCall;
 #[frame_support::pallet]
 pub mod pallet {
 	use super::*;
-	use orml_traits::XcmTransfer;
 
 	#[pallet::config]
 	pub trait Config: frame_system::Config + pallet_transaction_payment::Config {
@@ -90,10 +89,7 @@ pub mod pallet {
 		type Currency: Currency<Self::AccountId> + ReservableCurrency<Self::AccountId>;
 		/// Handler for the unbalanced decrease
 		type OnUnbalanced: OnUnbalanced<NegativeImbalanceOf<Self>>;
-		/// xtokens xcm transfer interface
-		type XcmTransfer: XcmTransfer<AccountIdOf<Self>, BalanceOf<Self>, CurrencyIdOf<Self>>;
-
-		///
+		/// xcm transfer interface
 		type XcmRouter: SendXcm;
 
 		type DexOperator: ExportZenlink<Self::AccountId, AssetId>;

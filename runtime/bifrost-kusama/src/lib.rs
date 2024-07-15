@@ -1152,7 +1152,6 @@ impl bifrost_flexible_fee::Config for Runtime {
 	type ParachainId = ParachainInfo;
 	type ControlOrigin = TechAdminOrCouncil;
 	type XcmWeightAndFeeHandler = XcmInterface;
-	type XcmTransfer = XTokens;
 	type MinAssetHubExecutionFee = ConstU128<{ 3 * DOLLARS }>;
 	type MinRelaychainExecutionFee = ConstU128<{ 3 * DOLLARS }>;
 	type RelaychainCurrencyId = RelayCurrencyId;

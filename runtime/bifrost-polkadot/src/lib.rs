@@ -1005,7 +1005,6 @@ impl bifrost_flexible_fee::Config for Runtime {
 	type ParachainId = ParachainInfo;
 	type ControlOrigin = TechAdminOrCouncil;
 	type XcmWeightAndFeeHandler = XcmInterface;
-	type XcmTransfer = XTokens;
 	type MinAssetHubExecutionFee = ConstU128<{ 20 * CENTS }>;
 	type MinRelaychainExecutionFee = ConstU128<{ 20 * CENTS }>;
 	type RelaychainCurrencyId = RelayCurrencyId;
@@ -1014,9 +1013,6 @@ impl bifrost_flexible_fee::Config for Runtime {
 
 parameter_types! {
 	pub BifrostParachainAccountId20: [u8; 20] = cumulus_primitives_core::ParaId::from(ParachainInfo::get()).into_account_truncating();
-	pub BifrostParachainAccountId32: [u8; 32] = cumulus_primitives_core::ParaId::from(ParachainInfo::get()).into_account_truncating();
-	pub BifrostSiblingAccountId32: [u8; 32] = polkadot_parachain_primitives::primitives::Sibling::from(ParachainInfo::get(),).into_account_truncating();
-
 }
 
 pub fn create_x2_multilocation(index: u16, currency_id: CurrencyId) -> MultiLocation {
