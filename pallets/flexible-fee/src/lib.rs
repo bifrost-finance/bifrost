@@ -127,7 +127,7 @@ pub mod pallet {
 	#[pallet::hooks]
 	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
 		fn on_idle(_n: BlockNumberFor<T>, limit: Weight) -> Weight {
-			let weight = Weight::default();
+			let mut weight = Weight::default();
 
 			if WeightMeter::with_limit(limit)
 				.try_consume(T::DbWeight::get().reads_writes(4, 2))
@@ -136,9 +136,14 @@ pub mod pallet {
 				return weight;
 			}
 
-			Self::handle_fee().expect("Transfer to failed");
+			weight += T::DbWeight::get().reads_writes(4, 2);
 
-			T::DbWeight::get().reads_writes(4, 2)
+			if Self::handle_fee().is_err() {
+				return weight;
+			}
+
+			weight += T::DbWeight::get().reads_writes(1, 2);
+			weight
 		}
 	}
 
@@ -311,7 +316,7 @@ impl<T: Config> Pallet<T> {
 				},
 				DepositAsset {
 					assets: All.into(),
-					beneficiary: Location::new(1, [Parachain(T::ParachainId::get().into())]),
+					beneficiary: Location::new(0, [Parachain(T::ParachainId::get().into())]),
 				},
 			]);
 			let (ticket, _) =
