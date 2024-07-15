@@ -1974,7 +1974,6 @@ extern crate frame_benchmarking;
 mod benches {
 	define_benchmarks!(
 		[bifrost_asset_registry, AssetRegistry]
-		[bifrost_call_switchgear, CallSwitchgear]
 		[bifrost_cross_in_out, CrossInOut]
 		[bifrost_farming, Farming]
 		[bifrost_fee_share, FeeShare]
