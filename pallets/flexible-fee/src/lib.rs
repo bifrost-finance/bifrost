@@ -37,7 +37,7 @@ use frame_support::{
 	PalletId,
 };
 use frame_system::pallet_prelude::*;
-use orml_traits::{MultiCurrency};
+use orml_traits::MultiCurrency;
 use pallet_transaction_payment::OnChargeTransaction;
 use polkadot_parachain_primitives::primitives::Sibling;
 use sp_arithmetic::traits::{CheckedAdd, SaturatedConversion, UniqueSaturatedInto};
@@ -46,7 +46,7 @@ use sp_runtime::{
 	transaction_validity::TransactionValidityError,
 	BoundedVec,
 };
-use sp_std::{vec, vec::Vec};
+use sp_std::{boxed::Box, vec, vec::Vec};
 pub use weights::WeightInfo;
 use xcm::{prelude::Unlimited, v4::prelude::*};
 use zenlink_protocol::{AssetBalance, AssetId, ExportZenlink};
@@ -261,7 +261,7 @@ impl<T: Config> Pallet<T> {
 			);
 
 			let asset: Asset = Asset {
-				id: AssetId(Location::parent()),
+				id: AssetId(Location::here()),
 				fun: Fungible(UniqueSaturatedInto::<u128>::unique_saturated_into(
 					pending_transfer_to_assethub_amount,
 				)),
@@ -298,7 +298,7 @@ impl<T: Config> Pallet<T> {
 				.ok_or(Error::<T>::WeightAndFeeNotExist)?;
 
 			let fee: Asset = Asset {
-				id: AssetId(Location::parent()),
+				id: AssetId(Location::here()),
 				fun: Fungible(UniqueSaturatedInto::<u128>::unique_saturated_into(xcm_fee)),
 			};
 
