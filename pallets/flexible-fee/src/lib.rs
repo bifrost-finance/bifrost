@@ -119,6 +119,9 @@ pub mod pallet {
 		type ControlOrigin: EnsureOrigin<Self::RuntimeOrigin>;
 
 		type XcmWeightAndFeeHandler: XcmDestWeightAndFeeHandler<CurrencyId, PalletBalanceOf<Self>>;
+
+		#[pallet::constant]
+		type PalletId: Get<PalletId>;
 	}
 
 	#[pallet::hooks]
@@ -358,10 +361,8 @@ impl<T: Config> Pallet<T> {
 		match extra_fee_name {
 			ExtraFeeName::SalpContribute |
 			ExtraFeeName::VoteVtoken |
-			ExtraFeeName::VoteRemoveDelegatorVote =>
-				PalletId(*b"bf/flexi").into_sub_account_truncating(0u64),
-			ExtraFeeName::StatemineTransfer =>
-				PalletId(*b"bf/flexi").into_sub_account_truncating(1u64),
+			ExtraFeeName::VoteRemoveDelegatorVote => T::PalletId::get().into_sub_account_truncating(0u64),
+			ExtraFeeName::StatemineTransfer => T::PalletId::get().into_sub_account_truncating(1u64),
 			ExtraFeeName::NoExtraFee => T::TreasuryAccount::get(),
 		}
 	}

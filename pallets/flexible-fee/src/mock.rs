@@ -175,6 +175,7 @@ impl orml_tokens::Config for Test {
 parameter_types! {
 	pub const TreasuryAccount: AccountId32 = TREASURY_ACCOUNT;
 	pub const MaxFeeCurrencyOrderListLen: u32 = 50;
+	pub const FlexibleFeePalletId: PalletId = PalletId(*b"bf/flexi");
 }
 
 ord_parameter_types! {
@@ -198,6 +199,7 @@ impl crate::Config for Test {
 	type MinRelaychainExecutionFee = ConstU128<3>;
 	type RelaychainCurrencyId = RelayCurrencyId;
 	type XcmRouter = ();
+	type PalletId = FlexibleFeePalletId;
 }
 
 pub struct XcmDestWeightAndFee;

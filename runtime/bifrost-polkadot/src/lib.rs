@@ -329,6 +329,7 @@ parameter_types! {
 	pub const FarmingGaugeRewardIssuerPalletId: PalletId = PalletId(*b"bf/fmgar");
 	pub const BuyBackAccount: PalletId = PalletId(*b"bf/bybck");
 	pub const LiquidityAccount: PalletId = PalletId(*b"bf/liqdt");
+	pub const FlexibleFeePalletId: PalletId = PalletId(*b"bf/flexi");
 }
 
 impl frame_system::Config for Runtime {
@@ -1009,6 +1010,7 @@ impl bifrost_flexible_fee::Config for Runtime {
 	type MinRelaychainExecutionFee = ConstU128<{ 20 * CENTS }>;
 	type RelaychainCurrencyId = RelayCurrencyId;
 	type XcmRouter = XcmRouter;
+	type PalletId = FlexibleFeePalletId;
 }
 
 parameter_types! {
