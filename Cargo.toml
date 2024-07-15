@@ -61,7 +61,6 @@ bifrost-polkadot-runtime = { path = "runtime/bifrost-polkadot" }
 # Bifrost Wasm
 bifrost-asset-registry               = { path = "pallets/asset-registry", default-features = false }
 bifrost-buy-back                     = { path = "pallets/buy-back", default-features = false }
-bifrost-call-switchgear              = { path = "pallets/call-switchgear", default-features = false }
 bifrost-cross-in-out                 = { path = "pallets/cross-in-out", default-features = false }
 bifrost-currencies                   = { path = "pallets/currencies", default-features = false }
 bifrost-farming                      = { path = "pallets/farming", default-features = false }
@@ -169,6 +168,7 @@ pallet-staking                             = { version = "29.0.0", default-featu
 pallet-sudo                                = { version = "29.0.0", default-features = false }
 pallet-timestamp                           = { version = "28.0.0", default-features = false }
 pallet-tips                                = { version = "28.0.0", default-features = false }
+pallet-tx-pause                            = { version = "10.0.0", default-features = false }
 pallet-transaction-payment                 = { version = "29.0.0", default-features = false }
 pallet-transaction-payment-rpc-runtime-api = { version = "29.0.0", default-features = false }
 pallet-treasury                            = { version = "28.0.0", default-features = false }
