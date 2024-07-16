@@ -230,6 +230,7 @@ parameter_types! {
 	pub const CommissionPalletId: PalletId = PalletId(*b"bf/comms");
 	pub IncentivePoolAccount: PalletId = PalletId(*b"bf/inpoo");
 	pub const FarmingGaugeRewardIssuerPalletId: PalletId = PalletId(*b"bf/fmgar");
+	pub const FlexibleFeePalletId: PalletId = PalletId(*b"bf/flexi");
 }
 
 impl frame_system::Config for Runtime {
@@ -1059,6 +1060,11 @@ impl bifrost_flexible_fee::Config for Runtime {
 	type ParachainId = ParachainInfo;
 	type ControlOrigin = TechAdminOrCouncil;
 	type XcmWeightAndFeeHandler = XcmInterface;
+	type MinAssetHubExecutionFee = ConstU128<{ 3 * DOLLARS }>;
+	type MinRelaychainExecutionFee = ConstU128<{ 3 * DOLLARS }>;
+	type RelaychainCurrencyId = RelayCurrencyId;
+	type XcmRouter = XcmRouter;
+	type PalletId = FlexibleFeePalletId;
 }
 
 parameter_types! {

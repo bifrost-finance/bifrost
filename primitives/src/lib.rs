@@ -330,6 +330,7 @@ pub enum XcmOperationType {
 	Any,
 	SupplementaryFee,
 	EthereumTransfer,
+	TeleportAssets,
 }
 
 pub struct ExtraFeeInfo {

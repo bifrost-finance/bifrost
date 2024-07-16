@@ -55,6 +55,14 @@ pub enum PolkadotXcmCall {
 		u32,
 		WeightLimit,
 	),
+	#[codec(index = 9)]
+	LimitedTeleportAssets(
+		Box<VersionedLocation>,
+		Box<VersionedLocation>,
+		Box<VersionedAssets>,
+		u32,
+		WeightLimit,
+	),
 }
 
 #[derive(Encode, Decode, RuntimeDebug, Clone)]
@@ -91,6 +99,8 @@ pub mod polkadot {
 		Crowdloan(ContributeCall<BalanceOf, AccountIdOf>),
 		#[codec(index = 29)]
 		Proxy(ProxyCall<AccountIdOf, BlockNumberOf>),
+		#[codec(index = 99)]
+		XcmPallet(PolkadotXcmCall),
 	}
 
 	#[derive(Encode, Decode, RuntimeDebug)]
