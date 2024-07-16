@@ -359,16 +359,6 @@ impl Default for ExtraFeeInfo {
 	}
 }
 
-// pub struct IncentiveConfig<CurrencyId, Balance, BlockNumber, AccountId> {
-// 	pub reward_rate: BTreeMap<CurrencyId, Balance>,
-// 	pub reward_per_token_stored: BTreeMap<CurrencyId, Balance>,
-// 	pub rewards_duration: BlockNumber,
-// 	pub period_finish: BlockNumber,
-// 	pub last_update_time: BlockNumber,
-// 	pub incentive_controller: Option<AccountId>,
-// 	pub last_reward: Vec<(CurrencyId, Balance)>,
-// }
-
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, scale_info::TypeInfo)]
 pub enum RedeemTo<AccountId> {
 	/// Native chain.
