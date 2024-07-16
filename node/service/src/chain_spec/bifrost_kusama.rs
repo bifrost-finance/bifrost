@@ -42,7 +42,7 @@ use crate::chain_spec::{get_account_id_from_seed, get_from_seed, RelayExtensions
 const DEFAULT_PROTOCOL_ID: &str = "bifrost";
 
 /// Specialized `ChainSpec` for the bifrost runtime.
-pub type ChainSpec = sc_service::GenericChainSpec<RuntimeGenesisConfig, RelayExtensions>;
+pub type ChainSpec = sc_service::GenericChainSpec<RelayExtensions>;
 
 #[allow(non_snake_case)]
 pub fn ENDOWMENT() -> u128 {

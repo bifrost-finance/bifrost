@@ -32,7 +32,7 @@ use sp_core::{crypto::UncheckedInto, sr25519};
 const DEFAULT_PROTOCOL_ID: &str = "bifrost_polkadot";
 
 /// Specialized `ChainSpec` for the bifrost-polkadot runtime.
-pub type ChainSpec = sc_service::GenericChainSpec<RuntimeGenesisConfig, RelayExtensions>;
+pub type ChainSpec = sc_service::GenericChainSpec<RelayExtensions>;
 
 #[allow(non_snake_case)]
 pub fn ENDOWMENT() -> u128 {

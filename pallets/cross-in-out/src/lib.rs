@@ -30,8 +30,8 @@ use orml_traits::MultiCurrency;
 use sp_std::boxed::Box;
 pub use weights::WeightInfo;
 use xcm::{
-	opaque::v2::{Junction::AccountId32, Junctions::X1, NetworkId::Any},
-	v2::MultiLocation,
+	opaque::v3::{Junction::AccountId32, Junctions::X1},
+	v3::MultiLocation,
 };
 
 #[cfg(feature = "runtime-benchmarks")]
@@ -226,7 +226,7 @@ pub mod pallet {
 			let entrance_account_mutlilcaition = Box::new(MultiLocation {
 				parents: 0,
 				interior: X1(AccountId32 {
-					network: Any,
+					network: None,
 					id: T::EntrancePalletId::get().into_account_truncating(),
 				}),
 			});
