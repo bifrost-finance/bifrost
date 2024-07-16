@@ -17,40 +17,10 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 use crate::{traits::VeMintingInterface, *};
+pub use bifrost_primitives::IncentiveConfig;
 use bifrost_primitives::PoolId;
 pub use pallet::*;
 use sp_std::collections::btree_map::BTreeMap;
-
-#[derive(Clone, Encode, Decode, PartialEq, Eq, RuntimeDebug, TypeInfo)]
-pub struct IncentiveConfig<CurrencyId, Balance, BlockNumber, AccountId> {
-	pub reward_rate: BTreeMap<CurrencyId, Balance>,
-	pub reward_per_token_stored: BTreeMap<CurrencyId, Balance>,
-	pub rewards_duration: BlockNumber,
-	pub period_finish: BlockNumber,
-	pub last_update_time: BlockNumber,
-	pub incentive_controller: Option<AccountId>,
-	pub last_reward: Vec<(CurrencyId, Balance)>,
-}
-
-impl<CurrencyId, Balance, BlockNumber, AccountId> Default
-	for IncentiveConfig<CurrencyId, Balance, BlockNumber, AccountId>
-where
-	CurrencyId: Default,
-	Balance: Default,
-	BlockNumber: Default,
-{
-	fn default() -> Self {
-		IncentiveConfig {
-			reward_rate: Default::default(),
-			reward_per_token_stored: Default::default(),
-			rewards_duration: Default::default(),
-			period_finish: Default::default(),
-			last_update_time: Default::default(),
-			incentive_controller: None,
-			last_reward: Default::default(),
-		}
-	}
-}
 
 impl<T: Config> Pallet<T> {
 	pub fn last_time_reward_applicable(pool_id: PoolId) -> BlockNumberFor<T> {

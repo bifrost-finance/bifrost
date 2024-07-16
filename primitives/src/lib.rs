@@ -359,15 +359,15 @@ impl Default for ExtraFeeInfo {
 	}
 }
 
-pub struct IncentiveConfig<CurrencyId, Balance, BlockNumber, AccountId> {
-	pub reward_rate: BTreeMap<CurrencyId, Balance>,
-	pub reward_per_token_stored: BTreeMap<CurrencyId, Balance>,
-	pub rewards_duration: BlockNumber,
-	pub period_finish: BlockNumber,
-	pub last_update_time: BlockNumber,
-	pub incentive_controller: Option<AccountId>,
-	pub last_reward: Vec<(CurrencyId, Balance)>,
-}
+// pub struct IncentiveConfig<CurrencyId, Balance, BlockNumber, AccountId> {
+// 	pub reward_rate: BTreeMap<CurrencyId, Balance>,
+// 	pub reward_per_token_stored: BTreeMap<CurrencyId, Balance>,
+// 	pub rewards_duration: BlockNumber,
+// 	pub period_finish: BlockNumber,
+// 	pub last_update_time: BlockNumber,
+// 	pub incentive_controller: Option<AccountId>,
+// 	pub last_reward: Vec<(CurrencyId, Balance)>,
+// }
 
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, scale_info::TypeInfo)]
 pub enum RedeemTo<AccountId> {
@@ -383,4 +383,12 @@ pub enum RedeemTo<AccountId> {
 	Interlay(AccountId),
 	/// Manta chain.
 	Manta(AccountId),
+}
+
+#[derive(Clone, Copy, Encode, Decode, PartialEq, Eq, RuntimeDebug, TypeInfo, Default)]
+pub struct Point<Balance, BlockNumber> {
+	pub bias: i128,  // i128
+	pub slope: i128, // dweight / dt
+	pub block: BlockNumber,
+	pub amount: Balance,
 }

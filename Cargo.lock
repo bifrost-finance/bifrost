@@ -1356,6 +1356,7 @@ dependencies = [
  "bstringify",
  "frame-support",
  "orml-oracle",
+ "orml-traits",
  "parity-scale-codec",
  "scale-info",
  "serde",
