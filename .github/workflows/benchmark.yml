@@ -20,7 +20,7 @@ jobs:
         with:
           components: rustfmt
           target: wasm32-unknown-unknown
-          toolchain: 1.74.0
+          toolchain: 1.77.0
       - name: Generate WeightInfo Files
         run: make generate-bifrost-weights
       - name: Commit Automatically

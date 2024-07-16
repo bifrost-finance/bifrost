@@ -355,8 +355,8 @@ impl pallet_ranked_collective::Config<FellowshipCollectiveInstance> for Runtime 
 	type Polls = FellowshipReferenda;
 	type MinRankOfClass = sp_runtime::traits::Identity;
 	type VoteWeight = pallet_ranked_collective::Geometric;
-	#[cfg(feature = "runtime-benchmarks")]
-	type BenchmarkSetup = ();
 	type MemberSwappedHandler = ();
 	type ExchangeOrigin = EitherOfDiverse<CoreAdmin, MoreThanHalfCouncil>;
+	type AddOrigin = EitherOfDiverse<CoreAdmin, MoreThanHalfCouncil>;
+	type RemoveOrigin = Self::DemoteOrigin;
 }

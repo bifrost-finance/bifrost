@@ -26,7 +26,7 @@
 //!
 //! The RPCs available in this crate however can make some assumptions
 //! about how the runtime is constructed and what FRAME pallets
-//! are part of it. Therefore all node-runtime-specific RPCs can
+//! are part of it. Therefore, all node-runtime-specific RPCs can
 //! be placed here or imported from corresponding FRAME RPC definitions.
 
 #![warn(missing_docs)]
