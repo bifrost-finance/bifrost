@@ -17,11 +17,16 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 //! Service implementation. Specialized wrapper over substrate service.
-use std::{sync::Arc, time::Duration};
+use std::{
+	collections::BTreeMap,
+	path::Path,
+	sync::{Arc, Mutex},
+	time::Duration,
+};
 
 #[cfg(any(feature = "with-bifrost-polkadot-runtime", feature = "with-bifrost-runtime"))]
 pub use bifrost_polkadot_runtime;
-use bifrost_polkadot_runtime::RuntimeApi;
+use bifrost_polkadot_runtime::{RuntimeApi, TransactionConverter};
 use cumulus_client_cli::CollatorOptions;
 use cumulus_client_collator::service::CollatorService;
 use cumulus_client_consensus_aura::collators::basic::{
@@ -31,14 +36,17 @@ use cumulus_client_consensus_aura::collators::basic::{
 use cumulus_client_consensus_common::ParachainBlockImport as TParachainBlockImport;
 use cumulus_client_consensus_proposer::Proposer;
 
+use crate::{dev, IdentifyVariant};
 use bifrost_primitives::Block;
 use cumulus_client_service::{
 	build_network, build_relay_chain_interface, prepare_node_config, start_relay_chain_tasks,
 	BuildNetworkParams, CollatorSybilResistance, DARecoveryProfile, StartRelayChainTasksParams,
 };
 use cumulus_primitives_core::{relay_chain::Hash, ParaId};
+use cumulus_primitives_parachain_inherent::ParachainInherentData;
 use cumulus_relay_chain_interface::{OverseerHandle, RelayChainInterface};
-use polkadot_primitives::CollatorPair;
+use cumulus_test_relay_sproof_builder::RelayStateSproofBuilder;
+use polkadot_primitives::{CollatorPair, PersistedValidationData};
 use sc_client_api::backend::Backend;
 use sc_consensus::{ImportQueue, LongestChain};
 use sc_executor::{HeapAllocStrategy, WasmExecutor, DEFAULT_HEAP_ALLOC_STRATEGY};
@@ -50,7 +58,9 @@ use sc_transaction_pool_api::OffchainTransactionPoolFactory;
 use sp_keystore::KeystorePtr;
 use substrate_prometheus_endpoint::Registry;
 
-use crate::eth::EthConfiguration;
+use crate::eth::{
+	db_config_dir, spawn_frontier_tasks, BackendType, EthConfiguration, FrontierBackend,
+};
 
 #[cfg(not(feature = "runtime-benchmarks"))]
 type HostFunctions = sp_io::SubstrateHostFunctions;
@@ -81,7 +91,7 @@ type ParachainBlockImport = TParachainBlockImport<Block, Arc<FullClient>, FullBa
 
 pub fn new_partial(
 	config: &Configuration,
-	_eth_config: &EthConfiguration,
+	eth_config: &EthConfiguration,
 	dev: bool,
 ) -> Result<
 	PartialComponents<
@@ -90,7 +100,7 @@ pub fn new_partial(
 		MaybeFullSelectChain,
 		sc_consensus::import_queue::BasicQueue<Block>,
 		sc_transaction_pool::FullPool<Block, FullClient>,
-		(ParachainBlockImport, Option<Telemetry>, Option<TelemetryWorkerHandle>),
+		(ParachainBlockImport, Option<Telemetry>, Option<TelemetryWorkerHandle>, FrontierBackend),
 	>,
 	sc_service::Error,
 > {
@@ -144,6 +154,36 @@ pub fn new_partial(
 
 	let select_chain = if dev { Some(LongestChain::new(backend.clone())) } else { None };
 
+	let overrides = fc_storage::overrides_handle(client.clone());
+	let frontier_backend = match eth_config.frontier_backend_type {
+		BackendType::KeyValue => FrontierBackend::KeyValue(fc_db::kv::Backend::open(
+			Arc::clone(&client),
+			&config.database,
+			&db_config_dir(config),
+		)?),
+		BackendType::Sql => {
+			let db_path = db_config_dir(config).join("sql");
+			std::fs::create_dir_all(&db_path).expect("failed creating sql db directory");
+			let backend = futures::executor::block_on(fc_db::sql::Backend::new(
+				fc_db::sql::BackendConfig::Sqlite(fc_db::sql::SqliteBackendConfig {
+					path: Path::new("sqlite:///")
+						.join(db_path)
+						.join("frontier.db3")
+						.to_str()
+						.unwrap(),
+					create_if_missing: true,
+					thread_count: eth_config.frontier_sql_backend_thread_count,
+					cache_size: eth_config.frontier_sql_backend_cache_size,
+				}),
+				eth_config.frontier_sql_backend_pool_size,
+				std::num::NonZeroU32::new(eth_config.frontier_sql_backend_num_ops_timeout),
+				overrides.clone(),
+			))
+			.unwrap_or_else(|err| panic!("failed creating sql backend: {:?}", err));
+			FrontierBackend::Sql(backend)
+		},
+	};
+
 	let block_import = ParachainBlockImport::new(client.clone(), backend.clone());
 
 	let import_queue = if dev {
@@ -170,7 +210,7 @@ pub fn new_partial(
 		task_manager,
 		transaction_pool,
 		select_chain,
-		other: (block_import, telemetry, telemetry_worker_handle),
+		other: (block_import, telemetry, telemetry_worker_handle, frontier_backend),
 	})
 }
 
@@ -293,7 +333,7 @@ async fn start_node_impl(
 	let parachain_config = prepare_node_config(parachain_config);
 
 	let params = new_partial(&parachain_config, &eth_config, false)?;
-	let (block_import, mut telemetry, telemetry_worker_handle) = params.other;
+	let (block_import, mut telemetry, telemetry_worker_handle, frontier_backend) = params.other;
 
 	let client = params.client.clone();
 	let backend = params.backend.clone();
@@ -352,17 +392,115 @@ async fn start_node_impl(
 		);
 	}
 
+	let overrides = crate::rpc::overrides_handle(client.clone());
+	let _block_data_cache = Arc::new(fc_rpc::EthBlockDataCacheTask::new(
+		task_manager.spawn_handle(),
+		overrides.clone(),
+		eth_config.eth_log_block_cache,
+		eth_config.eth_statuses_cache,
+		prometheus_registry.clone(),
+	));
+
+	// Sinks for pubsub notifications.
+	// Everytime a new subscription is created, a new mpsc channel is added to the sink pool.
+	// The MappingSyncWorker sends through the channel on block import and the subscription emits a
+	// notification to the subscriber on receiving a message through this channel.
+	// This way we avoid race conditions when using native substrate block import notification
+	// stream.
+	let pubsub_notification_sinks: fc_mapping_sync::EthereumBlockNotificationSinks<
+		fc_mapping_sync::EthereumBlockNotification<Block>,
+	> = Default::default();
+	let pubsub_notification_sinks = Arc::new(pubsub_notification_sinks);
+
+	let filter_pool = Some(Arc::new(Mutex::new(BTreeMap::new())));
+	let fee_history_cache = Arc::new(Mutex::new(BTreeMap::new()));
+	// let fee_history_cache_limit = parachain_config.fee_history_limit;
+	let fee_history_cache_limit = 2048;
+
 	let rpc_builder = {
 		let client = client.clone();
-		let transaction_pool = transaction_pool.clone();
+		let pool = transaction_pool.clone();
+		let network = network.clone();
+		let sync_service = sync_service.clone();
 
-		Box::new(move |deny_unsafe, _| {
+		let is_authority = parachain_config.role.is_authority();
+		let enable_dev_signer = eth_config.enable_dev_signer;
+		let max_past_logs = eth_config.max_past_logs;
+		let execute_gas_limit_multiplier = eth_config.execute_gas_limit_multiplier;
+		let filter_pool = filter_pool.clone();
+		let frontier_backend = frontier_backend.clone();
+		let pubsub_notification_sinks = pubsub_notification_sinks.clone();
+		let overrides = overrides.clone();
+		let fee_history_cache = fee_history_cache.clone();
+		let block_data_cache = Arc::new(fc_rpc::EthBlockDataCacheTask::new(
+			task_manager.spawn_handle(),
+			overrides.clone(),
+			eth_config.eth_log_block_cache,
+			eth_config.eth_statuses_cache,
+			prometheus_registry.clone(),
+		));
+
+		let pending_create_inherent_data_providers = move |_, _| async move {
+			let timestamp = sp_timestamp::InherentDataProvider::from_system_time();
+			// Create a dummy parachain inherent data provider which is required to pass
+			// the checks by the para chain system. We use dummy values because in the 'pending
+			// context' neither do we have access to the real values nor do we need them.
+			let (relay_parent_storage_root, relay_chain_state) =
+				RelayStateSproofBuilder::default().into_state_root_and_proof();
+			let vfp = PersistedValidationData {
+				// This is a hack to make
+				// `cumulus_pallet_parachain_system::RelayNumberStrictlyIncreases` happy. Relay
+				// parent number can't be bigger than u32::MAX.
+				relay_parent_number: u32::MAX,
+				relay_parent_storage_root,
+				..Default::default()
+			};
+			let parachain_inherent_data = ParachainInherentData {
+				validation_data: vfp,
+				relay_chain_state,
+				downward_messages: Default::default(),
+				horizontal_messages: Default::default(),
+			};
+			Ok((timestamp, parachain_inherent_data))
+		};
+
+		Box::new(move |deny_unsafe, subscription_task_executor| {
+			let eth_deps = crate::rpc::EthDeps {
+				client: client.clone(),
+				pool: pool.clone(),
+				graph: pool.pool().clone(),
+				converter: Some(TransactionConverter),
+				is_authority,
+				enable_dev_signer,
+				network: network.clone(),
+				sync: sync_service.clone(),
+				frontier_backend: match frontier_backend.clone() {
+					fc_db::Backend::KeyValue(b) => Arc::new(b),
+					fc_db::Backend::Sql(b) => Arc::new(b),
+				},
+				overrides: overrides.clone(),
+				block_data_cache: block_data_cache.clone(),
+				filter_pool: filter_pool.clone(),
+				max_past_logs,
+				fee_history_cache: fee_history_cache.clone(),
+				fee_history_cache_limit,
+				execute_gas_limit_multiplier,
+				forced_parent_hashes: None,
+				pending_create_inherent_data_providers,
+			};
 			let deps = crate::rpc::FullDepsPolkadot {
 				client: client.clone(),
-				pool: transaction_pool.clone(),
+				pool: pool.clone(),
 				deny_unsafe,
+				command_sink: None,
+				eth: eth_deps,
 			};
-			crate::rpc::create_full_polkadot(deps).map_err(Into::into)
+			crate::rpc::create_full_polkadot(
+				deps,
+				subscription_task_executor,
+				pubsub_notification_sinks.clone(),
+			)
+			.map_err(Into::into)
 		})
 	};
 
@@ -373,13 +511,27 @@ async fn start_node_impl(
 		task_manager: &mut task_manager,
 		config: parachain_config,
 		keystore: params.keystore_container.keystore(),
-		backend,
+		backend: backend.clone(),
 		network: network.clone(),
 		sync_service: sync_service.clone(),
 		system_rpc_tx,
 		tx_handler_controller,
 		telemetry: telemetry.as_mut(),
 	})?;
+
+	spawn_frontier_tasks(
+		&task_manager,
+		client.clone(),
+		backend,
+		frontier_backend,
+		filter_pool,
+		overrides,
+		fee_history_cache,
+		fee_history_cache_limit,
+		sync_service.clone(),
+		pubsub_notification_sinks,
+	)
+	.await;
 
 	if let Some(hwbench) = hwbench {
 		sc_sysinfo::print_hwbench(&hwbench);
@@ -455,14 +607,18 @@ pub async fn start_node(
 	para_id: ParaId,
 	hwbench: Option<sc_sysinfo::HwBench>,
 ) -> sc_service::error::Result<(TaskManager, Arc<FullClient>)> {
-	start_node_impl(
-		parachain_config,
-		polkadot_config,
-		eth_config,
-		collator_options,
-		CollatorSybilResistance::Resistant,
-		para_id,
-		hwbench,
-	)
-	.await
+	if parachain_config.chain_spec.is_dev() {
+		dev::start_node(parachain_config, eth_config).await
+	} else {
+		start_node_impl(
+			parachain_config,
+			polkadot_config,
+			eth_config,
+			collator_options,
+			CollatorSybilResistance::Resistant,
+			para_id,
+			hwbench,
+		)
+		.await
+	}
 }

@@ -19,18 +19,12 @@
 // use crate::evm::runner::WrapRunner;
 pub use crate::evm::accounts_conversion::{ExtendedAddressMapping, FindAuthorTruncated};
 use crate::{
-	evm::runner::WrapRunner, governance::TechAdminOrCouncil, Aura, ConstU32, DynamicFee,
-	EVMChainId, Runtime, RuntimeEvent, Timestamp, Weight, EVM, MAXIMUM_BLOCK_WEIGHT,
-	NORMAL_DISPATCH_RATIO, WEIGHT_REF_TIME_PER_SECOND,
+	governance::TechAdminOrCouncil, Aura, ConstU32, DynamicFee, EVMChainId, Runtime, RuntimeEvent,
+	Timestamp, Weight, EVM, MAXIMUM_BLOCK_WEIGHT, NORMAL_DISPATCH_RATIO,
+	WEIGHT_REF_TIME_PER_SECOND,
 };
-use bifrost_flexible_fee::FeeAssetBalanceInCurrency;
 use bifrost_primitives::{CurrencyId, CurrencyId::Token2};
-use frame_support::{
-	pallet_prelude::Get,
-	parameter_types,
-	traits::{Defensive, FindAuthor},
-	ConsensusEngineId,
-};
+use frame_support::{pallet_prelude::Get, parameter_types, traits::FindAuthor, ConsensusEngineId};
 use orml_tokens::CurrencyAdapter;
 use pallet_ethereum::PostLogContent;
 use pallet_evm::EnsureAddressTruncated;
@@ -40,7 +34,7 @@ use primitive_types::U256;
 mod accounts_conversion;
 mod evm_fee;
 pub mod precompiles;
-mod runner;
+// mod runner;
 
 // Current approximation of the gas per second consumption considering
 // EVM execution over compiled WASM (on 4.4Ghz CPU).
@@ -108,15 +102,7 @@ impl pallet_evm::Config for Runtime {
 	type PrecompilesValue = PrecompilesValue;
 	type ChainId = EVMChainId;
 	type BlockGasLimit = BlockGasLimit;
-	type Runner = WrapRunner<
-		Self,
-		pallet_evm::runner::stack::Runner<Self>, // Evm runner that we wrap
-		FeeAssetBalanceInCurrency<
-			crate::Runtime,
-			crate::FlexibleFee, // Get account's fee payment asset
-			crate::Currencies,  // Account balance inspector
-		>,
-	>;
+	type Runner = pallet_evm::runner::stack::Runner<Self>;
 	type OnChargeTransaction = evm_fee::TransferEvmFees<
 		evm_fee::DepositEvmFeeToTreasury,
 		crate::FlexibleFee, // Get account's fee payment asset

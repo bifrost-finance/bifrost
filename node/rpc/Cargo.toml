@@ -33,6 +33,7 @@ substrate-frame-rpc-system = { workspace = true }
 # Bifrost
 bifrost-primitives = { workspace = true }
 bifrost-kusama-runtime = { workspace = true }
+bifrost-polkadot-runtime = { workspace = true }
 bifrost-flexible-fee-rpc = { workspace = true }
 bifrost-flexible-fee-rpc-runtime-api = { workspace = true }
 bifrost-salp-rpc = { workspace = true }

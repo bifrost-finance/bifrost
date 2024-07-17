@@ -37,7 +37,7 @@ use bifrost_farming_rpc::{FarmingRpc, FarmingRpcApiServer};
 use bifrost_farming_rpc_runtime_api::FarmingRuntimeApi;
 use bifrost_flexible_fee_rpc::{FeeRpcApiServer, FlexibleFeeRpc};
 use bifrost_flexible_fee_rpc_runtime_api::FlexibleFeeRuntimeApi as FeeRuntimeApi;
-use bifrost_kusama_runtime::{opaque::Block as BlockK, Hash};
+use bifrost_polkadot_runtime::Hash;
 use bifrost_primitives::{AccountId, Balance, Block, CurrencyId, Nonce, ParaId, PoolId};
 use bifrost_salp_rpc::{SalpRpc, SalpRpcApiServer};
 use bifrost_salp_rpc_runtime_api::SalpRuntimeApi;
@@ -75,7 +75,29 @@ mod eth;
 pub use self::eth::{create_eth, overrides_handle, EthDeps};
 
 /// Full client dependencies.
-pub struct FullDeps<C, P, A: ChainApi, CT, CIDP> {
+pub struct FullDeps<C, P> {
+	/// The client instance to use.
+	pub client: Arc<C>,
+	/// Transaction pool instance.
+	pub pool: Arc<P>,
+	/// Whether to deny unsafe calls
+	pub deny_unsafe: DenyUnsafe,
+}
+
+pub struct DefaultEthConfig<C, BE>(std::marker::PhantomData<(C, BE)>);
+
+impl<C, BE> fc_rpc::EthConfig<Block, C> for DefaultEthConfig<C, BE>
+where
+	C: StorageProvider<Block, BE> + Sync + Send + 'static,
+	BE: Backend<Block> + 'static,
+{
+	type EstimateGasAdapter = ();
+	type RuntimeStorageOverride =
+		fc_rpc::frontier_backend_client::SystemAccountId20StorageOverride<Block, C, BE>;
+}
+
+/// Full client dependencies.
+pub struct FullDepsPolkadot<C, P, A: ChainApi, CT, CIDP> {
 	/// The client instance to use.
 	pub client: Arc<C>,
 	/// Transaction pool instance.
@@ -83,83 +105,40 @@ pub struct FullDeps<C, P, A: ChainApi, CT, CIDP> {
 	/// Whether to deny unsafe calls
 	pub deny_unsafe: DenyUnsafe,
 	/// Ethereum-compatibility specific dependencies.
-	pub eth: EthDeps<BlockK, C, P, A, CT, CIDP>,
+	pub eth: EthDeps<Block, C, P, A, CT, CIDP>,
 	/// Manual seal command sink
 	pub command_sink: Option<mpsc::Sender<EngineCommand<Hash>>>,
-}
-
-pub struct DefaultEthConfig<C, BE>(std::marker::PhantomData<(C, BE)>);
-
-impl<C, BE> fc_rpc::EthConfig<BlockK, C> for DefaultEthConfig<C, BE>
-where
-	C: StorageProvider<BlockK, BE> + Sync + Send + 'static,
-	BE: Backend<BlockK> + 'static,
-{
-	type EstimateGasAdapter = ();
-	type RuntimeStorageOverride =
-		fc_rpc::frontier_backend_client::SystemAccountId20StorageOverride<BlockK, C, BE>;
-}
-
-/// Full client dependencies.
-pub struct FullDepsPolkadot<C, P> {
-	/// The client instance to use.
-	pub client: Arc<C>,
-	/// Transaction pool instance.
-	pub pool: Arc<P>,
-	/// Whether to deny unsafe calls
-	pub deny_unsafe: DenyUnsafe,
 }
 
 /// A IO handler that uses all Full RPC extensions.
 pub type RpcExtension = jsonrpsee::RpcModule<()>;
 
 /// RPC of bifrost-kusama runtime.
-pub fn create_full<C, P, BE, A, CT, CIDP>(
-	deps: FullDeps<C, P, A, CT, CIDP>,
-	subscription_task_executor: SubscriptionTaskExecutor,
-	pubsub_notification_sinks: Arc<
-		fc_mapping_sync::EthereumBlockNotificationSinks<
-			fc_mapping_sync::EthereumBlockNotification<BlockK>,
-		>,
-	>,
+pub fn create_full<C, P>(
+	deps: FullDeps<C, P>,
 ) -> Result<RpcExtension, Box<dyn std::error::Error + Send + Sync>>
 where
-	C: CallApiAt<BlockK>,
-	C: ProvideRuntimeApi<BlockK>
-		+ HeaderBackend<BlockK>
-		+ HeaderMetadata<BlockK, Error = BlockChainError>
+	C: ProvideRuntimeApi<Block>
+		+ HeaderBackend<Block>
+		+ HeaderMetadata<Block, Error = BlockChainError>
 		+ Send
 		+ Sync
 		+ 'static,
-	C::Api: pallet_transaction_payment_rpc::TransactionPaymentRuntimeApi<BlockK, Balance>,
-	C::Api: substrate_frame_rpc_system::AccountNonceApi<BlockK, AccountId, Nonce>,
-	C::Api: sp_consensus_aura::AuraApi<BlockK, AuraId>,
-	C::Api: FarmingRuntimeApi<BlockK, AccountId, PoolId, CurrencyId>,
-	C::Api: FeeRuntimeApi<BlockK, AccountId>,
-	C::Api: SalpRuntimeApi<BlockK, ParaId, AccountId>,
-	C::Api: StablePoolRuntimeApi<BlockK>,
-	C::Api: LendMarketApi<BlockK, AccountId, Balance>,
-	C::Api: ZenlinkProtocolRuntimeApi<BlockK, AccountId, AssetId>,
-	C::Api: zenlink_stable_amm_runtime_api::StableAmmApi<
-		BlockK,
-		CurrencyId,
-		Balance,
-		AccountId,
-		PoolId,
-	>,
-	C::Api: BlockBuilder<BlockK>,
-	C::Api: fp_rpc::ConvertTransactionRuntimeApi<BlockK>,
-	C::Api: fp_rpc::EthereumRuntimeRPCApi<BlockK>,
-	C: HeaderBackend<BlockK> + HeaderMetadata<BlockK, Error = BlockChainError> + 'static,
-	C: BlockchainEvents<BlockK> + AuxStore + UsageProvider<BlockK> + StorageProvider<BlockK, BE>,
-	BE: Backend<BlockK> + 'static,
-	P: TransactionPool<Block = BlockK> + 'static,
-	A: ChainApi<Block = BlockK> + 'static,
-	CIDP: CreateInherentDataProviders<BlockK, ()> + Send + 'static,
-	CT: fp_rpc::ConvertTransaction<<Block as BlockT>::Extrinsic> + Send + Sync + 'static,
+	C::Api: pallet_transaction_payment_rpc::TransactionPaymentRuntimeApi<Block, Balance>,
+	C::Api: substrate_frame_rpc_system::AccountNonceApi<Block, AccountId, Nonce>,
+	C::Api: FarmingRuntimeApi<Block, AccountId, PoolId, CurrencyId>,
+	C::Api: FeeRuntimeApi<Block, AccountId>,
+	C::Api: SalpRuntimeApi<Block, ParaId, AccountId>,
+	C::Api: StablePoolRuntimeApi<Block>,
+	C::Api: LendMarketApi<Block, AccountId, Balance>,
+	C::Api: ZenlinkProtocolRuntimeApi<Block, AccountId, AssetId>,
+	C::Api:
+		zenlink_stable_amm_runtime_api::StableAmmApi<Block, CurrencyId, Balance, AccountId, PoolId>,
+	C::Api: BlockBuilder<Block>,
+	P: TransactionPool + Sync + Send + 'static,
 {
 	let mut module = RpcExtension::new(());
-	let FullDeps { client, pool, deny_unsafe, eth, command_sink } = deps;
+	let FullDeps { client, pool, deny_unsafe } = deps;
 
 	module.merge(System::new(client.clone(), pool.clone(), deny_unsafe).into_rpc())?;
 	module.merge(TransactionPayment::new(client.clone()).into_rpc())?;
@@ -169,6 +148,63 @@ where
 	module.merge(SalpRpc::new(client.clone()).into_rpc())?;
 	module.merge(ZenlinkProtocol::new(client.clone()).into_rpc())?;
 	module.merge(StableAmm::new(client.clone()).into_rpc())?;
+	module.merge(StablePoolRpc::new(client.clone()).into_rpc())?;
+	module.merge(LendMarket::new(client.clone()).into_rpc())?;
+
+	Ok(module)
+}
+
+/// RPC of bifrost-polkadot runtime.
+pub fn create_full_polkadot<C, P, BE, A, CT, CIDP>(
+	deps: FullDepsPolkadot<C, P, A, CT, CIDP>,
+	subscription_task_executor: SubscriptionTaskExecutor,
+	pubsub_notification_sinks: Arc<
+		fc_mapping_sync::EthereumBlockNotificationSinks<
+			fc_mapping_sync::EthereumBlockNotification<Block>,
+		>,
+	>,
+) -> Result<RpcExtension, Box<dyn std::error::Error + Send + Sync>>
+where
+	C: CallApiAt<Block>,
+	C: ProvideRuntimeApi<Block>
+		+ HeaderBackend<Block>
+		+ HeaderMetadata<Block, Error = BlockChainError>
+		+ Send
+		+ Sync
+		+ 'static
+		+ BlockIdTo<Block>,
+	C::Api: pallet_transaction_payment_rpc::TransactionPaymentRuntimeApi<Block, Balance>,
+	C::Api: substrate_frame_rpc_system::AccountNonceApi<Block, AccountId, Nonce>,
+	C::Api: sp_consensus_aura::AuraApi<Block, AuraId>,
+	C::Api: FarmingRuntimeApi<Block, AccountId, PoolId, CurrencyId>,
+	C::Api: FeeRuntimeApi<Block, AccountId>,
+	C::Api: SalpRuntimeApi<Block, ParaId, AccountId>,
+	C::Api: VeMintingRuntimeApi<Block, AccountId>,
+	C::Api: LendMarketApi<Block, AccountId, Balance>,
+	C::Api: ZenlinkProtocolRuntimeApi<Block, AccountId, AssetId>,
+	C::Api: StablePoolRuntimeApi<Block>,
+	C::Api: BlockBuilder<Block>,
+	C::Api: fp_rpc::ConvertTransactionRuntimeApi<Block>,
+	C::Api: fp_rpc::EthereumRuntimeRPCApi<Block>,
+	C: HeaderBackend<Block> + HeaderMetadata<Block, Error = BlockChainError> + 'static,
+	C: BlockchainEvents<Block> + AuxStore + UsageProvider<Block> + StorageProvider<Block, BE>,
+	BE: Backend<Block> + 'static,
+	P: TransactionPool<Block = Block> + 'static,
+	A: ChainApi<Block = Block> + 'static,
+	CIDP: CreateInherentDataProviders<Block, ()> + Send + 'static,
+	CT: fp_rpc::ConvertTransaction<<Block as BlockT>::Extrinsic> + Send + Sync + 'static,
+{
+	let mut module = RpcExtension::new(());
+	let FullDepsPolkadot { client, pool, deny_unsafe, eth, command_sink } = deps;
+
+	module.merge(System::new(client.clone(), pool.clone(), deny_unsafe).into_rpc())?;
+	module.merge(TransactionPayment::new(client.clone()).into_rpc())?;
+
+	module.merge(FarmingRpc::new(client.clone()).into_rpc())?;
+	module.merge(FlexibleFeeRpc::new(client.clone()).into_rpc())?;
+	module.merge(SalpRpc::new(client.clone()).into_rpc())?;
+	module.merge(VeMintingRpc::new(client.clone()).into_rpc())?;
+	module.merge(ZenlinkProtocol::new(client.clone()).into_rpc())?;
 	module.merge(StablePoolRpc::new(client.clone()).into_rpc())?;
 	module.merge(LendMarket::new(client).into_rpc())?;
 
@@ -187,47 +223,6 @@ where
 		subscription_task_executor,
 		pubsub_notification_sinks,
 	)?;
-
-	Ok(module)
-}
-
-/// RPC of bifrost-polkadot runtime.
-pub fn create_full_polkadot<C, P>(
-	deps: FullDepsPolkadot<C, P>,
-) -> Result<RpcExtension, Box<dyn std::error::Error + Send + Sync>>
-where
-	C: ProvideRuntimeApi<Block>
-		+ HeaderBackend<Block>
-		+ HeaderMetadata<Block, Error = BlockChainError>
-		+ Send
-		+ Sync
-		+ 'static
-		+ BlockIdTo<Block>,
-	C::Api: pallet_transaction_payment_rpc::TransactionPaymentRuntimeApi<Block, Balance>,
-	C::Api: substrate_frame_rpc_system::AccountNonceApi<Block, AccountId, Nonce>,
-	C::Api: FarmingRuntimeApi<Block, AccountId, PoolId, CurrencyId>,
-	C::Api: FeeRuntimeApi<Block, AccountId>,
-	C::Api: SalpRuntimeApi<Block, ParaId, AccountId>,
-	C::Api: VeMintingRuntimeApi<Block, AccountId>,
-	C::Api: LendMarketApi<Block, AccountId, Balance>,
-	C::Api: ZenlinkProtocolRuntimeApi<Block, AccountId, AssetId>,
-	C::Api: StablePoolRuntimeApi<Block>,
-	C::Api: BlockBuilder<Block>,
-	P: TransactionPool + Sync + Send + 'static,
-{
-	let mut module = RpcExtension::new(());
-	let FullDepsPolkadot { client, pool, deny_unsafe } = deps;
-
-	module.merge(System::new(client.clone(), pool.clone(), deny_unsafe).into_rpc())?;
-	module.merge(TransactionPayment::new(client.clone()).into_rpc())?;
-
-	module.merge(FarmingRpc::new(client.clone()).into_rpc())?;
-	module.merge(FlexibleFeeRpc::new(client.clone()).into_rpc())?;
-	module.merge(SalpRpc::new(client.clone()).into_rpc())?;
-	module.merge(VeMintingRpc::new(client.clone()).into_rpc())?;
-	module.merge(ZenlinkProtocol::new(client.clone()).into_rpc())?;
-	module.merge(StablePoolRpc::new(client.clone()).into_rpc())?;
-	module.merge(LendMarket::new(client).into_rpc())?;
 
 	Ok(module)
 }

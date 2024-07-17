@@ -17,7 +17,7 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 use crate::{Currencies, ParachainInfo, ZenlinkProtocol};
-use bifrost_primitives::{AccountFeeCurrency, Balance, CurrencyId, BNC};
+use bifrost_primitives::{AccountFeeCurrency, Balance, CurrencyId};
 use bifrost_runtime_common::Ratio;
 use frame_support::traits::{
 	tokens::{Fortitude, Precision},
@@ -28,11 +28,10 @@ use pallet_evm::{AddressMapping, Error, OnChargeEVMTransaction};
 use sp_core::{H160, U256};
 use sp_runtime::{
 	helpers_128bit::multiply_by_rational_with_rounding,
-	traits::{Convert, UniqueSaturatedInto},
+	traits::{UniqueSaturatedInto},
 	Rounding,
 };
 use sp_std::marker::PhantomData;
-use zenlink_protocol::ExportZenlink;
 
 #[derive(Copy, Clone, Default)]
 pub struct EvmPaymentInfo {
@@ -82,7 +81,7 @@ where
 			AssetId = CurrencyId,
 			Balance = Balance,
 		>,
-	sp_runtime::AccountId32: From<<T as frame_system::Config>::AccountId>
+	sp_runtime::AccountId32: From<<T as frame_system::Config>::AccountId>,
 {
 	type LiquidityInfo = Option<EvmPaymentInfo>;
 

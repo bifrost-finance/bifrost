@@ -20,16 +20,15 @@ use std::{
 	collections::BTreeMap,
 	fs::{read_dir, File},
 	path::PathBuf,
-	str::FromStr,
 };
 
 use bifrost_kusama_runtime::{
 	constants::currency::DOLLARS, AccountId, AssetRegistryConfig, Balance, BalancesConfig,
 	BlockNumber, CouncilConfig, CouncilMembershipConfig, DefaultBlocksPerRound, DemocracyConfig,
-	DynamicFeeConfig, EVMChainIdConfig, EVMConfig, IndicesConfig, InflationInfo,
-	OracleMembershipConfig, ParachainInfoConfig, ParachainStakingConfig, PolkadotXcmConfig, Range,
-	RuntimeGenesisConfig, SS58Prefix, SalpConfig, SessionConfig, SystemConfig,
-	TechnicalCommitteeConfig, TechnicalMembershipConfig, TokensConfig, VestingConfig, WASM_BINARY,
+	IndicesConfig, InflationInfo, OracleMembershipConfig, ParachainInfoConfig,
+	ParachainStakingConfig, PolkadotXcmConfig, Range, RuntimeGenesisConfig, SS58Prefix, SalpConfig,
+	SessionConfig, SystemConfig, TechnicalCommitteeConfig, TechnicalMembershipConfig, TokensConfig,
+	VestingConfig, WASM_BINARY,
 };
 use bifrost_primitives::{CurrencyId, CurrencyId::*, TokenInfo, TokenSymbol, TokenSymbol::*};
 use bifrost_runtime_common::AuraId;
@@ -42,7 +41,7 @@ use sc_service::ChainType;
 use sc_telemetry::TelemetryEndpoints;
 use serde::de::DeserializeOwned;
 use serde_json as json;
-use sp_core::{crypto::UncheckedInto, sr25519, H160, U256};
+use sp_core::{crypto::UncheckedInto, sr25519};
 use sp_runtime::traits::Zero;
 
 use super::TELEMETRY_URL;
@@ -169,9 +168,9 @@ pub fn bifrost_genesis(
 				.cloned()
 				.map(|(acc, aura, _)| {
 					(
-						acc.clone(),                                          // account id
-						acc,                                                  // validator id
-						bifrost_kusama_runtime::opaque::SessionKeys { aura }, // session keys
+						acc.clone(),                                  // account id
+						acc,                                          // validator id
+						bifrost_kusama_runtime::SessionKeys { aura }, // session keys
 					)
 				})
 				.collect(),
@@ -201,57 +200,6 @@ pub fn bifrost_genesis(
 		vtoken_voting: Default::default(),
 		transaction_payment: Default::default(),
 		zenlink_protocol: Default::default(),
-		// EVM compatibility
-		evm_chain_id: EVMChainIdConfig { chain_id: 42u64, ..Default::default() },
-		evm: EVMConfig {
-			accounts: {
-				let mut map = BTreeMap::new();
-				map.insert(
-					// H160 address of Alice dev account
-					// Derived from SS58 (42 prefix) address
-					// SS58: 5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY
-					// hex: 0xd43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d
-					// Using the full hex key, truncating to the first 20 bytes (the first 40 hex
-					// chars)
-					H160::from_str("d43593c715fdd31c61141abd04a99fd6822c8558")
-						.expect("internal H160 is valid; qed"),
-					fp_evm::GenesisAccount {
-						balance: U256::from_str("0xffffffffffffffffffffffffffffffff")
-							.expect("internal U256 is valid; qed"),
-						code: Default::default(),
-						nonce: Default::default(),
-						storage: Default::default(),
-					},
-				);
-				map.insert(
-					// H160 address of CI test runner account
-					H160::from_str("6be02d1d3665660d22ff9624b7be0551ee1ac91b")
-						.expect("internal H160 is valid; qed"),
-					fp_evm::GenesisAccount {
-						balance: U256::from_str("0xffffffffffffffffffffffffffffffff")
-							.expect("internal U256 is valid; qed"),
-						code: Default::default(),
-						nonce: Default::default(),
-						storage: Default::default(),
-					},
-				);
-				map.insert(
-					// H160 address for benchmark usage
-					H160::from_str("1000000000000000000000000000000000000001")
-						.expect("internal H160 is valid; qed"),
-					fp_evm::GenesisAccount {
-						nonce: U256::from(1),
-						balance: U256::from(1_000_000_000_000_000_000_000_000u128),
-						storage: Default::default(),
-						code: vec![0x00],
-					},
-				);
-				map
-			},
-			..Default::default()
-		},
-		ethereum: Default::default(),
-		dynamic_fee: DynamicFeeConfig { min_gas_price: 560174200u64.into(), ..Default::default() },
 	}
 }
 

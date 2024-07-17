@@ -36,7 +36,7 @@ members = [
     "pallets/leverage-staking",
     "pallets/channel-commission",
     "runtime/bifrost-kusama",
-    "runtime/bifrost-kusama/src/evm/evm-utility/macro",
+    "runtime/bifrost-polkadot/src/evm/evm-utility/macro",
     "runtime/bifrost-polkadot",
 ]
 resolver = "2"
@@ -338,7 +338,7 @@ pallet-evm-accounts-rpc-runtime-api = { path = "pallets/evm-accounts/rpc/runtime
 evm = { version = "0.41.1", default-features = false }
 
 # EVM from acala
-module-evm-utility-macro = { path = "runtime/bifrost-kusama/src/evm/evm-utility/macro", default-features = false }
+module-evm-utility-macro = { path = "runtime/bifrost-polkadot/src/evm/evm-utility/macro", default-features = false }
 
 # Integration-tests
 beefy-primitives = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.3.0", package = "sp-consensus-beefy" }

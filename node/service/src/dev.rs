@@ -16,7 +16,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-use bifrost_kusama_runtime::{TransactionConverter, SLOT_DURATION};
+use bifrost_polkadot_runtime::{constants::time::SLOT_DURATION, TransactionConverter};
 use cumulus_primitives_core::{ParaId, PersistedValidationData};
 use cumulus_primitives_parachain_inherent::{
 	MockValidationDataInherentDataProvider, MockXcmConfig, ParachainInherentData,
@@ -35,13 +35,13 @@ use std::{
 };
 
 use crate::{
-	collator_kusama::FullClient,
+	collator_polkadot::FullClient,
 	eth::{spawn_frontier_tasks, EthConfiguration},
 };
 
 pub type Block = bifrost_primitives::Block;
-pub type Executor = crate::collator_kusama::BifrostExecutor;
-pub type RuntimeApi = crate::collator_kusama::bifrost_kusama_runtime::RuntimeApi;
+pub type Executor = crate::collator_polkadot::BifrostPolkadotExecutor;
+pub type RuntimeApi = bifrost_polkadot_runtime::RuntimeApi;
 
 pub type FullBackend = sc_service::TFullBackend<Block>;
 pub type FullSelectChain = sc_consensus::LongestChain<FullBackend, Block>;
@@ -94,7 +94,7 @@ pub async fn start_node(
 	config: Configuration,
 	eth_config: EthConfiguration,
 ) -> sc_service::error::Result<(TaskManager, Arc<FullClient>)> {
-	let params = crate::collator_kusama::new_partial(&config, &eth_config, true)?;
+	let params = crate::collator_polkadot::new_partial(&config, &eth_config, true)?;
 	let (block_import, mut telemetry, telemetry_worker_handle, frontier_backend) = params.other;
 
 	let client = params.client.clone();
@@ -307,14 +307,14 @@ pub async fn start_node(
 				forced_parent_hashes: None,
 				pending_create_inherent_data_providers,
 			};
-			let deps = crate::rpc::FullDeps {
+			let deps = crate::rpc::FullDepsPolkadot {
 				client: client.clone(),
 				pool: pool.clone(),
 				deny_unsafe,
 				command_sink: Some(command_sink.clone()),
 				eth: eth_deps,
 			};
-			crate::rpc::create_full(
+			crate::rpc::create_full_polkadot(
 				deps,
 				subscription_task_executor,
 				pubsub_notification_sinks.clone(),

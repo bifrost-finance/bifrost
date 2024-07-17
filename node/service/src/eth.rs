@@ -33,9 +33,9 @@ pub use fc_consensus::FrontierBlockImport;
 use fc_rpc::{EthTask, OverrideHandle};
 pub use fc_rpc_core::types::{FeeHistoryCache, FeeHistoryCacheLimit, FilterPool};
 // Local
-use bifrost_kusama_runtime::opaque::Block;
+use bifrost_polkadot_runtime::opaque::Block;
 
-use crate::collator_kusama::{FullBackend, FullClient};
+use crate::collator_polkadot::{FullBackend, FullClient};
 
 /// Frontier DB backend type.
 pub type FrontierBackend = fc_db::Backend<Block>;

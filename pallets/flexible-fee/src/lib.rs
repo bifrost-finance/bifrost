@@ -20,9 +20,8 @@
 
 use bifrost_primitives::{
 	traits::{FeeGetter, XcmDestWeightAndFeeHandler},
-	AccountFeeCurrency, AccountFeeCurrencyBalanceInCurrency, Balance, CurrencyId,
-	CurrencyId::{Native, Token2},
-	ExtraFeeName, TryConvertFrom, XcmOperationType, BNC,
+	AccountFeeCurrency, AccountFeeCurrencyBalanceInCurrency, Balance, CurrencyId, ExtraFeeName,
+	TryConvertFrom, XcmOperationType, BNC,
 };
 use core::convert::Into;
 use cumulus_primitives_core::ParaId;
@@ -30,17 +29,15 @@ use frame_support::{
 	pallet_prelude::*,
 	traits::{
 		tokens::{Fortitude, Preservation},
-		Currency, ExistenceRequirement, Get, Imbalance, OnUnbalanced, ReservableCurrency, TryDrop,
+		Currency, ExistenceRequirement, Get, Imbalance, OnUnbalanced, ReservableCurrency,
 		WithdrawReasons,
 	},
 };
 use frame_system::pallet_prelude::*;
 use orml_traits::MultiCurrency;
 pub use pallet::*;
-use pallet_evm::{AddressMapping, OnChargeEVMTransaction};
 use pallet_transaction_payment::OnChargeTransaction;
 use sp_arithmetic::traits::{CheckedAdd, SaturatedConversion, UniqueSaturatedInto};
-use sp_core::{H160, U256};
 use sp_runtime::{
 	traits::{DispatchInfoOf, PostDispatchInfoOf, Saturating, Zero},
 	transaction_validity::TransactionValidityError,

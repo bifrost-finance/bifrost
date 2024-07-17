@@ -36,7 +36,6 @@ use sp_runtime::traits::Dispatchable;
 // use codec::alloc;
 use ethabi::Token;
 use hex_literal::hex;
-use orml_traits::MultiCurrency;
 use parity_scale_codec::alloc;
 use primitive_types::{H160, U256};
 use sp_std::{borrow::ToOwned, vec::Vec};
