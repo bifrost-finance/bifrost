@@ -57,7 +57,6 @@ pallet-transaction-payment-rpc = { workspace = true }
 frame-system-rpc-runtime-api = { workspace = true }
 substrate-prometheus-endpoint = { workspace = true }
 substrate-frame-rpc-system = { workspace = true }
-try-runtime-cli = { workspace = true, optional = true }
 pallet-transaction-payment-rpc-runtime-api = { workspace = true }
 
 # Cumulus dependencies

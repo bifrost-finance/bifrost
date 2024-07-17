@@ -267,7 +267,6 @@ substrate-build-script-utils                  = { version = "11.0.0" }
 substrate-frame-rpc-system                    = { version = "35.0.0" }
 substrate-prometheus-endpoint                 = { version = "0.17.0" }
 substrate-wasm-builder                        = { version = "23.0.0" }
-try-runtime-cli                               = { version = "0.39.0" }
 xcm-emulator                                  = { version = "0.12.0" }
 xcm-simulator                                 = { version = "14.0.0" }
 
@@ -282,7 +281,7 @@ futures               = { version =  "0.3.30" }
 hex                   = { version = "0.4.3", default-features = false }
 hex-literal           = { version = "0.4.1" }
 impl-trait-for-tuples = { version = "0.2.2" }
-jsonrpsee             = { version = "0.20.3" }
+jsonrpsee             = { version = "0.22.5" }
 log                   = { version = "0.4.21", default-features = false }
 num-bigint            = { version = "0.4.6", default-features = false }
 num-traits            = { version = "0.2.19", default-features = false }
