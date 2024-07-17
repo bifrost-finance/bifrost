@@ -24,7 +24,7 @@
 
 #![allow(clippy::explicit_counter_loop)]
 
-use frame_support::{assert_noop, assert_ok};
+use frame_support::{assert_noop, assert_ok, dispatch::RawOrigin};
 use sp_runtime::{traits::Zero, DispatchError, ModuleError, Perbill, Percent};
 
 use crate::{
@@ -5146,10 +5146,11 @@ fn deferred_payment_steady_state_event_flow() {
 			let reset_issuance = || {
 				let new_issuance = Balances::total_issuance();
 				let diff = new_issuance - initial_issuance;
-				let burned = Balances::burn(diff);
-				Balances::settle(
+				Balances::force_adjust_total_issuance(RawOrigin::Root.into(), Decrease, diff)
+					.expect("Force adjust total issuance failed");
+				let _ = Balances::withdraw(
 					&111,
-					burned,
+					diff,
 					WithdrawReasons::FEE,
 					ExistenceRequirement::AllowDeath,
 				)
@@ -5261,6 +5262,7 @@ fn deferred_payment_steady_state_event_flow() {
 
 // MIGRATION UNIT TESTS
 use frame_support::traits::OnRuntimeUpgrade;
+use pallet_balances::AdjustmentDirection::Decrease;
 
 #[test]
 fn patch_incorrect_delegations_sums() {

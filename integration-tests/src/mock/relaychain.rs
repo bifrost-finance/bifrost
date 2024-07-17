@@ -16,6 +16,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
+use bifrost_polkadot_runtime::{RuntimeBlockLength, RuntimeBlockWeights};
 use cumulus_primitives_core::ParaId;
 use frame_support::{
 	construct_runtime, derive_impl, parameter_types,
@@ -49,16 +50,16 @@ impl frame_system::Config for Runtime {
 	type AccountData = pallet_balances::AccountData<Balance>;
 
 	/// The index type for storing how many extrinsics an account has signed.
-	type Nonce = Nonce;
+	type Nonce = Self::Nonce;
 	/// The type for hashing blocks and tries.
-	type Hash = Hash;
+	type Hash = Self::Hash;
 	/// Maximum number of block number to block hash mappings to keep (oldest pruned first).
-	type BlockHashCount = BlockHashCount;
+	type BlockHashCount = Self::BlockHashCount;
 	/// Runtime version.
-	type Version = Version;
+	type Version = Self::Version;
 	type BlockWeights = RuntimeBlockWeights;
 	type BlockLength = RuntimeBlockLength;
-	type SS58Prefix = SS58Prefix;
+	type SS58Prefix = Self::SS58Prefix;
 	type OnSetCode = cumulus_pallet_parachain_system::ParachainSetCode<Self>;
 	type MaxConsumers = frame_support::traits::ConstU32<16>;
 }

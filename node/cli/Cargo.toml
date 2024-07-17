@@ -28,6 +28,7 @@ sp-runtime = { workspace = true }
 
 # client dependencies
 sc-executor = { workspace = true }
+sc-network = { workspace = true }
 sc-service = { workspace = true, optional = true }
 sc-sysinfo = { workspace = true }
 sc-telemetry = { workspace = true }

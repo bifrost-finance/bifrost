@@ -18,7 +18,7 @@
 
 use bifrost_kusama_runtime::{
 	constants::currency::DOLLARS, AccountId, Balance, BalancesConfig, BlockNumber,
-	DefaultBlocksPerRound, InflationInfo, Range, RuntimeGenesisConfig, SS58Prefix, VestingConfig,
+	DefaultBlocksPerRound, InflationInfo, Range, SS58Prefix, VestingConfig,
 };
 use bifrost_primitives::{CurrencyId, CurrencyId::*, TokenInfo, TokenSymbol::*};
 use bifrost_runtime_common::AuraId;

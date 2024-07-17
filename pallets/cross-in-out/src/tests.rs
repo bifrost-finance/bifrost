@@ -20,65 +20,38 @@
 
 use crate::{mock::*, *};
 use bifrost_primitives::currency::KSM;
-use frame_support::{assert_noop, assert_ok, WeakBoundedVec};
+use frame_support::{assert_noop, assert_ok};
 use sp_runtime::DispatchError::BadOrigin;
-use xcm::opaque::v2::{Junction, Junctions::X1};
+use xcm::opaque::v3::{Junction, Junctions::X1};
 
 #[test]
 fn cross_in_and_cross_out_should_work() {
 	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
-		let location = MultiLocation {
-			parents: 100,
-			interior: X1(Junction::GeneralKey(WeakBoundedVec::default())),
-		};
+		let location = MultiLocation { parents: 100, interior: X1(Junction::GeneralIndex(12345)) };
 
 		assert_noop!(
-			CrossInOut::cross_in(
-				RuntimeOrigin::signed(ALICE),
-				Box::new(location.clone()),
-				KSM,
-				100,
-				None
-			),
+			CrossInOut::cross_in(RuntimeOrigin::signed(ALICE), Box::new(location), KSM, 100, None),
 			Error::<Runtime>::CurrencyNotSupportCrossInAndOut
 		);
 
 		CrossCurrencyRegistry::<Runtime>::insert(KSM, ());
 
 		assert_noop!(
-			CrossInOut::cross_in(
-				RuntimeOrigin::signed(ALICE),
-				Box::new(location.clone()),
-				KSM,
-				100,
-				None
-			),
+			CrossInOut::cross_in(RuntimeOrigin::signed(ALICE), Box::new(location), KSM, 100, None),
 			Error::<Runtime>::NoCrossingMinimumSet
 		);
 
 		CrossingMinimumAmount::<Runtime>::insert(KSM, (1000, 1000));
 
 		assert_noop!(
-			CrossInOut::cross_in(
-				RuntimeOrigin::signed(ALICE),
-				Box::new(location.clone()),
-				KSM,
-				100,
-				None
-			),
+			CrossInOut::cross_in(RuntimeOrigin::signed(ALICE), Box::new(location), KSM, 100, None),
 			Error::<Runtime>::AmountLowerThanMinimum
 		);
 
 		CrossingMinimumAmount::<Runtime>::insert(KSM, (1, 1));
 
 		assert_noop!(
-			CrossInOut::cross_in(
-				RuntimeOrigin::signed(ALICE),
-				Box::new(location.clone()),
-				KSM,
-				100,
-				None
-			),
+			CrossInOut::cross_in(RuntimeOrigin::signed(ALICE), Box::new(location), KSM, 100, None),
 			Error::<Runtime>::NotAllowed
 		);
 
@@ -86,18 +59,12 @@ fn cross_in_and_cross_out_should_work() {
 		IssueWhiteList::<Runtime>::insert(KSM, bounded_vector);
 
 		assert_noop!(
-			CrossInOut::cross_in(
-				RuntimeOrigin::signed(ALICE),
-				Box::new(location.clone()),
-				KSM,
-				100,
-				None
-			),
+			CrossInOut::cross_in(RuntimeOrigin::signed(ALICE), Box::new(location), KSM, 100, None),
 			Error::<Runtime>::NoAccountIdMapping
 		);
 
-		AccountToOuterMultilocation::<Runtime>::insert(KSM, ALICE, location.clone());
-		OuterMultilocationToAccount::<Runtime>::insert(KSM, location.clone(), ALICE);
+		AccountToOuterMultilocation::<Runtime>::insert(KSM, ALICE, location);
+		OuterMultilocationToAccount::<Runtime>::insert(KSM, location, ALICE);
 
 		assert_eq!(Tokens::free_balance(KSM, &ALICE), 0);
 		assert_ok!(CrossInOut::cross_in(
@@ -163,22 +130,16 @@ fn add_to_and_remove_from_register_whitelist_should_work() {
 #[test]
 fn register_linked_account_should_work() {
 	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
-		let location = MultiLocation {
-			parents: 100,
-			interior: X1(Junction::GeneralKey(WeakBoundedVec::default())),
-		};
+		let location = MultiLocation { parents: 100, interior: X1(Junction::GeneralIndex(12345)) };
 
-		let location2 = MultiLocation {
-			parents: 111,
-			interior: X1(Junction::GeneralKey(WeakBoundedVec::default())),
-		};
+		let location2 = MultiLocation { parents: 100, interior: X1(Junction::GeneralIndex(12345)) };
 
 		assert_noop!(
 			CrossInOut::register_linked_account(
 				RuntimeOrigin::signed(ALICE),
 				KSM,
 				BOB,
-				Box::new(location.clone())
+				Box::new(location)
 			),
 			Error::<Runtime>::NotAllowed
 		);
@@ -190,7 +151,7 @@ fn register_linked_account_should_work() {
 				RuntimeOrigin::signed(ALICE),
 				KSM,
 				BOB,
-				Box::new(location.clone())
+				Box::new(location)
 			),
 			Error::<Runtime>::CurrencyNotSupportCrossInAndOut
 		);
@@ -201,7 +162,7 @@ fn register_linked_account_should_work() {
 			RuntimeOrigin::signed(ALICE),
 			KSM,
 			ALICE,
-			Box::new(location.clone())
+			Box::new(location)
 		));
 
 		assert_noop!(
@@ -238,24 +199,18 @@ fn register_and_deregister_currency_for_cross_in_out_should_work() {
 #[test]
 fn change_outer_linked_account_should_work() {
 	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
-		let location = MultiLocation {
-			parents: 100,
-			interior: X1(Junction::GeneralKey(WeakBoundedVec::default())),
-		};
+		let location = MultiLocation { parents: 100, interior: X1(Junction::GeneralIndex(12345)) };
 
-		let location2 = MultiLocation {
-			parents: 111,
-			interior: X1(Junction::GeneralKey(WeakBoundedVec::default())),
-		};
+		let location2 = MultiLocation { parents: 100, interior: X1(Junction::GeneralIndex(12345)) };
 
-		AccountToOuterMultilocation::<Runtime>::insert(KSM, BOB, location.clone());
-		OuterMultilocationToAccount::<Runtime>::insert(KSM, location.clone(), BOB);
+		AccountToOuterMultilocation::<Runtime>::insert(KSM, BOB, location);
+		OuterMultilocationToAccount::<Runtime>::insert(KSM, location, BOB);
 
 		assert_noop!(
 			CrossInOut::change_outer_linked_account(
 				RuntimeOrigin::signed(BOB),
 				KSM,
-				Box::new(location2.clone()),
+				Box::new(location2),
 				BOB
 			),
 			BadOrigin
@@ -265,7 +220,7 @@ fn change_outer_linked_account_should_work() {
 			CrossInOut::change_outer_linked_account(
 				RuntimeOrigin::signed(ALICE),
 				KSM,
-				Box::new(location.clone()),
+				Box::new(location),
 				BOB
 			),
 			Error::<Runtime>::CurrencyNotSupportCrossInAndOut
@@ -277,7 +232,7 @@ fn change_outer_linked_account_should_work() {
 			CrossInOut::change_outer_linked_account(
 				RuntimeOrigin::signed(ALICE),
 				KSM,
-				Box::new(location.clone()),
+				Box::new(location),
 				BOB
 			),
 			Error::<Runtime>::AlreadyExist
@@ -286,7 +241,7 @@ fn change_outer_linked_account_should_work() {
 		assert_ok!(CrossInOut::change_outer_linked_account(
 			RuntimeOrigin::signed(ALICE),
 			KSM,
-			Box::new(location2.clone()),
+			Box::new(location2),
 			BOB
 		));
 	});

@@ -87,6 +87,11 @@ impl frame_system::Config for Runtime {
 	type Version = ();
 	type MaxConsumers = frame_support::traits::ConstU32<16>;
 	type RuntimeTask = ();
+	type SingleBlockMigrations = ();
+	type MultiBlockMigrator = ();
+	type PreInherents = ();
+	type PostInherents = ();
+	type PostTransactions = ();
 }
 
 parameter_types! {
