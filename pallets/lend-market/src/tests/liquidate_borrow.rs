@@ -12,7 +12,9 @@ use sp_runtime::FixedPointNumber;
 #[test]
 fn liquidate_borrow_allowed_works() {
 	new_test_ext().execute_with(|| {
-		// Borrower should have a positive shortfall
+		assert_ok!(LendMarket::add_market_bond(RuntimeOrigin::root(), KSM, vec![DOT, BNC, KSM]));
+		assert_ok!(LendMarket::add_market_bond(RuntimeOrigin::root(), DOT, vec![DOT, BNC, KSM]));
+		assert_ok!(LendMarket::add_market_bond(RuntimeOrigin::root(), BNC, vec![DOT, BNC, KSM])); // Borrower should have a positive shortfall
 		let dot_market = LendMarket::market(DOT).unwrap();
 		assert_noop!(
 			LendMarket::liquidate_borrow_allowed(&ALICE, DOT, 100, &dot_market),
@@ -38,6 +40,9 @@ fn liquidate_borrow_allowed_works() {
 #[test]
 fn lf_liquidate_borrow_fails_due_to_lf_collateral() {
 	new_test_ext().execute_with(|| {
+		assert_ok!(LendMarket::add_market_bond(RuntimeOrigin::root(), KSM, vec![DOT, BNC, KSM]));
+		assert_ok!(LendMarket::add_market_bond(RuntimeOrigin::root(), DOT, vec![DOT, BNC, KSM]));
+		assert_ok!(LendMarket::add_market_bond(RuntimeOrigin::root(), BNC, vec![DOT, BNC, KSM]));
 		LendMarket::update_liquidation_free_collateral(RuntimeOrigin::root(), vec![PHA]).unwrap();
 
 		assert_err!(
@@ -54,6 +59,13 @@ fn lf_liquidate_borrow_fails_due_to_lf_collateral() {
 #[test]
 fn lf_liquidate_borrow_allowed_works() {
 	new_test_ext().execute_with(|| {
+		assert_ok!(LendMarket::add_market_bond(RuntimeOrigin::root(), KSM, vec![DOT, BNC, KSM]));
+		assert_ok!(LendMarket::add_market_bond(
+			RuntimeOrigin::root(),
+			DOT,
+			vec![DOT, BNC, KSM, DOT_U, PHA]
+		));
+		assert_ok!(LendMarket::add_market_bond(RuntimeOrigin::root(), BNC, vec![DOT, BNC, KSM]));
 		LendMarket::update_liquidation_free_collateral(RuntimeOrigin::root(), vec![PHA]).unwrap();
 		// Bob deposits $200 DOT
 		LendMarket::mint(RuntimeOrigin::signed(BOB), DOT, unit(200)).unwrap();
@@ -95,6 +107,9 @@ fn lf_liquidate_borrow_allowed_works() {
 #[test]
 fn deposit_of_borrower_must_be_collateral() {
 	new_test_ext().execute_with(|| {
+		assert_ok!(LendMarket::add_market_bond(RuntimeOrigin::root(), KSM, vec![DOT, BNC, KSM]));
+		assert_ok!(LendMarket::add_market_bond(RuntimeOrigin::root(), DOT, vec![DOT, BNC, KSM]));
+		assert_ok!(LendMarket::add_market_bond(RuntimeOrigin::root(), BNC, vec![DOT, BNC, KSM]));
 		initial_setup();
 		alice_borrows_100_ksm();
 		// Adjust KSM price to make shortfall
@@ -114,6 +129,9 @@ fn deposit_of_borrower_must_be_collateral() {
 #[test]
 fn collateral_value_must_be_greater_than_liquidation_value() {
 	new_test_ext().execute_with(|| {
+		assert_ok!(LendMarket::add_market_bond(RuntimeOrigin::root(), KSM, vec![DOT, BNC, KSM]));
+		assert_ok!(LendMarket::add_market_bond(RuntimeOrigin::root(), DOT, vec![DOT, BNC, KSM]));
+		assert_ok!(LendMarket::add_market_bond(RuntimeOrigin::root(), BNC, vec![DOT, BNC, KSM]));
 		initial_setup();
 		alice_borrows_100_ksm();
 		MockPriceFeeder::set_price(KSM, Rate::from_float(2000.0));
@@ -132,6 +150,9 @@ fn collateral_value_must_be_greater_than_liquidation_value() {
 #[test]
 fn full_workflow_works_as_expected() {
 	new_test_ext().execute_with(|| {
+		assert_ok!(LendMarket::add_market_bond(RuntimeOrigin::root(), KSM, vec![DOT, BNC, KSM]));
+		assert_ok!(LendMarket::add_market_bond(RuntimeOrigin::root(), DOT, vec![DOT, BNC, KSM]));
+		assert_ok!(LendMarket::add_market_bond(RuntimeOrigin::root(), BNC, vec![DOT, BNC, KSM]));
 		initial_setup();
 		alice_borrows_100_ksm();
 		// adjust KSM price to make ALICE generate shortfall
@@ -200,6 +221,9 @@ fn full_workflow_works_as_expected() {
 #[test]
 fn liquidator_cannot_take_inactive_market_currency() {
 	new_test_ext().execute_with(|| {
+		assert_ok!(LendMarket::add_market_bond(RuntimeOrigin::root(), KSM, vec![DOT, BNC, KSM]));
+		assert_ok!(LendMarket::add_market_bond(RuntimeOrigin::root(), DOT, vec![DOT, BNC, KSM]));
+		assert_ok!(LendMarket::add_market_bond(RuntimeOrigin::root(), BNC, vec![DOT, BNC, KSM]));
 		initial_setup();
 		alice_borrows_100_ksm();
 		// Adjust KSM price to make shortfall
@@ -218,6 +242,9 @@ fn liquidator_cannot_take_inactive_market_currency() {
 #[test]
 fn liquidator_can_not_repay_more_than_the_close_factor_pct_multiplier() {
 	new_test_ext().execute_with(|| {
+		assert_ok!(LendMarket::add_market_bond(RuntimeOrigin::root(), KSM, vec![DOT, BNC, KSM]));
+		assert_ok!(LendMarket::add_market_bond(RuntimeOrigin::root(), DOT, vec![DOT, BNC, KSM]));
+		assert_ok!(LendMarket::add_market_bond(RuntimeOrigin::root(), BNC, vec![DOT, BNC, KSM]));
 		initial_setup();
 		alice_borrows_100_ksm();
 		MockPriceFeeder::set_price(KSM, 20.into());
@@ -231,6 +258,9 @@ fn liquidator_can_not_repay_more_than_the_close_factor_pct_multiplier() {
 #[test]
 fn liquidator_must_not_be_borrower() {
 	new_test_ext().execute_with(|| {
+		assert_ok!(LendMarket::add_market_bond(RuntimeOrigin::root(), KSM, vec![DOT, BNC, KSM]));
+		assert_ok!(LendMarket::add_market_bond(RuntimeOrigin::root(), DOT, vec![DOT, BNC, KSM]));
+		assert_ok!(LendMarket::add_market_bond(RuntimeOrigin::root(), BNC, vec![DOT, BNC, KSM]));
 		initial_setup();
 		assert_noop!(
 			LendMarket::liquidate_borrow(RuntimeOrigin::signed(ALICE), ALICE, KSM, 0, DOT),
@@ -244,6 +274,13 @@ fn alice_borrows_100_ksm() {
 }
 
 fn initial_setup() {
+	assert_ok!(LendMarket::add_market_bond(
+		RuntimeOrigin::root(),
+		KSM,
+		vec![DOT, BNC, KSM, DOT_U, PHA]
+	));
+	assert_ok!(LendMarket::add_market_bond(RuntimeOrigin::root(), DOT, vec![DOT, BNC, DOT_U, PHA]));
+	assert_ok!(LendMarket::add_market_bond(RuntimeOrigin::root(), BNC, vec![DOT, BNC, DOT_U, PHA]));
 	// Bob deposits 200 KSM
 	assert_ok!(LendMarket::mint(RuntimeOrigin::signed(BOB), KSM, unit(200)));
 	// Alice deposits 200 DOT as collateral
