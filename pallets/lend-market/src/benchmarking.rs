@@ -227,6 +227,11 @@ benchmarks! {
 		transfer_initial_balance::<T>(caller.clone());
 		let deposit_amount: u32 = 200_000_000;
 		let borrowed_amount: u32 = 100_000_000;
+		assert_ok!(LendMarket::<T>::add_market_bond(
+			SystemOrigin::Root.into(),
+			DOT_U,
+			vec![DOT_U]
+		));
 		assert_ok!(LendMarket::<T>::add_market(SystemOrigin::Root.into(), DOT_U, pending_market_mock::<T>(LUSDT)));
 		assert_ok!(LendMarket::<T>::activate_market(SystemOrigin::Root.into(), DOT_U));
 		assert_ok!(LendMarket::<T>::mint(SystemOrigin::Signed(caller.clone()).into(), DOT_U, deposit_amount.into()));
@@ -267,6 +272,11 @@ benchmarks! {
 		let deposit_amount: u32 = 200_000_000;
 		let borrowed_amount: u32 = 100_000_000;
 		let repay_amount: u32 = 100;
+		assert_ok!(LendMarket::<T>::add_market_bond(
+			SystemOrigin::Root.into(),
+			DOT_U,
+			vec![DOT_U]
+		));
 		assert_ok!(LendMarket::<T>::add_market(SystemOrigin::Root.into(), DOT_U, pending_market_mock::<T>(LUSDT)));
 		assert_ok!(LendMarket::<T>::activate_market(SystemOrigin::Root.into(), DOT_U));
 		assert_ok!(LendMarket::<T>::mint(SystemOrigin::Signed(caller.clone()).into(), DOT_U, deposit_amount.into()));
@@ -283,6 +293,11 @@ benchmarks! {
 		let deposit_amount: u32 = 200_000_000;
 		let borrowed_amount: u32 = 100_000_000;
 		assert_ok!(LendMarket::<T>::add_market(SystemOrigin::Root.into(), DOT_U, pending_market_mock::<T>(LUSDT)));
+		assert_ok!(LendMarket::<T>::add_market_bond(
+			SystemOrigin::Root.into(),
+			DOT_U,
+			vec![DOT_U]
+		));
 		assert_ok!(LendMarket::<T>::activate_market(SystemOrigin::Root.into(), DOT_U));
 		assert_ok!(LendMarket::<T>::mint(SystemOrigin::Signed(caller.clone()).into(), DOT_U, deposit_amount.into()));
 		assert_ok!(LendMarket::<T>::collateral_asset(SystemOrigin::Signed(caller.clone()).into(), DOT_U, true));
