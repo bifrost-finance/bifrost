@@ -201,7 +201,7 @@ fn change_outer_linked_account_should_work() {
 	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
 		let location = MultiLocation { parents: 100, interior: X1(Junction::GeneralIndex(12345)) };
 
-		let location2 = MultiLocation { parents: 100, interior: X1(Junction::GeneralIndex(12345)) };
+		let location2 = MultiLocation { parents: 111, interior: X1(Junction::GeneralIndex(12345)) };
 
 		AccountToOuterMultilocation::<Runtime>::insert(KSM, BOB, location);
 		OuterMultilocationToAccount::<Runtime>::insert(KSM, location, BOB);

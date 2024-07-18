@@ -51,7 +51,6 @@ fn create_funded_user<T: Config>(
 	let min_candidate_stk = min_candidate_stk::<T>();
 	let total = min_candidate_stk + extra;
 	T::Currency::make_free_balance_be(&user, total);
-	T::Currency::issue(total);
 	(user, total)
 }
 

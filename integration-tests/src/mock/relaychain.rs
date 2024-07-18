@@ -16,7 +16,11 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-use bifrost_polkadot_runtime::{RuntimeBlockLength, RuntimeBlockWeights};
+use bifrost_polkadot_runtime::{
+	xcm_config, BlockHashCount, Hash, Nonce, ReservedDmpWeight, ReservedXcmpWeight,
+	RuntimeBlockLength, RuntimeBlockWeights, SS58Prefix, Version, XcmpQueue,
+};
+use cumulus_pallet_parachain_system::RelayNumberStrictlyIncreases;
 use cumulus_primitives_core::ParaId;
 use frame_support::{
 	construct_runtime, derive_impl, parameter_types,
@@ -50,18 +54,37 @@ impl frame_system::Config for Runtime {
 	type AccountData = pallet_balances::AccountData<Balance>;
 
 	/// The index type for storing how many extrinsics an account has signed.
-	type Nonce = Self::Nonce;
+	type Nonce = Nonce;
 	/// The type for hashing blocks and tries.
-	type Hash = Self::Hash;
+	type Hash = Hash;
 	/// Maximum number of block number to block hash mappings to keep (oldest pruned first).
-	type BlockHashCount = Self::BlockHashCount;
+	type BlockHashCount = BlockHashCount;
 	/// Runtime version.
-	type Version = Self::Version;
+	type Version = Version;
 	type BlockWeights = RuntimeBlockWeights;
 	type BlockLength = RuntimeBlockLength;
-	type SS58Prefix = Self::SS58Prefix;
+	type SS58Prefix = SS58Prefix;
 	type OnSetCode = cumulus_pallet_parachain_system::ParachainSetCode<Self>;
 	type MaxConsumers = frame_support::traits::ConstU32<16>;
+}
+
+impl cumulus_pallet_parachain_system::Config for Runtime {
+	type DmpQueue = frame_support::traits::EnqueueWithOrigin<
+		bifrost_polkadot_runtime::MessageQueue,
+		xcm_config::RelayOrigin,
+	>;
+	type RuntimeEvent = RuntimeEvent;
+	type OnSystemEvent = ();
+	type OutboundXcmpMessageSource = XcmpQueue;
+	type ReservedDmpWeight = ReservedDmpWeight;
+	type ReservedXcmpWeight = ReservedXcmpWeight;
+	type SelfParaId = parachain_info::Pallet<bifrost_polkadot_runtime::Runtime>;
+	type XcmpMessageHandler = XcmpQueue;
+	type CheckAssociatedRelayNumber = RelayNumberStrictlyIncreases;
+	type ConsensusHook = cumulus_pallet_parachain_system::ExpectParentIncluded;
+	type WeightInfo = cumulus_pallet_parachain_system::weights::SubstrateWeight<
+		bifrost_polkadot_runtime::Runtime,
+	>;
 }
 
 impl pallet_balances::Config for Runtime {
@@ -151,6 +174,10 @@ impl Config for XcmConfig {
 	type SafeCallFilter = Everything;
 	type Aliasers = ();
 	type TransactionalProcessor = ();
+	type HrmpNewChannelOpenRequestHandler = ();
+	type HrmpChannelAcceptedHandler = ();
+	type HrmpChannelClosingHandler = ();
+	type XcmRecorder = ();
 }
 
 pub type LocalOriginToLocation = SignedToAccountId32<RuntimeOrigin, AccountId, PolkadotNetwork>;
@@ -235,5 +262,6 @@ construct_runtime!(
 		ParasOrigin: origin,
 		MessageQueue: pallet_message_queue,
 		XcmPallet: pallet_xcm,
+		ParachainSystem: cumulus_pallet_parachain_system,
 	}
 );

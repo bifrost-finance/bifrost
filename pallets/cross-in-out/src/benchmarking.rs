@@ -25,7 +25,7 @@ use frame_benchmarking::v1::{account, benchmarks, whitelisted_caller, BenchmarkE
 use frame_support::assert_ok;
 use frame_system::RawOrigin;
 use sp_runtime::traits::UniqueSaturatedFrom;
-use xcm::v2::prelude::*;
+use xcm::v3::prelude::*;
 
 use super::*;
 #[allow(unused_imports)]
@@ -99,7 +99,7 @@ benchmarks! {
 		let location = Box::new(MultiLocation {
 				parents: 0,
 				interior: X1(AccountId32 {
-					network: Any,
+					network: None,
 					id: T::EntrancePalletId::get().into_account_truncating(),
 				}),
 			});
@@ -121,7 +121,7 @@ benchmarks! {
 		let location = Box::new(MultiLocation {
 				parents: 0,
 				interior: X1(AccountId32 {
-					network: Any,
+					network: None,
 					id: T::EntrancePalletId::get().into_account_truncating(),
 				}),
 			});
@@ -148,7 +148,7 @@ benchmarks! {
 		let location = Box::new(MultiLocation {
 				parents: 0,
 				interior: X1(AccountId32 {
-					network: Any,
+					network: None,
 					id: T::EntrancePalletId::get().into_account_truncating(),
 				}),
 			});
@@ -181,7 +181,7 @@ benchmarks! {
 		let location1 = Box::new(MultiLocation {
 				parents: 0,
 				interior: X1(AccountId32 {
-					network: Any,
+					network: None,
 					id: T::EntrancePalletId::get().into_account_truncating(),
 				}),
 			});
@@ -196,7 +196,7 @@ benchmarks! {
 		let location2 = Box::new(MultiLocation {
 				parents: 1,
 				interior: X1(AccountId32 {
-					network: Any,
+					network: None,
 					id: T::EntrancePalletId::get().into_account_truncating(),
 				}),
 			});

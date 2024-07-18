@@ -359,4 +359,6 @@ impl pallet_ranked_collective::Config<FellowshipCollectiveInstance> for Runtime 
 	type ExchangeOrigin = EitherOfDiverse<CoreAdmin, MoreThanHalfCouncil>;
 	type AddOrigin = EitherOfDiverse<CoreAdmin, MoreThanHalfCouncil>;
 	type RemoveOrigin = Self::DemoteOrigin;
+	#[cfg(feature = "runtime-benchmarks")]
+	type BenchmarkSetup = ();
 }
