@@ -137,4 +137,3 @@ fast-runtime = [
 	"bifrost-kusama-runtime/fast-runtime",
 	"bifrost-polkadot-runtime/fast-runtime",
 ]
-

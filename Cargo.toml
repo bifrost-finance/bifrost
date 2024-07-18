@@ -61,7 +61,6 @@ bifrost-polkadot-runtime = { path = "runtime/bifrost-polkadot" }
 # Bifrost Wasm
 bifrost-asset-registry               = { path = "pallets/asset-registry", default-features = false }
 bifrost-buy-back                     = { path = "pallets/buy-back", default-features = false }
-bifrost-call-switchgear              = { path = "pallets/call-switchgear", default-features = false }
 bifrost-cross-in-out                 = { path = "pallets/cross-in-out", default-features = false }
 bifrost-currencies                   = { path = "pallets/currencies", default-features = false }
 bifrost-farming                      = { path = "pallets/farming", default-features = false }
@@ -134,6 +133,7 @@ cumulus-primitives-utility                 = { version = "0.14.0", default-featu
 cumulus-test-relay-sproof-builder          = { version = "0.14.0", default-features = false }
 frame-benchmarking                         = { version = "35.0.0", default-features = false }
 frame-executive                            = { version = "35.0.0", default-features = false }
+frame-metadata-hash-extension              = { version = "0.1.0", default-features = false }
 frame-support                              = { version = "35.0.0", default-features = false }
 frame-system                               = { version = "35.0.0", default-features = false }
 frame-system-benchmarking                  = { version = "35.0.0", default-features = false }
@@ -168,6 +168,7 @@ pallet-staking                             = { version = "35.0.0", default-featu
 pallet-sudo                                = { version = "35.0.0", default-features = false }
 pallet-timestamp                           = { version = "34.0.0", default-features = false }
 pallet-tips                                = { version = "34.0.0", default-features = false }
+pallet-tx-pause                            = { version = "10.0.0", default-features = false }
 pallet-transaction-payment                 = { version = "35.0.0", default-features = false }
 pallet-transaction-payment-rpc-runtime-api = { version = "35.0.0", default-features = false }
 pallet-treasury                            = { version = "34.0.0", default-features = false }
@@ -267,6 +268,7 @@ substrate-build-script-utils                  = { version = "11.0.0" }
 substrate-frame-rpc-system                    = { version = "35.0.0" }
 substrate-prometheus-endpoint                 = { version = "0.17.0" }
 substrate-wasm-builder                        = { version = "23.0.0" }
+try-runtime-cli                               = { version = "0.39.0" }
 xcm-emulator                                  = { version = "0.12.0" }
 xcm-simulator                                 = { version = "14.0.0" }
 
@@ -281,12 +283,12 @@ futures               = { version =  "0.3.30" }
 hex                   = { version = "0.4.3", default-features = false }
 hex-literal           = { version = "0.4.1" }
 impl-trait-for-tuples = { version = "0.2.2" }
-jsonrpsee             = { version = "0.22.5" }
-log                   = { version = "0.4.21", default-features = false }
+jsonrpsee             = { version = "0.20.3" }
+log                   = { version = "0.4.22", default-features = false }
 num-bigint            = { version = "0.4.6", default-features = false }
 num-traits            = { version = "0.2.19", default-features = false }
 parity-scale-codec    = { version = "3.6.12", default-features = false }
-paste                 = { version = "1.0.14" }
+paste                 = { version = "1.0.15" }
 scale-info            = { version = "2.11.3", default-features = false }
 serde                 = { version = "1.0.203", default-features = false }
 serde_json            = { version = "1.0.120", default-features = false }

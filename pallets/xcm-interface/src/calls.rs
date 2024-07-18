@@ -20,7 +20,7 @@ use frame_support::sp_runtime::MultiSignature;
 use parity_scale_codec::{Decode, Encode};
 use sp_runtime::RuntimeDebug;
 use sp_std::{boxed::Box, vec::Vec};
-use xcm::{VersionedAssets, VersionedLocation};
+use xcm::{v4::WeightLimit, VersionedAssets, VersionedLocation};
 
 use crate::ChainId;
 
@@ -39,7 +39,7 @@ pub enum StakingCall {
 }
 
 #[derive(Encode, Decode, RuntimeDebug, Clone)]
-pub enum PolkadotXcm {
+pub enum PolkadotXcmCall {
 	#[codec(index = 2)]
 	ReserveTransferAssets(
 		Box<VersionedLocation>,
@@ -47,25 +47,28 @@ pub enum PolkadotXcm {
 		Box<VersionedAssets>,
 		u32,
 	),
+	#[codec(index = 8)]
+	LimitedReserveTransferAssets(
+		Box<VersionedLocation>,
+		Box<VersionedLocation>,
+		Box<VersionedAssets>,
+		u32,
+		WeightLimit,
+	),
+	#[codec(index = 9)]
+	LimitedTeleportAssets(
+		Box<VersionedLocation>,
+		Box<VersionedLocation>,
+		Box<VersionedAssets>,
+		u32,
+		WeightLimit,
+	),
 }
 
 #[derive(Encode, Decode, RuntimeDebug, Clone)]
 pub enum SystemCall {
 	#[codec(index = 7)]
 	RemarkWithEvent(Vec<u8>),
-}
-
-pub mod rococo {
-
-	pub use crate::calls::*;
-
-	#[derive(Encode, Decode, RuntimeDebug)]
-	pub enum RelaychainCall<BalanceOf, AccountIdOf, BlockNumberOf> {
-		#[codec(index = 28)]
-		Crowdloan(ContributeCall<BalanceOf, AccountIdOf>),
-		#[codec(index = 91)]
-		Proxy(ProxyCall<AccountIdOf, BlockNumberOf>),
-	}
 }
 
 pub mod kusama {
@@ -79,10 +82,15 @@ pub mod kusama {
 		#[codec(index = 30)]
 		Proxy(ProxyCall<AccountIdOf, BlockNumberOf>),
 	}
+
+	#[derive(Encode, Decode, RuntimeDebug)]
+	pub enum AssetHubCall {
+		#[codec(index = 31)]
+		PolkadotXcm(PolkadotXcmCall),
+	}
 }
 
 pub mod polkadot {
-
 	pub use crate::calls::*;
 
 	#[derive(Encode, Decode, RuntimeDebug)]
@@ -91,6 +99,14 @@ pub mod polkadot {
 		Crowdloan(ContributeCall<BalanceOf, AccountIdOf>),
 		#[codec(index = 29)]
 		Proxy(ProxyCall<AccountIdOf, BlockNumberOf>),
+		#[codec(index = 99)]
+		XcmPallet(PolkadotXcmCall),
+	}
+
+	#[derive(Encode, Decode, RuntimeDebug)]
+	pub enum AssetHubCall {
+		#[codec(index = 31)]
+		PolkadotXcm(PolkadotXcmCall),
 	}
 }
 

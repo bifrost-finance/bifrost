@@ -36,7 +36,7 @@ use bifrost_parachain_staking::ParachainStakingInterface;
 use bifrost_primitives::{
 	currency::{BNC, KSM, MANTA, MOVR, PHA},
 	traits::XcmDestWeightAndFeeHandler,
-	CurrencyId, CurrencyIdExt, CurrencyIdMapping, DerivativeAccountHandler, DerivativeIndex,
+	CurrencyId, CurrencyIdMapping, DerivativeAccountHandler, DerivativeIndex,
 	SlpHostingFeeProvider, SlpOperator, TimeUnit, VtokenMintingOperator, XcmOperationType, ASTR,
 	DOT, FIL, GLMR,
 };
@@ -1246,80 +1246,11 @@ pub mod pallet {
 		#[pallet::call_index(19)]
 		#[pallet::weight(<T as Config>::WeightInfo::supplement_fee_reserve())]
 		pub fn supplement_fee_reserve(
-			origin: OriginFor<T>,
-			currency_id: CurrencyId,
-			dest: Box<MultiLocation>,
+			_origin: OriginFor<T>,
+			_currency_id: CurrencyId,
+			_dest: Box<MultiLocation>,
 		) -> DispatchResult {
-			// Ensure origin
-			Self::ensure_authorized(origin, currency_id)?;
-
-			// Ensure dest is one of delegators accounts, or operators account, or in
-			// SupplementFeeAccountWhitelist.
-			let mut valid_account = false;
-
-			if DelegatorsMultilocation2Index::<T>::contains_key(currency_id, dest.clone()) {
-				valid_account = true;
-			}
-
-			if !valid_account {
-				let dest_account_id = Self::multilocation_to_account(&dest)?;
-				let operate_account_op = OperateOrigins::<T>::get(currency_id);
-
-				if let Some(operate_account) = operate_account_op {
-					if dest_account_id == operate_account {
-						valid_account = true;
-					}
-				}
-			}
-
-			if !valid_account {
-				let white_list_op = SupplementFeeAccountWhitelist::<T>::get(currency_id);
-
-				if let Some(white_list) = white_list_op {
-					let multi_hash = T::Hashing::hash(&dest.encode());
-					white_list
-						.binary_search_by_key(&multi_hash, |(_multi, hash)| *hash)
-						.map_err(|_| Error::<T>::DestAccountNotValid)?;
-
-					valid_account = true;
-				}
-			}
-
-			ensure!(valid_account, Error::<T>::DestAccountNotValid);
-
-			// Get the  fee source account and reserve amount from the FeeSources<T> storage.
-			let (source_location, reserved_fee) =
-				FeeSources::<T>::get(currency_id).ok_or(Error::<T>::FeeSourceNotExist)?;
-
-			// If currency is BNC, transfer directly.
-			// Otherwise, call supplement_fee_reserve of StakingFeeManager trait.
-			if currency_id.is_native() {
-				let source_account = Self::native_multilocation_to_account(&source_location)?;
-				let dest_account = Self::native_multilocation_to_account(&dest)?;
-				T::MultiCurrency::transfer(
-					currency_id,
-					&source_account,
-					&dest_account,
-					reserved_fee,
-				)?;
-			} else {
-				let staking_agent = Self::get_currency_staking_agent(currency_id)?;
-				staking_agent.supplement_fee_reserve(
-					reserved_fee,
-					&source_location,
-					&dest,
-					currency_id,
-				)?;
-			}
-
-			// Deposit event.
-			Pallet::<T>::deposit_event(Event::FeeSupplemented {
-				currency_id,
-				amount: reserved_fee,
-				from: source_location,
-				to: *dest,
-			});
-
+			ensure!(false, Error::<T>::Unsupported);
 			Ok(())
 		}
 

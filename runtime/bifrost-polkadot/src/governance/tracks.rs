@@ -62,10 +62,10 @@ const TRACKS_DATA: [(u16, pallet_referenda::TrackInfo<Balance, BlockNumber>); 8]
 			name: "whitelisted_caller",
 			max_deciding: 100,
 			decision_deposit: 5_000 * BNCS,
-			prepare_period: 15 * MINUTES,
+			prepare_period: 5 * MINUTES,
 			decision_period: 14 * DAYS,
-			confirm_period: 10 * MINUTES,
-			min_enactment_period: 10 * MINUTES,
+			confirm_period: 5 * MINUTES,
+			min_enactment_period: 5 * MINUTES,
 			min_approval: Curve::make_reciprocal(
 				16,
 				28 * 24,
@@ -73,7 +73,7 @@ const TRACKS_DATA: [(u16, pallet_referenda::TrackInfo<Balance, BlockNumber>); 8]
 				percent(50),
 				percent(100),
 			),
-			min_support: Curve::make_reciprocal(1, 28, percent(8), percent(2), percent(50)),
+			min_support: Curve::make_reciprocal(1, 1792, percent(3), percent(2), percent(50)),
 		},
 	),
 	(
