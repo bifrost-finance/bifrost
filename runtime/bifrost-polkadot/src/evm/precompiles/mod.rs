@@ -51,7 +51,7 @@ pub type EvmResult<T = ()> = Result<T, PrecompileFailure>;
 #[cfg(test)]
 mod tests;
 
-pub type EvmAddress = sp_core::H160;
+pub type EvmAddress = H160;
 
 /// The `address` type of Solidity.
 /// H160 could represent 2 types of data (bytes20 and address) that are not encoded the same way.

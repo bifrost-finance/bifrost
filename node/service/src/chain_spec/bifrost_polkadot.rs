@@ -279,7 +279,12 @@ fn local_config_genesis(id: ParaId) -> RuntimeGenesisConfig {
 		.collect();
 	let tokens = endowed_accounts
 		.iter()
-		.flat_map(|x| vec![(x.clone(), Token2(DOT_TOKEN_ID), ENDOWMENT() * 4_000_000)])
+		.flat_map(|x| {
+			vec![
+				(x.clone(), Token2(DOT_TOKEN_ID), ENDOWMENT() * 4_000_000),
+				(x.clone(), Token2(13), ENDOWMENT() * 4_000_000),
+			]
+		})
 		.collect();
 	let council_membership = vec![get_account_id_from_seed::<sr25519::Public>("Alice")];
 	let technical_committee_membership = vec![get_account_id_from_seed::<sr25519::Public>("Alice")];
@@ -290,8 +295,45 @@ fn local_config_genesis(id: ParaId) -> RuntimeGenesisConfig {
 		(Native(TokenSymbol::BNC), DOLLARS / 100, None),
 		(
 			Token2(DOT_TOKEN_ID),
-			DOLLARS / 1000_000,
+			1_000_000,
 			Some((String::from("Polkadot DOT"), String::from("DOT"), 10u8)),
+		),
+		(
+			Token2(1),
+			1_000_000_000_000,
+			Some((String::from("Moonbeam Native Token"), String::from("GLMR"), 18u8)),
+		),
+		(Token2(2), 1_000, Some((String::from("Tether USD"), String::from("USDT"), 6u8))),
+		(
+			Token2(3),
+			10_000_000_000_000_000,
+			Some((String::from("Astar"), String::from("ASTR"), 18u8)),
+		),
+		(
+			Token2(4),
+			1_000_000_000_000,
+			Some((String::from("Filecoin Network Token"), String::from("FIL"), 18u8)),
+		),
+		(Token2(5), 1_000, Some((String::from("USD Coin"), String::from("USDC"), 6u8))),
+		(Token2(6), 100, Some((String::from("interBTC"), String::from("IBTC"), 8u8))),
+		(Token2(7), 10_000_000, Some((String::from("Interlay"), String::from("INTR"), 10u8))),
+		(
+			Token2(8),
+			10_000_000_000_000,
+			Some((String::from("Manta Network"), String::from("MANTA"), 18u8)),
+		),
+		(
+			Token2(9),
+			10_000_000_000,
+			Some((String::from("bncs-20 inscription token BNCS"), String::from("BNCS"), 12u8)),
+		),
+		(Token2(10), 100_000_000, Some((String::from("PINK"), String::from("PINK"), 10u8))),
+		(Token2(11), 1, Some((String::from("DED"), String::from("DED"), 10u8))),
+		(Token2(12), 100_000_000, Some((String::from("Pendulum"), String::from("PEN"), 12u8))),
+		(
+			Token2(13),
+			100_000_000,
+			Some((String::from("SnowBridge WETH"), String::from("SWETH"), 18u8)),
 		),
 	];
 	let vcurrency = vec![VSToken2(DOT_TOKEN_ID), VToken(TokenSymbol::BNC), VToken2(DOT_TOKEN_ID)];

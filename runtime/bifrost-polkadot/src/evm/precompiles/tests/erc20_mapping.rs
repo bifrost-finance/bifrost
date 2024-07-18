@@ -16,7 +16,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-use crate::evm::precompiles::erc20_mapping::{Erc20Mapping, HydraErc20Mapping};
+use crate::evm::precompiles::erc20_mapping::{BifrostErc20Mapping, Erc20Mapping};
 use bifrost_primitives::{
 	CurrencyId,
 	TokenSymbol::{BNC, KSM},
@@ -28,19 +28,19 @@ use sp_core::bytes::to_hex;
 
 macro_rules! encode {
 	($asset_id:expr) => {{
-		HydraErc20Mapping::encode_evm_address($asset_id).unwrap()
+		BifrostErc20Mapping::encode_evm_address($asset_id).unwrap()
 	}};
 }
 
 macro_rules! decode {
 	($evm_address:expr) => {{
-		HydraErc20Mapping::decode_evm_address(H160::from($evm_address)).unwrap()
+		BifrostErc20Mapping::decode_evm_address(H160::from($evm_address)).unwrap()
 	}};
 }
 
 macro_rules! decode_optional {
 	($evm_address:expr) => {{
-		HydraErc20Mapping::decode_evm_address(H160::from($evm_address))
+		BifrostErc20Mapping::decode_evm_address(H160::from($evm_address))
 	}};
 }
 

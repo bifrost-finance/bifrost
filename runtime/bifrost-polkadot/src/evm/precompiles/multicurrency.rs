@@ -19,7 +19,7 @@
 use crate::{
 	evm::{
 		precompiles::{
-			erc20_mapping::{Erc20Mapping, HydraErc20Mapping},
+			erc20_mapping::{BifrostErc20Mapping, Erc20Mapping},
 			handle::{EvmDataWriter, FunctionModifier, PrecompileHandleExt},
 			substrate::RuntimeHelper,
 			succeed, Address, Output,
@@ -71,7 +71,7 @@ where
 {
 	fn execute(handle: &mut impl PrecompileHandle) -> pallet_evm::PrecompileResult {
 		let address = handle.code_address();
-		if let Some(asset_id) = HydraErc20Mapping::decode_evm_address(address) {
+		if let Some(asset_id) = BifrostErc20Mapping::decode_evm_address(address) {
 			log::debug!(target: "evm", "multicurrency: currency id: {:?}", asset_id);
 
 			let selector = match handle.read_selector() {
@@ -122,13 +122,7 @@ where
 		let input = handle.read_input()?;
 		input.expect_arguments(0)?;
 
-		let asset_id = match currency_id {
-			CurrencyId::ForeignAsset(foreign_asset_id) =>
-				AssetIds::ForeignAssetId(foreign_asset_id),
-			_ => AssetIds::NativeAssetId(currency_id),
-		};
-
-		match AssetIdMaps::<Runtime>::get_asset_metadata(asset_id) {
+		match AssetIdMaps::<Runtime>::get_currency_metadata(currency_id) {
 			Some(metadata) => {
 				let encoded = Output::encode_bytes(metadata.name.as_slice());
 				Ok(succeed(encoded))
@@ -146,13 +140,7 @@ where
 		let input = handle.read_input()?;
 		input.expect_arguments(0)?;
 
-		let asset_id = match currency_id {
-			CurrencyId::ForeignAsset(foreign_asset_id) =>
-				AssetIds::ForeignAssetId(foreign_asset_id),
-			_ => AssetIds::NativeAssetId(currency_id),
-		};
-
-		match AssetIdMaps::<Runtime>::get_asset_metadata(asset_id) {
+		match AssetIdMaps::<Runtime>::get_currency_metadata(currency_id) {
 			Some(metadata) => {
 				let encoded = Output::encode_bytes(metadata.symbol.as_slice());
 				Ok(succeed(encoded))
@@ -170,13 +158,7 @@ where
 		let input = handle.read_input()?;
 		input.expect_arguments(0)?;
 
-		let asset_id = match currency_id {
-			CurrencyId::ForeignAsset(foreign_asset_id) =>
-				AssetIds::ForeignAssetId(foreign_asset_id),
-			_ => AssetIds::NativeAssetId(currency_id),
-		};
-
-		match AssetIdMaps::<Runtime>::get_asset_metadata(asset_id) {
+		match AssetIdMaps::<Runtime>::get_currency_metadata(currency_id) {
 			Some(metadata) => {
 				let encoded = Output::encode_uint::<u8>(metadata.decimals);
 				Ok(succeed(encoded))

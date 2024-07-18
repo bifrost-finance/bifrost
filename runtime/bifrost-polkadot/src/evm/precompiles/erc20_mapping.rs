@@ -30,11 +30,11 @@ pub trait Erc20Mapping {
 	fn decode_evm_address(evm_address: EvmAddress) -> Option<CurrencyId>;
 }
 
-pub struct HydraErc20Mapping;
+pub struct BifrostErc20Mapping;
 
 /// Erc20Mapping logic for HydraDX
 /// The asset id (with type u32) is encoded in the last 4 bytes of EVM address
-impl Erc20Mapping for HydraErc20Mapping {
+impl Erc20Mapping for BifrostErc20Mapping {
 	fn encode_evm_address(currency_id: CurrencyId) -> Option<EvmAddress> {
 		let asset_id_bytes = currency_id.encode();
 
