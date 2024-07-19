@@ -194,6 +194,8 @@ pub mod pallet {
 		CodecError,
 		/// Collateral is reserved and cannot be liquidated
 		CollateralReserved,
+		/// Market bond does not exist
+		MarketBondDoesNotExist,
 	}
 
 	#[pallet::event]
@@ -260,6 +262,10 @@ pub mod pallet {
 		IncentiveReservesReduced(T::AccountId, AssetIdOf<T>, BalanceOf<T>),
 		/// Liquidation free collaterals has been updated
 		LiquidationFreeCollateralsUpdated(Vec<AssetIdOf<T>>),
+		MarketBonded {
+			asset_id: AssetIdOf<T>,
+			market_bond: Vec<AssetIdOf<T>>,
+		},
 	}
 
 	/// The timestamp of the last calculation of accrued interest
@@ -445,6 +451,10 @@ pub mod pallet {
 	#[pallet::getter(fn reward_accrued)]
 	pub type RewardAccrued<T: Config> =
 		StorageMap<_, Blake2_128Concat, T::AccountId, BalanceOf<T>, ValueQuery>;
+
+	#[pallet::storage]
+	pub type MarketBond<T: Config> =
+		StorageMap<_, Blake2_128Concat, AssetIdOf<T>, Vec<AssetIdOf<T>>>;
 
 	/// DefaultVersion is using for initialize the StorageVersion
 	#[pallet::type_value]
@@ -1126,6 +1136,21 @@ pub mod pallet {
 			Self::deposit_event(Event::<T>::LiquidationFreeCollateralsUpdated(collaterals));
 			Ok(().into())
 		}
+
+		#[pallet::call_index(22)]
+		#[pallet::weight(T::WeightInfo::add_market())]
+		#[transactional]
+		pub fn add_market_bond(
+			origin: OriginFor<T>,
+			asset_id: AssetIdOf<T>,
+			market_bond: Vec<AssetIdOf<T>>,
+		) -> DispatchResultWithPostInfo {
+			T::UpdateOrigin::ensure_origin(origin)?;
+			MarketBond::<T>::insert(asset_id, market_bond.clone());
+
+			Self::deposit_event(Event::<T>::MarketBonded { asset_id, market_bond });
+			Ok(().into())
+		}
 	}
 }
 
@@ -1456,6 +1481,20 @@ impl<T: Config> Pallet<T> {
 			borrow_value,
 			asset_id == T::LiquidationFreeAssetId::get(),
 		)?;
+
+		Ok(())
+	}
+
+	/// Borrower shouldn't borrow more than his bonded collateral value
+	fn borrow_allowed_for_market_bond(
+		borrow_asset_id: AssetIdOf<T>,
+		borrower: &T::AccountId,
+		borrow_amount: BalanceOf<T>,
+	) -> DispatchResult {
+		Self::ensure_under_borrow_cap(borrow_asset_id, borrow_amount)?;
+		Self::ensure_enough_cash(borrow_asset_id, borrow_amount)?;
+		let borrow_value = Self::get_asset_value(borrow_asset_id, borrow_amount)?;
+		Self::ensure_liquidity_for_market_bond(borrow_asset_id, borrower, borrow_value)?;
 
 		Ok(())
 	}
@@ -1877,6 +1916,35 @@ impl<T: Config> Pallet<T> {
 		Err(Error::<T>::InsufficientLiquidity.into())
 	}
 
+	fn ensure_liquidity_for_market_bond(
+		borrow_asset_id: AssetIdOf<T>,
+		account: &T::AccountId,
+		reduce_amount: FixedU128,
+	) -> DispatchResult {
+		let collateral_asset_ids = MarketBond::<T>::try_get(borrow_asset_id)
+			.map_err(|_err| Error::<T>::MarketBondDoesNotExist)?;
+
+		let currency_borrow_amount = Self::current_borrow_balance(account, borrow_asset_id)?;
+		let total_borrow_value = Self::get_asset_value(borrow_asset_id, currency_borrow_amount)?;
+
+		let mut total_collateral_value: FixedU128 = FixedU128::zero();
+		for asset_id in collateral_asset_ids {
+			total_collateral_value = total_collateral_value
+				.checked_add(&Self::collateral_asset_value(account, asset_id)?)
+				.ok_or(ArithmeticError::Overflow)?;
+		}
+
+		let total_liquidity = total_collateral_value
+			.checked_sub(&total_borrow_value)
+			.ok_or(ArithmeticError::Underflow)?;
+
+		if total_liquidity >= reduce_amount {
+			return Ok(());
+		}
+
+		Err(Error::<T>::InsufficientLiquidity.into())
+	}
+
 	pub fn calc_underlying_amount(
 		voucher_amount: BalanceOf<T>,
 		exchange_rate: Rate,
@@ -2064,6 +2132,7 @@ impl<T: Config> LendMarketTrait<AssetIdOf<T>, AccountIdOf<T>, BalanceOf<T>> for 
 		Self::ensure_active_market(asset_id)?;
 
 		Self::accrue_interest(asset_id)?;
+		Self::borrow_allowed_for_market_bond(asset_id, borrower, amount)?;
 		Self::borrow_allowed(asset_id, borrower, amount)?;
 
 		// update borrow index after accrue interest.

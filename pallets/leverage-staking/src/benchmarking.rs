@@ -157,6 +157,11 @@ fn init<
 		VKSM,
 		lend_market::BalanceOf::<T>::unique_saturated_from(unit(1u128))
 	));
+	assert_ok!(lend_market::Pallet::<T>::add_market_bond(
+		SystemOrigin::Root.into(),
+		KSM,
+		vec![VKSM]
+	));
 
 	Ok(())
 }
