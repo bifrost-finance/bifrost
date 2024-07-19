@@ -358,6 +358,7 @@ try-runtime = [
 	"pallet-treasury/try-runtime",
 	"pallet-bounties/try-runtime",
 	"pallet-tips/try-runtime",
+	"pallet-tx-pause/try-runtime",
 	"pallet-preimage/try-runtime",
 	"pallet-whitelist/try-runtime",
 	"orml-xtokens/try-runtime",
