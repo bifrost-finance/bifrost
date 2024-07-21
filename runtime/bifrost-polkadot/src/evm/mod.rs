@@ -20,11 +20,13 @@
 pub use crate::evm::accounts_conversion::{ExtendedAddressMapping, FindAuthorTruncated};
 use crate::{
 	evm::runner::WrapRunner, governance::TechAdminOrCouncil, Aura, ConstU32, DynamicFee,
-	EVMChainId, Runtime, RuntimeEvent, Timestamp, Weight, EVM, MAXIMUM_BLOCK_WEIGHT,
+	EVMChainId, Prices, Runtime, RuntimeEvent, Timestamp, Weight, EVM, MAXIMUM_BLOCK_WEIGHT,
 	NORMAL_DISPATCH_RATIO, WEIGHT_REF_TIME_PER_SECOND,
 };
-use bifrost_flexible_fee::FeeAssetBalanceInCurrency;
 use bifrost_primitives::{CurrencyId, CurrencyId::Token2};
+use bifrost_runtime_common::price::{
+	ConvertAmount, FeeAssetBalanceInCurrency, OraclePriceProvider,
+};
 use frame_support::{pallet_prelude::Get, parameter_types, traits::FindAuthor, ConsensusEngineId};
 use orml_tokens::CurrencyAdapter;
 use pallet_ethereum::PostLogContent;
@@ -61,7 +63,7 @@ precompiles::BifrostPrecompiles::<_>::new();
 pub struct WethAssetId;
 impl Get<CurrencyId> for WethAssetId {
 	fn get() -> CurrencyId {
-		Token2(0)
+		Token2(13)
 	}
 }
 
@@ -108,6 +110,7 @@ impl pallet_evm::Config for Runtime {
 		pallet_evm::runner::stack::Runner<Self>, // Evm runner that we wrap
 		FeeAssetBalanceInCurrency<
 			crate::Runtime,
+			ConvertAmount<OraclePriceProvider<Prices>>,
 			crate::FlexibleFee, // Get account's fee payment asset
 			crate::Currencies,  // Account balance inspector
 		>,
@@ -116,6 +119,7 @@ impl pallet_evm::Config for Runtime {
 		evm_fee::DepositEvmFeeToTreasury,
 		crate::FlexibleFee, // Get account's fee payment asset
 		WethAssetId,
+		ConvertAmount<OraclePriceProvider<Prices>>,
 		crate::Currencies, // Multi currency support
 	>;
 	type OnCreate = ();

@@ -39,7 +39,7 @@ pub use pallet::*;
 use pallet_transaction_payment::OnChargeTransaction;
 use sp_arithmetic::traits::{CheckedAdd, SaturatedConversion, UniqueSaturatedInto};
 use sp_runtime::{
-	traits::{DispatchInfoOf, PostDispatchInfoOf, Saturating, Zero},
+	traits::{Convert, DispatchInfoOf, PostDispatchInfoOf, Saturating, Zero},
 	transaction_validity::TransactionValidityError,
 	BoundedVec,
 };
@@ -482,52 +482,5 @@ impl<T: Config> Pallet<T> {
 impl<T: Config> AccountFeeCurrency<T::AccountId> for Pallet<T> {
 	fn get(who: &T::AccountId) -> CurrencyId {
 		Pallet::<T>::get_user_default_fee_currency(who).unwrap_or_else(|| BNC)
-	}
-}
-
-pub struct FeeAssetBalanceInCurrency<T, AC, I>(sp_std::marker::PhantomData<(T, AC, I)>);
-
-impl<T, AC, I> AccountFeeCurrencyBalanceInCurrency<T::AccountId>
-	for FeeAssetBalanceInCurrency<T, AC, I>
-where
-	T: pallet::Config + frame_system::Config,
-	AC: AccountFeeCurrency<T::AccountId>,
-	I: frame_support::traits::fungibles::Inspect<
-		T::AccountId,
-		AssetId = CurrencyId,
-		Balance = Balance,
-	>,
-{
-	type Output = (Balance, Weight);
-
-	fn get_balance_in_currency(to_currency: CurrencyId, account: &T::AccountId) -> Self::Output {
-		let from_currency = AC::get(account);
-		let account_balance =
-			I::reducible_balance(from_currency, account, Preservation::Preserve, Fortitude::Polite);
-		let mut price_weight = T::DbWeight::get().reads(2); // 1 read to get currency and 1 read to get balance
-
-		if from_currency == to_currency {
-			return (account_balance, price_weight);
-		}
-
-		// This is a workaround, as there is no other way to get weight of price retrieval,
-		// We get the weight from the ema-oracle weights to get price
-		// Weight * 2 because we are reading from the storage twice ( from_currency/lrna and
-		// lrna/to_currency) if this gets removed (eg. Convert returns weight), the constraint on T
-		// and ema-oracle is not necessary price_weight.
-		// saturating_accrue(pallet_ema_oracle::Pallet::<T>::get_price_weight().saturating_mul(2));
-		price_weight.saturating_accrue(Weight::from_parts(1_000_000_000_000u64, 0u64));
-
-		// let Some((converted, _)) = C::convert((from_currency, to_currency, account_balance)) else
-		// { 	return (0, price_weight);
-		// };
-		let path = [
-			from_currency.to_asset_id(T::ParachainId::get().into()),
-			to_currency.to_asset_id(T::ParachainId::get().into()),
-		];
-		let amounts =
-			T::DexOperator::get_amount_in_by_path(account_balance.unique_saturated_into(), &path)
-				.unwrap();
-		(amounts[1], price_weight)
 	}
 }

@@ -27,7 +27,9 @@ use orml_traits::MultiCurrency;
 use pallet_evm::{AddressMapping, Error, OnChargeEVMTransaction};
 use sp_core::{H160, U256};
 use sp_runtime::{
-	helpers_128bit::multiply_by_rational_with_rounding, traits::UniqueSaturatedInto, Rounding,
+	helpers_128bit::multiply_by_rational_with_rounding,
+	traits::{Convert, UniqueSaturatedInto},
+	Rounding,
 };
 use sp_std::marker::PhantomData;
 
@@ -60,15 +62,19 @@ impl TryDrop for EvmPaymentInfo {
 
 /// Implements the transaction payment for EVM transactions.
 /// Supports multi-currency fees based on what is provided by AC - account currency.
-pub struct TransferEvmFees<OU, AC, EC, MC>(PhantomData<(OU, AC, EC, MC)>);
+pub struct TransferEvmFees<OU, AC, EC, C, MC>(PhantomData<(OU, AC, EC, C, MC)>);
 
-impl<T, OU, AC, EC, MC> OnChargeEVMTransaction<T> for TransferEvmFees<OU, AC, EC, MC>
+impl<T, OU, AC, EC, C, MC> OnChargeEVMTransaction<T> for TransferEvmFees<OU, AC, EC, C, MC>
 where
 	T: pallet_evm::Config,
 	OU: OnUnbalanced<EvmPaymentInfo>,
 	U256: UniqueSaturatedInto<Balance>,
 	AC: AccountFeeCurrency<T::AccountId>, // AccountCurrency
 	EC: Get<CurrencyId>,                  // Evm default fee asset
+	C: Convert<(CurrencyId, CurrencyId, Balance), Option<(Balance, Ratio)>>, /* Conversion from
+	                                       * default fee
+	                                       * asset to account
+	                                       * currency */
 	U256: UniqueSaturatedInto<Balance>,
 	MC: frame_support::traits::tokens::fungibles::Mutate<
 			T::AccountId,
@@ -90,25 +96,14 @@ where
 		let account_id = T::AddressMapping::into_account_id(*who);
 		let fee_currency = AC::get(&account_id);
 
-		let path = [
-			EC::get().to_asset_id(ParachainInfo::parachain_id().into()),
-			fee_currency.to_asset_id(ParachainInfo::parachain_id().into()),
-		];
-		let amounts = ZenlinkProtocol::get_amount_in_by_path(fee.unique_saturated_into(), &path)
-			.map_err(|_| Error::<T>::BalanceLow)?;
-
-		// let amounts = sp_std::vec![
-		// 	fee.unique_saturated_into(),
-		// 	180000000000u128
-		// ];
-
-		log::debug!(target: "runtime", "===========================amounts{:?}", amounts);
-
-		let converted = amounts[1];
-		let price = Ratio::new(amounts[1], amounts[0]);
+		let Some((converted, price)) =
+			C::convert((EC::get(), fee_currency, fee.unique_saturated_into()))
+		else {
+			return Err(Error::<T>::WithdrawFailed);
+		};
 
 		// Ensure that converted fee is not zero
-		if converted == 0u128 {
+		if converted == 0 {
 			return Err(Error::<T>::WithdrawFailed);
 		}
 
