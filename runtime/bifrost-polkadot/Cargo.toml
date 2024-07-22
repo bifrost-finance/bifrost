@@ -362,6 +362,7 @@ try-runtime = [
 	"pallet-session/try-runtime",
 	"pallet-timestamp/try-runtime",
 	"pallet-tips/try-runtime",
+	"pallet-tx-pause/try-runtime",
 	"pallet-transaction-payment/try-runtime",
 	"pallet-treasury/try-runtime",
 	"pallet-utility/try-runtime",

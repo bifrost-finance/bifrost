@@ -1,7 +1,7 @@
 use crate::{
 	mock::{
-		market_mock, new_test_ext, LendMarket, RuntimeOrigin, Test, ALICE, BNC, DAVE, DOT_U, KSM,
-		LKSM, LUSDT, VBNC,
+		market_mock, new_test_ext, LendMarket, RuntimeOrigin, Test, ALICE, BNC, DAVE, DOT, DOT_U,
+		KSM, LKSM, LUSDT, PHA, VBNC,
 	},
 	tests::unit,
 	Error, *,
@@ -15,7 +15,21 @@ use sp_runtime::{FixedPointNumber, TokenError};
 #[test]
 fn trait_inspect_methods_works() {
 	new_test_ext().execute_with(|| {
-		// No Deposits can't not withdraw
+		assert_ok!(LendMarket::add_market_bond(
+			RuntimeOrigin::root(),
+			KSM,
+			vec![DOT, BNC, KSM, DOT_U, PHA]
+		));
+		assert_ok!(LendMarket::add_market_bond(
+			RuntimeOrigin::root(),
+			DOT,
+			vec![DOT, BNC, KSM, DOT_U, PHA]
+		));
+		assert_ok!(LendMarket::add_market_bond(
+			RuntimeOrigin::root(),
+			BNC,
+			vec![DOT, BNC, KSM, DOT_U, PHA]
+		)); // No Deposits can't not withdraw
 		assert_err!(
 			LendMarket::can_withdraw(VBNC, &DAVE, 100).into_result(false),
 			TokenError::FundsUnavailable
@@ -91,7 +105,21 @@ fn trait_inspect_methods_works() {
 #[test]
 fn lend_token_unique_works() {
 	new_test_ext().execute_with(|| {
-		// lend_token_id already exists in `UnderlyingAssetId`
+		assert_ok!(LendMarket::add_market_bond(
+			RuntimeOrigin::root(),
+			KSM,
+			vec![DOT, BNC, KSM, DOT_U, PHA]
+		));
+		assert_ok!(LendMarket::add_market_bond(
+			RuntimeOrigin::root(),
+			DOT,
+			vec![DOT, BNC, KSM, DOT_U, PHA]
+		));
+		assert_ok!(LendMarket::add_market_bond(
+			RuntimeOrigin::root(),
+			BNC,
+			vec![DOT, BNC, KSM, DOT_U, PHA]
+		)); // lend_token_id already exists in `UnderlyingAssetId`
 		assert_noop!(
 			LendMarket::add_market(RuntimeOrigin::root(), LKSM, market_mock(VBNC)),
 			Error::<Test>::InvalidLendTokenId
@@ -108,7 +136,21 @@ fn lend_token_unique_works() {
 #[test]
 fn transfer_lend_token_works() {
 	new_test_ext().execute_with(|| {
-		// DAVE Deposit 100 BNC
+		assert_ok!(LendMarket::add_market_bond(
+			RuntimeOrigin::root(),
+			KSM,
+			vec![DOT, BNC, KSM, DOT_U, PHA]
+		));
+		assert_ok!(LendMarket::add_market_bond(
+			RuntimeOrigin::root(),
+			DOT,
+			vec![DOT, BNC, KSM, DOT_U, PHA]
+		));
+		assert_ok!(LendMarket::add_market_bond(
+			RuntimeOrigin::root(),
+			BNC,
+			vec![DOT, BNC, KSM, DOT_U, PHA]
+		)); // DAVE Deposit 100 BNC
 		assert_ok!(LendMarket::mint(RuntimeOrigin::signed(DAVE), BNC, unit(100)));
 
 		// DAVE BNC collateral: deposit = 100
@@ -155,7 +197,21 @@ fn transfer_lend_token_works() {
 #[test]
 fn transfer_lend_tokens_under_collateral_works() {
 	new_test_ext().execute_with(|| {
-		// DAVE Deposit 100 BNC
+		assert_ok!(LendMarket::add_market_bond(
+			RuntimeOrigin::root(),
+			KSM,
+			vec![DOT, BNC, KSM, DOT_U, PHA]
+		));
+		assert_ok!(LendMarket::add_market_bond(
+			RuntimeOrigin::root(),
+			DOT,
+			vec![DOT, BNC, KSM, DOT_U, PHA]
+		));
+		assert_ok!(LendMarket::add_market_bond(
+			RuntimeOrigin::root(),
+			BNC,
+			vec![DOT, BNC, KSM, DOT_U, PHA]
+		)); // DAVE Deposit 100 BNC
 		assert_ok!(LendMarket::mint(RuntimeOrigin::signed(DAVE), BNC, unit(100)));
 		assert_ok!(LendMarket::collateral_asset(RuntimeOrigin::signed(DAVE), BNC, true));
 
