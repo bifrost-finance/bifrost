@@ -33,6 +33,7 @@ sc-sysinfo = { workspace = true }
 sc-telemetry = { workspace = true }
 sc-tracing = { workspace = true }
 sc-offchain = { workspace = true }
+sc-network = { workspace = true }
 
 # node-specific dependencies
 bifrost-service = { workspace = true }
