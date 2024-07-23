@@ -26,7 +26,7 @@ use frame_support::traits::{EitherOf, MapSuccess, TryMapSuccess};
 use sp_arithmetic::traits::CheckedSub;
 use sp_runtime::{
 	morph_types,
-	traits::{ConstU16, Replace, TypedGet},
+	traits::{ConstU16, Replace, ReplaceWithDefault, TypedGet},
 };
 
 parameter_types! {
@@ -357,7 +357,7 @@ impl pallet_ranked_collective::Config<FellowshipCollectiveInstance> for Runtime 
 	type VoteWeight = pallet_ranked_collective::Geometric;
 	type MemberSwappedHandler = ();
 	type ExchangeOrigin = EitherOfDiverse<CoreAdmin, MoreThanHalfCouncil>;
-	type AddOrigin = EitherOfDiverse<CoreAdmin, MoreThanHalfCouncil>;
+	type AddOrigin = MapSuccess<Self::PromoteOrigin, ReplaceWithDefault<()>>;
 	type RemoveOrigin = Self::DemoteOrigin;
 	#[cfg(feature = "runtime-benchmarks")]
 	type BenchmarkSetup = ();
