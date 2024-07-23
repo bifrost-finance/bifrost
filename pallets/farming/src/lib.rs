@@ -404,9 +404,9 @@ pub mod pallet {
 			let reward_issuer = T::RewardIssuer::get().into_sub_account_truncating(pid);
 			let basic_token = *tokens_proportion.get(0).ok_or(Error::<T>::NotNullable)?;
 			let tokens_proportion_map: BTreeMap<CurrencyIdOf<T>, Perbill> =
-				tokens_proportion.into_iter().map(|(k, v)| (k, v)).collect();
+				tokens_proportion.into_iter().collect();
 			let basic_rewards_map: BTreeMap<CurrencyIdOf<T>, BalanceOf<T>> =
-				basic_rewards.into_iter().map(|(k, v)| (k, v)).collect();
+				basic_rewards.into_iter().collect();
 
 			let mut pool_info = PoolInfo::new(
 				keeper,
@@ -424,7 +424,7 @@ pub mod pallet {
 
 			if let Some((max_block, gauge_basic_rewards)) = gauge_init {
 				let gauge_basic_rewards_map: BTreeMap<CurrencyIdOf<T>, BalanceOf<T>> =
-					gauge_basic_rewards.into_iter().map(|(k, v)| (k, v)).collect();
+					gauge_basic_rewards.into_iter().collect();
 
 				Self::create_gauge_pool(pid, &mut pool_info, gauge_basic_rewards_map, max_block)?;
 			};
@@ -689,7 +689,7 @@ pub mod pallet {
 			ensure!(pool_info.state == PoolState::Retired, Error::<T>::InvalidPoolState);
 			if let Some(basic_rewards) = basic_rewards {
 				let basic_rewards_map: BTreeMap<CurrencyIdOf<T>, BalanceOf<T>> =
-					basic_rewards.into_iter().map(|(k, v)| (k, v)).collect();
+					basic_rewards.into_iter().collect();
 				pool_info.basic_rewards = basic_rewards_map;
 			};
 			if let Some(min_deposit_to_start) = min_deposit_to_start {
@@ -709,7 +709,7 @@ pub mod pallet {
 			};
 			if let Some((max_block, gauge_basic_rewards)) = gauge_init {
 				let gauge_basic_rewards_map: BTreeMap<CurrencyIdOf<T>, BalanceOf<T>> =
-					gauge_basic_rewards.into_iter().map(|(k, v)| (k, v)).collect();
+					gauge_basic_rewards.into_iter().collect();
 
 				Self::create_gauge_pool(pid, &mut pool_info, gauge_basic_rewards_map, max_block)?;
 			};
@@ -764,7 +764,7 @@ pub mod pallet {
 			);
 			if let Some(basic_rewards) = basic_rewards {
 				let basic_rewards_map: BTreeMap<CurrencyIdOf<T>, BalanceOf<T>> =
-					basic_rewards.into_iter().map(|(k, v)| (k, v)).collect();
+					basic_rewards.into_iter().collect();
 				pool_info.basic_rewards = basic_rewards_map;
 			};
 			if let Some(withdraw_limit_time) = withdraw_limit_time {
@@ -778,7 +778,7 @@ pub mod pallet {
 			};
 			if let Some(gauge_basic_rewards) = gauge_basic_rewards {
 				let gauge_basic_rewards_map: BTreeMap<CurrencyIdOf<T>, BalanceOf<T>> =
-					gauge_basic_rewards.into_iter().map(|(k, v)| (k, v)).collect();
+					gauge_basic_rewards.into_iter().collect();
 				GaugePoolInfos::<T>::mutate(
 					pool_info.gauge.ok_or(Error::<T>::GaugePoolNotExist)?,
 					|gauge_pool_info_old| {

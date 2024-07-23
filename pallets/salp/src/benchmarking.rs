@@ -81,7 +81,6 @@ where T: Config + bifrost_stable_pool::Config + bifrost_stable_asset::Config + o
 )]
 mod benchmarks {
 	use super::*;
-	use frame_benchmarking::impl_benchmark_test_suite;
 
 	#[benchmark]
 	fn contribute() {

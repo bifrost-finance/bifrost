@@ -13,6 +13,7 @@ bifrost-runtime-common        = { workspace = true }
 bifrost-slp                   = { workspace = true }
 bifrost-vtoken-voting         = { workspace = true }
 bifrost-xcm-interface         = { workspace = true }
+cumulus-pallet-parachain-system = { workspace = true }
 cumulus-primitives-core       = { workspace = true }
 env_logger                    = { workspace = true }
 frame-support                 = { workspace = true }

@@ -18,7 +18,7 @@
 
 use crate::chain_spec::{get_account_id_from_seed, get_from_seed, RelayExtensions};
 use bifrost_polkadot_runtime::{
-	constants::currency::DOLLARS, AccountId, Balance, BlockNumber, RuntimeGenesisConfig, SS58Prefix,
+	constants::currency::DOLLARS, AccountId, Balance, BlockNumber, SS58Prefix,
 };
 use bifrost_primitives::{CurrencyId, CurrencyId::*, TokenInfo, TokenSymbol, DOT_TOKEN_ID};
 use bifrost_runtime_common::AuraId;
@@ -32,7 +32,7 @@ use sp_core::{crypto::UncheckedInto, sr25519};
 const DEFAULT_PROTOCOL_ID: &str = "bifrost_polkadot";
 
 /// Specialized `ChainSpec` for the bifrost-polkadot runtime.
-pub type ChainSpec = sc_service::GenericChainSpec<RuntimeGenesisConfig, RelayExtensions>;
+pub type ChainSpec = sc_service::GenericChainSpec<RelayExtensions>;
 
 #[allow(non_snake_case)]
 pub fn ENDOWMENT() -> u128 {

@@ -201,7 +201,6 @@ mod benchmarks {
 	use super::*;
 	use crate::primitives::{PhalaLedger, SubstrateValidatorsByDelegatorUpdateEntry};
 	use bifrost_primitives::VKSM;
-	use frame_benchmarking::impl_benchmark_test_suite;
 	use sp_arithmetic::traits::SaturatedConversion;
 
 	#[benchmark]

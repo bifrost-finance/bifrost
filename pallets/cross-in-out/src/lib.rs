@@ -29,6 +29,7 @@ use frame_system::pallet_prelude::*;
 use orml_traits::MultiCurrency;
 use sp_std::boxed::Box;
 pub use weights::WeightInfo;
+#[allow(deprecated)]
 use xcm::{
 	opaque::v2::{Junction::AccountId32, Junctions::X1, NetworkId::Any},
 	v2::MultiLocation,
@@ -48,6 +49,7 @@ type BalanceOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<
 >>::Balance;
 type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
 
+#[allow(deprecated)]
 #[frame_support::pallet]
 pub mod pallet {
 	use super::*;

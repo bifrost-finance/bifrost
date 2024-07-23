@@ -55,7 +55,6 @@ fn init_whitelist<T: Config + bifrost_asset_registry::Config>() -> (T::AccountId
 #[benchmarks(where  T: Config + bifrost_asset_registry::Config + bifrost_stable_pool::Config + bifrost_stable_asset::Config + orml_tokens::Config<CurrencyId = CurrencyId>)]
 mod benchmarks {
 	use super::*;
-	use frame_benchmarking::impl_benchmark_test_suite;
 
 	#[benchmark]
 	fn add_whitelist() {

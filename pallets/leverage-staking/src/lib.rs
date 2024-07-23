@@ -33,7 +33,7 @@ use frame_support::{
 	pallet_prelude::*,
 	traits::{
 		fungibles::Mutate,
-		tokens::{Fortitude, Precision},
+		tokens::{Fortitude, Precision, Preservation},
 	},
 	transactional, BoundedVec,
 };
@@ -208,6 +208,7 @@ impl<T: Config> Pallet<T> {
 			asset_id,
 			&who,
 			reduce_amount,
+			Preservation::Protect,
 			Precision::Exact,
 			Fortitude::Force,
 		)?;
@@ -234,6 +235,7 @@ impl<T: Config> Pallet<T> {
 			asset_id,
 			&who,
 			increase_amount,
+			Preservation::Protect,
 			Precision::Exact,
 			Fortitude::Force,
 		)?;

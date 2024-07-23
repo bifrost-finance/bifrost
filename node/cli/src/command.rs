@@ -17,6 +17,7 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 use bifrost_service::{self as service, IdentifyVariant};
+use cumulus_client_service::storage_proof_size::HostFunctions as ReclaimHostFunctions;
 use cumulus_primitives_core::ParaId;
 use frame_benchmarking_cli::{BenchmarkCmd, SUBSTRATE_REFERENCE_HARDWARE};
 use log::info;
@@ -25,7 +26,7 @@ use sc_cli::{
 	NetworkParams, Result, SharedParams, SubstrateCli,
 };
 use sc_service::config::{BasePath, PrometheusConfig};
-use sp_runtime::traits::AccountIdConversion;
+use sp_runtime::traits::{AccountIdConversion, HashingFor};
 
 use crate::{Cli, RelayChainCli, Subcommand};
 
@@ -362,7 +363,11 @@ pub fn run() -> Result<()> {
 				BenchmarkCmd::Pallet(cmd) =>
 					if cfg!(feature = "runtime-benchmarks") {
 						with_runtime_or_err!(chain_spec, {
-							return runner.sync_run(|config| cmd.run::<Block, ()>(config));
+							return runner.sync_run(|config| {
+								cmd.run_with_spec::<HashingFor<Block>, ReclaimHostFunctions>(Some(
+									config.chain_spec,
+								))
+							});
 						})
 					} else {
 						Err("Benchmarking wasn't enabled when building the node. \
@@ -447,10 +452,16 @@ pub fn run() -> Result<()> {
 
 				with_runtime_or_err!(config.chain_spec, {
 					{
-						start_node(config, polkadot_config, collator_options, id, hwbench)
-							.await
-							.map(|r| r.0)
-							.map_err(Into::into)
+						start_node::<sc_network::NetworkWorker<_, _>>(
+							config,
+							polkadot_config,
+							collator_options,
+							id,
+							hwbench,
+						)
+						.await
+						.map(|r| r.0)
+						.map_err(Into::into)
 					}
 				})
 			})
