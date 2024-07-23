@@ -22,8 +22,10 @@ use crate::{mock::*, *};
 use bifrost_primitives::currency::KSM;
 use frame_support::{assert_noop, assert_ok, WeakBoundedVec};
 use sp_runtime::DispatchError::BadOrigin;
+#[allow(deprecated)]
 use xcm::opaque::v2::{Junction, Junctions::X1};
 
+#[allow(deprecated)]
 #[test]
 fn cross_in_and_cross_out_should_work() {
 	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
@@ -160,6 +162,7 @@ fn add_to_and_remove_from_register_whitelist_should_work() {
 	});
 }
 
+#[allow(deprecated)]
 #[test]
 fn register_linked_account_should_work() {
 	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
@@ -235,6 +238,7 @@ fn register_and_deregister_currency_for_cross_in_out_should_work() {
 	});
 }
 
+#[allow(deprecated)]
 #[test]
 fn change_outer_linked_account_should_work() {
 	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
