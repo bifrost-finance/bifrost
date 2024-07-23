@@ -95,8 +95,8 @@ lend-market-rpc-runtime-api          = { path = "pallets/lend-market/rpc/runtime
 pallet-prices                        = { path = "pallets/prices", default-features = false }
 pallet-traits                        = { path = "pallets/traits", default-features = false }
 leverage-staking                     = { path = "pallets/leverage-staking", default-features = false }
-bifrost-channel-commission			 = { path = "pallets/channel-commission", default-features = false }
-bifrost-clouds-convert				 = { path = "pallets/clouds-convert", default-features = false }
+bifrost-channel-commission           = { path = "pallets/channel-commission", default-features = false }
+bifrost-clouds-convert               = { path = "pallets/clouds-convert", default-features = false }
 bifrost-vtoken-minting-rpc-runtime-api = { path = "pallets/vtoken-minting/rpc/runtime-api", default-features = false }
 
 # Zenlink
@@ -140,7 +140,7 @@ frame-system-benchmarking                  = { version = "35.0.0", default-featu
 frame-system-rpc-runtime-api               = { version = "33.0.0", default-features = false }
 frame-try-runtime                          = { version = "0.41.0", default-features = false }
 pallet-assets                              = { version = "36.0.0", default-features = false }
-pallet-asset-rate 						   = { version = "14.0.0", default-features = false }
+pallet-asset-rate                          = { version = "14.0.0", default-features = false }
 pallet-aura                                = { version = "34.0.0", default-features = false }
 pallet-authority-discovery                 = { version = "35.0.0", default-features = false }
 pallet-authorship                          = { version = "35.0.0", default-features = false }
@@ -194,7 +194,7 @@ sp-consensus-slots                         = { version = "0.39.0", default-featu
 sp-core                                    = { version = "34.0.0", default-features = false }
 sp-debug-derive                            = { version = "14.0.0", default-features = false }
 sp-externalities                           = { version = "0.29.0", default-features = false }
-sp-genesis-builder 						   = { version = "0.14.0", default-features = false }
+sp-genesis-builder                         = { version = "0.14.0", default-features = false }
 sp-inherents                               = { version = "33.0.0", default-features = false }
 sp-io                                      = { version = "37.0.0", default-features = false }
 sp-keyring                                 = { version = "38.0.0", default-features = false }
@@ -216,7 +216,7 @@ sp-trie                                    = { version = "36.0.0", default-featu
 sp-version                                 = { version = "36.0.0", default-features = false }
 sp-wasm-interface                          = { version = "21.0.0", default-features = false }
 sp-weights                                 = { version = "31.0.0", default-features = false }
-substrate-fixed                             = { git = "https://github.com/encointer/substrate-fixed", default-features = false }
+substrate-fixed                            = { git = "https://github.com/encointer/substrate-fixed", default-features = false }
 xcm                                        = { version = "14.0.0", package = "staging-xcm", default-features = false }
 xcm-builder                                = { version = "14.0.0", package = "staging-xcm-builder", default-features = false }
 xcm-executor                               = { version = "14.0.0", package = "staging-xcm-executor", default-features = false }
@@ -241,12 +241,12 @@ polkadot-service                              = { version = "14.0.0" }
 sc-basic-authorship                           = { version = "0.41.0" }
 sc-chain-spec                                 = { version = "34.0.0" }
 sc-cli                                        = { version = "0.43.0" }
-sc-client-api            					  = { version = "35.0.0" }
-sc-consensus             					  = { version = "0.40.0" }
-sc-consensus-aura        					  = { version = "0.41.0" }
-sc-consensus-grandpa     					  = { version = "0.26.0" }
-sc-consensus-manual-seal 				      = { version = "0.42.0" }
-sc-consensus-slots       					  = { version = "0.40.0" }
+sc-client-api                                 = { version = "35.0.0" }
+sc-consensus                                  = { version = "0.40.0" }
+sc-consensus-aura                             = { version = "0.41.0" }
+sc-consensus-grandpa                          = { version = "0.26.0" }
+sc-consensus-manual-seal                      = { version = "0.42.0" }
+sc-consensus-slots                            = { version = "0.40.0" }
 sc-executor                                   = { version = "0.39.0" }
 sc-keystore                                   = { version = "32.0.0" }
 sc-network                                    = { version = "0.41.0" }
