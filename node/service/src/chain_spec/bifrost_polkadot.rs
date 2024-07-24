@@ -173,8 +173,7 @@ pub fn bifrost_polkadot_genesis(
 					H160::from_str("6be02d1d3665660d22ff9624b7be0551ee1ac91b")
 						.expect("internal H160 is valid; qed"),
 					fp_evm::GenesisAccount {
-						balance: U256::from_str("0xffffffffffffffffffffffffffffffff")
-							.expect("internal U256 is valid; qed"),
+						balance: U256::from(1_000_000_000_000_000_000_000_000u128),
 						code: Default::default(),
 						nonce: Default::default(),
 						storage: Default::default(),
@@ -213,7 +212,9 @@ fn development_config_genesis(id: ParaId) -> RuntimeGenesisConfig {
 		.collect();
 	let tokens = endowed_accounts
 		.iter()
-		.flat_map(|x| vec![(x.clone(), Token(TokenSymbol::DOT), ENDOWMENT())])
+		.flat_map(|x| {
+			vec![(x.clone(), Token2(0), ENDOWMENT()), (x.clone(), Token2(13), ENDOWMENT())]
+		})
 		.collect();
 
 	let council_membership = vec![get_account_id_from_seed::<sr25519::Public>("Alice")];
@@ -250,7 +251,7 @@ pub fn development_config() -> Result<ChainSpec, String> {
 		Some(DEFAULT_PROTOCOL_ID),
 		None,
 		Some(bifrost_polkadot_properties()),
-		RelayExtensions { relay_chain: "polkadot-dev".into(), para_id: PARA_ID },
+		RelayExtensions { relay_chain: "polkadot".into(), para_id: PARA_ID, evm_since: 1 },
 	))
 }
 
@@ -369,7 +370,7 @@ pub fn local_testnet_config() -> Result<ChainSpec, String> {
 		Some(DEFAULT_PROTOCOL_ID),
 		None,
 		Some(bifrost_polkadot_properties()),
-		RelayExtensions { relay_chain: "polkadot-local".into(), para_id: PARA_ID },
+		RelayExtensions { relay_chain: "polkadot-local".into(), para_id: PARA_ID, evm_since: 1 },
 	))
 }
 
@@ -384,7 +385,7 @@ pub fn chainspec_config() -> ChainSpec {
 		Some(DEFAULT_PROTOCOL_ID),
 		None,
 		Some(bifrost_polkadot_properties()),
-		RelayExtensions { relay_chain: "polkadot".into(), para_id: PARA_ID },
+		RelayExtensions { relay_chain: "polkadot".into(), para_id: PARA_ID, evm_since: 1 },
 	)
 }
 

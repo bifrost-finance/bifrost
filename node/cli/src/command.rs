@@ -433,7 +433,7 @@ pub fn run() -> Result<()> {
 					.flatten();
 
 				let para_id =
-					bifrost_service::chain_spec::RelayExtensions::try_get(&*config.chain_spec)
+					bifrost_service::chain_spec::RelayExtensions::try_get(&config.chain_spec)
 						.map(|e| e.para_id)
 						.ok_or("Could not find parachain ID in chain-spec.")?;
 

@@ -20,10 +20,20 @@ use std::{collections::BTreeMap, sync::Arc};
 
 use jsonrpsee::RpcModule;
 // Substrate
+use bifrost_polkadot_runtime::opaque::{Block, Hash};
+use cumulus_primitives_core::PersistedValidationData;
+use cumulus_primitives_parachain_inherent::ParachainInherentData;
+use cumulus_test_relay_sproof_builder::RelayStateSproofBuilder;
+use fc_db::kv::Backend as FrontierBackend;
+pub use fc_rpc::{EthBlockDataCacheTask, EthConfig, OverrideHandle, StorageOverride};
+use fc_rpc_core::types::CallRequest;
+pub use fc_rpc_core::types::{FeeHistoryCache, FeeHistoryCacheLimit, FilterPool};
+pub use fc_storage::overrides_handle;
+use fp_rpc::{ConvertTransaction, ConvertTransactionRuntimeApi, EthereumRuntimeRPCApi};
 use sc_client_api::{
 	backend::{Backend, StorageProvider},
 	client::BlockchainEvents,
-	AuxStore, UsageProvider,
+	AuxStore, StateBackend, UsageProvider,
 };
 use sc_network::NetworkService;
 use sc_network_sync::SyncingService;
@@ -33,18 +43,43 @@ use sc_transaction_pool_api::TransactionPool;
 use sp_api::{CallApiAt, ProvideRuntimeApi};
 use sp_block_builder::BlockBuilder as BlockBuilderApi;
 use sp_blockchain::{Error as BlockChainError, HeaderBackend, HeaderMetadata};
-use sp_consensus_aura::{sr25519::AuthorityId as AuraId, AuraApi};
-use sp_core::H256;
-use sp_inherents::CreateInherentDataProviders;
-use sp_runtime::traits::Block as BlockT;
-// Frontier
-pub use fc_rpc::{EthBlockDataCacheTask, EthConfig, OverrideHandle, StorageOverride};
-pub use fc_rpc_core::types::{FeeHistoryCache, FeeHistoryCacheLimit, FilterPool};
-pub use fc_storage::overrides_handle;
-use fp_rpc::{ConvertTransaction, ConvertTransactionRuntimeApi, EthereumRuntimeRPCApi};
+use sp_runtime::traits::{BlakeTwo256, Block as BlockT};
+
+pub struct BifrostEGA;
+
+impl fc_rpc::EstimateGasAdapter for BifrostEGA {
+	fn adapt_request(mut request: CallRequest) -> CallRequest {
+		// Redirect any call to batch precompile:
+		// force usage of batchAll method for estimation
+		use sp_core::H160;
+		const BATCH_PRECOMPILE_ADDRESS: H160 =
+			H160(hex_literal::hex!("0000000000000000000000000000000000000808"));
+		const BATCH_PRECOMPILE_BATCH_ALL_SELECTOR: [u8; 4] = hex_literal::hex!("96e292b8");
+		if request.to == Some(BATCH_PRECOMPILE_ADDRESS) {
+			if let Some(ref mut data) = request.data {
+				if data.0.len() >= 4 {
+					data.0[..4].copy_from_slice(&BATCH_PRECOMPILE_BATCH_ALL_SELECTOR);
+				}
+			}
+		}
+		request
+	}
+}
+
+pub struct BifrostEthConfig<C, BE>(std::marker::PhantomData<(C, BE)>);
+
+impl<C, BE> fc_rpc::EthConfig<Block, C> for BifrostEthConfig<C, BE>
+where
+	C: sc_client_api::StorageProvider<Block, BE> + Sync + Send + 'static,
+	BE: Backend<Block> + 'static,
+{
+	type EstimateGasAdapter = BifrostEGA;
+	type RuntimeStorageOverride =
+		fc_rpc::frontier_backend_client::SystemAccountId20StorageOverride<Block, C, BE>;
+}
 
 /// Extra dependencies for Ethereum compatibility.
-pub struct EthDeps<B: BlockT, C, P, A: ChainApi, CT, CIDP> {
+pub struct EthDeps<C, P, A: ChainApi, CT> {
 	/// The client instance to use.
 	pub client: Arc<C>,
 	/// Transaction pool instance.
@@ -58,17 +93,17 @@ pub struct EthDeps<B: BlockT, C, P, A: ChainApi, CT, CIDP> {
 	/// Whether to enable dev signer
 	pub enable_dev_signer: bool,
 	/// Network service
-	pub network: Arc<NetworkService<B, B::Hash>>,
+	pub network: Arc<NetworkService<Block, Hash>>,
 	/// Chain syncing service
-	pub sync: Arc<SyncingService<B>>,
+	pub sync_service: Arc<SyncingService<Block>>,
 	/// Frontier Backend.
-	pub frontier_backend: Arc<dyn fc_api::Backend<B>>,
+	pub frontier_backend: Arc<FrontierBackend<Block>>,
 	/// Ethereum data access overrides.
-	pub overrides: Arc<OverrideHandle<B>>,
+	pub overrides: Arc<OverrideHandle<Block>>,
 	/// Cache for Ethereum block data.
-	pub block_data_cache: Arc<EthBlockDataCacheTask<B>>,
+	pub block_data_cache: Arc<EthBlockDataCacheTask<Block>>,
 	/// EthFilterApi pool.
-	pub filter_pool: Option<FilterPool>,
+	pub filter_pool: FilterPool,
 	/// Maximum number of logs in a query.
 	pub max_past_logs: u32,
 	/// Fee history cache.
@@ -78,43 +113,38 @@ pub struct EthDeps<B: BlockT, C, P, A: ChainApi, CT, CIDP> {
 	/// Maximum allowed gas limit will be ` block.gas_limit * execute_gas_limit_multiplier` when
 	/// using eth_call/eth_estimateGas.
 	pub execute_gas_limit_multiplier: u64,
-	/// Mandated parent hashes for a given block hash.
-	pub forced_parent_hashes: Option<BTreeMap<H256, H256>>,
-	/// Something that can create the inherent data providers for pending state
-	pub pending_create_inherent_data_providers: CIDP,
 }
 
 /// Instantiate Ethereum-compatible RPC extensions.
-pub fn create_eth<B, C, BE, P, A, CT, CIDP, EC>(
+pub fn create_eth<C, BE, P, A, CT>(
 	mut io: RpcModule<()>,
-	deps: EthDeps<B, C, P, A, CT, CIDP>,
+	deps: EthDeps<C, P, A, CT>,
 	subscription_task_executor: SubscriptionTaskExecutor,
 	pubsub_notification_sinks: Arc<
 		fc_mapping_sync::EthereumBlockNotificationSinks<
-			fc_mapping_sync::EthereumBlockNotification<B>,
+			fc_mapping_sync::EthereumBlockNotification<Block>,
 		>,
 	>,
 ) -> Result<RpcModule<()>, Box<dyn std::error::Error + Send + Sync>>
 where
-	B: BlockT<Hash = H256>,
-	C: CallApiAt<B> + ProvideRuntimeApi<B>,
-	C::Api: AuraApi<B, AuraId>
-		+ BlockBuilderApi<B>
-		+ ConvertTransactionRuntimeApi<B>
-		+ EthereumRuntimeRPCApi<B>,
-	C: HeaderBackend<B> + HeaderMetadata<B, Error = BlockChainError>,
-	C: BlockchainEvents<B> + AuxStore + UsageProvider<B> + StorageProvider<B, BE> + 'static,
-	BE: Backend<B> + 'static,
-	P: TransactionPool<Block = B> + 'static,
-	A: ChainApi<Block = B> + 'static,
-	CT: ConvertTransaction<<B as BlockT>::Extrinsic> + Send + Sync + 'static,
-	CIDP: CreateInherentDataProviders<B, ()> + Send + 'static,
-	EC: EthConfig<B, C>,
+	C: ProvideRuntimeApi<Block>,
+	C::Api:
+		BlockBuilderApi<Block> + EthereumRuntimeRPCApi<Block> + ConvertTransactionRuntimeApi<Block>,
+	C: BlockchainEvents<Block> + 'static,
+	C: HeaderBackend<Block>
+		+ HeaderMetadata<Block, Error = BlockChainError>
+		+ StorageProvider<Block, BE>,
+	C: CallApiAt<Block>,
+	BE: Backend<Block> + 'static,
+	BE::State: StateBackend<BlakeTwo256>,
+	P: TransactionPool<Block = Block> + 'static,
+	A: ChainApi<Block = Block> + 'static,
+	CT: ConvertTransaction<<Block as BlockT>::Extrinsic> + Send + Sync + 'static,
 {
 	use fc_rpc::{
-		pending::AuraConsensusDataProvider, Debug, DebugApiServer, Eth, EthApiServer, EthDevSigner,
-		EthFilter, EthFilterApiServer, EthPubSub, EthPubSubApiServer, EthSigner, Net, NetApiServer,
-		TxPool, TxPoolApiServer, Web3, Web3ApiServer,
+		Debug, DebugApiServer, Eth, EthApiServer, EthDevSigner, EthFilter, EthFilterApiServer,
+		EthPubSub, EthPubSubApiServer, EthSigner, Net, NetApiServer, TxPool, TxPoolApiServer, Web3,
+		Web3ApiServer,
 	};
 
 	let EthDeps {
@@ -125,7 +155,7 @@ where
 		is_authority,
 		enable_dev_signer,
 		network,
-		sync,
+		sync_service,
 		frontier_backend,
 		overrides,
 		block_data_cache,
@@ -134,8 +164,6 @@ where
 		fee_history_cache,
 		fee_history_cache_limit,
 		execute_gas_limit_multiplier,
-		forced_parent_hashes,
-		pending_create_inherent_data_providers,
 	} = deps;
 
 	let mut signers = Vec::new();
@@ -143,13 +171,37 @@ where
 		signers.push(Box::new(EthDevSigner::new()) as Box<dyn EthSigner>);
 	}
 
+	let pending_create_inherent_data_providers = move |_, _| async move {
+		let timestamp = sp_timestamp::InherentDataProvider::from_system_time();
+		// Create a dummy parachain inherent data provider which is required to pass
+		// the checks by the para chain system. We use dummy values because in the 'pending context'
+		// neither do we have access to the real values nor do we need them.
+		let (relay_parent_storage_root, relay_chain_state) =
+			RelayStateSproofBuilder::default().into_state_root_and_proof();
+		let vfp = PersistedValidationData {
+			// This is a hack to make
+			// `cumulus_pallet_parachain_system::RelayNumberStrictlyIncreases` happy. Relay parent
+			// number can't be bigger than u32::MAX.
+			relay_parent_number: u32::MAX,
+			relay_parent_storage_root,
+			..Default::default()
+		};
+		let parachain_inherent_data = ParachainInherentData {
+			validation_data: vfp,
+			relay_chain_state,
+			downward_messages: Default::default(),
+			horizontal_messages: Default::default(),
+		};
+		Ok((timestamp, parachain_inherent_data))
+	};
+
 	io.merge(
-		Eth::<B, C, P, CT, BE, A, CIDP, EC>::new(
+		Eth::<_, _, _, _, _, _, _, BifrostEthConfig<_, _>>::new(
 			client.clone(),
 			pool.clone(),
 			graph.clone(),
 			converter,
-			sync.clone(),
+			sync_service.clone(),
 			signers,
 			overrides.clone(),
 			frontier_backend.clone(),
@@ -158,34 +210,32 @@ where
 			fee_history_cache,
 			fee_history_cache_limit,
 			execute_gas_limit_multiplier,
-			forced_parent_hashes,
+			None,
 			pending_create_inherent_data_providers,
-			Some(Box::new(AuraConsensusDataProvider::new(client.clone()))),
+			None,
 		)
-		.replace_config::<EC>()
+		.replace_config::<BifrostEthConfig<C, BE>>()
 		.into_rpc(),
 	)?;
 
-	if let Some(filter_pool) = filter_pool {
-		io.merge(
-			EthFilter::new(
-				client.clone(),
-				frontier_backend.clone(),
-				graph.clone(),
-				filter_pool,
-				500_usize, // max stored filters
-				max_past_logs,
-				block_data_cache.clone(),
-			)
-			.into_rpc(),
-		)?;
-	}
+	io.merge(
+		EthFilter::new(
+			client.clone(),
+			frontier_backend.clone(),
+			graph.clone(),
+			filter_pool,
+			500_usize, // max stored filters
+			max_past_logs,
+			block_data_cache.clone(),
+		)
+		.into_rpc(),
+	)?;
 
 	io.merge(
 		EthPubSub::new(
 			pool,
 			client.clone(),
-			sync,
+			sync_service,
 			subscription_task_executor,
 			overrides.clone(),
 			pubsub_notification_sinks,

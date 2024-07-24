@@ -20,8 +20,9 @@
 
 use bifrost_primitives::{
 	traits::{FeeGetter, XcmDestWeightAndFeeHandler},
-	AccountFeeCurrency, AccountFeeCurrencyBalanceInCurrency, Balance, CurrencyId, ExtraFeeName,
-	TryConvertFrom, XcmOperationType, BNC,
+	AccountFeeCurrency, AccountFeeCurrencyBalanceInCurrency, Balance, CurrencyId,
+	CurrencyId::Token2,
+	ExtraFeeName, TryConvertFrom, XcmOperationType, BNC,
 };
 use core::convert::Into;
 use cumulus_primitives_core::ParaId;
@@ -481,6 +482,6 @@ impl<T: Config> Pallet<T> {
 /// Provides account's fee payment asset or default fee asset ( Native asset )
 impl<T: Config> AccountFeeCurrency<T::AccountId> for Pallet<T> {
 	fn get(who: &T::AccountId) -> CurrencyId {
-		Pallet::<T>::get_user_default_fee_currency(who).unwrap_or_else(|| BNC)
+		Pallet::<T>::get_user_default_fee_currency(who).unwrap_or_else(|| Token2(13))
 	}
 }

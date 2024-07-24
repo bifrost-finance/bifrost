@@ -85,13 +85,6 @@ impl From<Ratio> for (u128, u128) {
 	}
 }
 
-#[cfg(test)]
-impl From<Ratio> for rug::Rational {
-	fn from(ratio: Ratio) -> rug::Rational {
-		rug::Rational::from((ratio.n, ratio.d))
-	}
-}
-
 impl From<u128> for Ratio {
 	fn from(n: u128) -> Self {
 		Self::new(n, 1)

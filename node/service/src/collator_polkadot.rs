@@ -36,7 +36,7 @@ use cumulus_client_consensus_aura::collators::basic::{
 use cumulus_client_consensus_common::ParachainBlockImport as TParachainBlockImport;
 use cumulus_client_consensus_proposer::Proposer;
 
-use crate::{dev, IdentifyVariant};
+use crate::{chain_spec, eth, IdentifyVariant};
 use bifrost_primitives::Block;
 use cumulus_client_service::{
 	build_network, build_relay_chain_interface, prepare_node_config, start_relay_chain_tasks,
@@ -46,6 +46,7 @@ use cumulus_primitives_core::{relay_chain::Hash, ParaId};
 use cumulus_primitives_parachain_inherent::ParachainInherentData;
 use cumulus_relay_chain_interface::{OverseerHandle, RelayChainInterface};
 use cumulus_test_relay_sproof_builder::RelayStateSproofBuilder;
+use fc_rpc_core::types::{FeeHistoryCache, FilterPool};
 use polkadot_primitives::{CollatorPair, PersistedValidationData};
 use sc_client_api::backend::Backend;
 use sc_consensus::{ImportQueue, LongestChain};
@@ -58,9 +59,7 @@ use sc_transaction_pool_api::OffchainTransactionPoolFactory;
 use sp_keystore::KeystorePtr;
 use substrate_prometheus_endpoint::Registry;
 
-use crate::eth::{
-	db_config_dir, spawn_frontier_tasks, BackendType, EthConfiguration, FrontierBackend,
-};
+use crate::eth::{db_config_dir, spawn_frontier_tasks, EthConfiguration, FrontierBackend};
 
 #[cfg(not(feature = "runtime-benchmarks"))]
 type HostFunctions = sp_io::SubstrateHostFunctions;
@@ -100,7 +99,14 @@ pub fn new_partial(
 		MaybeFullSelectChain,
 		sc_consensus::import_queue::BasicQueue<Block>,
 		sc_transaction_pool::FullPool<Block, FullClient>,
-		(ParachainBlockImport, Option<Telemetry>, Option<TelemetryWorkerHandle>, FrontierBackend),
+		(
+			eth::BlockImport<Block, ParachainBlockImport, FullClient>,
+			Option<Telemetry>,
+			Option<TelemetryWorkerHandle>,
+			Arc<FrontierBackend<Block>>,
+			FilterPool,
+			FeeHistoryCache,
+		),
 	>,
 	sc_service::Error,
 > {
@@ -154,37 +160,21 @@ pub fn new_partial(
 
 	let select_chain = if dev { Some(LongestChain::new(backend.clone())) } else { None };
 
-	let overrides = fc_storage::overrides_handle(client.clone());
-	let frontier_backend = match eth_config.frontier_backend_type {
-		BackendType::KeyValue => FrontierBackend::KeyValue(fc_db::kv::Backend::open(
-			Arc::clone(&client),
-			&config.database,
-			&db_config_dir(config),
-		)?),
-		BackendType::Sql => {
-			let db_path = db_config_dir(config).join("sql");
-			std::fs::create_dir_all(&db_path).expect("failed creating sql db directory");
-			let backend = futures::executor::block_on(fc_db::sql::Backend::new(
-				fc_db::sql::BackendConfig::Sqlite(fc_db::sql::SqliteBackendConfig {
-					path: Path::new("sqlite:///")
-						.join(db_path)
-						.join("frontier.db3")
-						.to_str()
-						.unwrap(),
-					create_if_missing: true,
-					thread_count: eth_config.frontier_sql_backend_thread_count,
-					cache_size: eth_config.frontier_sql_backend_cache_size,
-				}),
-				eth_config.frontier_sql_backend_pool_size,
-				std::num::NonZeroU32::new(eth_config.frontier_sql_backend_num_ops_timeout),
-				overrides.clone(),
-			))
-			.unwrap_or_else(|err| panic!("failed creating sql backend: {:?}", err));
-			FrontierBackend::Sql(backend)
-		},
-	};
+	let frontier_backend = Arc::new(FrontierBackend::open(
+		Arc::clone(&client),
+		&config.database,
+		&eth::db_config_dir(config),
+	)?);
 
-	let block_import = ParachainBlockImport::new(client.clone(), backend.clone());
+	let evm_since = chain_spec::RelayExtensions::try_get(&config.chain_spec)
+		.map(|e| e.evm_since)
+		.unwrap_or(1);
+	let block_import = eth::BlockImport::new(
+		ParachainBlockImport::new(client.clone(), backend.clone()),
+		client.clone(),
+		frontier_backend.clone(),
+		evm_since,
+	);
 
 	let import_queue = if dev {
 		sc_consensus_manual_seal::import_queue(
@@ -202,6 +192,9 @@ pub fn new_partial(
 		)?
 	};
 
+	let filter_pool: FilterPool = Arc::new(Mutex::new(BTreeMap::new()));
+	let fee_history_cache: FeeHistoryCache = Arc::new(Mutex::new(BTreeMap::new()));
+
 	Ok(PartialComponents {
 		backend,
 		client,
@@ -210,14 +203,21 @@ pub fn new_partial(
 		task_manager,
 		transaction_pool,
 		select_chain,
-		other: (block_import, telemetry, telemetry_worker_handle, frontier_backend),
+		other: (
+			block_import,
+			telemetry,
+			telemetry_worker_handle,
+			frontier_backend,
+			filter_pool,
+			fee_history_cache,
+		),
 	})
 }
 
 /// Build the import queue for the parachain runtime.
 fn build_import_queue(
 	client: Arc<FullClient>,
-	block_import: ParachainBlockImport,
+	block_import: eth::BlockImport<Block, ParachainBlockImport, FullClient>,
 	config: &Configuration,
 	telemetry: Option<TelemetryHandle>,
 	task_manager: &TaskManager,
@@ -254,7 +254,7 @@ fn build_import_queue(
 
 fn start_consensus(
 	client: Arc<FullClient>,
-	block_import: ParachainBlockImport,
+	block_import: eth::BlockImport<Block, ParachainBlockImport, FullClient>,
 	prometheus_registry: Option<&Registry>,
 	telemetry: Option<TelemetryHandle>,
 	task_manager: &TaskManager,
@@ -333,7 +333,14 @@ async fn start_node_impl(
 	let parachain_config = prepare_node_config(parachain_config);
 
 	let params = new_partial(&parachain_config, &eth_config, false)?;
-	let (block_import, mut telemetry, telemetry_worker_handle, frontier_backend) = params.other;
+	let (
+		block_import,
+		mut telemetry,
+		telemetry_worker_handle,
+		frontier_backend,
+		filter_pool,
+		fee_history_cache,
+	) = params.other;
 
 	let client = params.client.clone();
 	let backend = params.backend.clone();
@@ -392,8 +399,8 @@ async fn start_node_impl(
 		);
 	}
 
-	let overrides = crate::rpc::overrides_handle(client.clone());
-	let _block_data_cache = Arc::new(fc_rpc::EthBlockDataCacheTask::new(
+	let overrides = eth::overrides_handle(client.clone());
+	let block_data_cache = Arc::new(fc_rpc::EthBlockDataCacheTask::new(
 		task_manager.spawn_handle(),
 		overrides.clone(),
 		eth_config.eth_log_block_cache,
@@ -412,91 +419,49 @@ async fn start_node_impl(
 	> = Default::default();
 	let pubsub_notification_sinks = Arc::new(pubsub_notification_sinks);
 
-	let filter_pool = Some(Arc::new(Mutex::new(BTreeMap::new())));
-	let fee_history_cache = Arc::new(Mutex::new(BTreeMap::new()));
-	// let fee_history_cache_limit = parachain_config.fee_history_limit;
-	let fee_history_cache_limit = 2048;
-
 	let rpc_builder = {
 		let client = client.clone();
-		let pool = transaction_pool.clone();
+		let is_authority = parachain_config.role.is_authority();
+		let transaction_pool = transaction_pool.clone();
 		let network = network.clone();
 		let sync_service = sync_service.clone();
-
-		let is_authority = parachain_config.role.is_authority();
-		let enable_dev_signer = eth_config.enable_dev_signer;
-		let max_past_logs = eth_config.max_past_logs;
-		let execute_gas_limit_multiplier = eth_config.execute_gas_limit_multiplier;
-		let filter_pool = filter_pool.clone();
 		let frontier_backend = frontier_backend.clone();
-		let pubsub_notification_sinks = pubsub_notification_sinks.clone();
-		let overrides = overrides.clone();
 		let fee_history_cache = fee_history_cache.clone();
-		let block_data_cache = Arc::new(fc_rpc::EthBlockDataCacheTask::new(
-			task_manager.spawn_handle(),
-			overrides.clone(),
-			eth_config.eth_log_block_cache,
-			eth_config.eth_statuses_cache,
-			prometheus_registry.clone(),
-		));
-
-		let pending_create_inherent_data_providers = move |_, _| async move {
-			let timestamp = sp_timestamp::InherentDataProvider::from_system_time();
-			// Create a dummy parachain inherent data provider which is required to pass
-			// the checks by the para chain system. We use dummy values because in the 'pending
-			// context' neither do we have access to the real values nor do we need them.
-			let (relay_parent_storage_root, relay_chain_state) =
-				RelayStateSproofBuilder::default().into_state_root_and_proof();
-			let vfp = PersistedValidationData {
-				// This is a hack to make
-				// `cumulus_pallet_parachain_system::RelayNumberStrictlyIncreases` happy. Relay
-				// parent number can't be bigger than u32::MAX.
-				relay_parent_number: u32::MAX,
-				relay_parent_storage_root,
-				..Default::default()
-			};
-			let parachain_inherent_data = ParachainInherentData {
-				validation_data: vfp,
-				relay_chain_state,
-				downward_messages: Default::default(),
-				horizontal_messages: Default::default(),
-			};
-			Ok((timestamp, parachain_inherent_data))
-		};
+		let filter_pool = filter_pool.clone();
+		let overrides = overrides.clone();
+		let pubsub_notification_sinks = pubsub_notification_sinks.clone();
 
 		Box::new(move |deny_unsafe, subscription_task_executor| {
+			let deps = crate::rpc::FullDepsPolkadot {
+				client: client.clone(),
+				pool: transaction_pool.clone(),
+				deny_unsafe,
+				command_sink: None,
+			};
+			let module = crate::rpc::create_full_polkadot(deps)?;
+
 			let eth_deps = crate::rpc::EthDeps {
 				client: client.clone(),
-				pool: pool.clone(),
-				graph: pool.pool().clone(),
+				pool: transaction_pool.clone(),
+				graph: transaction_pool.pool().clone(),
 				converter: Some(TransactionConverter),
 				is_authority,
-				enable_dev_signer,
+				enable_dev_signer: eth_config.enable_dev_signer,
 				network: network.clone(),
-				sync: sync_service.clone(),
-				frontier_backend: match frontier_backend.clone() {
-					fc_db::Backend::KeyValue(b) => Arc::new(b),
-					fc_db::Backend::Sql(b) => Arc::new(b),
-				},
+				sync_service: sync_service.clone(),
+				frontier_backend: frontier_backend.clone(),
 				overrides: overrides.clone(),
 				block_data_cache: block_data_cache.clone(),
 				filter_pool: filter_pool.clone(),
-				max_past_logs,
+				max_past_logs: eth_config.max_past_logs,
 				fee_history_cache: fee_history_cache.clone(),
-				fee_history_cache_limit,
-				execute_gas_limit_multiplier,
-				forced_parent_hashes: None,
-				pending_create_inherent_data_providers,
+				fee_history_cache_limit: eth_config.fee_history_limit,
+				execute_gas_limit_multiplier: eth_config.execute_gas_limit_multiplier,
 			};
-			let deps = crate::rpc::FullDepsPolkadot {
-				client: client.clone(),
-				pool: pool.clone(),
-				deny_unsafe,
-				command_sink: None,
-				eth: eth_deps,
-			};
-			crate::rpc::create_full_polkadot(
-				deps,
+
+			crate::rpc::create_eth(
+				module,
+				eth_deps,
 				subscription_task_executor,
 				pubsub_notification_sinks.clone(),
 			)
@@ -519,7 +484,7 @@ async fn start_node_impl(
 		telemetry: telemetry.as_mut(),
 	})?;
 
-	spawn_frontier_tasks(
+	eth::spawn_frontier_tasks(
 		&task_manager,
 		client.clone(),
 		backend,
@@ -527,11 +492,10 @@ async fn start_node_impl(
 		filter_pool,
 		overrides,
 		fee_history_cache,
-		fee_history_cache_limit,
+		eth_config.fee_history_limit,
 		sync_service.clone(),
 		pubsub_notification_sinks,
-	)
-	.await;
+	);
 
 	if let Some(hwbench) = hwbench {
 		sc_sysinfo::print_hwbench(&hwbench);
@@ -607,18 +571,14 @@ pub async fn start_node(
 	para_id: ParaId,
 	hwbench: Option<sc_sysinfo::HwBench>,
 ) -> sc_service::error::Result<(TaskManager, Arc<FullClient>)> {
-	if parachain_config.chain_spec.is_dev() {
-		dev::start_node(parachain_config, eth_config).await
-	} else {
-		start_node_impl(
-			parachain_config,
-			polkadot_config,
-			eth_config,
-			collator_options,
-			CollatorSybilResistance::Resistant,
-			para_id,
-			hwbench,
-		)
-		.await
-	}
+	start_node_impl(
+		parachain_config,
+		polkadot_config,
+		eth_config,
+		collator_options,
+		CollatorSybilResistance::Resistant,
+		para_id,
+		hwbench,
+	)
+	.await
 }

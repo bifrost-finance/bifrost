@@ -218,6 +218,16 @@ impl<T: Config> PriceFeeder for Pallet<T> {
 				.and_then(|price| Self::normalize_detail_price(price, mantissa))
 		})
 	}
+
+	fn get_normal_price(asset_id: &CurrencyId) -> Option<u128> {
+		let decimals = Self::get_asset_mantissa(asset_id)?;
+		Self::emergency_price(asset_id)
+			.and_then(|p| Some(p.into_inner().saturating_div(decimals)))
+			.or_else(|| {
+				T::Source::get(&asset_id)
+					.and_then(|price| Some(price.value.into_inner().saturating_div(decimals)))
+			})
+	}
 }
 
 impl<T: Config> EmergencyPriceFeeder<CurrencyId, Price> for Pallet<T> {

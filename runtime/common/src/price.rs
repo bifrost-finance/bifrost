@@ -40,11 +40,9 @@ where
 	type Price = Ratio;
 
 	fn get_price(asset_a: CurrencyId, asset_b: CurrencyId) -> Option<Self::Price> {
-		if let Some(a) = PF::get_price(&asset_a) {
-			if let Some(b) = PF::get_price(&asset_b) {
-				let price_a = a.0.into_inner();
-				let price_b = b.0.into_inner();
-				Some(Ratio::from((price_a, price_b)))
+		if let Some(a) = PF::get_normal_price(&asset_a) {
+			if let Some(b) = PF::get_normal_price(&asset_b) {
+				Some(Ratio::from((a, b)))
 			} else {
 				None
 			}
@@ -109,7 +107,7 @@ where
 		if from_currency == to_currency {
 			return Some((amount, Ratio::one()));
 		}
-		let price = P::get_price(to_currency, from_currency)?;
+		let price = P::get_price(from_currency, to_currency)?;
 		let converted = multiply_by_rational_with_rounding(amount, price.n, price.d, Rounding::Up)?;
 		Some((converted, price))
 	}

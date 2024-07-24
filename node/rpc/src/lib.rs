@@ -97,15 +97,13 @@ where
 }
 
 /// Full client dependencies.
-pub struct FullDepsPolkadot<C, P, A: ChainApi, CT, CIDP> {
+pub struct FullDepsPolkadot<C, P> {
 	/// The client instance to use.
 	pub client: Arc<C>,
 	/// Transaction pool instance.
 	pub pool: Arc<P>,
 	/// Whether to deny unsafe calls
 	pub deny_unsafe: DenyUnsafe,
-	/// Ethereum-compatibility specific dependencies.
-	pub eth: EthDeps<Block, C, P, A, CT, CIDP>,
 	/// Manual seal command sink
 	pub command_sink: Option<mpsc::Sender<EngineCommand<Hash>>>,
 }
@@ -155,14 +153,8 @@ where
 }
 
 /// RPC of bifrost-polkadot runtime.
-pub fn create_full_polkadot<C, P, BE, A, CT, CIDP>(
-	deps: FullDepsPolkadot<C, P, A, CT, CIDP>,
-	subscription_task_executor: SubscriptionTaskExecutor,
-	pubsub_notification_sinks: Arc<
-		fc_mapping_sync::EthereumBlockNotificationSinks<
-			fc_mapping_sync::EthereumBlockNotification<Block>,
-		>,
-	>,
+pub fn create_full_polkadot<C, P>(
+	deps: FullDepsPolkadot<C, P>,
 ) -> Result<RpcExtension, Box<dyn std::error::Error + Send + Sync>>
 where
 	C: CallApiAt<Block>,
@@ -184,18 +176,11 @@ where
 	C::Api: ZenlinkProtocolRuntimeApi<Block, AccountId, AssetId>,
 	C::Api: StablePoolRuntimeApi<Block>,
 	C::Api: BlockBuilder<Block>,
-	C::Api: fp_rpc::ConvertTransactionRuntimeApi<Block>,
-	C::Api: fp_rpc::EthereumRuntimeRPCApi<Block>,
 	C: HeaderBackend<Block> + HeaderMetadata<Block, Error = BlockChainError> + 'static,
-	C: BlockchainEvents<Block> + AuxStore + UsageProvider<Block> + StorageProvider<Block, BE>,
-	BE: Backend<Block> + 'static,
 	P: TransactionPool<Block = Block> + 'static,
-	A: ChainApi<Block = Block> + 'static,
-	CIDP: CreateInherentDataProviders<Block, ()> + Send + 'static,
-	CT: fp_rpc::ConvertTransaction<<Block as BlockT>::Extrinsic> + Send + Sync + 'static,
 {
 	let mut module = RpcExtension::new(());
-	let FullDepsPolkadot { client, pool, deny_unsafe, eth, command_sink } = deps;
+	let FullDepsPolkadot { client, pool, deny_unsafe, command_sink } = deps;
 
 	module.merge(System::new(client.clone(), pool.clone(), deny_unsafe).into_rpc())?;
 	module.merge(TransactionPayment::new(client.clone()).into_rpc())?;
@@ -215,14 +200,6 @@ where
 			ManualSeal::new(command_sink).into_rpc(),
 		)?;
 	}
-
-	// Ethereum compatibility RPCs
-	let module = create_eth::<_, _, _, _, _, _, _, DefaultEthConfig<C, BE>>(
-		module,
-		eth,
-		subscription_task_executor,
-		pubsub_notification_sinks,
-	)?;
 
 	Ok(module)
 }

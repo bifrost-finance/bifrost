@@ -14,6 +14,7 @@ pub trait EmergencyCallFilter<Call> {
 
 pub trait PriceFeeder {
 	fn get_price(asset_id: &CurrencyId) -> Option<PriceDetail>;
+	fn get_normal_price(asset_id: &CurrencyId) -> Option<u128>;
 }
 
 pub trait EmergencyPriceFeeder<CurrencyId, Price> {

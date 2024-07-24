@@ -264,7 +264,7 @@ pub fn development_config() -> Result<ChainSpec, String> {
 		Some(DEFAULT_PROTOCOL_ID),
 		None,
 		Some(bifrost_kusama_properties()),
-		RelayExtensions { relay_chain: "kusama".into(), para_id: PARA_ID },
+		RelayExtensions { relay_chain: "kusama".into(), para_id: PARA_ID, evm_since: 1 },
 	))
 }
 
@@ -403,7 +403,7 @@ pub fn local_testnet_config() -> Result<ChainSpec, String> {
 		Some(DEFAULT_PROTOCOL_ID),
 		None,
 		Some(bifrost_kusama_properties()),
-		RelayExtensions { relay_chain: "kusama-local".into(), para_id: PARA_ID },
+		RelayExtensions { relay_chain: "kusama-local".into(), para_id: PARA_ID, evm_since: 1 },
 	))
 }
 
@@ -502,7 +502,7 @@ pub fn rococo_testnet_config() -> Result<ChainSpec, String> {
 		Some(DEFAULT_PROTOCOL_ID),
 		None,
 		Some(bifrost_kusama_properties()),
-		RelayExtensions { relay_chain: "rococo".into(), para_id: 2030 },
+		RelayExtensions { relay_chain: "rococo".into(), para_id: 2030, evm_since: 1 },
 	))
 }
 
@@ -566,7 +566,7 @@ pub fn rococo_local_config() -> Result<ChainSpec, String> {
 		Some(DEFAULT_PROTOCOL_ID),
 		None,
 		Some(bifrost_kusama_properties()),
-		RelayExtensions { relay_chain: "rococo".into(), para_id: 2030 },
+		RelayExtensions { relay_chain: "rococo".into(), para_id: 2030, evm_since: 1 },
 	))
 }
 
@@ -581,7 +581,7 @@ pub fn chainspec_config() -> ChainSpec {
 		Some(DEFAULT_PROTOCOL_ID),
 		None,
 		Some(bifrost_kusama_properties()),
-		RelayExtensions { relay_chain: "kusama".into(), para_id: PARA_ID },
+		RelayExtensions { relay_chain: "kusama".into(), para_id: PARA_ID, evm_since: 1 },
 	)
 }
 
