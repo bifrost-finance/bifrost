@@ -69,6 +69,12 @@ pub type PositiveImbalanceOf<T> =
 	<<T as Config>::Currency as Currency<AccountIdOf<T>>>::PositiveImbalance;
 pub type CallOf<T> = <T as frame_system::Config>::RuntimeCall;
 
+#[derive(Encode, Decode, Copy, Clone, Eq, PartialEq, RuntimeDebug, TypeInfo, MaxEncodedLen)]
+pub enum TargetChain {
+	AssetHub,
+	RelayChain,
+}
+
 #[frame_support::pallet]
 pub mod pallet {
 	use super::*;
@@ -152,8 +158,8 @@ pub mod pallet {
 	pub enum Event<T: Config> {
 		TransferTo {
 			from: T::AccountId,
+			target_chain: TargetChain,
 			amount: BalanceOf<T>,
-			dest_location: Location,
 		},
 		FlexibleFeeExchanged {
 			transaction_fee_currency: CurrencyIdOf<T>,
@@ -246,28 +252,20 @@ pub mod pallet {
 impl<T: Config> Pallet<T> {
 	#[transactional]
 	fn handle_fee() -> DispatchResult {
-		let pending_transfer_to_assethub_account =
-			Self::get_fee_receiver(ExtraFeeName::StatemineTransfer);
-		let pending_transfer_to_assethub_amount = T::MultiCurrency::free_balance(
-			T::RelaychainCurrencyId::get(),
-			&pending_transfer_to_assethub_account,
-		);
-		if pending_transfer_to_assethub_amount >= T::MinAssetHubExecutionFee::get() {
-			let dest_location = Location::new(
-				1,
-				[
-					Parachain(parachains::Statemine::ID),
-					AccountId32 {
-						network: None,
-						id: Sibling::from(T::ParachainId::get()).into_account_truncating(),
-					},
-				],
-			);
+		let fee_receiver = Self::get_fee_receiver(ExtraFeeName::StatemineTransfer);
+		let fee_receiver_balance =
+			T::MultiCurrency::free_balance(T::RelaychainCurrencyId::get(), &fee_receiver);
+		if fee_receiver_balance >= T::MinAssetHubExecutionFee::get() {
+			T::MultiCurrency::withdraw(
+				T::RelaychainCurrencyId::get(),
+				&fee_receiver,
+				fee_receiver_balance,
+			)?;
 
 			let asset: Asset = Asset {
 				id: AssetId(Location::here()),
 				fun: Fungible(UniqueSaturatedInto::<u128>::unique_saturated_into(
-					pending_transfer_to_assethub_amount,
+					fee_receiver_balance,
 				)),
 			};
 
@@ -325,38 +323,27 @@ impl<T: Config> Pallet<T> {
 			T::XcmRouter::deliver(ticket).map_err(|_| Error::<T>::XcmExecutionFailed)?;
 
 			Self::deposit_event(Event::TransferTo {
-				from: pending_transfer_to_assethub_account,
-				amount: pending_transfer_to_assethub_amount,
-				dest_location,
+				from: fee_receiver,
+				target_chain: TargetChain::AssetHub,
+				amount: fee_receiver_balance,
 			});
 		}
 
-		let pending_transfer_to_relaychain_account =
-			Self::get_fee_receiver(ExtraFeeName::VoteVtoken);
-		let pending_transfer_to_relaychain_amount = T::MultiCurrency::free_balance(
-			T::RelaychainCurrencyId::get(),
-			&pending_transfer_to_relaychain_account,
-		);
-		if pending_transfer_to_relaychain_amount >= T::MinRelaychainExecutionFee::get() {
-			let dest_location = Location::new(
-				1,
-				[AccountId32 {
-					network: None,
-					id: ParaId::from(T::ParachainId::get()).into_account_truncating(),
-				}],
-			);
-			let result = T::MultiCurrency::withdraw(
+		let fee_receiver = Self::get_fee_receiver(ExtraFeeName::VoteVtoken);
+		let fee_receiver_balance =
+			T::MultiCurrency::free_balance(T::RelaychainCurrencyId::get(), &fee_receiver);
+		if fee_receiver_balance >= T::MinRelaychainExecutionFee::get() {
+			T::MultiCurrency::withdraw(
 				T::RelaychainCurrencyId::get(),
-				&pending_transfer_to_relaychain_account,
-				pending_transfer_to_relaychain_amount,
-			);
-			if result.is_ok() {
-				Self::deposit_event(Event::TransferTo {
-					from: pending_transfer_to_relaychain_account,
-					amount: pending_transfer_to_relaychain_amount,
-					dest_location,
-				});
-			}
+				&fee_receiver,
+				fee_receiver_balance,
+			)?;
+
+			Self::deposit_event(Event::TransferTo {
+				from: fee_receiver,
+				target_chain: TargetChain::RelayChain,
+				amount: fee_receiver_balance,
+			});
 		}
 
 		Ok(())
