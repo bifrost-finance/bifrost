@@ -200,6 +200,7 @@ pub fn bifrost_genesis(
 		vtoken_voting: Default::default(),
 		transaction_payment: Default::default(),
 		zenlink_protocol: Default::default(),
+		prices: Default::default(),
 	}
 }
 

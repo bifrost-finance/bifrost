@@ -81,7 +81,7 @@ fn load_spec(id: &str) -> std::result::Result<Box<dyn ChainSpec>, String> {
 			Box::new(service::chain_spec::bifrost_polkadot::local_testnet_config()?),
 		#[cfg(any(feature = "with-bifrost-kusama-runtime", feature = "with-bifrost-runtime"))]
 		"dev" => Box::new(service::chain_spec::bifrost_kusama::development_config()?),
-		#[cfg(feature = "with-bifrost-polkadot-runtime")]
+		#[cfg(any(feature = "with-bifrost-polkadot-runtime", feature = "with-bifrost-runtime"))]
 		"bifrost-polkadot-dev" => Box::new(service::chain_spec::bifrost_polkadot::development_config()?),
 		path => {
 			let path = std::path::PathBuf::from(path);
@@ -192,7 +192,7 @@ impl SubstrateCli for RelayChainCli {
 
 macro_rules! with_runtime_or_err {
 	($chain_spec:expr, { $( $code:tt )* }) => {
-		if $chain_spec.is_bifrost_kusama() || $chain_spec.is_dev() {
+		if $chain_spec.is_bifrost_kusama() {
 			#[cfg(any(feature = "with-bifrost-kusama-runtime",feature = "with-bifrost-runtime"))]
 			#[allow(unused_imports)]
 			use service::collator_kusama::{bifrost_kusama_runtime::{Block, RuntimeApi},BifrostExecutor as Executor,start_node,new_partial};

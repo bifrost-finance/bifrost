@@ -20,8 +20,8 @@ use bifrost_polkadot_runtime::{
 	constants::currency::DOLLARS, AccountId, AssetRegistryConfig, Balance, BalancesConfig,
 	BlockNumber, CollatorSelectionConfig, CouncilMembershipConfig, DynamicFeeConfig,
 	EVMChainIdConfig, EVMConfig, IndicesConfig, OracleMembershipConfig, ParachainInfoConfig,
-	PolkadotXcmConfig, RuntimeGenesisConfig, SS58Prefix, SalpConfig, SessionConfig, SystemConfig,
-	TechnicalMembershipConfig, TokensConfig, VestingConfig, WASM_BINARY,
+	PolkadotXcmConfig, PricesConfig, RuntimeGenesisConfig, SS58Prefix, SalpConfig, SessionConfig,
+	SystemConfig, TechnicalMembershipConfig, TokensConfig, VestingConfig, WASM_BINARY,
 };
 use bifrost_primitives::{CurrencyId, CurrencyId::*, TokenInfo, TokenSymbol, DOT_TOKEN_ID};
 use bifrost_runtime_common::AuraId;
@@ -161,8 +161,7 @@ pub fn bifrost_polkadot_genesis(
 					H160::from_str("d43593c715fdd31c61141abd04a99fd6822c8558")
 						.expect("internal H160 is valid; qed"),
 					fp_evm::GenesisAccount {
-						balance: U256::from_str("0xffffffffffffffffffffffffffffffff")
-							.expect("internal U256 is valid; qed"),
+						balance: U256::from(1_000_000_000_000_000_000_000_000_000_000u128),
 						code: Default::default(),
 						nonce: Default::default(),
 						storage: Default::default(),
@@ -196,6 +195,14 @@ pub fn bifrost_polkadot_genesis(
 		},
 		ethereum: Default::default(),
 		dynamic_fee: DynamicFeeConfig { min_gas_price: 560174200u64.into(), ..Default::default() },
+		prices: PricesConfig {
+			emergency_price: vec![
+				(Token2(13), 3000000000u128.into()),
+				(Native(TokenSymbol::BNC), 2000000u128.into()),
+			],
+			foreign_to_native_asset: Default::default(),
+			phantom: Default::default(),
+		},
 	}
 }
 
@@ -245,7 +252,7 @@ pub fn development_config() -> Result<ChainSpec, String> {
 		"Bifrost Polkadot Development",
 		"bifrost_polkadot_dev",
 		ChainType::Development,
-		move || development_config_genesis(PARA_ID.into()),
+		move || local_config_genesis(PARA_ID.into()),
 		vec![],
 		None,
 		Some(DEFAULT_PROTOCOL_ID),
