@@ -16,43 +16,33 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
+use std::{marker::PhantomData, path::PathBuf, sync::Arc, time::Duration};
+
+use crate::collator_polkadot::{FullBackend, FullClient};
 use bifrost_polkadot_runtime::opaque::Block;
 use cumulus_client_consensus_common::ParachainBlockImportMarker;
+use cumulus_primitives_core::BlockT;
 use fc_consensus::Error;
 pub use fc_consensus::FrontierBlockImport;
 pub use fc_db::kv::Backend as FrontierBackend;
 use fc_mapping_sync::{kv::MappingSyncWorker, SyncStrategy};
-use fc_rpc::{EthTask, OverrideHandle};
+use fc_rpc::EthTask;
 pub use fc_rpc_core::types::{FeeHistoryCache, FeeHistoryCacheLimit, FilterPool};
-use fc_storage::{
-	RuntimeApiStorageOverride, SchemaV1Override, SchemaV2Override, SchemaV3Override,
-	StorageOverride,
-};
+use fc_storage::StorageOverride;
 use fp_consensus::ensure_log;
 use fp_rpc::EthereumRuntimeRPCApi;
-use fp_storage::EthereumStorageSchema;
 use futures::{future, prelude::*};
-use sc_client_api::{AuxStore, Backend, BlockOf, BlockchainEvents, StateBackend, StorageProvider};
+use polkadot_service::HeaderT;
+use sc_client_api::{AuxStore, BlockOf, BlockchainEvents};
 use sc_consensus::{
 	BlockCheckParams, BlockImport as BlockImportT, BlockImportParams, ImportResult,
 };
 use sc_network_sync::SyncingService;
-use sc_service::{error::Error as ServiceError, Configuration, TaskManager};
-use sp_api::{BlockT, HeaderT, ProvideRuntimeApi};
+use sc_service::{Configuration, TaskManager};
+use sp_api::ProvideRuntimeApi;
 use sp_block_builder::BlockBuilder as BlockBuilderApi;
-use sp_blockchain::{Error as BlockchainError, HeaderBackend, HeaderMetadata};
+use sp_blockchain::HeaderBackend;
 use sp_consensus::Error as ConsensusError;
-use sp_core::H256;
-use sp_runtime::traits::BlakeTwo256;
-use std::{
-	collections::BTreeMap,
-	marker::PhantomData,
-	path::PathBuf,
-	sync::{Arc, Mutex},
-	time::Duration,
-};
-
-use crate::collator_polkadot::{FullBackend, FullClient};
 
 pub fn db_config_dir(config: &Configuration) -> PathBuf {
 	config.base_path.config_dir(config.chain_spec.id())
@@ -95,7 +85,7 @@ type BlockNumberOf<B> = <<B as BlockT>::Header as HeaderT>::Number;
 pub struct BlockImport<B: BlockT, I: BlockImportT<B>, C> {
 	inner: I,
 	client: Arc<C>,
-	backend: Arc<fc_db::kv::Backend<B>>,
+	backend: Arc<fc_db::kv::Backend<B, C>>,
 	evm_since: BlockNumberOf<B>,
 	_marker: PhantomData<B>,
 }
@@ -124,7 +114,7 @@ where
 	pub fn new(
 		inner: I,
 		client: Arc<C>,
-		backend: Arc<fc_db::kv::Backend<B>>,
+		backend: Arc<fc_db::kv::Backend<B, C>>,
 		evm_since: BlockNumberOf<B>,
 	) -> Self {
 		Self { inner, client, backend, evm_since, _marker: PhantomData }
@@ -168,9 +158,9 @@ pub fn spawn_frontier_tasks(
 	task_manager: &TaskManager,
 	client: Arc<FullClient>,
 	backend: Arc<FullBackend>,
-	frontier_backend: Arc<FrontierBackend<Block>>,
+	frontier_backend: Arc<FrontierBackend<Block, FullClient>>,
 	filter_pool: FilterPool,
-	overrides: Arc<OverrideHandle<Block>>,
+	storage_overrides: Arc<dyn StorageOverride<Block>>,
 	fee_history_cache: FeeHistoryCache,
 	fee_history_cache_limit: FeeHistoryCacheLimit,
 	sync: Arc<SyncingService<Block>>,
@@ -188,7 +178,7 @@ pub fn spawn_frontier_tasks(
 			Duration::new(6, 0),
 			client.clone(),
 			backend,
-			overrides.clone(),
+			storage_overrides.clone(),
 			frontier_backend,
 			3,
 			0,
@@ -212,37 +202,11 @@ pub fn spawn_frontier_tasks(
 	task_manager.spawn_essential_handle().spawn(
 		"frontier-fee-history",
 		None,
-		EthTask::fee_history_task(client, overrides, fee_history_cache, fee_history_cache_limit),
+		EthTask::fee_history_task(
+			client,
+			storage_overrides,
+			fee_history_cache,
+			fee_history_cache_limit,
+		),
 	);
-}
-
-pub fn overrides_handle<B: BlockT<Hash = H256>, C, BE>(client: Arc<C>) -> Arc<OverrideHandle<B>>
-where
-	C: ProvideRuntimeApi<B> + StorageProvider<B, BE> + AuxStore,
-	C: HeaderBackend<B> + HeaderMetadata<B, Error = BlockchainError>,
-	C: Send + Sync + 'static,
-	C::Api: sp_api::ApiExt<B>
-		+ fp_rpc::EthereumRuntimeRPCApi<B>
-		+ fp_rpc::ConvertTransactionRuntimeApi<B>,
-	BE: Backend<B> + 'static,
-	BE::State: StateBackend<BlakeTwo256>,
-{
-	let mut overrides_map = BTreeMap::new();
-	overrides_map.insert(
-		EthereumStorageSchema::V1,
-		Box::new(SchemaV1Override::new(client.clone())) as Box<dyn StorageOverride<_>>,
-	);
-	overrides_map.insert(
-		EthereumStorageSchema::V2,
-		Box::new(SchemaV2Override::new(client.clone())) as Box<dyn StorageOverride<_>>,
-	);
-	overrides_map.insert(
-		EthereumStorageSchema::V3,
-		Box::new(SchemaV3Override::new(client.clone())) as Box<dyn StorageOverride<_>>,
-	);
-
-	Arc::new(OverrideHandle {
-		schemas: overrides_map,
-		fallback: Box::new(RuntimeApiStorageOverride::new(client)),
-	})
 }

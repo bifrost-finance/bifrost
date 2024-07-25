@@ -15,8 +15,11 @@
 
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
+#![allow(ambiguous_glob_imports)]
+#![allow(ambiguous_glob_reexports)]
+#![allow(unused_imports)]
 
-use crate::{AccountVote, BalanceOf, Config, DerivativeIndex, PollIndex};
+use crate::{AccountVote, BalanceOf, Config, DerivativeIndex, PollClass, PollIndex};
 use parity_scale_codec::{Decode, Encode};
 use sp_runtime::{traits::StaticLookup, RuntimeDebug};
 use sp_std::prelude::*;
@@ -58,15 +61,15 @@ pub enum ConvictionVoting<T: Config> {
 	#[codec(index = 0)]
 	Vote(#[codec(compact)] PollIndex, AccountVote<BalanceOf<T>>),
 	#[codec(index = 3)]
-	Unlock(u16, <T::Lookup as StaticLookup>::Source),
+	Unlock(PollClass, <T::Lookup as StaticLookup>::Source),
 	#[codec(index = 4)]
-	RemoveVote(Option<u16>, PollIndex),
+	RemoveVote(Option<PollClass>, PollIndex),
 }
 
 pub trait ConvictionVotingCall<T: Config> {
 	fn vote(poll_index: PollIndex, vote: AccountVote<BalanceOf<T>>) -> Self;
 
-	fn remove_vote(class: Option<u16>, poll_index: PollIndex) -> Self;
+	fn remove_vote(class: Option<PollClass>, poll_index: PollIndex) -> Self;
 }
 
 impl<T: Config> ConvictionVotingCall<T> for RelayCall<T> {
@@ -74,7 +77,7 @@ impl<T: Config> ConvictionVotingCall<T> for RelayCall<T> {
 		Self::ConvictionVoting(ConvictionVoting::Vote(poll_index, vote))
 	}
 
-	fn remove_vote(class: Option<u16>, poll_index: PollIndex) -> Self {
+	fn remove_vote(class: Option<PollClass>, poll_index: PollIndex) -> Self {
 		Self::ConvictionVoting(ConvictionVoting::RemoveVote(class, poll_index))
 	}
 }

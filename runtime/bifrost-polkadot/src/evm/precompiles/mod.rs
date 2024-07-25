@@ -21,23 +21,20 @@ use core::marker::PhantomData;
 use crate::evm::precompiles::{
 	erc20_mapping::is_asset_address, multicurrency::MultiCurrencyPrecompile,
 };
+use ethabi::Token;
 use frame_support::dispatch::{GetDispatchInfo, PostDispatchInfo};
+use hex_literal::hex;
 use pallet_evm::{
-	ExitError, ExitRevert, ExitSucceed, IsPrecompileResult, Precompile, PrecompileFailure,
-	PrecompileHandle, PrecompileOutput, PrecompileResult, PrecompileSet,
+	ExitRevert, ExitSucceed, IsPrecompileResult, Precompile, PrecompileFailure, PrecompileHandle,
+	PrecompileOutput, PrecompileResult, PrecompileSet,
 };
 use pallet_evm_precompile_blake2::Blake2F;
 use pallet_evm_precompile_bn128::{Bn128Add, Bn128Mul, Bn128Pairing};
 use pallet_evm_precompile_modexp::Modexp;
 use pallet_evm_precompile_simple::{ECRecover, Identity, Ripemd160, Sha256};
 use parity_scale_codec::Decode;
-use sp_runtime::traits::Dispatchable;
-
-// use codec::alloc;
-use ethabi::Token;
-use hex_literal::hex;
-use parity_scale_codec::alloc;
 use primitive_types::{H160, U256};
+use sp_runtime::traits::Dispatchable;
 use sp_std::{borrow::ToOwned, vec::Vec};
 
 pub mod costs;
@@ -164,12 +161,6 @@ pub const fn addr(a: u64) -> H160 {
 	H160([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, b[0], b[1], b[2], b[3], b[4], b[5], b[6], b[7]])
 }
 
-#[must_use]
-pub fn error<T: Into<alloc::borrow::Cow<'static, str>>>(text: T) -> PrecompileFailure {
-	PrecompileFailure::Error { exit_status: ExitError::Other(text.into()) }
-}
-
-#[must_use]
 pub fn revert(output: impl AsRef<[u8]>) -> PrecompileFailure {
 	PrecompileFailure::Revert {
 		exit_status: ExitRevert::Reverted,
@@ -177,7 +168,6 @@ pub fn revert(output: impl AsRef<[u8]>) -> PrecompileFailure {
 	}
 }
 
-#[must_use]
 pub fn succeed(output: impl AsRef<[u8]>) -> PrecompileOutput {
 	PrecompileOutput { exit_status: ExitSucceed::Returned, output: output.as_ref().to_owned() }
 }
@@ -185,10 +175,6 @@ pub fn succeed(output: impl AsRef<[u8]>) -> PrecompileOutput {
 pub struct Output;
 
 impl Output {
-	pub fn encode_bool(b: bool) -> Vec<u8> {
-		ethabi::encode(&[Token::Bool(b)])
-	}
-
 	pub fn encode_uint<T>(b: T) -> Vec<u8>
 	where
 		U256: From<T>,
@@ -196,38 +182,8 @@ impl Output {
 		ethabi::encode(&[Token::Uint(U256::from(b))])
 	}
 
-	pub fn encode_uint_tuple<T>(b: Vec<T>) -> Vec<u8>
-	where
-		U256: From<T>,
-	{
-		ethabi::encode(&[Token::Tuple(b.into_iter().map(U256::from).map(Token::Uint).collect())])
-	}
-
-	pub fn encode_uint_array<T>(b: Vec<T>) -> Vec<u8>
-	where
-		U256: From<T>,
-	{
-		ethabi::encode(&[Token::Array(b.into_iter().map(U256::from).map(Token::Uint).collect())])
-	}
-
 	pub fn encode_bytes(b: &[u8]) -> Vec<u8> {
 		ethabi::encode(&[Token::Bytes(b.to_vec())])
-	}
-
-	pub fn encode_fixed_bytes(b: &[u8]) -> Vec<u8> {
-		ethabi::encode(&[Token::FixedBytes(b.to_vec())])
-	}
-
-	pub fn encode_address(b: H160) -> Vec<u8> {
-		ethabi::encode(&[Token::Address(b)])
-	}
-
-	pub fn encode_address_tuple(b: Vec<H160>) -> Vec<u8> {
-		ethabi::encode(&[Token::Tuple(b.into_iter().map(Token::Address).collect())])
-	}
-
-	pub fn encode_address_array(b: Vec<H160>) -> Vec<u8> {
-		ethabi::encode(&[Token::Array(b.into_iter().map(Token::Address).collect())])
 	}
 }
 

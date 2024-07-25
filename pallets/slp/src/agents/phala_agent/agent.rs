@@ -30,7 +30,6 @@ use crate::{
 };
 use bifrost_primitives::{TokenSymbol, VtokenMintingOperator, XcmOperationType};
 use core::marker::PhantomData;
-pub use cumulus_primitives_core::ParaId;
 use frame_support::{ensure, traits::Get};
 use frame_system::pallet_prelude::BlockNumberFor;
 use parity_scale_codec::Encode;
@@ -136,7 +135,7 @@ impl<T: Config>
 
 		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
 		// send it out.
-		let (query_id, timeout, _fee, xcm_message) =
+		let (query_id, timeout, fee, xcm_message) =
 			Pallet::<T>::construct_xcm_as_subaccount_with_query_id(
 				XcmOperationType::Bond,
 				calls,
@@ -144,6 +143,10 @@ impl<T: Config>
 				currency_id,
 				weight_and_fee,
 			)?;
+
+		// withdraw this xcm fee from treasury. If treasury doesn't have this money, stop the
+		// process.
+		Pallet::<T>::burn_fee_from_source_account(fee, currency_id)?;
 
 		// Calculate how many shares we can get by the amount at current price
 		let shares = if let Some(MultiLocation {
@@ -167,8 +170,9 @@ impl<T: Config>
 		)?;
 
 		// Send out the xcm message.
-		let dest = Pallet::<T>::get_para_multilocation_by_currency_id(currency_id)?;
-		send_xcm::<T::XcmRouter>(dest, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
+		let dest_location = Pallet::<T>::convert_currency_to_dest_location(currency_id)?;
+		xcm::v4::send_xcm::<T::XcmRouter>(dest_location, xcm_message)
+			.map_err(|_e| Error::<T>::XcmFailure)?;
 
 		Ok(query_id)
 	}
@@ -253,7 +257,7 @@ impl<T: Config>
 
 		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
 		// send it out.
-		let (query_id, timeout, _fee, xcm_message) =
+		let (query_id, timeout, fee, xcm_message) =
 			Pallet::<T>::construct_xcm_as_subaccount_with_query_id(
 				XcmOperationType::Unbond,
 				call,
@@ -261,6 +265,10 @@ impl<T: Config>
 				currency_id,
 				weight_and_fee,
 			)?;
+
+		// withdraw this xcm fee from treasury. If treasury doesn't have this money, stop the
+		// process.
+		Pallet::<T>::burn_fee_from_source_account(fee, currency_id)?;
 
 		// Insert a delegator ledger update record into DelegatorLedgerXcmUpdateQueue<T>.
 		Self::insert_delegator_ledger_update_entry(
@@ -273,8 +281,9 @@ impl<T: Config>
 		)?;
 
 		// Send out the xcm message.
-		let dest = Pallet::<T>::get_para_multilocation_by_currency_id(currency_id)?;
-		send_xcm::<T::XcmRouter>(dest, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
+		let dest_location = Pallet::<T>::convert_currency_to_dest_location(currency_id)?;
+		xcm::v4::send_xcm::<T::XcmRouter>(dest_location, xcm_message)
+			.map_err(|_e| Error::<T>::XcmFailure)?;
 
 		Ok(query_id)
 	}
@@ -487,7 +496,7 @@ impl<T: Config>
 
 		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
 		// send it out.
-		let (query_id, _timeout, _fee, xcm_message) =
+		let (query_id, _timeout, fee, xcm_message) =
 			Pallet::<T>::construct_xcm_as_subaccount_with_query_id(
 				XcmOperationType::Payout,
 				call,
@@ -496,9 +505,14 @@ impl<T: Config>
 				weight_and_fee,
 			)?;
 
+		// withdraw this xcm fee from treasury. If treasury doesn't have this money, stop the
+		// process.
+		Pallet::<T>::burn_fee_from_source_account(fee, currency_id)?;
+
 		// Send out the xcm message.
-		let dest = Pallet::<T>::get_para_multilocation_by_currency_id(currency_id)?;
-		send_xcm::<T::XcmRouter>(dest, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
+		let dest_location = Pallet::<T>::convert_currency_to_dest_location(currency_id)?;
+		xcm::v4::send_xcm::<T::XcmRouter>(dest_location, xcm_message)
+			.map_err(|_e| Error::<T>::XcmFailure)?;
 
 		Ok(query_id)
 	}
@@ -577,10 +591,14 @@ impl<T: Config>
 			T::ParachainId::get().into(),
 		)?;
 
-		let locat = Pallet::<T>::get_para_multilocation_by_currency_id(currency_id)?;
+		let dest_location = Pallet::<T>::convert_currency_to_dest_location(currency_id)?;
+		let dest_location =
+			xcm::v3::Location::try_from(dest_location).map_err(|_| Error::<T>::FailToConvert)?;
 		// Prepare parameter assets.
-		let asset =
-			MultiAsset { fun: Fungible(amount.unique_saturated_into()), id: Concrete(locat) };
+		let asset = MultiAsset {
+			fun: Fungible(amount.unique_saturated_into()),
+			id: Concrete(dest_location),
+		};
 
 		// Construct xcm message.
 		let call: PhalaCall<T> =
@@ -588,13 +606,17 @@ impl<T: Config>
 
 		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
 		// send it out.
-		Pallet::<T>::construct_xcm_and_send_as_subaccount_without_query_id(
+		let fee = Pallet::<T>::construct_xcm_and_send_as_subaccount_without_query_id(
 			XcmOperationType::TransferBack,
 			call.encode(),
 			from,
 			currency_id,
 			weight_and_fee,
 		)?;
+
+		// withdraw this xcm fee from treasury. If treasury doesn't have this money, stop the
+		// process.
+		Pallet::<T>::burn_fee_from_source_account(fee, currency_id)?;
 
 		Ok(())
 	}
@@ -618,6 +640,14 @@ impl<T: Config>
 		let from_account_id = Pallet::<T>::multilocation_to_account(from)?;
 		let (entrance_account, _) = T::VtokenMinting::get_entrance_and_exit_accounts();
 		ensure!(from_account_id == entrance_account, Error::<T>::InvalidAccount);
+
+		// transfer supplementary fee from treasury to the "from" account. Return the added up
+		// amount
+		let amount = Pallet::<T>::get_transfer_to_added_amount_and_supplement(
+			from_account_id,
+			amount,
+			currency_id,
+		)?;
 
 		Pallet::<T>::do_transfer_to(from, to, amount, currency_id)?;
 
@@ -653,7 +683,7 @@ impl<T: Config>
 
 		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
 		// send it out.
-		let (query_id, _timeout, _fee, xcm_message) =
+		let (query_id, _timeout, fee, xcm_message) =
 			Pallet::<T>::construct_xcm_as_subaccount_with_query_id(
 				XcmOperationType::ConvertAsset,
 				call.encode(),
@@ -662,9 +692,14 @@ impl<T: Config>
 				weight_and_fee,
 			)?;
 
+		// withdraw this xcm fee from treasury. If treasury doesn't have this money, stop the
+		// process.
+		Pallet::<T>::burn_fee_from_source_account(fee, currency_id)?;
+
 		// Send out the xcm message.
-		let dest = Pallet::<T>::get_para_multilocation_by_currency_id(currency_id)?;
-		send_xcm::<T::XcmRouter>(dest, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
+		let dest_location = Pallet::<T>::convert_currency_to_dest_location(currency_id)?;
+		xcm::v4::send_xcm::<T::XcmRouter>(dest_location, xcm_message)
+			.map_err(|_e| Error::<T>::XcmFailure)?;
 
 		Ok(query_id)
 	}
@@ -725,19 +760,6 @@ impl<T: Config>
 			Pallet::<T>::inner_calculate_vtoken_hosting_fee(amount, vtoken, currency_id)?;
 
 		Pallet::<T>::inner_charge_hosting_fee(charge_amount, to, vtoken)
-	}
-
-	/// Deposit some amount as fee to nominator accounts.
-	fn supplement_fee_reserve(
-		&self,
-		amount: BalanceOf<T>,
-		from: &MultiLocation,
-		to: &MultiLocation,
-		currency_id: CurrencyId,
-	) -> Result<(), Error<T>> {
-		Pallet::<T>::do_transfer_to(from, to, amount, currency_id)?;
-
-		Ok(())
 	}
 
 	fn check_delegator_ledger_query_response(
@@ -891,10 +913,7 @@ impl<T: Config> PhalaAgent<T> {
 		DelegatorLedgerXcmUpdateQueue::<T>::remove(query_id);
 
 		// Delete the query in pallet_xcm.
-		ensure!(
-			T::SubstrateResponseManager::remove_query_record(query_id),
-			Error::<T>::QueryResponseRemoveError
-		);
+		T::SubstrateResponseManager::remove_query_record(query_id);
 
 		Ok(())
 	}

@@ -47,7 +47,7 @@ impl<T: cumulus_pallet_parachain_system::Config> BlockNumberProvider
 	type BlockNumber = BlockNumber;
 
 	fn current_block_number() -> Self::BlockNumber {
-		cumulus_pallet_parachain_system::Pallet::<T>::validation_data()
+		cumulus_pallet_parachain_system::ValidationData::<T>::get()
 			.map(|d| d.relay_parent_number)
 			.unwrap_or_default()
 	}
@@ -131,7 +131,7 @@ impl<T: cumulus_pallet_parachain_system::Config> BlockNumberProvider
 	type BlockNumber = BlockNumber;
 
 	fn current_block_number() -> Self::BlockNumber {
-		cumulus_pallet_parachain_system::Pallet::<T>::validation_data()
+		cumulus_pallet_parachain_system::ValidationData::<T>::get()
 			.map(|d| d.relay_parent_number)
 			.unwrap_or_default()
 	}

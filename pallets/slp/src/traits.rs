@@ -193,15 +193,6 @@ pub trait StakingAgent<
 		currency_id: CurrencyId,
 	) -> DispatchResult;
 
-	/// Deposit some amount as fee to nominator accounts.
-	fn supplement_fee_reserve(
-		&self,
-		amount: Balance,
-		from: &MultiLocation,
-		to: &MultiLocation,
-		currency_id: CurrencyId,
-	) -> Result<(), Error>;
-
 	/// Remove an existing serving delegator for a particular currency.
 	fn remove_delegator(&self, who: &MultiLocation, currency_id: CurrencyId) -> DispatchResult;
 
@@ -235,7 +226,7 @@ pub trait QueryResponseManager<QueryId, AccountId, BlockNumber, RuntimeCall> {
 	// False is returned.
 	fn get_query_response_record(query_id: QueryId) -> bool;
 	fn create_query_record(
-		responder: &AccountId,
+		responder: AccountId,
 		call_back: Option<RuntimeCall>,
 		timeout: BlockNumber,
 	) -> u64;

@@ -29,7 +29,7 @@ use crate::{
 	Currencies,
 };
 use bifrost_asset_registry::AssetIdMaps;
-use bifrost_primitives::{AssetIds, Balance, CurrencyId, CurrencyIdMapping};
+use bifrost_primitives::{Balance, CurrencyId, CurrencyIdMapping};
 use frame_support::traits::OriginTrait;
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 use orml_traits::{MultiCurrency as MultiCurrencyT, MultiCurrency};

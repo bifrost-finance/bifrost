@@ -22,7 +22,7 @@ use scale_info::TypeInfo;
 use sp_core::H160;
 use sp_runtime::RuntimeDebug;
 use sp_std::{boxed::Box, vec::Vec};
-use xcm::{opaque::v3::WeightLimit, VersionedMultiAssets, VersionedMultiLocation};
+use xcm::{opaque::v3::WeightLimit, VersionedAssets, VersionedLocation};
 
 #[derive(Encode, Decode, RuntimeDebug, Clone)]
 pub enum AstarCall<T: Config> {
@@ -66,9 +66,9 @@ pub enum AstarDappsStakingCall<T: Config> {
 pub enum XcmCall {
 	#[codec(index = 8)]
 	LimitedReserveTransferAssets(
-		Box<VersionedMultiLocation>,
-		Box<VersionedMultiLocation>,
-		Box<VersionedMultiAssets>,
+		Box<VersionedLocation>,
+		Box<VersionedLocation>,
+		Box<VersionedAssets>,
 		u32,
 		WeightLimit,
 	),

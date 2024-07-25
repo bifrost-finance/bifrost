@@ -829,8 +829,10 @@ impl<T: Config> Pallet<T> {
 	) -> Option<T::AtLeast64BitUnsigned> {
 		let current_block = frame_system::Pallet::<T>::block_number();
 		if current_block < t1 {
-			let time_diff: T::AtLeast64BitUnsigned = current_block.checked_sub(&t0)?.into();
-			let time_diff_div: T::AtLeast64BitUnsigned = t1.checked_sub(&t0)?.into();
+			let time_diff: u128 = current_block.checked_sub(&t0)?.saturated_into();
+			let time_diff: T::AtLeast64BitUnsigned = time_diff.into();
+			let time_diff_div: u128 = t1.checked_sub(&t0)?.saturated_into();
+			let time_diff_div: T::AtLeast64BitUnsigned = time_diff_div.into();
 			if a1 > a0 {
 				let diff = a1.checked_sub(&a0)?;
 				let amount = u128::try_from(

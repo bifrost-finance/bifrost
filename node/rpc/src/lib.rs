@@ -26,7 +26,7 @@
 //!
 //! The RPCs available in this crate however can make some assumptions
 //! about how the runtime is constructed and what FRAME pallets
-//! are part of it. Therefore all node-runtime-specific RPCs can
+//! are part of it. Therefore, all node-runtime-specific RPCs can
 //! be placed here or imported from corresponding FRAME RPC definitions.
 
 #![warn(missing_docs)]
@@ -45,26 +45,20 @@ use bifrost_stable_pool_rpc::{StablePoolRpc, StablePoolRpcApiServer};
 use bifrost_stable_pool_rpc_runtime_api::StablePoolRuntimeApi;
 use bifrost_ve_minting_rpc::{VeMintingRpc, VeMintingRpcApiServer};
 use bifrost_ve_minting_rpc_runtime_api::VeMintingRuntimeApi;
+use bifrost_vtoken_minting_rpc::{VtokenMintingRpc, VtokenMintingRpcApiServer};
+use bifrost_vtoken_minting_rpc_runtime_api::VtokenMintingRuntimeApi;
 use futures::channel::mpsc;
 use lend_market_rpc::{LendMarket, LendMarketApiServer};
 use lend_market_rpc_runtime_api::LendMarketApi;
 use pallet_transaction_payment_rpc::{TransactionPayment, TransactionPaymentApiServer};
-use sc_client_api::{
-	backend::{Backend, StorageProvider},
-	client::BlockchainEvents,
-	AuxStore, UsageProvider,
-};
 use sc_consensus_manual_seal::rpc::{EngineCommand, ManualSeal, ManualSealApiServer};
-use sc_rpc::SubscriptionTaskExecutor;
 use sc_rpc_api::DenyUnsafe;
-use sc_transaction_pool::ChainApi;
 use sc_transaction_pool_api::TransactionPool;
 use sp_api::{CallApiAt, ProvideRuntimeApi};
 use sp_block_builder::BlockBuilder;
 use sp_blockchain::{Error as BlockChainError, HeaderBackend, HeaderMetadata};
 use sp_consensus_aura::sr25519::AuthorityId as AuraId;
-use sp_inherents::CreateInherentDataProviders;
-use sp_runtime::traits::{Block as BlockT, BlockIdTo};
+use sp_runtime::traits::BlockIdTo;
 use substrate_frame_rpc_system::{System, SystemApiServer};
 use zenlink_protocol::AssetId;
 use zenlink_protocol_rpc::{ZenlinkProtocol, ZenlinkProtocolApiServer};
@@ -72,7 +66,7 @@ use zenlink_protocol_runtime_api::ZenlinkProtocolApi as ZenlinkProtocolRuntimeAp
 use zenlink_stable_amm_rpc::{StableAmm, StableAmmApiServer};
 
 mod eth;
-pub use self::eth::{create_eth, overrides_handle, EthDeps};
+pub use self::eth::{create_eth, EthDeps};
 
 /// Full client dependencies.
 pub struct FullDeps<C, P> {
@@ -82,18 +76,6 @@ pub struct FullDeps<C, P> {
 	pub pool: Arc<P>,
 	/// Whether to deny unsafe calls
 	pub deny_unsafe: DenyUnsafe,
-}
-
-pub struct DefaultEthConfig<C, BE>(std::marker::PhantomData<(C, BE)>);
-
-impl<C, BE> fc_rpc::EthConfig<Block, C> for DefaultEthConfig<C, BE>
-where
-	C: StorageProvider<Block, BE> + Sync + Send + 'static,
-	BE: Backend<Block> + 'static,
-{
-	type EstimateGasAdapter = ();
-	type RuntimeStorageOverride =
-		fc_rpc::frontier_backend_client::SystemAccountId20StorageOverride<Block, C, BE>;
 }
 
 /// Full client dependencies.
@@ -129,6 +111,7 @@ where
 	C::Api: SalpRuntimeApi<Block, ParaId, AccountId>,
 	C::Api: StablePoolRuntimeApi<Block>,
 	C::Api: LendMarketApi<Block, AccountId, Balance>,
+	C::Api: VtokenMintingRuntimeApi<Block, CurrencyId>,
 	C::Api: ZenlinkProtocolRuntimeApi<Block, AccountId, AssetId>,
 	C::Api:
 		zenlink_stable_amm_runtime_api::StableAmmApi<Block, CurrencyId, Balance, AccountId, PoolId>,
@@ -148,6 +131,7 @@ where
 	module.merge(StableAmm::new(client.clone()).into_rpc())?;
 	module.merge(StablePoolRpc::new(client.clone()).into_rpc())?;
 	module.merge(LendMarket::new(client.clone()).into_rpc())?;
+	module.merge(VtokenMintingRpc::new(client).into_rpc())?;
 
 	Ok(module)
 }
@@ -173,6 +157,7 @@ where
 	C::Api: SalpRuntimeApi<Block, ParaId, AccountId>,
 	C::Api: VeMintingRuntimeApi<Block, AccountId>,
 	C::Api: LendMarketApi<Block, AccountId, Balance>,
+	C::Api: VtokenMintingRuntimeApi<Block, CurrencyId>,
 	C::Api: ZenlinkProtocolRuntimeApi<Block, AccountId, AssetId>,
 	C::Api: StablePoolRuntimeApi<Block>,
 	C::Api: BlockBuilder<Block>,
@@ -191,7 +176,8 @@ where
 	module.merge(VeMintingRpc::new(client.clone()).into_rpc())?;
 	module.merge(ZenlinkProtocol::new(client.clone()).into_rpc())?;
 	module.merge(StablePoolRpc::new(client.clone()).into_rpc())?;
-	module.merge(LendMarket::new(client).into_rpc())?;
+	module.merge(LendMarket::new(client.clone()).into_rpc())?;
+	module.merge(VtokenMintingRpc::new(client).into_rpc())?;
 
 	if let Some(command_sink) = command_sink {
 		module.merge(

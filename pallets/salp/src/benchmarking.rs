@@ -26,7 +26,7 @@ use frame_benchmarking::v2::*;
 use frame_support::assert_ok;
 use frame_system::{pallet_prelude::BlockNumberFor, RawOrigin};
 use sp_runtime::{
-	traits::{AccountIdConversion, Bounded, UniqueSaturatedFrom},
+	traits::{AccountIdConversion, Bounded, StaticLookup, UniqueSaturatedFrom},
 	SaturatedConversion,
 };
 use sp_std::prelude::*;
@@ -81,7 +81,6 @@ where T: Config + bifrost_stable_pool::Config + bifrost_stable_asset::Config + o
 )]
 mod benchmarks {
 	use super::*;
-	use frame_benchmarking::impl_benchmark_test_suite;
 
 	#[benchmark]
 	fn contribute() {
@@ -369,10 +368,13 @@ mod benchmarks {
 		let relay_vstoken_id =
 			<T as Config>::CurrencyIdConversion::convert_to_vstoken(relay_currency_id).unwrap();
 
+		let caller_lookup: <T::Lookup as StaticLookup>::Source =
+			T::Lookup::unlookup(caller.clone());
 		assert_ok!(zenlink_protocol::Pallet::<T>::create_pair(
 			RawOrigin::Root.into(),
 			zenlink_protocol::AssetId { chain_id: 2001, asset_type: 2, asset_index: 516 },
 			zenlink_protocol::AssetId { chain_id: 2001, asset_type: 2, asset_index: 1028 },
+			caller_lookup
 		));
 
 		let buybck_caller = T::BuybackPalletId::get().into_account_truncating();
@@ -470,7 +472,7 @@ mod benchmarks {
 			None
 		));
 		#[extrinsic_call]
-		_(RawOrigin::Root, 0, KSM, 1_000_000_000u32.into())
+		_(RawOrigin::Signed(caller), 0, KSM, 1_000_000_000u32.into())
 	}
 
 	#[benchmark]

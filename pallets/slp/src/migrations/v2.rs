@@ -32,15 +32,15 @@ impl<T: Config> OnRuntimeUpgrade for SlpMigration<T> {
 			// Transform storage values
 			// We transform the storage values from the old into the new format.
 			log::info!(target: LOG_TARGET, "Start to migrate Validators storage...");
-			Validators::<T>::translate(|k: CurrencyId, value: Vec<MultiLocation>| {
+			Validators::<T>::translate(|k: CurrencyId, value: Vec<Location>| {
 				log::info!(target: LOG_TARGET, "Migrated to boundedvec for {:?}...", k);
 
-				let target_bounded_vec: BoundedVec<MultiLocation, T::MaxLengthLimit>;
+				let target_bounded_vec: BoundedVec<Location, T::MaxLengthLimit>;
 
 				if value.len() != 0 {
 					target_bounded_vec = BoundedVec::try_from(value).unwrap();
 				} else {
-					target_bounded_vec = BoundedVec::<MultiLocation, T::MaxLengthLimit>::default();
+					target_bounded_vec = BoundedVec::<Location, T::MaxLengthLimit>::default();
 				}
 
 				Some(target_bounded_vec)
@@ -48,7 +48,7 @@ impl<T: Config> OnRuntimeUpgrade for SlpMigration<T> {
 
 			log::info!(target: LOG_TARGET, "Start to migrate ValidatorsByDelegator storage...");
 			//migrate the value type of ValidatorsByDelegator
-			ValidatorsByDelegator::<T>::translate(|key1, key2, value: Vec<MultiLocation>| {
+			ValidatorsByDelegator::<T>::translate(|key1, key2, value: Vec<Location>| {
 				log::info!(
 					target: LOG_TARGET,
 					"Migrated to boundedvec for {:?} - {:?}...",
@@ -56,12 +56,12 @@ impl<T: Config> OnRuntimeUpgrade for SlpMigration<T> {
 					key2
 				);
 
-				let target_bounded_vec: BoundedVec<MultiLocation, T::MaxLengthLimit>;
+				let target_bounded_vec: BoundedVec<Location, T::MaxLengthLimit>;
 
 				if value.len() != 0 {
 					target_bounded_vec = BoundedVec::try_from(value).unwrap();
 				} else {
-					target_bounded_vec = BoundedVec::<MultiLocation, T::MaxLengthLimit>::default();
+					target_bounded_vec = BoundedVec::<Location, T::MaxLengthLimit>::default();
 				}
 
 				Some(target_bounded_vec)
@@ -70,11 +70,11 @@ impl<T: Config> OnRuntimeUpgrade for SlpMigration<T> {
 			log::info!(target: LOG_TARGET, "Start to migrate ValidatorBoostList storage...");
 			//migrate the value type of ValidatorBoostList
 			ValidatorBoostList::<T>::translate(
-				|k: CurrencyId, value: Vec<(MultiLocation, BlockNumberFor<T>)>| {
+				|k: CurrencyId, value: Vec<(Location, BlockNumberFor<T>)>| {
 					log::info!(target: LOG_TARGET, "Migrated to boundedvec for {:?}...", k);
 
 					let target_bounded_vec: BoundedVec<
-						(MultiLocation, BlockNumberFor<T>),
+						(Location, BlockNumberFor<T>),
 						T::MaxLengthLimit,
 					>;
 
@@ -82,7 +82,7 @@ impl<T: Config> OnRuntimeUpgrade for SlpMigration<T> {
 						target_bounded_vec = BoundedVec::try_from(value).unwrap();
 					} else {
 						target_bounded_vec = BoundedVec::<
-							(MultiLocation, BlockNumberFor<T>),
+							(Location, BlockNumberFor<T>),
 							T::MaxLengthLimit,
 						>::default();
 					}

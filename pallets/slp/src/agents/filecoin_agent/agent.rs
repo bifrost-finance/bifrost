@@ -20,12 +20,11 @@ use crate::{
 	primitives::{FilecoinLedger, Ledger},
 	traits::StakingAgent,
 	AccountIdOf, BalanceOf, BoundedVec, Config, DelegatorLatestTuneRecord, DelegatorLedgers,
-	LedgerUpdateEntry, MinimumsAndMaximums, MultiLocation, Pallet, TimeUnit, Validators,
-	ValidatorsByDelegator, ValidatorsByDelegatorUpdateEntry,
+	LedgerUpdateEntry, MinimumsAndMaximums, Pallet, TimeUnit, Validators, ValidatorsByDelegator,
+	ValidatorsByDelegatorUpdateEntry,
 };
 use bifrost_primitives::{CurrencyId, VtokenMintingOperator};
 use core::marker::PhantomData;
-pub use cumulus_primitives_core::ParaId;
 use frame_support::ensure;
 use orml_traits::MultiCurrency;
 use sp_core::Get;
@@ -497,17 +496,6 @@ impl<T: Config>
 		currency_id: CurrencyId,
 	) -> DispatchResult {
 		Pallet::<T>::inner_charge_hosting_fee(amount, to, currency_id)
-	}
-
-	/// Deposit some amount as fee to nominator accounts.
-	fn supplement_fee_reserve(
-		&self,
-		_amount: BalanceOf<T>,
-		_from: &MultiLocation,
-		_to: &MultiLocation,
-		_currency_id: CurrencyId,
-	) -> Result<(), Error<T>> {
-		Err(Error::<T>::Unsupported)
 	}
 
 	fn check_delegator_ledger_query_response(

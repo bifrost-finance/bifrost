@@ -52,8 +52,8 @@ fn init_vote<T: Config>(vtoken: CurrencyIdOf<T>) -> Result<(), BenchmarkError> {
 		Some((Weight::from_parts(4000000000, 100000), 4000000000u32.into())),
 	)?;
 	T::DerivativeAccount::init_minimums_and_maximums(token);
-	T::DerivativeAccount::add_delegator(token, derivative_index, Parent.into());
-	T::DerivativeAccount::new_delegator_ledger(token, Parent.into());
+	T::DerivativeAccount::add_delegator(token, derivative_index, xcm::v3::Parent.into());
+	T::DerivativeAccount::new_delegator_ledger(token, xcm::v3::Parent.into());
 	Pallet::<T>::set_undeciding_timeout(RawOrigin::Root.into(), vtoken, Zero::zero())?;
 	Pallet::<T>::add_delegator(RawOrigin::Root.into(), vtoken, derivative_index)?;
 	Pallet::<T>::set_vote_cap_ratio(RawOrigin::Root.into(), vtoken, Perbill::from_percent(10))?;
@@ -180,6 +180,7 @@ mod benchmarks {
 		whitelist_account!(caller);
 		let origin = RawOrigin::Signed(caller);
 		let vtoken = VKSM;
+		let class = 0u16;
 		let poll_index = 0u32;
 		let vote = account_vote::<T>(100u32.into());
 		let derivative_index = 0u16;
@@ -208,7 +209,7 @@ mod benchmarks {
 		)?;
 
 		#[extrinsic_call]
-		_(origin, vtoken, poll_index, derivative_index);
+		_(origin, vtoken, class, poll_index, derivative_index);
 
 		Ok(())
 	}
@@ -250,7 +251,7 @@ mod benchmarks {
 		T::DerivativeAccount::add_delegator(
 			CurrencyId::to_token(&vtoken).unwrap(),
 			derivative_index,
-			Parent.into(),
+			xcm::v3::Parent.into(),
 		);
 
 		#[extrinsic_call]

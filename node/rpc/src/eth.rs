@@ -16,26 +16,25 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-use std::{collections::BTreeMap, sync::Arc};
+use std::sync::Arc;
 
 use jsonrpsee::RpcModule;
 // Substrate
-use bifrost_polkadot_runtime::opaque::{Block, Hash};
+use bifrost_polkadot_runtime::opaque::Block;
 use cumulus_primitives_core::PersistedValidationData;
 use cumulus_primitives_parachain_inherent::ParachainInherentData;
 use cumulus_test_relay_sproof_builder::RelayStateSproofBuilder;
 use fc_db::kv::Backend as FrontierBackend;
-pub use fc_rpc::{EthBlockDataCacheTask, EthConfig, OverrideHandle, StorageOverride};
-use fc_rpc_core::types::CallRequest;
+pub use fc_rpc::{EthBlockDataCacheTask, StorageOverride};
+use fc_rpc_core::types::TransactionRequest;
 pub use fc_rpc_core::types::{FeeHistoryCache, FeeHistoryCacheLimit, FilterPool};
-pub use fc_storage::overrides_handle;
 use fp_rpc::{ConvertTransaction, ConvertTransactionRuntimeApi, EthereumRuntimeRPCApi};
 use sc_client_api::{
 	backend::{Backend, StorageProvider},
 	client::BlockchainEvents,
-	AuxStore, StateBackend, UsageProvider,
+	StateBackend,
 };
-use sc_network::NetworkService;
+use sc_network::service::traits::NetworkService;
 use sc_network_sync::SyncingService;
 use sc_rpc::SubscriptionTaskExecutor;
 use sc_transaction_pool::{ChainApi, Pool};
@@ -48,7 +47,7 @@ use sp_runtime::traits::{BlakeTwo256, Block as BlockT};
 pub struct BifrostEGA;
 
 impl fc_rpc::EstimateGasAdapter for BifrostEGA {
-	fn adapt_request(mut request: CallRequest) -> CallRequest {
+	fn adapt_request(mut request: TransactionRequest) -> TransactionRequest {
 		// Redirect any call to batch precompile:
 		// force usage of batchAll method for estimation
 		use sp_core::H160;
@@ -56,7 +55,7 @@ impl fc_rpc::EstimateGasAdapter for BifrostEGA {
 			H160(hex_literal::hex!("0000000000000000000000000000000000000808"));
 		const BATCH_PRECOMPILE_BATCH_ALL_SELECTOR: [u8; 4] = hex_literal::hex!("96e292b8");
 		if request.to == Some(BATCH_PRECOMPILE_ADDRESS) {
-			if let Some(ref mut data) = request.data {
+			if let Some(ref mut data) = request.data.data {
 				if data.0.len() >= 4 {
 					data.0[..4].copy_from_slice(&BATCH_PRECOMPILE_BATCH_ALL_SELECTOR);
 				}
@@ -93,13 +92,13 @@ pub struct EthDeps<C, P, A: ChainApi, CT> {
 	/// Whether to enable dev signer
 	pub enable_dev_signer: bool,
 	/// Network service
-	pub network: Arc<NetworkService<Block, Hash>>,
+	pub network: Arc<dyn NetworkService>,
 	/// Chain syncing service
 	pub sync_service: Arc<SyncingService<Block>>,
 	/// Frontier Backend.
-	pub frontier_backend: Arc<FrontierBackend<Block>>,
+	pub frontier_backend: Arc<FrontierBackend<Block, C>>,
 	/// Ethereum data access overrides.
-	pub overrides: Arc<OverrideHandle<Block>>,
+	pub storage_override: Arc<dyn StorageOverride<Block>>,
 	/// Cache for Ethereum block data.
 	pub block_data_cache: Arc<EthBlockDataCacheTask<Block>>,
 	/// EthFilterApi pool.
@@ -157,7 +156,7 @@ where
 		network,
 		sync_service,
 		frontier_backend,
-		overrides,
+		storage_override,
 		block_data_cache,
 		filter_pool,
 		max_past_logs,
@@ -203,7 +202,7 @@ where
 			converter,
 			sync_service.clone(),
 			signers,
-			overrides.clone(),
+			storage_override.clone(),
 			frontier_backend.clone(),
 			is_authority,
 			block_data_cache.clone(),
@@ -237,7 +236,7 @@ where
 			client.clone(),
 			sync_service,
 			subscription_task_executor,
-			overrides.clone(),
+			storage_override.clone(),
 			pubsub_notification_sinks,
 		)
 		.into_rpc(),
@@ -255,7 +254,9 @@ where
 
 	io.merge(Web3::new(client.clone()).into_rpc())?;
 
-	io.merge(Debug::new(client.clone(), frontier_backend, overrides, block_data_cache).into_rpc())?;
+	io.merge(
+		Debug::new(client.clone(), frontier_backend, storage_override, block_data_cache).into_rpc(),
+	)?;
 
 	io.merge(TxPool::new(client, graph).into_rpc())?;
 

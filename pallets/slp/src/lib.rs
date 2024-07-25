@@ -31,16 +31,20 @@ pub use crate::{
 	Junction::AccountId32,
 	Junctions::X1,
 };
+use bifrost_asset_registry::AssetMetadata;
 use bifrost_parachain_staking::ParachainStakingInterface;
 use bifrost_primitives::{
 	currency::{BNC, KSM, MANTA, MOVR, PHA},
 	traits::XcmDestWeightAndFeeHandler,
-	CurrencyId, CurrencyIdExt, DerivativeAccountHandler, DerivativeIndex, SlpHostingFeeProvider,
-	SlpOperator, TimeUnit, VtokenMintingOperator, XcmOperationType, ASTR, DOT, FIL, GLMR,
+	CurrencyId, CurrencyIdMapping, DerivativeAccountHandler, DerivativeIndex,
+	SlpHostingFeeProvider, SlpOperator, TimeUnit, VtokenMintingOperator, XcmOperationType, ASTR,
+	DOT, FIL, GLMR,
 };
+use bifrost_stable_pool::traits::StablePoolHandler;
 use cumulus_primitives_core::{relay_chain::HashT, ParaId};
 use frame_support::{pallet_prelude::*, traits::Contains, weights::Weight};
 use frame_system::{
+	ensure_signed,
 	pallet_prelude::{BlockNumberFor, OriginFor},
 	RawOrigin,
 };
@@ -49,13 +53,10 @@ pub use primitives::Ledger;
 use sp_arithmetic::{per_things::Permill, traits::Zero};
 use sp_core::{bounded::BoundedVec, H160};
 use sp_io::hashing::blake2_256;
-use sp_runtime::traits::{CheckedAdd, CheckedSub, Convert, TrailingZeroInput};
+use sp_runtime::traits::{CheckedAdd, CheckedSub, Convert, TrailingZeroInput, UniqueSaturatedFrom};
 use sp_std::{boxed::Box, vec, vec::Vec};
 pub use weights::WeightInfo;
-use xcm::{
-	prelude::*,
-	v3::{Junction, Junctions, MultiLocation, Xcm},
-};
+use xcm::v3::{Junction, Junctions, MultiLocation};
 
 mod agents;
 pub mod migrations;
@@ -87,12 +88,12 @@ pub type CurrencyIdOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<
 	<T as frame_system::Config>::AccountId,
 >>::CurrencyId;
 const SIX_MONTHS: u32 = 5 * 60 * 24 * 180;
+const ITERATE_LENGTH: usize = 100;
 
 #[frame_support::pallet]
 pub mod pallet {
 	use super::*;
 	use crate::agents::{AstarAgent, FilecoinAgent, ParachainStakingAgent, PhalaAgent};
-	use bifrost_primitives::{RedeemType, SlpxOperator};
 	use frame_support::dispatch::GetDispatchInfo;
 	use orml_traits::XcmTransfer;
 	use pallet_xcm::ensure_response;
@@ -122,8 +123,6 @@ pub mod pallet {
 			TimeUnit,
 		>;
 
-		type BifrostSlpx: SlpxOperator<BalanceOf<Self>>;
-
 		/// xtokens xcm transfer interface
 		type XcmTransfer: XcmTransfer<AccountIdOf<Self>, BalanceOf<Self>, CurrencyIdOf<Self>>;
 
@@ -137,14 +136,10 @@ pub mod pallet {
 		/// Substrate response manager.
 		type SubstrateResponseManager: QueryResponseManager<
 			QueryId,
-			MultiLocation,
+			xcm::v4::Location,
 			BlockNumberFor<Self>,
 			<Self as pallet::Config>::RuntimeCall,
 		>;
-
-		/// Handler to notify the runtime when refund.
-		/// If you don't need it, you can specify the type `()`.
-		type OnRefund: OnRefund<AccountIdOf<Self>, CurrencyId, BalanceOf<Self>>;
 
 		type XcmWeightAndFeeHandler: XcmDestWeightAndFeeHandler<CurrencyId, BalanceOf<Self>>;
 
@@ -164,6 +159,22 @@ pub mod pallet {
 			BalanceOf<Self>,
 			AccountIdOf<Self>,
 		>;
+
+		type StablePoolHandler: StablePoolHandler<
+			Balance = BalanceOf<Self>,
+			AccountId = AccountIdOf<Self>,
+			CurrencyId = CurrencyId,
+		>;
+
+		// asset registry to get asset metadata
+		type AssetIdMaps: CurrencyIdMapping<
+			CurrencyId,
+			MultiLocation,
+			AssetMetadata<BalanceOf<Self>>,
+		>;
+
+		#[pallet::constant]
+		type TreasuryAccount: Get<Self::AccountId>;
 	}
 
 	#[pallet::error]
@@ -246,6 +257,11 @@ pub mod pallet {
 		ExceedMaxLengthLimit,
 		/// Transfer to failed
 		TransferToError,
+		StablePoolNotFound,
+		StablePoolTokenIndexNotFound,
+		ExceedLimit,
+		InvalidPageNumber,
+		NoMoreValidatorBoostListForCurrency,
 	}
 
 	#[pallet::event]
@@ -499,6 +515,18 @@ pub mod pallet {
 		RemovedFromBoostList {
 			currency_id: CurrencyId,
 			who: MultiLocation,
+		},
+		OutdatedValidatorBoostListCleaned {
+			currency_id: CurrencyId,
+			page: u8,
+			// already removed num
+			remove_num: u32,
+			// still to iterate num
+			num_left: u32,
+		},
+		BurnFeeFailed {
+			currency_id: CurrencyId,
+			amount: BalanceOf<T>,
 		},
 	}
 
@@ -1208,299 +1236,21 @@ pub mod pallet {
 		#[pallet::call_index(18)]
 		#[pallet::weight(<T as Config>::WeightInfo::refund_currency_due_unbond())]
 		pub fn refund_currency_due_unbond(
-			origin: OriginFor<T>,
-			currency_id: CurrencyId,
+			_origin: OriginFor<T>,
+			_currency_id: CurrencyId,
 		) -> DispatchResultWithPostInfo {
-			// Ensure origin
-			Self::ensure_authorized(origin, currency_id)?;
-
-			// Get entrance_account and exit_account, as well as their currency balances.
-			let (entrance_account, exit_account) =
-				T::VtokenMinting::get_entrance_and_exit_accounts();
-			let mut exit_account_balance =
-				T::MultiCurrency::free_balance(currency_id, &exit_account);
-
-			if exit_account_balance.is_zero() {
-				return Ok(().into());
-			}
-
-			// Get the currency due unlocking records
-			let time_unit = T::VtokenMinting::get_ongoing_time_unit(currency_id)
-				.ok_or(Error::<T>::TimeUnitNotExist)?;
-			let rs = T::VtokenMinting::get_unlock_records(currency_id, time_unit.clone());
-
-			let mut extra_weight = 0 as u64;
-
-			// Refund due unlocking records one by one.
-			if let Some((_locked_amount, idx_vec)) = rs {
-				let mut counter = 0;
-
-				for idx in idx_vec.iter() {
-					if counter >= T::MaxRefundPerBlock::get() {
-						break;
-					}
-					// get idx record amount
-					let idx_record_amount_op =
-						T::VtokenMinting::get_token_unlock_ledger(currency_id, *idx);
-
-					if let Some((user_account, idx_record_amount, _unlock_era, redeem_type)) =
-						idx_record_amount_op
-					{
-						let mut deduct_amount = idx_record_amount;
-						if exit_account_balance < idx_record_amount {
-							match redeem_type {
-								RedeemType::Native => {},
-								RedeemType::Astar(_) |
-								RedeemType::Moonbeam(_) |
-								RedeemType::Hydradx(_) |
-								RedeemType::Manta(_) |
-								RedeemType::Interlay(_) => break,
-							};
-							deduct_amount = exit_account_balance;
-						};
-						match redeem_type {
-							RedeemType::Native => {
-								// Transfer some amount from the exit_account to the user's account
-								T::MultiCurrency::transfer(
-									currency_id,
-									&exit_account,
-									&user_account,
-									deduct_amount,
-								)?;
-							},
-							RedeemType::Astar(receiver) => {
-								let dest = MultiLocation {
-									parents: 1,
-									interior: X2(
-										Parachain(T::VtokenMinting::get_astar_parachain_id()),
-										AccountId32 {
-											network: None,
-											id: receiver.encode().try_into().unwrap(),
-										},
-									),
-								};
-								T::XcmTransfer::transfer(
-									user_account.clone(),
-									currency_id,
-									deduct_amount,
-									dest,
-									Unlimited,
-								)?;
-							},
-							RedeemType::Hydradx(receiver) => {
-								let dest = MultiLocation {
-									parents: 1,
-									interior: X2(
-										Parachain(T::VtokenMinting::get_hydradx_parachain_id()),
-										AccountId32 {
-											network: None,
-											id: receiver.encode().try_into().unwrap(),
-										},
-									),
-								};
-								T::XcmTransfer::transfer(
-									user_account.clone(),
-									currency_id,
-									deduct_amount,
-									dest,
-									Unlimited,
-								)?;
-							},
-							RedeemType::Interlay(receiver) => {
-								let dest = MultiLocation {
-									parents: 1,
-									interior: X2(
-										Parachain(T::VtokenMinting::get_interlay_parachain_id()),
-										AccountId32 {
-											network: None,
-											id: receiver.encode().try_into().unwrap(),
-										},
-									),
-								};
-								T::XcmTransfer::transfer(
-									user_account.clone(),
-									currency_id,
-									deduct_amount,
-									dest,
-									Unlimited,
-								)?;
-							},
-							RedeemType::Manta(receiver) => {
-								let dest = MultiLocation {
-									parents: 1,
-									interior: X2(
-										Parachain(T::VtokenMinting::get_manta_parachain_id()),
-										AccountId32 {
-											network: None,
-											id: receiver.encode().try_into().unwrap(),
-										},
-									),
-								};
-								T::XcmTransfer::transfer(
-									user_account.clone(),
-									currency_id,
-									deduct_amount,
-									dest,
-									Unlimited,
-								)?;
-							},
-							RedeemType::Moonbeam(receiver) => {
-								let dest = MultiLocation {
-									parents: 1,
-									interior: X2(
-										Parachain(T::VtokenMinting::get_moonbeam_parachain_id()),
-										AccountKey20 {
-											network: None,
-											key: receiver.to_fixed_bytes(),
-										},
-									),
-								};
-								if currency_id == FIL {
-									let assets = vec![
-										(currency_id, deduct_amount),
-										(BNC, T::BifrostSlpx::get_moonbeam_transfer_to_fee()),
-									];
-
-									T::XcmTransfer::transfer_multicurrencies(
-										user_account.clone(),
-										assets,
-										1,
-										dest,
-										Unlimited,
-									)?;
-								} else {
-									T::XcmTransfer::transfer(
-										user_account.clone(),
-										currency_id,
-										deduct_amount,
-										dest,
-										Unlimited,
-									)?;
-								}
-							},
-						};
-						// Delete the corresponding unlocking record storage.
-						T::VtokenMinting::deduct_unlock_amount(currency_id, *idx, deduct_amount)?;
-
-						extra_weight =
-							T::OnRefund::on_refund(currency_id, user_account, deduct_amount);
-
-						// Deposit event.
-						Pallet::<T>::deposit_event(Event::Refund {
-							currency_id,
-							time_unit: time_unit.clone(),
-							index: *idx,
-							amount: deduct_amount,
-						});
-
-						counter = counter.saturating_add(1);
-
-						exit_account_balance = exit_account_balance
-							.checked_sub(&deduct_amount)
-							.ok_or(Error::<T>::UnderFlow)?;
-						if exit_account_balance == Zero::zero() {
-							break;
-						}
-					}
-				}
-			} else {
-				// Automatically move the rest amount in exit account to entrance account.
-				T::MultiCurrency::transfer(
-					currency_id,
-					&exit_account,
-					&entrance_account,
-					exit_account_balance,
-				)?;
-			}
-
-			if extra_weight != 0 {
-				Ok(Some(
-					<T as Config>::WeightInfo::refund_currency_due_unbond() +
-						Weight::from_parts(extra_weight, 0),
-				)
-				.into())
-			} else {
-				Ok(().into())
-			}
+			ensure!(false, Error::<T>::Unsupported);
+			Ok(().into())
 		}
 
 		#[pallet::call_index(19)]
 		#[pallet::weight(<T as Config>::WeightInfo::supplement_fee_reserve())]
 		pub fn supplement_fee_reserve(
-			origin: OriginFor<T>,
-			currency_id: CurrencyId,
-			dest: Box<MultiLocation>,
+			_origin: OriginFor<T>,
+			_currency_id: CurrencyId,
+			_dest: Box<MultiLocation>,
 		) -> DispatchResult {
-			// Ensure origin
-			Self::ensure_authorized(origin, currency_id)?;
-
-			// Ensure dest is one of delegators accounts, or operators account, or in
-			// SupplementFeeAccountWhitelist.
-			let mut valid_account = false;
-
-			if DelegatorsMultilocation2Index::<T>::contains_key(currency_id, dest.clone()) {
-				valid_account = true;
-			}
-
-			if !valid_account {
-				let dest_account_id = Self::multilocation_to_account(&dest)?;
-				let operate_account_op = OperateOrigins::<T>::get(currency_id);
-
-				if let Some(operate_account) = operate_account_op {
-					if dest_account_id == operate_account {
-						valid_account = true;
-					}
-				}
-			}
-
-			if !valid_account {
-				let white_list_op = SupplementFeeAccountWhitelist::<T>::get(currency_id);
-
-				if let Some(white_list) = white_list_op {
-					let multi_hash = T::Hashing::hash(&dest.encode());
-					white_list
-						.binary_search_by_key(&multi_hash, |(_multi, hash)| *hash)
-						.map_err(|_| Error::<T>::DestAccountNotValid)?;
-
-					valid_account = true;
-				}
-			}
-
-			ensure!(valid_account, Error::<T>::DestAccountNotValid);
-
-			// Get the  fee source account and reserve amount from the FeeSources<T> storage.
-			let (source_location, reserved_fee) =
-				FeeSources::<T>::get(currency_id).ok_or(Error::<T>::FeeSourceNotExist)?;
-
-			// If currency is BNC, transfer directly.
-			// Otherwise, call supplement_fee_reserve of StakingFeeManager trait.
-			if currency_id.is_native() {
-				let source_account = Self::native_multilocation_to_account(&source_location)?;
-				let dest_account = Self::native_multilocation_to_account(&dest)?;
-				T::MultiCurrency::transfer(
-					currency_id,
-					&source_account,
-					&dest_account,
-					reserved_fee,
-				)?;
-			} else {
-				let staking_agent = Self::get_currency_staking_agent(currency_id)?;
-				staking_agent.supplement_fee_reserve(
-					reserved_fee,
-					&source_location,
-					&dest,
-					currency_id,
-				)?;
-			}
-
-			// Deposit event.
-			Pallet::<T>::deposit_event(Event::FeeSupplemented {
-				currency_id,
-				amount: reserved_fee,
-				from: source_location,
-				to: *dest,
-			});
-
+			ensure!(false, Error::<T>::Unsupported);
 			Ok(())
 		}
 
@@ -2358,6 +2108,115 @@ pub mod pallet {
 
 			Ok(())
 		}
+
+		#[pallet::call_index(47)]
+		#[pallet::weight(<T as Config>::WeightInfo::convert_treasury_vtoken())]
+		pub fn convert_treasury_vtoken(
+			origin: OriginFor<T>,
+			vtoken: CurrencyId,
+			amount: BalanceOf<T>,
+		) -> DispatchResult {
+			T::ControlOrigin::ensure_origin(origin)?;
+			ensure!(amount > Zero::zero(), Error::<T>::AmountZero);
+
+			let token = vtoken.to_token().map_err(|_| Error::<T>::NotSupportedCurrencyId)?;
+			let (pool_id, _, _) = T::StablePoolHandler::get_pool_id(&vtoken, &token)
+				.ok_or(Error::<T>::StablePoolNotFound)?;
+
+			let vtoken_index = T::StablePoolHandler::get_pool_token_index(pool_id, vtoken)
+				.ok_or(Error::<T>::StablePoolTokenIndexNotFound)?;
+			let token_index = T::StablePoolHandler::get_pool_token_index(pool_id, token)
+				.ok_or(Error::<T>::StablePoolTokenIndexNotFound)?;
+
+			// get the vtoken balance of the treasury account
+			let source_vtoken_balance =
+				T::MultiCurrency::free_balance(vtoken, &T::TreasuryAccount::get());
+
+			// max_amount is 1% of the vtoken balance of the treasury account
+			let percentage = Permill::from_percent(1);
+			let max_amount = percentage.mul_floor(source_vtoken_balance);
+
+			ensure!(
+				amount <= BalanceOf::<T>::unique_saturated_from(max_amount),
+				Error::<T>::ExceedLimit
+			);
+
+			// swap vtoken from treasury account for token
+			let treasury = T::TreasuryAccount::get();
+			T::StablePoolHandler::swap(
+				&treasury,
+				pool_id,
+				vtoken_index,
+				token_index,
+				amount,
+				Zero::zero(),
+			)
+		}
+
+		#[pallet::call_index(48)]
+		#[pallet::weight(<T as Config>::WeightInfo::clean_outdated_validator_boost_list())]
+		pub fn clean_outdated_validator_boost_list(
+			origin: OriginFor<T>,
+			token: CurrencyId,
+			// start from 1
+			page: u8,
+		) -> DispatchResult {
+			ensure_signed(origin)?;
+			let page = page as usize;
+			ensure!(page > 0, Error::<T>::InvalidPageNumber);
+
+			let validator_boost_list_len = ValidatorBoostList::<T>::decode_len(token)
+				.ok_or(Error::<T>::NoMoreValidatorBoostListForCurrency)?;
+
+			let previous_count = (page - 1) * ITERATE_LENGTH;
+			ensure!(
+				validator_boost_list_len > previous_count,
+				Error::<T>::NoMoreValidatorBoostListForCurrency
+			);
+
+			// calculate next page number left
+			let num_left = if validator_boost_list_len > (previous_count + ITERATE_LENGTH) {
+				validator_boost_list_len - previous_count - ITERATE_LENGTH
+			} else {
+				0
+			};
+
+			let current_block_number = <frame_system::Pallet<T>>::block_number();
+			let mut remove_num = 0;
+			// for each validator in the validator boost list, if the due block number is less than
+			// or equal to the current block number, remove it
+			ValidatorBoostList::<T>::mutate(token, |validator_boost_list_op| {
+				if let Some(ref mut validator_boost_list) = validator_boost_list_op {
+					let mut remove_index = vec![];
+					for (index, (_validator, due_block_number)) in validator_boost_list
+						.iter()
+						.skip(previous_count)
+						.take(ITERATE_LENGTH)
+						.enumerate()
+					{
+						if *due_block_number <= current_block_number {
+							remove_index.push(index + previous_count);
+						}
+					}
+
+					// remove from the end to the start
+					for index in remove_index.iter().rev() {
+						validator_boost_list.remove(*index);
+						remove_num += 1;
+					}
+				}
+			});
+
+			// Deposit event.
+			Pallet::<T>::deposit_event(Event::OutdatedValidatorBoostListCleaned {
+				currency_id: token,
+				page: page as u8,
+				remove_num,
+				num_left: num_left as u32,
+			});
+
+			Ok(())
+		}
 	}
 
 	impl<T: Config> Pallet<T> {
@@ -2471,7 +2330,7 @@ impl<T: Config, F: Contains<CurrencyIdOf<T>>>
 			currency_id,
 			&who,
 			Ledger::Substrate(SubstrateLedger {
-				account: Parent.into(),
+				account: xcm::v3::Parent.into(),
 				total: u32::MAX.into(),
 				active: u32::MAX.into(),
 				unlocking: vec![],

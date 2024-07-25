@@ -18,9 +18,9 @@ pub use lend_market_rpc_runtime_api::LendMarketApi as LendMarketRuntimeApi;
 
 use bifrost_primitives::{CurrencyId, Liquidity, Rate, Ratio, Shortfall};
 use jsonrpsee::{
-	core::{async_trait, Error as JsonRpseeError, RpcResult},
+	core::{async_trait, RpcResult},
 	proc_macros::rpc,
-	types::error::{CallError, ErrorCode, ErrorObject},
+	types::error::{ErrorCode, ErrorObject},
 };
 use parity_scale_codec::Codec;
 use sp_api::ProvideRuntimeApi;
@@ -158,40 +158,36 @@ where
 }
 
 /// Converts a runtime trap into an RPC error.
-fn runtime_error_into_rpc_error(err: impl std::fmt::Debug) -> JsonRpseeError {
-	JsonRpseeError::Call(CallError::Custom(ErrorObject::owned(
-		Error::RuntimeError.into(),
-		"Runtime trapped",
-		Some(format!("{:?}", err)),
-	)))
+fn runtime_error_into_rpc_error(err: impl std::fmt::Debug) -> ErrorObject<'static> {
+	ErrorObject::owned(Error::RuntimeError.into(), "Runtime trapped", Some(format!("{:?}", err)))
 }
 
 /// Converts an account liquidity error into an RPC error.
-fn account_liquidity_error_into_rpc_error(err: impl std::fmt::Debug) -> JsonRpseeError {
-	JsonRpseeError::Call(CallError::Custom(ErrorObject::owned(
+fn account_liquidity_error_into_rpc_error(err: impl std::fmt::Debug) -> ErrorObject<'static> {
+	ErrorObject::owned(
 		Error::AccountLiquidityError.into(),
 		"Not able to get account liquidity",
 		Some(format!("{:?}", err)),
-	)))
+	)
 }
 
 /// Converts an market status error into an RPC error.
-fn market_status_error_into_rpc_error(err: impl std::fmt::Debug) -> JsonRpseeError {
-	JsonRpseeError::Call(CallError::Custom(ErrorObject::owned(
+fn market_status_error_into_rpc_error(err: impl std::fmt::Debug) -> ErrorObject<'static> {
+	ErrorObject::owned(
 		Error::MarketStatusError.into(),
 		"Not able to get market status",
 		Some(format!("{:?}", err)),
-	)))
+	)
 }
 
 fn try_into_rpc_balance<T: std::fmt::Display + Copy + TryInto<NumberOrHex>>(
 	value: T,
 ) -> RpcResult<NumberOrHex> {
 	value.try_into().map_err(|_| {
-		JsonRpseeError::Call(CallError::Custom(ErrorObject::owned(
+		ErrorObject::owned(
 			ErrorCode::InvalidParams.code(),
 			format!("{} doesn't fit in NumberOrHex representation", value),
 			None::<()>,
-		)))
+		)
 	})
 }

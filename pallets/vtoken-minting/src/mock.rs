@@ -28,9 +28,10 @@ use bifrost_primitives::{
 };
 use bifrost_runtime_common::{micro, milli};
 use bifrost_slp::{QueryId, QueryResponseManager};
+use bifrost_ve_minting::{Point, VeMintingInterface};
 pub use cumulus_primitives_core::ParaId;
 use frame_support::{
-	ord_parameter_types,
+	derive_impl, ord_parameter_types,
 	pallet_prelude::Get,
 	parameter_types,
 	traits::{Everything, Nothing},
@@ -39,13 +40,9 @@ use frame_support::{
 use frame_system::{EnsureRoot, EnsureSignedBy};
 use hex_literal::hex;
 use orml_traits::{location::RelativeReserveProvider, parameter_type_with_key};
-use parity_scale_codec::{Decode, Encode};
-use sp_core::{blake2_256, H256};
 use sp_runtime::{
-	traits::{
-		AccountIdConversion, BlakeTwo256, ConstU32, Convert, IdentityLookup, TrailingZeroInput,
-	},
-	AccountId32, BuildStorage,
+	traits::{ConstU32, IdentityLookup},
+	AccountId32, BuildStorage, DispatchError, DispatchResult,
 };
 use xcm::{prelude::*, v3::Weight};
 use xcm_builder::{FixedWeightBounds, FrameTransactionalProcessor};
@@ -82,30 +79,13 @@ type Block = frame_system::mocking::MockBlock<Runtime>;
 parameter_types! {
 	pub const BlockHashCount: u64 = 250;
 }
+
+#[derive_impl(frame_system::config_preludes::TestDefaultConfig as frame_system::DefaultConfig)]
 impl frame_system::Config for Runtime {
 	type AccountData = pallet_balances::AccountData<Balance>;
 	type AccountId = AccountId;
-	type BaseCallFilter = frame_support::traits::Everything;
-	type BlockHashCount = BlockHashCount;
-	type BlockLength = ();
-	type BlockWeights = ();
-	type RuntimeCall = RuntimeCall;
-	type DbWeight = ();
-	type RuntimeEvent = RuntimeEvent;
-	type Hash = H256;
-	type Hashing = BlakeTwo256;
-	type Nonce = u32;
 	type Block = Block;
 	type Lookup = IdentityLookup<Self::AccountId>;
-	type OnKilledAccount = ();
-	type OnNewAccount = ();
-	type OnSetCode = ();
-	type RuntimeOrigin = RuntimeOrigin;
-	type PalletInfo = PalletInfo;
-	type SS58Prefix = ();
-	type SystemWeightInfo = ();
-	type Version = ();
-	type MaxConsumers = frame_support::traits::ConstU32<16>;
 }
 
 parameter_types! {
@@ -144,7 +124,6 @@ impl pallet_balances::Config for Runtime {
 	type RuntimeHoldReason = RuntimeHoldReason;
 	type RuntimeFreezeReason = RuntimeFreezeReason;
 	type FreezeIdentifier = ();
-	type MaxHolds = ConstU32<0>;
 	type MaxFreezes = ConstU32<0>;
 }
 
@@ -176,7 +155,7 @@ impl orml_tokens::Config for Runtime {
 	type DustRemovalWhitelist = Nothing;
 	type RuntimeEvent = RuntimeEvent;
 	type ExistentialDeposits = ExistentialDeposits;
-	type MaxLocks = ();
+	type MaxLocks = ConstU32<50>;
 	type MaxReserves = ();
 	type ReserveIdentifier = [u8; 8];
 	type WeightInfo = ();
@@ -184,13 +163,13 @@ impl orml_tokens::Config for Runtime {
 }
 
 parameter_type_with_key! {
-	pub ParachainMinFee: |_location: MultiLocation| -> Option<u128> {
+	pub ParachainMinFee: |_location: Location| -> Option<u128> {
 		Some(u128::MAX)
 	};
 }
 
 parameter_types! {
-	pub SelfRelativeLocation: MultiLocation = MultiLocation::here();
+	pub SelfRelativeLocation: Location = Location::here();
 	pub const BaseXcmWeight: Weight = Weight::from_parts(1000_000_000u64, 0);
 	pub const MaxAssetsForTransfer: usize = 2;
 }
@@ -200,7 +179,7 @@ impl orml_xtokens::Config for Runtime {
 	type Balance = Balance;
 	type CurrencyId = CurrencyId;
 	type CurrencyIdConvert = ();
-	type AccountIdToMultiLocation = ();
+	type AccountIdToLocation = ();
 	type UniversalLocation = UniversalLocation;
 	type SelfLocation = SelfRelativeLocation;
 	type XcmExecutor = XcmExecutor<XcmConfig>;
@@ -208,15 +187,19 @@ impl orml_xtokens::Config for Runtime {
 	type BaseXcmWeight = BaseXcmWeight;
 	type MaxAssetsForTransfer = MaxAssetsForTransfer;
 	type MinXcmFee = ParachainMinFee;
-	type MultiLocationsFilter = Everything;
+	type LocationsFilter = Everything;
 	type ReserveProvider = RelativeReserveProvider;
+	type RateLimiter = ();
+	type RateLimiterId = ();
 }
 
 parameter_types! {
 	pub const MaximumUnlockIdOfUser: u32 = 1_000;
 	pub const MaximumUnlockIdOfTimeUnit: u32 = 1_000;
+	pub const MaxLockRecords: u32 = 64;
 	pub BifrostEntranceAccount: PalletId = PalletId(*b"bf/vtkin");
 	pub BifrostExitAccount: PalletId = PalletId(*b"bf/vtout");
+	pub IncentivePoolAccount: PalletId = PalletId(*b"bf/inpoo");
 	pub BifrostFeeAccount: AccountId = hex!["e4da05f08e89bf6c43260d96f26fffcfc7deae5b465da08669a9d008e64c2c63"].into();
 }
 
@@ -231,11 +214,15 @@ impl vtoken_minting::Config for Runtime {
 	type ControlOrigin = EnsureSignedBy<One, AccountId>;
 	type MaximumUnlockIdOfUser = MaximumUnlockIdOfUser;
 	type MaximumUnlockIdOfTimeUnit = MaximumUnlockIdOfTimeUnit;
+	type MaxLockRecords = MaxLockRecords;
 	type EntranceAccount = BifrostEntranceAccount;
 	type ExitAccount = BifrostExitAccount;
 	type FeeAccount = BifrostFeeAccount;
+	type RedeemFeeAccount = BifrostFeeAccount;
+	type IncentivePoolAccount = IncentivePoolAccount;
 	type BifrostSlp = Slp;
 	type BifrostSlpx = SlpxInterface;
+	type VeMinting = VeMinting;
 	type RelayChainToken = RelayCurrencyId;
 	type CurrencyIdConversion = AssetIdMaps<Runtime>;
 	type CurrencyIdRegister = AssetIdMaps<Runtime>;
@@ -248,6 +235,7 @@ impl vtoken_minting::Config for Runtime {
 	type MantaParachainId = ConstU32<2104>;
 	type InterlayParachainId = ConstU32<2032>;
 	type ChannelCommission = ();
+	type AssetIdMaps = AssetIdMaps<Runtime>;
 }
 
 ord_parameter_types! {
@@ -259,49 +247,6 @@ impl bifrost_asset_registry::Config for Runtime {
 	type RegisterOrigin = EnsureSignedBy<CouncilAccount, AccountId>;
 	type WeightInfo = ();
 }
-
-pub struct SubAccountIndexMultiLocationConvertor;
-impl Convert<(u16, CurrencyId), MultiLocation> for SubAccountIndexMultiLocationConvertor {
-	fn convert((sub_account_index, currency_id): (u16, CurrencyId)) -> MultiLocation {
-		match currency_id {
-			CurrencyId::Token(TokenSymbol::MOVR) => MultiLocation::new(
-				1,
-				X2(
-					Parachain(2023),
-					AccountKey20 {
-						network: None,
-						key: Slp::derivative_account_id_20(
-							hex!["7369626cd1070000000000000000000000000000"].into(),
-							sub_account_index,
-						)
-						.into(),
-					},
-				),
-			),
-			_ => MultiLocation::new(
-				1,
-				X1(Junction::AccountId32 {
-					network: None,
-					id: Self::derivative_account_id(
-						ParaId::from(2001u32).into_account_truncating(),
-						sub_account_index,
-					)
-					.into(),
-				}),
-			),
-		}
-	}
-}
-
-// Mock Utility::derivative_account_id function.
-impl SubAccountIndexMultiLocationConvertor {
-	pub fn derivative_account_id(who: AccountId, index: u16) -> AccountId {
-		let entropy = (b"modlpy/utilisuba", who, index).using_encoded(blake2_256);
-		Decode::decode(&mut TrailingZeroInput::new(entropy.as_ref()))
-			.expect("infinite length input; no invalid inputs for type; qed")
-	}
-}
-
 pub struct ParachainId;
 impl Get<ParaId> for ParachainId {
 	fn get() -> ParaId {
@@ -316,12 +261,12 @@ parameter_types! {
 }
 
 pub struct SubstrateResponseManager;
-impl QueryResponseManager<QueryId, MultiLocation, u64, RuntimeCall> for SubstrateResponseManager {
+impl QueryResponseManager<QueryId, Location, u64, RuntimeCall> for SubstrateResponseManager {
 	fn get_query_response_record(_query_id: QueryId) -> bool {
 		Default::default()
 	}
 	fn create_query_record(
-		_responder: &MultiLocation,
+		_responder: Location,
 		_call_back: Option<RuntimeCall>,
 		_timeout: u64,
 	) -> u64 {
@@ -339,6 +284,11 @@ impl SlpxOperator<Balance> for SlpxInterface {
 	}
 }
 
+pub const TREASURY_ACCOUNT: AccountId = AccountId32::new([9u8; 32]);
+parameter_types! {
+	pub const TreasuryAccount: AccountId32 = TREASURY_ACCOUNT;
+}
+
 impl bifrost_slp::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type RuntimeOrigin = RuntimeOrigin;
@@ -347,25 +297,26 @@ impl bifrost_slp::Config for Runtime {
 	type ControlOrigin = EnsureSignedBy<One, AccountId>;
 	type WeightInfo = ();
 	type VtokenMinting = VtokenMinting;
-	type BifrostSlpx = SlpxInterface;
-	type AccountConverter = SubAccountIndexMultiLocationConvertor;
+	type AccountConverter = ();
 	type ParachainId = ParachainId;
 	type SubstrateResponseManager = SubstrateResponseManager;
 	type MaxTypeEntryPerBlock = MaxTypeEntryPerBlock;
 	type MaxRefundPerBlock = MaxRefundPerBlock;
-	type OnRefund = ();
 	type ParachainStaking = ();
 	type XcmTransfer = XTokens;
 	type MaxLengthLimit = MaxLengthLimit;
 	type XcmWeightAndFeeHandler = ();
 	type ChannelCommission = ();
+	type StablePoolHandler = ();
+	type AssetIdMaps = AssetIdMaps<Runtime>;
+	type TreasuryAccount = TreasuryAccount;
 }
 
 parameter_types! {
 	// One XCM operation is 200_000_000 XcmWeight, cross-chain transfer ~= 2x of transfer = 3_000_000_000
 	pub UnitWeightCost: Weight = Weight::from_parts(200_000_000, 0);
 	pub const MaxInstructions: u32 = 100;
-	pub UniversalLocation: InteriorMultiLocation = X1(Parachain(2001));
+	pub UniversalLocation: InteriorLocation = Parachain(2001).into();
 }
 
 pub struct XcmConfig;
@@ -395,11 +346,15 @@ impl xcm_executor::Config for XcmConfig {
 	type AssetExchanger = ();
 	type Aliasers = Nothing;
 	type TransactionalProcessor = FrameTransactionalProcessor;
+	type HrmpNewChannelOpenRequestHandler = ();
+	type HrmpChannelAcceptedHandler = ();
+	type HrmpChannelClosingHandler = ();
+	type XcmRecorder = ();
 }
 
 #[cfg(feature = "runtime-benchmarks")]
 parameter_types! {
-	pub ReachableDest: Option<MultiLocation> = Some(Parent.into());
+	pub ReachableDest: Option<Location> = Some(Parent.into());
 }
 
 impl pallet_xcm::Config for Runtime {
@@ -423,8 +378,6 @@ impl pallet_xcm::Config for Runtime {
 	type SovereignAccountOf = ();
 	type MaxLockers = ConstU32<8>;
 	type WeightInfo = pallet_xcm::TestWeightInfo;
-	#[cfg(feature = "runtime-benchmarks")]
-	type ReachableDest = ReachableDest;
 	type AdminOrigin = EnsureRoot<AccountId>;
 	type MaxRemoteLockConsumers = ConstU32<0>;
 	type RemoteLockConsumerIdentifier = ();
@@ -503,7 +456,7 @@ impl ExtBuilder {
 }
 
 /// Run until a particular block.
-pub fn _run_to_block(n: BlockNumber) {
+pub fn run_to_block(n: BlockNumber) {
 	use frame_support::traits::Hooks;
 	while System::block_number() <= n {
 		VtokenMinting::on_finalize(System::block_number());
@@ -511,5 +464,101 @@ pub fn _run_to_block(n: BlockNumber) {
 		System::set_block_number(System::block_number() + 1);
 		System::on_initialize(System::block_number());
 		VtokenMinting::on_initialize(System::block_number());
+	}
+}
+
+use bifrost_primitives::PoolId;
+use bifrost_ve_minting::IncentiveConfig;
+// Mock VeMinting Struct
+pub struct VeMinting;
+impl VeMintingInterface<AccountId, CurrencyId, Balance, BlockNumber> for VeMinting {
+	fn balance_of(_addr: &AccountId, _time: Option<BlockNumber>) -> Result<Balance, DispatchError> {
+		Ok(100)
+	}
+
+	fn total_supply(_t: BlockNumber) -> Result<Balance, DispatchError> {
+		Ok(10000)
+	}
+
+	fn increase_amount_inner(_who: &AccountId, _position: u128, _value: Balance) -> DispatchResult {
+		Ok(())
+	}
+
+	fn deposit_for(_who: &AccountId, _position: u128, _value: Balance) -> DispatchResult {
+		Ok(())
+	}
+
+	fn withdraw_inner(_who: &AccountId, _position: u128) -> DispatchResult {
+		Ok(())
+	}
+
+	fn supply_at(_: Point<u128, u64>, _: u64) -> Result<u128, sp_runtime::DispatchError> {
+		todo!()
+	}
+
+	fn find_block_epoch(_: u64, _: sp_core::U256) -> sp_core::U256 {
+		todo!()
+	}
+
+	fn create_lock_inner(
+		_: &sp_runtime::AccountId32,
+		_: u128,
+		_: u64,
+	) -> Result<(), sp_runtime::DispatchError> {
+		todo!()
+	}
+
+	fn increase_unlock_time_inner(
+		_: &sp_runtime::AccountId32,
+		_: u128,
+		_: u64,
+	) -> Result<(), sp_runtime::DispatchError> {
+		todo!()
+	}
+
+	fn auto_notify_reward(
+		_: u32,
+		_: u64,
+		_: Vec<(CurrencyId, Balance)>,
+	) -> Result<(), sp_runtime::DispatchError> {
+		todo!()
+	}
+
+	fn update_reward(
+		_pool_id: PoolId,
+		_addr: Option<&AccountId>,
+		_share_info: Option<(Balance, Balance)>,
+	) -> DispatchResult {
+		Ok(())
+	}
+
+	fn get_rewards(
+		_pool_id: PoolId,
+		_addr: &AccountId,
+		_share_info: Option<(Balance, Balance)>,
+	) -> DispatchResult {
+		Ok(())
+	}
+
+	fn set_incentive(
+		_pool_id: PoolId,
+		_rewards_duration: Option<BlockNumber>,
+		_incentive_controller: Option<AccountId>,
+	) {
+	}
+	fn add_reward(
+		_addr: &AccountId,
+		_conf: &mut IncentiveConfig<CurrencyId, Balance, BlockNumber, AccountId>,
+		_rewards: &Vec<(CurrencyId, Balance)>,
+		_remaining: Balance,
+	) -> DispatchResult {
+		Ok(())
+	}
+	fn notify_reward(
+		_pool_id: u32,
+		_addr: &Option<AccountId>,
+		_rewards: Vec<(CurrencyId, Balance)>,
+	) -> DispatchResult {
+		Ok(())
 	}
 }

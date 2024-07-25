@@ -19,7 +19,6 @@
 //! Service implementation. Specialized wrapper over substrate service.
 use std::{
 	collections::BTreeMap,
-	path::Path,
 	sync::{Arc, Mutex},
 	time::Duration,
 };
@@ -36,22 +35,21 @@ use cumulus_client_consensus_aura::collators::basic::{
 use cumulus_client_consensus_common::ParachainBlockImport as TParachainBlockImport;
 use cumulus_client_consensus_proposer::Proposer;
 
-use crate::{chain_spec, eth, IdentifyVariant};
+use crate::{chain_spec, eth};
 use bifrost_primitives::Block;
 use cumulus_client_service::{
 	build_network, build_relay_chain_interface, prepare_node_config, start_relay_chain_tasks,
 	BuildNetworkParams, CollatorSybilResistance, DARecoveryProfile, StartRelayChainTasksParams,
 };
 use cumulus_primitives_core::{relay_chain::Hash, ParaId};
-use cumulus_primitives_parachain_inherent::ParachainInherentData;
 use cumulus_relay_chain_interface::{OverseerHandle, RelayChainInterface};
-use cumulus_test_relay_sproof_builder::RelayStateSproofBuilder;
 use fc_rpc_core::types::{FeeHistoryCache, FilterPool};
-use polkadot_primitives::{CollatorPair, PersistedValidationData};
+use fc_storage::StorageOverrideHandler;
+use polkadot_primitives::CollatorPair;
 use sc_client_api::backend::Backend;
 use sc_consensus::{ImportQueue, LongestChain};
 use sc_executor::{HeapAllocStrategy, WasmExecutor, DEFAULT_HEAP_ALLOC_STRATEGY};
-use sc_network::NetworkBlock;
+use sc_network::{service::traits::NetworkBackend, NetworkBlock};
 use sc_network_sync::SyncingService;
 use sc_service::{Configuration, PartialComponents, TFullBackend, TFullClient, TaskManager};
 use sc_telemetry::{Telemetry, TelemetryHandle, TelemetryWorker, TelemetryWorkerHandle};
@@ -59,7 +57,7 @@ use sc_transaction_pool_api::OffchainTransactionPoolFactory;
 use sp_keystore::KeystorePtr;
 use substrate_prometheus_endpoint::Registry;
 
-use crate::eth::{db_config_dir, spawn_frontier_tasks, EthConfiguration, FrontierBackend};
+use crate::eth::{EthConfiguration, FrontierBackend};
 
 #[cfg(not(feature = "runtime-benchmarks"))]
 type HostFunctions = sp_io::SubstrateHostFunctions;
@@ -68,21 +66,6 @@ type HostFunctions = sp_io::SubstrateHostFunctions;
 type HostFunctions =
 	(sp_io::SubstrateHostFunctions, frame_benchmarking::benchmarking::HostFunctions);
 
-#[cfg(any(feature = "with-bifrost-polkadot-runtime", feature = "with-bifrost-runtime"))]
-pub struct BifrostPolkadotExecutor;
-#[cfg(any(feature = "with-bifrost-polkadot-runtime", feature = "with-bifrost-runtime"))]
-impl sc_executor::NativeExecutionDispatch for BifrostPolkadotExecutor {
-	type ExtendHostFunctions = frame_benchmarking::benchmarking::HostFunctions;
-
-	fn dispatch(method: &str, data: &[u8]) -> Option<Vec<u8>> {
-		bifrost_polkadot_runtime::api::dispatch(method, data)
-	}
-
-	fn native_version() -> sc_executor::NativeVersion {
-		bifrost_polkadot_runtime::native_version()
-	}
-}
-
 pub type FullBackend = TFullBackend<Block>;
 pub type FullClient = TFullClient<Block, RuntimeApi, WasmExecutor<HostFunctions>>;
 pub type MaybeFullSelectChain = Option<LongestChain<FullBackend, Block>>;
@@ -90,7 +73,7 @@ type ParachainBlockImport = TParachainBlockImport<Block, Arc<FullClient>, FullBa
 
 pub fn new_partial(
 	config: &Configuration,
-	eth_config: &EthConfiguration,
+	_eth_config: &EthConfiguration,
 	dev: bool,
 ) -> Result<
 	PartialComponents<
@@ -103,7 +86,7 @@ pub fn new_partial(
 			eth::BlockImport<Block, ParachainBlockImport, FullClient>,
 			Option<Telemetry>,
 			Option<TelemetryWorkerHandle>,
-			Arc<FrontierBackend<Block>>,
+			Arc<FrontierBackend<Block, FullClient>>,
 			FilterPool,
 			FeeHistoryCache,
 		),
@@ -268,8 +251,6 @@ fn start_consensus(
 	overseer_handle: OverseerHandle,
 	announce_block: Arc<dyn Fn(Hash, Option<Vec<u8>>) + Send + Sync>,
 ) -> Result<(), sc_service::Error> {
-	let slot_duration = cumulus_client_consensus_aura::slot_duration(&*client)?;
-
 	let proposer_factory = sc_basic_authorship::ProposerFactory::with_proof_recording(
 		task_manager.spawn_handle(),
 		client.clone(),
@@ -297,7 +278,6 @@ fn start_consensus(
 		collator_key,
 		para_id,
 		overseer_handle,
-		slot_duration,
 		relay_chain_slot_duration,
 		proposer,
 		collator_service,
@@ -321,7 +301,7 @@ fn start_consensus(
 /// This is the actual implementation that is abstract over the executor and the
 /// runtime api.
 #[sc_tracing::logging::prefix_logs_with("Parachain🌈")]
-async fn start_node_impl(
+async fn start_node_impl<Net>(
 	parachain_config: Configuration,
 	polkadot_config: Configuration,
 	eth_config: EthConfiguration,
@@ -329,7 +309,10 @@ async fn start_node_impl(
 	sybil_resistance_level: CollatorSybilResistance,
 	para_id: ParaId,
 	hwbench: Option<sc_sysinfo::HwBench>,
-) -> sc_service::error::Result<(TaskManager, Arc<FullClient>)> {
+) -> sc_service::error::Result<(TaskManager, Arc<FullClient>)>
+where
+	Net: NetworkBackend<Block, Hash>,
+{
 	let parachain_config = prepare_node_config(parachain_config);
 
 	let params = new_partial(&parachain_config, &eth_config, false)?;
@@ -361,7 +344,8 @@ async fn start_node_impl(
 	let prometheus_registry = parachain_config.prometheus_registry().cloned();
 	let transaction_pool = params.transaction_pool.clone();
 	let import_queue_service = params.import_queue.service();
-	let net_config = sc_network::config::FullNetworkConfiguration::new(&parachain_config.network);
+	let net_config =
+		sc_network::config::FullNetworkConfiguration::<_, _, Net>::new(&parachain_config.network);
 	let (network, system_rpc_tx, tx_handler_controller, start_network, sync_service) =
 		build_network(BuildNetworkParams {
 			parachain_config: &parachain_config,
@@ -389,7 +373,7 @@ async fn start_node_impl(
 				transaction_pool: Some(OffchainTransactionPoolFactory::new(
 					transaction_pool.clone(),
 				)),
-				network_provider: network.clone(),
+				network_provider: Arc::new(network.clone()),
 				is_validator: parachain_config.role.is_authority(),
 				enable_http_requests: false,
 				custom_extensions: move |_| vec![],
@@ -399,10 +383,10 @@ async fn start_node_impl(
 		);
 	}
 
-	let overrides = eth::overrides_handle(client.clone());
+	let storage_override = Arc::new(StorageOverrideHandler::<Block, _, _>::new(client.clone()));
 	let block_data_cache = Arc::new(fc_rpc::EthBlockDataCacheTask::new(
 		task_manager.spawn_handle(),
-		overrides.clone(),
+		storage_override.clone(),
 		eth_config.eth_log_block_cache,
 		eth_config.eth_statuses_cache,
 		prometheus_registry.clone(),
@@ -428,7 +412,7 @@ async fn start_node_impl(
 		let frontier_backend = frontier_backend.clone();
 		let fee_history_cache = fee_history_cache.clone();
 		let filter_pool = filter_pool.clone();
-		let overrides = overrides.clone();
+		let storage_override = storage_override.clone();
 		let pubsub_notification_sinks = pubsub_notification_sinks.clone();
 
 		Box::new(move |deny_unsafe, subscription_task_executor| {
@@ -450,7 +434,7 @@ async fn start_node_impl(
 				network: network.clone(),
 				sync_service: sync_service.clone(),
 				frontier_backend: frontier_backend.clone(),
-				overrides: overrides.clone(),
+				storage_override: storage_override.clone(),
 				block_data_cache: block_data_cache.clone(),
 				filter_pool: filter_pool.clone(),
 				max_past_logs: eth_config.max_past_logs,
@@ -490,7 +474,7 @@ async fn start_node_impl(
 		backend,
 		frontier_backend,
 		filter_pool,
-		overrides,
+		storage_override,
 		fee_history_cache,
 		eth_config.fee_history_limit,
 		sync_service.clone(),
@@ -563,7 +547,7 @@ async fn start_node_impl(
 }
 
 /// Start a normal parachain node.
-pub async fn start_node(
+pub async fn start_node<Net: NetworkBackend<Block, Hash>>(
 	parachain_config: Configuration,
 	polkadot_config: Configuration,
 	eth_config: EthConfiguration,
@@ -571,7 +555,7 @@ pub async fn start_node(
 	para_id: ParaId,
 	hwbench: Option<sc_sysinfo::HwBench>,
 ) -> sc_service::error::Result<(TaskManager, Arc<FullClient>)> {
-	start_node_impl(
+	start_node_impl::<Net>(
 		parachain_config,
 		polkadot_config,
 		eth_config,

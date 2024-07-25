@@ -230,3 +230,40 @@ pub mod v1 {
 		}
 	}
 }
+
+pub mod slpx_migrates_whitelist {
+	use super::*;
+	use bifrost_slpx::types::SupportChain;
+	use sp_core::crypto::Ss58Codec;
+
+	pub struct UpdateWhitelist;
+	impl OnRuntimeUpgrade for UpdateWhitelist {
+		fn on_runtime_upgrade() -> Weight {
+			let new_whitelist: BoundedVec<AccountId, ConstU32<10>> =
+				vec![AccountId::from_ss58check("gtXJWw9ME9w7cXfmR6n9MFkKCSu2MrtA3dcFV2BhHpEZFjZ")
+					.unwrap()]
+				.try_into()
+				.unwrap();
+			bifrost_slpx::WhitelistAccountId::<Runtime>::insert(
+				SupportChain::Moonbeam,
+				new_whitelist,
+			);
+
+			Weight::from(<Runtime as frame_system::Config>::DbWeight::get().writes(1u64))
+		}
+
+		#[cfg(feature = "try-runtime")]
+		fn post_upgrade(_state: Vec<u8>) -> Result<(), TryRuntimeError> {
+			let whitelist =
+				bifrost_slpx::WhitelistAccountId::<Runtime>::get(SupportChain::Moonbeam);
+			let new_whitelist: BoundedVec<AccountId, ConstU32<10>> =
+				vec![AccountId::from_ss58check("gtXJWw9ME9w7cXfmR6n9MFkKCSu2MrtA3dcFV2BhHpEZFjZ")
+					.unwrap()]
+				.try_into()
+				.unwrap();
+			assert_eq!(whitelist, new_whitelist);
+
+			Ok(())
+		}
+	}
+}

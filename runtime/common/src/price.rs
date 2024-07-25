@@ -72,18 +72,11 @@ where
 		let from_currency = AC::get(account);
 		let account_balance =
 			I::reducible_balance(from_currency, account, Preservation::Preserve, Fortitude::Polite);
-		let mut price_weight = T::DbWeight::get().reads(2); // 1 read to get currency and 1 read to get balance
+		let price_weight = T::DbWeight::get().reads(2); // 1 read to get currency and 1 read to get balance
 
 		if from_currency == to_currency {
 			return (account_balance, price_weight);
 		}
-
-		// This is a workaround, as there is no other way to get weight of price retrieval,
-		// We get the weight from the ema-oracle weights to get price
-		// Weight * 2 because we are reading from the storage twice ( from_currency/lrna and
-		// lrna/to_currency) if this gets removed (eg. Convert returns weight), the constraint on T
-		// and ema-oracle is not necessary price_weight.
-		// saturating_accrue(pallet_ema_oracle::Pallet::<T>::get_price_weight().saturating_mul(2));
 
 		let Some((converted, _)) = C::convert((from_currency, to_currency, account_balance)) else {
 			return (0, price_weight);

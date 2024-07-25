@@ -43,13 +43,6 @@ impl EvmDataWriter {
 		Self { data: vec![], offset_data: vec![], selector: None }
 	}
 
-	/// Creates a new empty output builder with provided selector.
-	/// Selector will only be appended before the data when calling
-	/// `build` to not mess with the offsets.
-	pub fn new_with_selector(selector: impl Into<u32>) -> Self {
-		Self { data: vec![], offset_data: vec![], selector: Some(selector.into()) }
-	}
-
 	/// Return the built data.
 	pub fn build(mut self) -> Vec<u8> {
 		Self::bake_offsets(&mut self.data, self.offset_data);
@@ -352,20 +345,6 @@ impl<'a> EvmDataReader<'a> {
 		T::read(self)
 	}
 
-	/// Read raw bytes from the input.
-	/// Doesn't handle any alignment checks, prefer using `read` instead of possible.
-	/// Returns an error if trying to parse out of bounds.
-	pub fn read_raw_bytes(&mut self, len: usize) -> EvmResult<&[u8]> {
-		let range = self.move_cursor(len)?;
-
-		let data = self
-			.input
-			.get(range)
-			.ok_or_else(|| revert("tried to parse raw bytes out of bounds"))?;
-
-		Ok(data)
-	}
-
 	/// Reads a pointer, returning a reader targetting the pointed location.
 	pub fn read_pointer(&mut self) -> EvmResult<Self> {
 		let offset: usize = self
@@ -379,18 +358,6 @@ impl<'a> EvmDataReader<'a> {
 		}
 
 		Ok(Self { input: &self.input[offset..], cursor: 0 })
-	}
-
-	/// Read remaining bytes
-	pub fn read_till_end(&mut self) -> EvmResult<&[u8]> {
-		let range = self.move_cursor(self.input.len() - self.cursor)?;
-
-		let data = self
-			.input
-			.get(range)
-			.ok_or_else(|| revert("tried to parse raw bytes out of bounds"))?;
-
-		Ok(data)
 	}
 
 	/// Move the reading cursor with provided length, and return a range from the previous cursor

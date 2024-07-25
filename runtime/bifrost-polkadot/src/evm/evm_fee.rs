@@ -16,11 +16,11 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-use crate::{Currencies, ParachainInfo, ZenlinkProtocol};
+use crate::Currencies;
 use bifrost_primitives::{AccountFeeCurrency, Balance, CurrencyId};
 use bifrost_runtime_common::Ratio;
 use frame_support::traits::{
-	tokens::{Fortitude, Precision},
+	tokens::{Fortitude, Precision, Preservation},
 	Get, OnUnbalanced, TryDrop,
 };
 use orml_traits::MultiCurrency;
@@ -114,6 +114,7 @@ where
 			fee_currency,
 			&account_id,
 			converted,
+			Preservation::Expendable,
 			Precision::Exact,
 			Fortitude::Polite,
 		)

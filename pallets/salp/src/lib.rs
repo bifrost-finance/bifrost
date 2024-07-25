@@ -113,7 +113,7 @@ pub mod pallet {
 	};
 	use sp_arithmetic::Percent;
 	use sp_std::{convert::TryInto, prelude::*};
-	use xcm::v3::{MaybeErrorCode, MultiLocation};
+	use xcm::v3::MaybeErrorCode;
 
 	use super::*;
 
@@ -1212,7 +1212,7 @@ pub mod pallet {
 			response: Response,
 		) -> DispatchResult {
 			let responder = ensure_response(<T as Config>::RuntimeOrigin::from(origin))?;
-			ensure!(responder == MultiLocation::parent(), Error::<T>::ResponderNotRelayChain);
+			ensure!(responder == xcm::v4::Location::parent(), Error::<T>::ResponderNotRelayChain);
 
 			let (index, contributer, _amount) = QueryIdContributionInfo::<T>::get(query_id)
 				.ok_or(Error::<T>::NotFindContributionValue)?;
@@ -1287,7 +1287,7 @@ pub mod pallet {
 			currency_id_in: CurrencyId,
 			value: BalanceOf<T>,
 		) -> DispatchResult {
-			T::EnsureConfirmAsGovernance::ensure_origin(origin)?;
+			let _who = ensure_signed(origin)?;
 
 			let relay_currency_id = T::RelayChainToken::get();
 			let relay_vtoken_id = T::CurrencyIdConversion::convert_to_vtoken(relay_currency_id)

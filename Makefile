@@ -32,26 +32,13 @@ check-all: format
 .PHONY: test-all # cargo test all
 test-all: test-runtimes test-benchmarks
 
-
 .PHONY: test-runtimes
 test-runtimes:
-	cargo test --features "with-all-runtime" --lib
+	SKIP_WASM_BUILD= cargo test --features "with-all-runtime" --lib
 
 .PHONY: test-benchmarks
 test-benchmarks:
-	cargo test --all benchmarking  --features="runtime-benchmarks, polkadot" --exclude "*integration*" --exclude "bifrost-cli" --exclude "bifrost-rpc" --exclude "bifrost-service" --exclude "*-runtime"
-
-.PHONY: integration-test # integration test
-integration-test:
-	cargo test  -p *-integration-tests
-
-.PHONY: kusama-integration-test # integration test
-kusama-integration-test:
-	cargo test -p bifrost-kusama-integration-tests
-
-.PHONY: polkadot-integration-test # integration test
-polkadot-integration-test:
-	cargo test -p bifrost-polkadot-integration-tests
+	SKIP_WASM_BUILD= cargo test benchmarking  --features="runtime-benchmarks, polkadot"
 
 .PHONY: clean # cargo clean
 clean:
@@ -64,10 +51,14 @@ copy-genesis-config-release:
 
 .PHONY: format # cargo fmt
 format:
-	cargo fmt --all -- --check
+	cargo +nightly fmt --all
+
+.PHONY: format-check # cargo fmt check
+format-check:
+	cargo +nightly fmt --all -- --check
 
 .PHONY: clippy # cargo clippy
-clippy:
+clippy: format-check
 	SKIP_WASM_BUILD= cargo clippy --all --all-targets --features=with-all-runtime -- -D warnings
 
 .PHONY: benchmarking-staking # benchmarking staking pallet

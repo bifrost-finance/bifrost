@@ -21,6 +21,7 @@ serde_json = { workspace = true }
 # frame dependencies
 frame-benchmarking = { workspace = true, optional = true }
 frame-executive = { workspace = true }
+frame-metadata-hash-extension = { workspace = true }
 frame-support = { workspace = true, features = ["tuples-96"] }
 frame-system = { workspace = true }
 frame-system-benchmarking = { workspace = true, optional = true }
@@ -38,6 +39,7 @@ pallet-elections-phragmen = { workspace = true }
 pallet-identity = { workspace = true }
 pallet-indices = { workspace = true }
 pallet-membership = { workspace = true }
+pallet-message-queue = { workspace = true }
 pallet-multisig = { workspace = true }
 pallet-preimage = { workspace = true }
 pallet-proxy = { workspace = true }
@@ -47,6 +49,7 @@ pallet-scheduler = { workspace = true }
 pallet-session = { workspace = true }
 pallet-timestamp = { workspace = true }
 pallet-tips = { workspace = true }
+pallet-tx-pause = { workspace = true }
 pallet-transaction-payment = { workspace = true }
 pallet-transaction-payment-rpc-runtime-api = { workspace = true }
 pallet-treasury = { workspace = true }
@@ -66,10 +69,10 @@ sp-staking = { workspace = true }
 sp-std = { workspace = true }
 sp-transaction-pool = { workspace = true }
 sp-version = { workspace = true }
+sp-genesis-builder = { workspace = true }
 
 # Cumulus dependencies
 cumulus-pallet-aura-ext = { workspace = true }
-cumulus-pallet-dmp-queue = { workspace = true }
 cumulus-pallet-parachain-system = { workspace = true }
 cumulus-pallet-xcm = { workspace = true }
 cumulus-pallet-xcmp-queue = { workspace = true }
@@ -78,6 +81,7 @@ cumulus-primitives-timestamp = { workspace = true }
 cumulus-primitives-utility = { workspace = true }
 pallet-collator-selection = { workspace = true }
 parachain-info = { workspace = true }
+parachains-common = { workspace = true }
 
 # Polkadot dependencies
 pallet-xcm = { workspace = true }
@@ -133,7 +137,7 @@ pallet-traits = { workspace = true }
 
 # Bifrost
 bifrost-asset-registry = { workspace = true }
-bifrost-call-switchgear = { workspace = true }
+bifrost-buy-back = { workspace = true }
 bifrost-cross-in-out = { workspace = true }
 bifrost-currencies = { workspace = true }
 bifrost-farming = { workspace = true }
@@ -163,6 +167,8 @@ lend-market-rpc-runtime-api = { workspace = true }
 pallet-prices = { workspace = true }
 leverage-staking = { workspace = true }
 bifrost-channel-commission = { workspace = true }
+bifrost-clouds-convert = { workspace = true }
+bifrost-vtoken-minting-rpc-runtime-api = { workspace = true }
 
 [build-dependencies]
 substrate-wasm-builder = { workspace = true, optional = true }
@@ -176,6 +182,7 @@ std = [
 	"strum/std",
 
 	"frame-executive/std",
+	"frame-metadata-hash-extension/std",
 	"frame-support/std",
 	"frame-system-rpc-runtime-api/std",
 	"frame-system/std",
@@ -200,6 +207,7 @@ std = [
 	"pallet-session/std",
 	"pallet-timestamp/std",
 	"pallet-tips/std",
+	"pallet-tx-pause/std",
 	"pallet-transaction-payment-rpc-runtime-api/std",
 	"pallet-transaction-payment/std",
 	"pallet-treasury/std",
@@ -217,9 +225,9 @@ std = [
 	"sp-staking/std",
 	"sp-std/std",
 	"sp-transaction-pool/std",
+	"sp-genesis-builder/std",
 
 	"cumulus-pallet-aura-ext/std",
-	"cumulus-pallet-dmp-queue/std",
 	"cumulus-pallet-parachain-system/std",
 	"cumulus-pallet-xcm/std",
 	"cumulus-pallet-xcmp-queue/std",
@@ -246,6 +254,7 @@ std = [
 	"zenlink-protocol/std",
 
 	"bifrost-asset-registry/std",
+	"bifrost-buy-back/std",
 	"bifrost-cross-in-out/std",
 	"bifrost-currencies/std",
 	"bifrost-farming-rpc-runtime-api/std",
@@ -294,6 +303,8 @@ std = [
 	"pallet-evm-precompile-blake2/std",
 	"pallet-evm-accounts/std",
 	"pallet-evm-accounts-rpc-runtime-api/std",
+	"bifrost-clouds-convert/std",
+	"bifrost-vtoken-minting-rpc-runtime-api/std",
 
 	"substrate-wasm-builder"
 ]
@@ -320,7 +331,6 @@ runtime-benchmarks = [
 	"pallet-xcm/runtime-benchmarks",
 	"sp-runtime/runtime-benchmarks",
 	"xcm-builder/runtime-benchmarks",
-	"bifrost-call-switchgear/runtime-benchmarks",
 	"bifrost-slp/runtime-benchmarks",
 	"bifrost-salp/runtime-benchmarks",
 	"bifrost-vtoken-minting/runtime-benchmarks",
@@ -332,78 +342,83 @@ runtime-benchmarks = [
 	"sp-api/disable-logging",
 	"lend-market/runtime-benchmarks",
 	"bifrost-channel-commission/runtime-benchmarks",
+	"bifrost-clouds-convert/runtime-benchmarks",
+	"bifrost-buy-back/runtime-benchmarks",
 ]
 
 try-runtime = [
-	"frame-try-runtime",
-	"frame-support/try-runtime",
-	"frame-system/try-runtime",
-	"frame-executive/try-runtime",
-	"pallet-timestamp/try-runtime",
-	"pallet-indices/try-runtime",
-	"cumulus-pallet-parachain-system/try-runtime",
-	"parachain-info/try-runtime",
-	"pallet-balances/try-runtime",
-	"pallet-transaction-payment/try-runtime",
-	"pallet-authorship/try-runtime",
-	"pallet-collator-selection/try-runtime",
-	"pallet-session/try-runtime",
-	"pallet-aura/try-runtime",
-	"cumulus-pallet-aura-ext/try-runtime",
-	"pallet-democracy/try-runtime",
-	"pallet-collective/try-runtime",
-	"pallet-conviction-voting/try-runtime",
-	"pallet-elections-phragmen/try-runtime",
-	"pallet-membership/try-runtime",
-	"cumulus-pallet-xcmp-queue/try-runtime",
-	"pallet-xcm/try-runtime",
-	"cumulus-pallet-xcm/try-runtime",
-	"cumulus-pallet-dmp-queue/try-runtime",
-	"pallet-utility/try-runtime",
-	"pallet-scheduler/try-runtime",
-	"pallet-proxy/try-runtime",
-	"pallet-multisig/try-runtime",
-	"pallet-identity/try-runtime",
-	"pallet-ranked-collective/try-runtime",
-	"pallet-referenda/try-runtime",
-	"bifrost-vesting/try-runtime",
-	"pallet-treasury/try-runtime",
-	"pallet-bounties/try-runtime",
-	"pallet-tips/try-runtime",
-	"pallet-preimage/try-runtime",
-	"pallet-whitelist/try-runtime",
-	"orml-xtokens/try-runtime",
-	"orml-tokens/try-runtime",
+	"bifrost-asset-registry/try-runtime",
+	"bifrost-buy-back/try-runtime",
+	"bifrost-channel-commission/try-runtime",
+	"bifrost-clouds-convert/try-runtime",
+	"bifrost-cross-in-out/try-runtime",
 	"bifrost-currencies/try-runtime",
-	"orml-unknown-tokens/try-runtime",
-	"orml-xcm/try-runtime",
-	"orml-oracle/try-runtime",
-	"zenlink-protocol/try-runtime",
-	"merkle-distributor/try-runtime",
+	"bifrost-farming/try-runtime",
+	"bifrost-fee-share/try-runtime",
 	"bifrost-flexible-fee/try-runtime",
 	"bifrost-salp/try-runtime",
-	"bifrost-call-switchgear/try-runtime",
-	"bifrost-asset-registry/try-runtime",
-	"bifrost-vtoken-minting/try-runtime",
 	"bifrost-slp/try-runtime",
-	"bifrost-xcm-interface/try-runtime",
-	"bifrost-vstoken-conversion/try-runtime",
-	"bifrost-farming/try-runtime",
-	"bifrost-system-staking/try-runtime",
-	"bifrost-system-maker/try-runtime",
-	"bifrost-fee-share/try-runtime",
-	"bifrost-ve-minting/try-runtime",
-	"bifrost-cross-in-out/try-runtime",
 	"bifrost-slpx/try-runtime",
 	"bifrost-stable-asset/try-runtime",
 	"bifrost-stable-pool/try-runtime",
+	"bifrost-system-maker/try-runtime",
+	"bifrost-system-staking/try-runtime",
+	"bifrost-ve-minting/try-runtime",
+	"bifrost-vesting/try-runtime",
+	"bifrost-vstoken-conversion/try-runtime",
+	"bifrost-vtoken-minting/try-runtime",
 	"bifrost-vtoken-voting/try-runtime",
+	"bifrost-xcm-interface/try-runtime",
+	"cumulus-pallet-aura-ext/try-runtime",
+	"cumulus-pallet-parachain-system/try-runtime",
+	"cumulus-pallet-xcm/try-runtime",
+	"cumulus-pallet-xcmp-queue/try-runtime",
+	"frame-executive/try-runtime",
+	"frame-support/try-runtime",
+	"frame-system/try-runtime",
+	"frame-try-runtime",
+	"frame-try-runtime/try-runtime",
 	"lend-market/try-runtime",
-	"pallet-prices/try-runtime",
 	"leverage-staking/try-runtime",
-	"bifrost-channel-commission/try-runtime",
+	"merkle-distributor/try-runtime",
+	"orml-oracle/try-runtime",
+	"orml-tokens/try-runtime",
+	"orml-unknown-tokens/try-runtime",
+	"orml-xcm/try-runtime",
+	"orml-xtokens/try-runtime",
+	"pallet-aura/try-runtime",
+	"pallet-authorship/try-runtime",
+	"pallet-balances/try-runtime",
+	"pallet-bounties/try-runtime",
+	"pallet-collator-selection/try-runtime",
+	"pallet-collective/try-runtime",
+	"pallet-conviction-voting/try-runtime",
+	"pallet-democracy/try-runtime",
+	"pallet-elections-phragmen/try-runtime",
+	"pallet-identity/try-runtime",
+	"pallet-indices/try-runtime",
+	"pallet-membership/try-runtime",
+	"pallet-multisig/try-runtime",
+	"pallet-preimage/try-runtime",
+	"pallet-prices/try-runtime",
+	"pallet-proxy/try-runtime",
+	"pallet-ranked-collective/try-runtime",
+	"pallet-referenda/try-runtime",
+	"pallet-scheduler/try-runtime",
+	"pallet-session/try-runtime",
+	"pallet-timestamp/try-runtime",
+	"pallet-tips/try-runtime",
+	"pallet-tx-pause/try-runtime",
+	"pallet-transaction-payment/try-runtime",
+	"pallet-treasury/try-runtime",
+	"pallet-utility/try-runtime",
+	"pallet-whitelist/try-runtime",
+	"parachain-info/try-runtime",
+	"zenlink-protocol/try-runtime",
 ]
 
+# Enable the metadata hash generation in the wasm builder.
+metadata-hash = ["substrate-wasm-builder?/metadata-hash"]
 # When enabled, the runtime API will not be build.
 #
 # This is required by Cumulus to access certain types of the
@@ -414,7 +429,7 @@ disable-runtime-api = []
 # A feature that should be enabled when the runtime should be build for on-chain
 # deployment. This will disable stuff that shouldn't be part of the on-chain wasm
 # to make it smaller like logging for example.
-on-chain-release-build = ["sp-api/disable-logging"]
+on-chain-release-build = ["sp-api/disable-logging", "metadata-hash"]
 
 # Set timing constants (e.g. session period) to faster versions to speed up testing.
 fast-runtime = []

@@ -25,7 +25,7 @@ pub use bifrost_primitives::{
 use bifrost_slp::{QueryId, QueryResponseManager};
 use cumulus_primitives_core::ParaId;
 use frame_support::{
-	construct_runtime, ord_parameter_types,
+	construct_runtime, derive_impl, ord_parameter_types,
 	pallet_prelude::*,
 	parameter_types,
 	traits::{Everything, Nothing},
@@ -37,32 +37,19 @@ use orml_traits::{
 	location::RelativeReserveProvider, parameter_type_with_key, xcm_transfer::Transferred,
 	MultiCurrency, XcmTransfer,
 };
-use sp_core::{blake2_256, ConstU128, H256};
+use sp_core::ConstU128;
 use sp_runtime::{
-	traits::{
-		AccountIdConversion, BlakeTwo256, Convert, IdentityLookup, TrailingZeroInput,
-		UniqueSaturatedInto,
-	},
+	traits::{Convert, IdentityLookup, UniqueSaturatedInto},
 	AccountId32, SaturatedConversion,
 };
 use sp_std::vec;
 pub use xcm::latest::prelude::*;
 use xcm::{
-	latest::{Junction, MultiLocation},
-	opaque::latest::{
-		Junction::Parachain,
-		Junctions::{X1, X2},
-	},
+	latest::{Junction, Location},
+	opaque::latest::Junction::Parachain,
 };
 use xcm_builder::FrameTransactionalProcessor;
-pub use xcm_builder::{
-	AccountId32Aliases, AllowTopLevelPaidExecutionFrom, AllowUnpaidExecutionFrom,
-	ChildParachainAsNative, ChildParachainConvertsVia, ChildSystemParachainAsSuperuser,
-	CurrencyAdapter as XcmCurrencyAdapter, EnsureXcmOrigin, FixedRateOfFungible, FixedWeightBounds,
-	IsConcrete, NativeAsset, ParentAsSuperuser, ParentIsPreset, RelayChainAsNative,
-	SiblingParachainAsNative, SiblingParachainConvertsVia, SignedAccountId32AsNative,
-	SignedToAccountId32, SovereignSignedViaLocation, TakeWeightCredit,
-};
+pub use xcm_builder::{EnsureXcmOrigin, FixedWeightBounds};
 use zenlink_protocol::{
 	AssetBalance, AssetId as ZenlinkAssetId, LocalAssetHandler, PairLpGenerate, ZenlinkMultiAssets,
 };
@@ -101,30 +88,12 @@ parameter_types! {
   pub const BlockHashCount: u32 = 250;
 }
 
+#[derive_impl(frame_system::config_preludes::TestDefaultConfig as frame_system::DefaultConfig)]
 impl frame_system::Config for Test {
-	type BaseCallFilter = Everything;
-	type DbWeight = ();
-	type RuntimeOrigin = RuntimeOrigin;
-	type Nonce = u32;
 	type Block = Block;
-	type RuntimeCall = RuntimeCall;
-	type Hash = H256;
-	type Hashing = BlakeTwo256;
 	type AccountId = AccountId;
 	type Lookup = IdentityLookup<Self::AccountId>;
-	type RuntimeEvent = RuntimeEvent;
-	type BlockHashCount = BlockHashCount;
-	type Version = ();
-	type PalletInfo = PalletInfo;
 	type AccountData = pallet_balances::AccountData<Balance>;
-	type OnNewAccount = ();
-	type OnKilledAccount = ();
-	type SystemWeightInfo = ();
-	type BlockWeights = ();
-	type BlockLength = ();
-	type SS58Prefix = ();
-	type OnSetCode = ();
-	type MaxConsumers = frame_support::traits::ConstU32<16>;
 }
 
 // Pallet balances configuration
@@ -145,7 +114,6 @@ impl pallet_balances::Config for Test {
 	type RuntimeHoldReason = RuntimeHoldReason;
 	type RuntimeFreezeReason = RuntimeFreezeReason;
 	type FreezeIdentifier = ();
-	type MaxHolds = ConstU32<0>;
 	type MaxFreezes = ConstU32<0>;
 }
 
@@ -196,6 +164,7 @@ parameter_types! {
 	pub BifrostExitAccount: PalletId = PalletId(*b"bf/vtout");
 	pub BifrostFeeAccount: AccountId = hex!["e4da05f08e89bf6c43260d96f26fffcfc7deae5b465da08669a9d008e64c2c63"].into();
 	pub const RelayCurrencyId: CurrencyId = KSM;
+	pub IncentivePoolAccount: PalletId = PalletId(*b"bf/inpoo");
 }
 
 ord_parameter_types! {
@@ -218,6 +187,7 @@ impl bifrost_vtoken_minting::Config for Test {
 	type EntranceAccount = BifrostEntranceAccount;
 	type ExitAccount = BifrostExitAccount;
 	type FeeAccount = BifrostFeeAccount;
+	type RedeemFeeAccount = BifrostFeeAccount;
 	type RelayChainToken = RelayCurrencyId;
 	type CurrencyIdConversion = AssetIdMaps<Test>;
 	type CurrencyIdRegister = AssetIdMaps<Test>;
@@ -232,6 +202,10 @@ impl bifrost_vtoken_minting::Config for Test {
 	type MantaParachainId = ConstU32<2104>;
 	type InterlayParachainId = ConstU32<2032>;
 	type ChannelCommission = ();
+	type MaxLockRecords = ConstU32<100>;
+	type IncentivePoolAccount = IncentivePoolAccount;
+	type VeMinting = ();
+	type AssetIdMaps = AssetIdMaps<Test>;
 }
 // Below is the implementation of tokens manipulation functions other than native token.
 pub struct LocalAssetAdaptor<Local>(PhantomData<Local>);
@@ -312,10 +286,10 @@ impl zenlink_protocol::Config for Test {
 	type LpGenerate = PairLpGenerate<Self>;
 }
 
-pub struct AccountIdToMultiLocation;
-impl Convert<AccountId, MultiLocation> for AccountIdToMultiLocation {
-	fn convert(account_id: AccountId) -> MultiLocation {
-		MultiLocation::from(Junction::AccountId32 { network: None, id: account_id.into() })
+pub struct AccountIdToLocation;
+impl Convert<AccountId, Location> for AccountIdToLocation {
+	fn convert(account_id: AccountId) -> Location {
+		Location::from(Junction::AccountId32 { network: None, id: account_id.into() })
 	}
 }
 
@@ -323,7 +297,7 @@ parameter_types! {
 	// One XCM operation is 200_000_000 XcmWeight, cross-chain transfer ~= 2x of transfer = 3_000_000_000
 	pub UnitWeightCost: Weight = Weight::from_parts(200_000_000, 0);
 	pub const MaxInstructions: u32 = 100;
-	pub UniversalLocation: InteriorMultiLocation = X1(Parachain(2001));
+	pub UniversalLocation: InteriorLocation = Parachain(2001).into();
 }
 
 pub struct XcmConfig;
@@ -353,29 +327,33 @@ impl xcm_executor::Config for XcmConfig {
 	type Aliasers = Nothing;
 	type AssetExchanger = ();
 	type TransactionalProcessor = FrameTransactionalProcessor;
+	type HrmpNewChannelOpenRequestHandler = ();
+	type HrmpChannelAcceptedHandler = ();
+	type HrmpChannelClosingHandler = ();
+	type XcmRecorder = ();
 }
 
 parameter_type_with_key! {
-	pub ParachainMinFee: |_location: MultiLocation| -> Option<u128> {
+	pub ParachainMinFee: |_location: Location| -> Option<u128> {
 		None
 	};
 }
 
 parameter_types! {
-	pub SelfRelativeLocation: MultiLocation = MultiLocation::here();
+	pub SelfRelativeLocation: Location = Location::here();
 	pub const BaseXcmWeight: Weight = Weight::from_parts(1000_000_000u64, 0);
 	pub const MaxAssetsForTransfer: usize = 2;
 }
 
 pub struct BifrostCurrencyIdConvert<T>(sp_std::marker::PhantomData<T>);
-impl<T: Get<ParaId>> Convert<CurrencyId, Option<MultiLocation>> for BifrostCurrencyIdConvert<T> {
-	fn convert(id: CurrencyId) -> Option<MultiLocation> {
-		AssetIdMaps::<Test>::get_multi_location(id)
+impl<T: Get<ParaId>> Convert<CurrencyId, Option<Location>> for BifrostCurrencyIdConvert<T> {
+	fn convert(id: CurrencyId) -> Option<Location> {
+		AssetIdMaps::<Test>::get_location(id)
 	}
 }
 
-impl<T: Get<ParaId>> Convert<MultiLocation, Option<CurrencyId>> for BifrostCurrencyIdConvert<T> {
-	fn convert(location: MultiLocation) -> Option<CurrencyId> {
+impl<T: Get<ParaId>> Convert<Location, Option<CurrencyId>> for BifrostCurrencyIdConvert<T> {
+	fn convert(location: Location) -> Option<CurrencyId> {
 		AssetIdMaps::<Test>::get_currency_id(location)
 	}
 }
@@ -387,7 +365,7 @@ impl orml_xtokens::Config for Test {
 	type Balance = Balance;
 	type CurrencyId = CurrencyId;
 	type CurrencyIdConvert = BifrostCurrencyIdConvert<ParachainInfo>;
-	type AccountIdToMultiLocation = ();
+	type AccountIdToLocation = ();
 	type UniversalLocation = UniversalLocation;
 	type SelfLocation = SelfRelativeLocation;
 	type XcmExecutor = DoNothingExecuteXcm;
@@ -395,8 +373,10 @@ impl orml_xtokens::Config for Test {
 	type BaseXcmWeight = BaseXcmWeight;
 	type MaxAssetsForTransfer = MaxAssetsForTransfer;
 	type MinXcmFee = ParachainMinFee;
-	type MultiLocationsFilter = Everything;
+	type LocationsFilter = Everything;
 	type ReserveProvider = RelativeReserveProvider;
+	type RateLimiter = ();
+	type RateLimiterId = ();
 }
 
 ord_parameter_types! {
@@ -407,48 +387,6 @@ impl bifrost_asset_registry::Config for Test {
 	type Currency = Balances;
 	type RegisterOrigin = EnsureSignedBy<CouncilAccount, AccountId>;
 	type WeightInfo = ();
-}
-
-pub struct SubAccountIndexMultiLocationConvertor;
-impl Convert<(u16, CurrencyId), MultiLocation> for SubAccountIndexMultiLocationConvertor {
-	fn convert((sub_account_index, currency_id): (u16, CurrencyId)) -> MultiLocation {
-		match currency_id {
-			CurrencyId::Token(TokenSymbol::MOVR) => MultiLocation::new(
-				1,
-				X2(
-					Parachain(2023),
-					Junction::AccountKey20 {
-						network: None,
-						key: Slp::derivative_account_id_20(
-							hex!["7369626cd1070000000000000000000000000000"].into(),
-							sub_account_index,
-						)
-						.into(),
-					},
-				),
-			),
-			_ => MultiLocation::new(
-				1,
-				X1(Junction::AccountId32 {
-					network: None,
-					id: Self::derivative_account_id(
-						ParaId::from(2001u32).into_account_truncating(),
-						sub_account_index,
-					)
-					.into(),
-				}),
-			),
-		}
-	}
-}
-
-// Mock Utility::derivative_account_id function.
-impl SubAccountIndexMultiLocationConvertor {
-	pub fn derivative_account_id(who: AccountId, index: u16) -> AccountId {
-		let entropy = (b"modlpy/utilisuba", who, index).using_encoded(blake2_256);
-		Decode::decode(&mut TrailingZeroInput::new(entropy.as_ref()))
-			.expect("infinite length input; no invalid inputs for type; qed")
-	}
 }
 
 pub struct ParachainId;
@@ -465,12 +403,12 @@ parameter_types! {
 }
 
 pub struct SubstrateResponseManager;
-impl QueryResponseManager<QueryId, MultiLocation, u64, RuntimeCall> for SubstrateResponseManager {
+impl QueryResponseManager<QueryId, Location, u64, RuntimeCall> for SubstrateResponseManager {
 	fn get_query_response_record(_query_id: QueryId) -> bool {
 		Default::default()
 	}
 	fn create_query_record(
-		_responder: &MultiLocation,
+		_responder: Location,
 		_call_back: Option<RuntimeCall>,
 		_timeout: u64,
 	) -> u64 {
@@ -489,23 +427,24 @@ impl bifrost_slp::Config for Test {
 	type ControlOrigin = EnsureSignedBy<One, AccountId>;
 	type WeightInfo = ();
 	type VtokenMinting = VtokenMinting;
-	type BifrostSlpx = Slpx;
-	type AccountConverter = SubAccountIndexMultiLocationConvertor;
+	type AccountConverter = ();
 	type ParachainId = ParachainId;
 	type SubstrateResponseManager = SubstrateResponseManager;
 	type MaxTypeEntryPerBlock = MaxTypeEntryPerBlock;
 	type MaxRefundPerBlock = MaxRefundPerBlock;
-	type OnRefund = ();
 	type ParachainStaking = ();
 	type XcmTransfer = XTokens;
 	type MaxLengthLimit = MaxLengthLimit;
 	type XcmWeightAndFeeHandler = ();
 	type ChannelCommission = ();
+	type StablePoolHandler = ();
+	type AssetIdMaps = AssetIdMaps<Test>;
+	type TreasuryAccount = BifrostFeeAccount;
 }
 
 #[cfg(feature = "runtime-benchmarks")]
 parameter_types! {
-	pub ReachableDest: Option<MultiLocation> = Some(Parent.into());
+	pub ReachableDest: Option<Location> = Some(Parent.into());
 }
 
 impl pallet_xcm::Config for Test {
@@ -529,8 +468,6 @@ impl pallet_xcm::Config for Test {
 	type SovereignAccountOf = ();
 	type MaxLockers = ConstU32<8>;
 	type WeightInfo = pallet_xcm::TestWeightInfo;
-	#[cfg(feature = "runtime-benchmarks")]
-	type ReachableDest = ReachableDest;
 	type AdminOrigin = EnsureRoot<AccountId>;
 	type MaxRemoteLockConsumers = ConstU32<0>;
 	type RemoteLockConsumerIdentifier = ();
@@ -585,7 +522,7 @@ impl XcmTransfer<AccountId, Balance, CurrencyId> for XTokensMock {
 		who: AccountId,
 		currency_id: CurrencyId,
 		amount: Balance,
-		dest: MultiLocation,
+		dest: Location,
 		_dest_weight_limit: WeightLimit,
 	) -> Result<Transferred<AccountId>, DispatchError> {
 		Currencies::withdraw(currency_id, &who, amount).ok();
@@ -593,15 +530,15 @@ impl XcmTransfer<AccountId, Balance, CurrencyId> for XTokensMock {
 		Ok(Transferred {
 			sender: who,
 			assets: Default::default(),
-			fee: MultiAsset { id: [0u8; 32].into(), fun: Fungible(0u128) },
+			fee: Asset { id: AssetId(Location::new(1, Here)), fun: Fungible(0u128) },
 			dest,
 		})
 	}
 
 	fn transfer_multiasset(
 		_who: AccountId,
-		_asset: MultiAsset,
-		_dest: MultiLocation,
+		_asset: Asset,
+		_dest: Location,
 		_dest_weight_limit: WeightLimit,
 	) -> Result<Transferred<AccountId>, DispatchError> {
 		todo!()
@@ -612,7 +549,7 @@ impl XcmTransfer<AccountId, Balance, CurrencyId> for XTokensMock {
 		_currency_id: CurrencyId,
 		_amount: Balance,
 		_fee: Balance,
-		_dest: MultiLocation,
+		_dest: Location,
 		_dest_weight_limit: WeightLimit,
 	) -> Result<Transferred<AccountId>, DispatchError> {
 		todo!()
@@ -620,9 +557,9 @@ impl XcmTransfer<AccountId, Balance, CurrencyId> for XTokensMock {
 
 	fn transfer_multiasset_with_fee(
 		_who: AccountId,
-		_asset: MultiAsset,
-		_fee: MultiAsset,
-		_dest: MultiLocation,
+		_asset: Asset,
+		_fee: Asset,
+		_dest: Location,
 		_dest_weight_limit: WeightLimit,
 	) -> Result<Transferred<AccountId>, DispatchError> {
 		todo!()
@@ -632,7 +569,7 @@ impl XcmTransfer<AccountId, Balance, CurrencyId> for XTokensMock {
 		_who: AccountId,
 		_currencies: Vec<(CurrencyId, Balance)>,
 		_fee_item: u32,
-		_dest: MultiLocation,
+		_dest: Location,
 		_dest_weight_limit: WeightLimit,
 	) -> Result<Transferred<AccountId>, DispatchError> {
 		todo!()
@@ -640,9 +577,9 @@ impl XcmTransfer<AccountId, Balance, CurrencyId> for XTokensMock {
 
 	fn transfer_multiassets(
 		_who: AccountId,
-		_assets: cumulus_primitives_core::MultiAssets,
-		_fee: MultiAsset,
-		_dest: MultiLocation,
+		_assets: Assets,
+		_fee: Asset,
+		_dest: Location,
 		_dest_weight_limit: WeightLimit,
 	) -> Result<Transferred<AccountId>, DispatchError> {
 		todo!()

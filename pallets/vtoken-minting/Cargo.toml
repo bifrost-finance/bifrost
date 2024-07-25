@@ -22,11 +22,14 @@ pallet-balances = { workspace = true }
 xcm = { workspace = true }
 cumulus-primitives-core = { workspace = true }
 sp-core = { workspace = true }
+sp-runtime = { workspace = true }
+bifrost-ve-minting = { workspace = true }
+bifrost-asset-registry = { workspace = true }
 
 [dev-dependencies]
 orml-tokens = { workspace = true }
 bifrost-currencies = { workspace = true }
-orml-xtokens = { workspace = true }
+orml-xtokens = { workspace = true}
 orml-traits = { workspace = true }
 sp-io = { workspace = true }
 sp-runtime = { workspace = true }
@@ -50,6 +53,7 @@ std = [
 	"frame-benchmarking/std",
 	"bifrost-primitives/std",
 	"orml-traits/std",
+	"orml-xtokens/std",
 	"bifrost-slp/std",
 	"bifrost-asset-registry/std",
 	"bifrost-runtime-common/std",

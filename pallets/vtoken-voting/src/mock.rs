@@ -27,7 +27,7 @@ use bifrost_primitives::{
 };
 use cumulus_primitives_core::ParaId;
 use frame_support::{
-	ord_parameter_types,
+	derive_impl, ord_parameter_types,
 	pallet_prelude::Weight,
 	parameter_types,
 	traits::{Everything, Get, Nothing},
@@ -35,12 +35,11 @@ use frame_support::{
 };
 use frame_system::EnsureRoot;
 use pallet_xcm::EnsureResponse;
-use sp_core::H256;
 use sp_runtime::{
-	traits::{BlakeTwo256, BlockNumberProvider, ConstU32, IdentityLookup},
+	traits::{BlockNumberProvider, ConstU32, IdentityLookup},
 	BuildStorage, Perbill,
 };
-use xcm::prelude::*;
+use xcm::{prelude::*, v3::MultiLocation};
 use xcm_builder::{FixedWeightBounds, FrameTransactionalProcessor};
 use xcm_executor::XcmExecutor;
 
@@ -71,30 +70,13 @@ parameter_types! {
 	pub const BlockHashCount: u64 = 250;
 	pub const DbWeight: RuntimeDbWeight = RuntimeDbWeight { read: 1, write: 2 };
 }
+
+#[derive_impl(frame_system::config_preludes::TestDefaultConfig as frame_system::DefaultConfig)]
 impl frame_system::Config for Runtime {
 	type AccountData = pallet_balances::AccountData<Balance>;
 	type AccountId = AccountId;
-	type BaseCallFilter = Everything;
-	type BlockHashCount = BlockHashCount;
-	type BlockLength = ();
-	type Nonce = u64;
 	type Block = Block;
-	type BlockWeights = ();
-	type RuntimeCall = RuntimeCall;
-	type DbWeight = DbWeight;
-	type RuntimeEvent = RuntimeEvent;
-	type Hash = H256;
-	type Hashing = BlakeTwo256;
 	type Lookup = IdentityLookup<Self::AccountId>;
-	type OnKilledAccount = ();
-	type OnNewAccount = ();
-	type OnSetCode = ();
-	type RuntimeOrigin = RuntimeOrigin;
-	type PalletInfo = PalletInfo;
-	type SS58Prefix = ();
-	type SystemWeightInfo = ();
-	type Version = ();
-	type MaxConsumers = ConstU32<16>;
 }
 
 parameter_types! {
@@ -128,7 +110,6 @@ impl pallet_balances::Config for Runtime {
 	type RuntimeHoldReason = RuntimeHoldReason;
 	type RuntimeFreezeReason = RuntimeFreezeReason;
 	type FreezeIdentifier = ();
-	type MaxHolds = ConstU32<0>;
 	type MaxFreezes = ConstU32<0>;
 }
 
@@ -160,7 +141,7 @@ parameter_types! {
 	// One XCM operation is 200_000_000 XcmWeight, cross-chain transfer ~= 2x of transfer = 3_000_000_000
 	pub UnitWeightCost: Weight = Weight::from_parts(200_000_000, 0);
 	pub const MaxInstructions: u32 = 100;
-	pub UniversalLocation: InteriorMultiLocation = X1(Parachain(2001));
+	pub UniversalLocation: InteriorLocation = Parachain(2001).into();
 }
 
 pub struct XcmConfig;
@@ -190,11 +171,15 @@ impl xcm_executor::Config for XcmConfig {
 	type AssetExchanger = ();
 	type Aliasers = Nothing;
 	type TransactionalProcessor = FrameTransactionalProcessor;
+	type HrmpNewChannelOpenRequestHandler = ();
+	type HrmpChannelAcceptedHandler = ();
+	type HrmpChannelClosingHandler = ();
+	type XcmRecorder = ();
 }
 
 #[cfg(feature = "runtime-benchmarks")]
 parameter_types! {
-	pub ReachableDest: Option<MultiLocation> = Some(Parent.into());
+	pub ReachableDest: Option<Location> = Some(Parent.into());
 }
 
 impl pallet_xcm::Config for Runtime {
@@ -218,8 +203,6 @@ impl pallet_xcm::Config for Runtime {
 	type SovereignAccountOf = ();
 	type MaxLockers = ConstU32<8>;
 	type WeightInfo = pallet_xcm::TestWeightInfo;
-	#[cfg(feature = "runtime-benchmarks")]
-	type ReachableDest = ReachableDest;
 	type AdminOrigin = EnsureRoot<AccountId>;
 	type MaxRemoteLockConsumers = ConstU32<0>;
 	type RemoteLockConsumerIdentifier = ();
@@ -268,7 +251,7 @@ impl DerivativeAccountHandler<CurrencyId, Balance> for DerivativeAccount {
 		_token: CurrencyId,
 		_derivative_index: DerivativeIndex,
 	) -> Option<MultiLocation> {
-		Some(Parent.into())
+		Some(xcm::v3::Parent.into())
 	}
 
 	fn get_stake_info(
@@ -311,7 +294,8 @@ impl BlockNumberProvider for RelaychainDataProvider {
 }
 
 parameter_types! {
-	pub static VTokenSupply: Balance = u64::MAX.into();
+	// modify TokenSupply to be twice that of VTokenSupply, making the exchange rate for vtokenming 1:2
+	pub static VTokenSupply: Balance = u64::MAX.checked_div(2u64).unwrap().into();
 	pub static TokenSupply: Balance = u64::MAX.into();
 }
 

@@ -16,43 +16,33 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
+use bifrost_kusama_runtime::{
+	constants::currency::DOLLARS, AccountId, Balance, BalancesConfig, BlockNumber,
+	DefaultBlocksPerRound, InflationInfo, Range, SS58Prefix, VestingConfig,
+};
+use bifrost_primitives::{CurrencyId, CurrencyId::*, TokenInfo, TokenSymbol::*};
+use bifrost_runtime_common::AuraId;
+use cumulus_primitives_core::ParaId;
+use frame_benchmarking::{account, whitelisted_caller};
+use hex_literal::hex;
+use sc_chain_spec::Properties;
+use sc_service::ChainType;
+use serde::de::DeserializeOwned;
+use serde_json as json;
+use sp_core::{crypto::UncheckedInto, sr25519};
+use sp_runtime::{traits::Zero, Perbill};
 use std::{
 	collections::BTreeMap,
 	fs::{read_dir, File},
 	path::PathBuf,
 };
 
-use bifrost_kusama_runtime::{
-	constants::currency::DOLLARS, AccountId, AssetRegistryConfig, Balance, BalancesConfig,
-	BlockNumber, CouncilConfig, CouncilMembershipConfig, DefaultBlocksPerRound, DemocracyConfig,
-	IndicesConfig, InflationInfo, OracleMembershipConfig, ParachainInfoConfig,
-	ParachainStakingConfig, PolkadotXcmConfig, Range, RuntimeGenesisConfig, SS58Prefix, SalpConfig,
-	SessionConfig, SystemConfig, TechnicalCommitteeConfig, TechnicalMembershipConfig, TokensConfig,
-	VestingConfig, WASM_BINARY,
-};
-use bifrost_primitives::{CurrencyId, CurrencyId::*, TokenInfo, TokenSymbol, TokenSymbol::*};
-use bifrost_runtime_common::AuraId;
-use cumulus_primitives_core::ParaId;
-use frame_benchmarking::{account, whitelisted_caller};
-use hex_literal::hex;
-
-use sc_chain_spec::Properties;
-use sc_service::ChainType;
-use sc_telemetry::TelemetryEndpoints;
-use serde::de::DeserializeOwned;
-use serde_json as json;
-use sp_core::{crypto::UncheckedInto, sr25519};
-use sp_runtime::traits::Zero;
-
-use super::TELEMETRY_URL;
 use crate::chain_spec::{get_account_id_from_seed, get_from_seed, RelayExtensions};
 
 const DEFAULT_PROTOCOL_ID: &str = "bifrost";
 
-use sp_runtime::Perbill;
-
 /// Specialized `ChainSpec` for the bifrost runtime.
-pub type ChainSpec = sc_service::GenericChainSpec<RuntimeGenesisConfig, RelayExtensions>;
+pub type ChainSpec = sc_service::GenericChainSpec<RelayExtensions>;
 
 #[allow(non_snake_case)]
 pub fn ENDOWMENT() -> u128 {
@@ -87,7 +77,7 @@ pub fn inflation_config() -> InflationInfo<Balance> {
 }
 
 fn bifrost_kusama_properties() -> Properties {
-	let mut properties = sc_chain_spec::Properties::new();
+	let mut properties = Properties::new();
 	let mut token_symbol: Vec<String> = vec![];
 	let mut token_decimals: Vec<u32> = vec![];
 	[
@@ -123,7 +113,6 @@ pub fn bifrost_genesis(
 	balances: Vec<(AccountId, Balance)>,
 	vestings: Vec<(AccountId, BlockNumber, BlockNumber, Balance)>,
 	id: ParaId,
-	tokens: Vec<(AccountId, CurrencyId, Balance)>,
 	council_membership: Vec<AccountId>,
 	technical_committee_membership: Vec<AccountId>,
 	salp_multisig_key: AccountId,
@@ -133,37 +122,25 @@ pub fn bifrost_genesis(
 		Vec<(CurrencyId, u32, u32, u32)>,
 	),
 	oracle_membership: Vec<AccountId>,
-) -> RuntimeGenesisConfig {
-	RuntimeGenesisConfig {
-		system: SystemConfig {
-			code: WASM_BINARY.expect("WASM binary was not build, please build it!").to_vec(),
-			_config: Default::default(),
+) -> serde_json::Value {
+	serde_json::json!( {
+		"balances": {
+			"balances": balances
 		},
-		balances: BalancesConfig { balances },
-		indices: IndicesConfig { indices: vec![] },
-		democracy: DemocracyConfig::default(),
-		council_membership: CouncilMembershipConfig {
-			members: council_membership.try_into().expect("convert error!"),
-			phantom: Default::default(),
+		"councilMembership": {
+			"members": council_membership
 		},
-		technical_membership: TechnicalMembershipConfig {
-			members: technical_committee_membership.try_into().expect("convert error!"),
-			phantom: Default::default(),
+		"oracleMembership": {
+			"members": oracle_membership
 		},
-		oracle_membership: OracleMembershipConfig {
-			members: oracle_membership.try_into().expect("convert error!"),
-			phantom: Default::default(),
+		"technicalCommittee": {
+			"members": technical_committee_membership
 		},
-		council: CouncilConfig { members: vec![], phantom: Default::default() },
-		technical_committee: TechnicalCommitteeConfig {
-			members: vec![],
-			phantom: Default::default(),
+		"parachainInfo": {
+			"parachainId": id
 		},
-		treasury: Default::default(),
-		phragmen_election: Default::default(),
-		parachain_info: ParachainInfoConfig { parachain_id: id, _config: Default::default() },
-		session: SessionConfig {
-			keys: candidates
+		"session": {
+			"keys": candidates
 				.iter()
 				.cloned()
 				.map(|(acc, aura, _)| {
@@ -173,102 +150,33 @@ pub fn bifrost_genesis(
 						bifrost_kusama_runtime::SessionKeys { aura }, // session keys
 					)
 				})
-				.collect(),
+				.collect::<Vec<_>>(),
 		},
-		aura: Default::default(),
-		aura_ext: Default::default(),
-		parachain_system: Default::default(),
-		vesting: VestingConfig { vesting: vestings },
-		tokens: TokensConfig { balances: tokens },
-		asset_registry: AssetRegistryConfig {
-			currency: asset_registry.0,
-			vcurrency: asset_registry.1,
-			vsbond: asset_registry.2,
-			phantom: Default::default(),
+		"polkadotXcm": {
+			"safeXcmVersion": 3
 		},
-		polkadot_xcm: PolkadotXcmConfig { safe_xcm_version: Some(2), _config: Default::default() },
-		salp: SalpConfig { initial_multisig_account: Some(salp_multisig_key) },
-		parachain_staking: ParachainStakingConfig {
-			candidates: candidates
+		"vesting": {
+			"vesting": vestings
+		},
+		"assetRegistry": {
+			"currency": asset_registry.0,
+			"vcurrency": asset_registry.1,
+			"vsbond": asset_registry.2
+		},
+		"salp": { "initialMultisigAccount": Some(salp_multisig_key) },
+		"parachainStaking": {
+			"candidates": candidates
 				.iter()
 				.cloned()
 				.map(|(account, _, bond)| (account, bond))
-				.collect(),
-			delegations,
-			inflation_config: inflation_config(),
+				.collect::<Vec<_>>(),
+			"delegations": delegations,
+			"inflationConfig": inflation_config(),
 		},
-		vtoken_voting: Default::default(),
-		transaction_payment: Default::default(),
-		zenlink_protocol: Default::default(),
-	}
+	})
 }
 
-fn development_config_genesis(id: ParaId) -> RuntimeGenesisConfig {
-	let endowed_accounts = vec![
-		get_account_id_from_seed::<sr25519::Public>("Alice"),
-		whitelisted_caller(), // Benchmarking whitelist_account
-	];
-	let balances = endowed_accounts.iter().cloned().map(|x| (x, ENDOWMENT())).collect();
-	let vestings = endowed_accounts
-		.iter()
-		.cloned()
-		.map(|x| (x, 0u32, 100u32, ENDOWMENT() / 4))
-		.collect();
-	let tokens = endowed_accounts
-		.iter()
-		.flat_map(|x| {
-			vec![
-				(x.clone(), Stable(KUSD), ENDOWMENT() * 10_000),
-				(x.clone(), Token(KAR), ENDOWMENT() * 10_000),
-				(x.clone(), Token(KSM), ENDOWMENT()),
-				(x.clone(), Token(DOT), ENDOWMENT()),
-				(x.clone(), VSToken(DOT), ENDOWMENT()),
-			]
-		})
-		.collect();
-
-	let council_membership = vec![get_account_id_from_seed::<sr25519::Public>("Alice")];
-	let technical_committee_membership = vec![get_account_id_from_seed::<sr25519::Public>("Alice")];
-	let oracle_membership = vec![get_account_id_from_seed::<sr25519::Public>("Alice")];
-
-	let salp_multisig: AccountId =
-		hex!["49daa32c7287890f38b7e1a8cd2961723d36d20baa0bf3b82e0c4bdda93b1c0a"].into();
-
-	bifrost_genesis(
-		vec![(
-			get_account_id_from_seed::<sr25519::Public>("Alice"),
-			get_from_seed::<AuraId>("Alice"),
-			ENDOWMENT() / 4,
-		)],
-		vec![],
-		balances,
-		vestings,
-		id,
-		tokens,
-		council_membership,
-		technical_committee_membership,
-		salp_multisig,
-		(vec![], vec![], vec![]),
-		oracle_membership,
-	)
-}
-
-pub fn development_config() -> Result<ChainSpec, String> {
-	Ok(ChainSpec::from_genesis(
-		"Bifrost Development",
-		"dev",
-		ChainType::Development,
-		move || local_config_genesis(PARA_ID.into()),
-		vec![],
-		None,
-		Some(DEFAULT_PROTOCOL_ID),
-		None,
-		Some(bifrost_kusama_properties()),
-		RelayExtensions { relay_chain: "kusama".into(), para_id: PARA_ID, evm_since: 1 },
-	))
-}
-
-fn local_config_genesis(id: ParaId) -> RuntimeGenesisConfig {
+pub fn local_testnet_config() -> ChainSpec {
 	let endowed_accounts = vec![
 		get_account_id_from_seed::<sr25519::Public>("Alice"),
 		get_account_id_from_seed::<sr25519::Public>("Bob"),
@@ -276,12 +184,6 @@ fn local_config_genesis(id: ParaId) -> RuntimeGenesisConfig {
 		get_account_id_from_seed::<sr25519::Public>("Dave"),
 		get_account_id_from_seed::<sr25519::Public>("Eve"),
 		get_account_id_from_seed::<sr25519::Public>("Ferdie"),
-		get_account_id_from_seed::<sr25519::Public>("Alice//stash"),
-		get_account_id_from_seed::<sr25519::Public>("Bob//stash"),
-		get_account_id_from_seed::<sr25519::Public>("Charlie//stash"),
-		get_account_id_from_seed::<sr25519::Public>("Dave//stash"),
-		get_account_id_from_seed::<sr25519::Public>("Eve//stash"),
-		get_account_id_from_seed::<sr25519::Public>("Ferdie//stash"),
 		whitelisted_caller(), // Benchmarking whitelist_account
 		account("bechmarking_account_1", 0, 0),
 		// dKwyFv7RL79j1pAukZnZtAmxwG6a3USBmjZyFCLRSbghdiV
@@ -294,28 +196,6 @@ fn local_config_genesis(id: ParaId) -> RuntimeGenesisConfig {
 		.iter()
 		.cloned()
 		.map(|x| (x, 0u32, 100u32, ENDOWMENT() / 4))
-		.collect();
-	let tokens = endowed_accounts
-		.iter()
-		.flat_map(|x| {
-			vec![
-				(x.clone(), Stable(KUSD), ENDOWMENT() * 10_000),
-				(x.clone(), Token(KAR), ENDOWMENT() * 10_000),
-				(x.clone(), Token(KSM), ENDOWMENT() * 4_000_000),
-				(x.clone(), VSToken(KSM), ENDOWMENT() * 4_000_000),
-				(x.clone(), Token2(0), ENDOWMENT() * 4_000_000),
-				(
-					x.clone(),
-					CurrencyId::VSBond(TokenSymbol::KSM, 3000, 13, 20),
-					ENDOWMENT() * 4_000_000,
-				),
-				(
-					x.clone(),
-					CurrencyId::VSBond(TokenSymbol::BNC, 2001, 13, 20),
-					ENDOWMENT() * 4_000_000,
-				),
-			]
-		})
 		.collect();
 
 	let council_membership = vec![get_account_id_from_seed::<sr25519::Public>("Alice")];
@@ -330,43 +210,21 @@ fn local_config_genesis(id: ParaId) -> RuntimeGenesisConfig {
 		(Stable(KUSD), DOLLARS / 10_000, None),
 		(Token(KSM), DOLLARS / 10_000, None),
 		(Token(ZLK), DOLLARS / 1000_000, None),
-		(Token(KAR), DOLLARS / 10_000, None),
-		(Token(RMRK), DOLLARS / 1000_000, None),
-		(Token(PHA), 4 * DOLLARS / 100, None),
 		(Token(MOVR), DOLLARS / 1000_000, None),
-		(Token2(0), 0, None),
 	];
-	let vcurrency = vec![VSToken(KSM), VToken(BNC), VToken(KSM), VToken(MOVR)];
+	let vcurrency = vec![VToken(BNC), VToken(KSM), VToken(MOVR)];
 
 	// vsBond
-	let vsbond = vec![
-		// Token, ParaId, first_slot, last_slot
-		(Native(BNC), 2001u32, 13u32, 20u32),
-		(Token(KSM), 2011, 19, 26),
-		(Token(KSM), 2085, 15, 22),
-		(Token(KSM), 2087, 17, 24),
-		(Token(KSM), 2088, 15, 22),
-		(Token(KSM), 2090, 15, 22),
-		(Token(KSM), 2092, 15, 22),
-		(Token(KSM), 2095, 17, 24),
-		(Token(KSM), 2096, 17, 24),
-		(Token(KSM), 2100, 18, 25),
-		(Token(KSM), 2101, 18, 25),
-		(Token(KSM), 2102, 19, 26),
-		(Token(KSM), 2102, 21, 28),
-		(Token(KSM), 2102, 20, 27),
-		(Token(KSM), 2106, 19, 26),
-		(Token(KSM), 2114, 20, 27),
-		(Token(KSM), 2118, 22, 29),
-		(Token(KSM), 2119, 22, 29),
-		(Token(KSM), 2121, 22, 29),
-		(Token(KSM), 2124, 23, 30),
-		(Token(KSM), 2125, 23, 30),
-		(Token(KSM), 2127, 23, 30),
-		(Token(KSM), 2129, 24, 31),
-	];
+	let vsbond = vec![];
 
-	bifrost_genesis(
+	ChainSpec::builder(
+		bifrost_kusama_runtime::WASM_BINARY.expect("WASM binary was not built, please build it!"),
+		RelayExtensions { relay_chain: "kusama-local".into(), para_id: PARA_ID, evm_since: 1 },
+	)
+	.with_name("Bifrost Local Testnet")
+	.with_id("bifrost_local_testnet")
+	.with_chain_type(ChainType::Local)
+	.with_genesis_config_patch(bifrost_genesis(
 		vec![
 			(
 				get_account_id_from_seed::<sr25519::Public>("Alice"),
@@ -382,210 +240,19 @@ fn local_config_genesis(id: ParaId) -> RuntimeGenesisConfig {
 		vec![],
 		balances,
 		vestings,
-		id,
-		tokens,
+		PARA_ID.into(),
 		council_membership,
 		technical_committee_membership,
 		salp_multisig,
 		(currency, vcurrency, vsbond),
 		oracle_membership,
-	)
-}
-
-pub fn local_testnet_config() -> Result<ChainSpec, String> {
-	Ok(ChainSpec::from_genesis(
-		"Bifrost Local Testnet",
-		"bifrost_local_testnet",
-		ChainType::Local,
-		move || local_config_genesis(PARA_ID.into()),
-		vec![],
-		None,
-		Some(DEFAULT_PROTOCOL_ID),
-		None,
-		Some(bifrost_kusama_properties()),
-		RelayExtensions { relay_chain: "kusama-local".into(), para_id: PARA_ID, evm_since: 1 },
 	))
-}
-
-fn rococo_testnet_config_genesis(id: ParaId) -> RuntimeGenesisConfig {
-	let invulnerables: Vec<(AccountId, AuraId, Balance)> = vec![
-		(
-			// e2s2dTSWe9kHebF2FCbPGbXftDT7fY5AMDfib3j86zSi3v7
-			hex!["66204aeda74f07f77a4b6945681296763706f98d0f8aebb1b9ccdf6e9b7ac13f"].into(),
-			hex!["66204aeda74f07f77a4b6945681296763706f98d0f8aebb1b9ccdf6e9b7ac13f"]
-				.unchecked_into(),
-			ENDOWMENT(),
-		),
-		(
-			// fFjUFbokagaDRQUDzVhDcMZQaDwQvvha74RMZnyoSWNpiBQ
-			hex!["9c2d45edb30d4bf0c285d6809e28c55e871f10578c5a3ea62da152d03761d266"].into(),
-			hex!["9c2d45edb30d4bf0c285d6809e28c55e871f10578c5a3ea62da152d03761d266"]
-				.unchecked_into(),
-			ENDOWMENT(),
-		),
-		(
-			// fBAbVJAsbWsKTedTVYGrBB3Usm6Vx635z1N9PX2tZ2boT37
-			hex!["98b19fa5a3e98f693b7440de07b4744834ff0072cb704f1c6e33791953ac4924"].into(),
-			hex!["98b19fa5a3e98f693b7440de07b4744834ff0072cb704f1c6e33791953ac4924"]
-				.unchecked_into(),
-			ENDOWMENT(),
-		),
-		(
-			// c9eHvgbxTFzijvY3AnAKiRTHhi2hzS5SLCPzCkb4jP79MLu
-			hex!["12d3ab675d6503279133898efe246a63fdc8be685cc3f7bce079aac064108a7a"].into(),
-			hex!["12d3ab675d6503279133898efe246a63fdc8be685cc3f7bce079aac064108a7a"]
-				.unchecked_into(),
-			ENDOWMENT(),
-		),
-	];
-
-	let endowed_accounts: Vec<AccountId> = vec![
-		// dDWnEWnx3GUgfugXh9mZtgj4CvJdmd8naYkWYCZGxjfb1Cz
-		hex!["420398e0150cd9d417fb8fd4027b75bd42717262e6eac97c55f2f8f84e8ffb3f"].into(),
-		// e2s2dTSWe9kHebF2FCbPGbXftDT7fY5AMDfib3j86zSi3v7
-		hex!["66204aeda74f07f77a4b6945681296763706f98d0f8aebb1b9ccdf6e9b7ac13f"].into(),
-		// fFjUFbokagaDRQUDzVhDcMZQaDwQvvha74RMZnyoSWNpiBQ
-		hex!["9c2d45edb30d4bf0c285d6809e28c55e871f10578c5a3ea62da152d03761d266"].into(),
-		// fBAbVJAsbWsKTedTVYGrBB3Usm6Vx635z1N9PX2tZ2boT37
-		hex!["98b19fa5a3e98f693b7440de07b4744834ff0072cb704f1c6e33791953ac4924"].into(),
-		// c9eHvgbxTFzijvY3AnAKiRTHhi2hzS5SLCPzCkb4jP79MLu
-		hex!["12d3ab675d6503279133898efe246a63fdc8be685cc3f7bce079aac064108a7a"].into(),
-	];
-	let balances = endowed_accounts.iter().cloned().map(|x| (x, ENDOWMENT())).collect();
-
-	let salp_multisig: AccountId =
-		hex!["e4da05f08e89bf6c43260d96f26fffcfc7deae5b465da08669a9d008e64c2c63"].into();
-
-	let council_membership = vec![
-		// dDWnEWnx3GUgfugXh9mZtgj4CvJdmd8naYkWYCZGxjfb1Cz
-		hex!["420398e0150cd9d417fb8fd4027b75bd42717262e6eac97c55f2f8f84e8ffb3f"].into(),
-	];
-	let technical_committee_membership = vec![
-		// dDWnEWnx3GUgfugXh9mZtgj4CvJdmd8naYkWYCZGxjfb1Cz
-		hex!["420398e0150cd9d417fb8fd4027b75bd42717262e6eac97c55f2f8f84e8ffb3f"].into(),
-	];
-	let oracle_membership = vec![
-		// dDWnEWnx3GUgfugXh9mZtgj4CvJdmd8naYkWYCZGxjfb1Cz
-		hex!["420398e0150cd9d417fb8fd4027b75bd42717262e6eac97c55f2f8f84e8ffb3f"].into(),
-	];
-
-	bifrost_genesis(
-		invulnerables,
-		vec![],
-		balances,
-		vec![],
-		id,
-		vec![],
-		council_membership,
-		technical_committee_membership,
-		salp_multisig,
-		(
-			vec![
-				(CurrencyId::Token(TokenSymbol::DOT), 100_000_000, None),
-				(CurrencyId::Token(TokenSymbol::KSM), 10_000_000, None),
-			],
-			vec![],
-			vec![],
-		),
-		oracle_membership,
-	)
-}
-
-pub fn rococo_testnet_config() -> Result<ChainSpec, String> {
-	Ok(ChainSpec::from_genesis(
-		"Bifrost K Rococo",
-		"bifrost-k-rococo",
-		ChainType::Live,
-		move || rococo_testnet_config_genesis(2030.into()),
-		vec![],
-		TelemetryEndpoints::new(vec![(TELEMETRY_URL.into(), 0)]).ok(),
-		Some(DEFAULT_PROTOCOL_ID),
-		None,
-		Some(bifrost_kusama_properties()),
-		RelayExtensions { relay_chain: "rococo".into(), para_id: 2030, evm_since: 1 },
-	))
-}
-
-fn rococo_local_config_genesis(id: ParaId) -> RuntimeGenesisConfig {
-	let endowed_accounts: Vec<AccountId> = vec![
-		get_account_id_from_seed::<sr25519::Public>("Alice"),
-		get_account_id_from_seed::<sr25519::Public>("Bob"),
-		get_account_id_from_seed::<sr25519::Public>("Charlie"),
-		get_account_id_from_seed::<sr25519::Public>("Dave"),
-		get_account_id_from_seed::<sr25519::Public>("Eve"),
-		get_account_id_from_seed::<sr25519::Public>("Ferdie"),
-		get_account_id_from_seed::<sr25519::Public>("Alice//stash"),
-		get_account_id_from_seed::<sr25519::Public>("Bob//stash"),
-		get_account_id_from_seed::<sr25519::Public>("Charlie//stash"),
-		get_account_id_from_seed::<sr25519::Public>("Dave//stash"),
-		get_account_id_from_seed::<sr25519::Public>("Eve//stash"),
-		get_account_id_from_seed::<sr25519::Public>("Ferdie//stash"),
-	];
-	let balances = endowed_accounts.iter().cloned().map(|x| (x, ENDOWMENT())).collect();
-
-	let salp_multisig: AccountId = get_account_id_from_seed::<sr25519::Public>("Alice");
-
-	let council_membership = vec![get_account_id_from_seed::<sr25519::Public>("Alice")];
-	let technical_committee_membership = vec![get_account_id_from_seed::<sr25519::Public>("Alice")];
-	let oracle_membership = vec![get_account_id_from_seed::<sr25519::Public>("Alice")];
-
-	bifrost_genesis(
-		vec![
-			(
-				get_account_id_from_seed::<sr25519::Public>("Alice"),
-				get_from_seed::<AuraId>("Alice"),
-				ENDOWMENT() / 4,
-			),
-			(
-				get_account_id_from_seed::<sr25519::Public>("Bob"),
-				get_from_seed::<AuraId>("Bob"),
-				ENDOWMENT() / 4,
-			),
-		],
-		vec![],
-		balances,
-		vec![],
-		id,
-		vec![],
-		council_membership,
-		technical_committee_membership,
-		salp_multisig,
-		(vec![(Token(DOT), 100_000_000, None), (Token(KSM), 10_000_000, None)], vec![], vec![]),
-		oracle_membership,
-	)
-}
-
-pub fn rococo_local_config() -> Result<ChainSpec, String> {
-	Ok(ChainSpec::from_genesis(
-		"Bifrost K Rococo Local",
-		"bifrost-k-rococo-local",
-		ChainType::Local,
-		move || rococo_local_config_genesis(2030.into()),
-		vec![],
-		TelemetryEndpoints::new(vec![(TELEMETRY_URL.into(), 0)]).ok(),
-		Some(DEFAULT_PROTOCOL_ID),
-		None,
-		Some(bifrost_kusama_properties()),
-		RelayExtensions { relay_chain: "rococo".into(), para_id: 2030, evm_since: 1 },
-	))
+	.with_properties(bifrost_kusama_properties())
+	.with_protocol_id(DEFAULT_PROTOCOL_ID)
+	.build()
 }
 
 pub fn chainspec_config() -> ChainSpec {
-	ChainSpec::from_genesis(
-		"Bifrost",
-		"bifrost",
-		ChainType::Live,
-		move || bifrost_config_genesis(PARA_ID.into()),
-		vec![],
-		TelemetryEndpoints::new(vec![(TELEMETRY_URL.into(), 0)]).ok(),
-		Some(DEFAULT_PROTOCOL_ID),
-		None,
-		Some(bifrost_kusama_properties()),
-		RelayExtensions { relay_chain: "kusama".into(), para_id: PARA_ID, evm_since: 1 },
-	)
-}
-
-fn bifrost_config_genesis(id: ParaId) -> RuntimeGenesisConfig {
 	let invulnerables: Vec<(AccountId, AuraId, Balance)> = vec![
 		(
 			// eunwjK45qDugPXhnjxGUcMbifgdtgefzoW7PgMMpr39AXwh
@@ -656,19 +323,28 @@ fn bifrost_config_genesis(id: ParaId) -> RuntimeGenesisConfig {
 	let salp_multisig: AccountId =
 		hex!["e4da05f08e89bf6c43260d96f26fffcfc7deae5b465da08669a9d008e64c2c63"].into();
 
-	bifrost_genesis(
+	ChainSpec::builder(
+		bifrost_kusama_runtime::WASM_BINARY.expect("WASM binary was not built, please build it!"),
+		RelayExtensions { relay_chain: "kusama".into(), para_id: PARA_ID, evm_since: 1 },
+	)
+	.with_name("Bifrost")
+	.with_id("bifrost")
+	.with_chain_type(ChainType::Live)
+	.with_genesis_config_patch(bifrost_genesis(
 		invulnerables,
 		vec![],
 		balances,
 		vesting_configs.into_iter().flat_map(|vc| vc.vesting).collect(),
-		id,
-		vec![], // tokens
+		PARA_ID.into(),
 		vec![], // council membership
 		vec![], // technical committee membership
 		salp_multisig,
 		(vec![], vec![], vec![]),
 		vec![],
-	)
+	))
+	.with_properties(bifrost_kusama_properties())
+	.with_protocol_id(DEFAULT_PROTOCOL_ID)
+	.build()
 }
 
 fn config_from_json_file<T: DeserializeOwned>(path: PathBuf) -> Result<T, String> {

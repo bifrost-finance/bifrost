@@ -30,7 +30,6 @@ use crate::{
 };
 use bifrost_primitives::{CurrencyId, VtokenMintingOperator, XcmOperationType, ASTR_TOKEN_ID};
 use core::marker::PhantomData;
-pub use cumulus_primitives_core::ParaId;
 use frame_support::{ensure, traits::Get};
 use frame_system::pallet_prelude::BlockNumberFor;
 use parity_scale_codec::Encode;
@@ -42,7 +41,7 @@ use sp_std::prelude::*;
 use xcm::{
 	opaque::v3::{Junction::Parachain, Junctions::X1, MultiLocation},
 	v3::prelude::*,
-	VersionedMultiAssets, VersionedMultiLocation,
+	VersionedAssets, VersionedLocation,
 };
 
 /// StakingAgent implementation for Astar
@@ -129,7 +128,7 @@ impl<T: Config>
 
 		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
 		// send it out.
-		let (query_id, timeout, _fee, xcm_message) =
+		let (query_id, timeout, fee, xcm_message) =
 			Pallet::<T>::construct_xcm_as_subaccount_with_query_id(
 				XcmOperationType::Bond,
 				call.encode(),
@@ -137,6 +136,10 @@ impl<T: Config>
 				currency_id,
 				weight_and_fee,
 			)?;
+
+		// withdraw this xcm fee from treasury. If treasury doesn't have this money, stop the
+		// process.
+		Pallet::<T>::burn_fee_from_source_account(fee, currency_id)?;
 
 		// Insert a delegator ledger update record into DelegatorLedgerXcmUpdateQueue<T>.
 		Self::insert_delegator_ledger_update_entry(
@@ -149,8 +152,9 @@ impl<T: Config>
 		)?;
 
 		// Send out the xcm message.
-		let dest = Pallet::<T>::get_para_multilocation_by_currency_id(currency_id)?;
-		send_xcm::<T::XcmRouter>(dest, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
+		let dest_location = Pallet::<T>::convert_currency_to_dest_location(currency_id)?;
+		xcm::v4::send_xcm::<T::XcmRouter>(dest_location, xcm_message)
+			.map_err(|_e| Error::<T>::XcmFailure)?;
 
 		Ok(query_id)
 	}
@@ -171,13 +175,17 @@ impl<T: Config>
 
 		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
 		// send it out.
-		Pallet::<T>::construct_xcm_and_send_as_subaccount_without_query_id(
+		let fee = Pallet::<T>::construct_xcm_and_send_as_subaccount_without_query_id(
 			XcmOperationType::Payout,
 			call,
 			who,
 			currency_id,
 			weight_and_fee,
 		)?;
+
+		// withdraw this xcm fee from treasury. If treasury doesn't have this money, stop the
+		// process.
+		Pallet::<T>::burn_fee_from_source_account(fee, currency_id)?;
 
 		Ok(Zero::zero())
 	}
@@ -220,7 +228,7 @@ impl<T: Config>
 
 		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
 		// send it out.
-		let (query_id, timeout, _, xcm_message) =
+		let (query_id, timeout, fee, xcm_message) =
 			Pallet::<T>::construct_xcm_as_subaccount_with_query_id(
 				XcmOperationType::Unbond,
 				call.encode(),
@@ -228,6 +236,10 @@ impl<T: Config>
 				currency_id,
 				weight_and_fee,
 			)?;
+
+		// withdraw this xcm fee from treasury. If treasury doesn't have this money, stop the
+		// process.
+		Pallet::<T>::burn_fee_from_source_account(fee, currency_id)?;
 
 		// Insert a delegator ledger update record into DelegatorLedgerXcmUpdateQueue<T>.
 		Self::insert_delegator_ledger_update_entry(
@@ -240,8 +252,9 @@ impl<T: Config>
 		)?;
 
 		// Send out the xcm message.
-		let dest = Pallet::<T>::get_para_multilocation_by_currency_id(currency_id)?;
-		send_xcm::<T::XcmRouter>(dest, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
+		let dest_location = Pallet::<T>::convert_currency_to_dest_location(currency_id)?;
+		xcm::v4::send_xcm::<T::XcmRouter>(dest_location, xcm_message)
+			.map_err(|_e| Error::<T>::XcmFailure)?;
 
 		Ok(query_id)
 	}
@@ -323,13 +336,17 @@ impl<T: Config>
 
 		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
 		// send it out.
-		Pallet::<T>::construct_xcm_and_send_as_subaccount_without_query_id(
+		let fee = Pallet::<T>::construct_xcm_and_send_as_subaccount_without_query_id(
 			XcmOperationType::Payout,
 			call,
 			who,
 			currency_id,
 			weight_and_fee,
 		)?;
+
+		// withdraw this xcm fee from treasury. If treasury doesn't have this money, stop the
+		// process.
+		Pallet::<T>::burn_fee_from_source_account(fee, currency_id)?;
 
 		Ok(Zero::zero())
 	}
@@ -355,7 +372,7 @@ impl<T: Config>
 
 		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
 		// send it out.
-		let (query_id, timeout, _fee, xcm_message) =
+		let (query_id, timeout, fee, xcm_message) =
 			Pallet::<T>::construct_xcm_as_subaccount_with_query_id(
 				XcmOperationType::Liquidize,
 				call.encode(),
@@ -363,6 +380,10 @@ impl<T: Config>
 				currency_id,
 				weight_and_fee,
 			)?;
+
+		// withdraw this xcm fee from treasury. If treasury doesn't have this money, stop the
+		// process.
+		Pallet::<T>::burn_fee_from_source_account(fee, currency_id)?;
 
 		// Insert a delegator ledger update record into DelegatorLedgerXcmUpdateQueue<T>.
 		Self::insert_delegator_ledger_update_entry(
@@ -375,8 +396,9 @@ impl<T: Config>
 		)?;
 
 		// Send out the xcm message.
-		let dest = Pallet::<T>::get_para_multilocation_by_currency_id(currency_id)?;
-		send_xcm::<T::XcmRouter>(dest, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
+		let dest_location = Pallet::<T>::convert_currency_to_dest_location(currency_id)?;
+		xcm::v4::send_xcm::<T::XcmRouter>(dest_location, xcm_message)
+			.map_err(|_e| Error::<T>::XcmFailure)?;
 
 		Ok(query_id)
 	}
@@ -397,7 +419,7 @@ impl<T: Config>
 	fn transfer_back(
 		&self,
 		from: &MultiLocation,
-		to: &MultiLocation,
+		_to: &MultiLocation,
 		amount: BalanceOf<T>,
 		currency_id: CurrencyId,
 		weight_and_fee: Option<(Weight, BalanceOf<T>)>,
@@ -409,32 +431,26 @@ impl<T: Config>
 		DelegatorsMultilocation2Index::<T>::get(currency_id, from)
 			.ok_or(Error::<T>::DelegatorNotExist)?;
 
-		// Make sure the receiving account is the Exit_account from vtoken-minting module.
-		let to_account_id = Pallet::<T>::multilocation_to_account(to)?;
-		let (_, exit_account) = T::VtokenMinting::get_entrance_and_exit_accounts();
-		ensure!(to_account_id == exit_account, Error::<T>::InvalidAccount);
+		// Make sure the receiving account is the entrance_account from vtoken-minting module.
+		let (entrance_account, _) = T::VtokenMinting::get_entrance_and_exit_accounts();
 
 		// Prepare parameter dest and beneficiary.
-		let to_32: [u8; 32] = Pallet::<T>::multilocation_to_account_32(to)?;
-
-		let dest = Box::new(VersionedMultiLocation::from(MultiLocation::new(
+		let dest = Box::new(VersionedLocation::V3(MultiLocation::new(
 			1,
 			X1(Parachain(T::ParachainId::get().into())),
 		)));
 
-		let beneficiary =
-			Box::new(VersionedMultiLocation::from(MultiLocation::from(X1(AccountId32 {
-				network: None,
-				id: to_32,
-			}))));
+		let beneficiary = Box::new(VersionedLocation::V3(MultiLocation::from(X1(AccountId32 {
+			network: None,
+			id: entrance_account.encode().try_into().map_err(|_| Error::<T>::FailToConvert)?,
+		}))));
 
 		// Prepare parameter assets.
 		let asset = MultiAsset {
 			fun: Fungible(amount.unique_saturated_into()),
 			id: Concrete(MultiLocation { parents: 0, interior: Here }),
 		};
-		let assets: Box<VersionedMultiAssets> =
-			Box::new(VersionedMultiAssets::from(MultiAssets::from(asset)));
+		let assets: Box<VersionedAssets> = Box::new(VersionedAssets::V3(MultiAssets::from(asset)));
 
 		// Prepare parameter fee_asset_item.
 		let fee_asset_item: u32 = 0;
@@ -450,13 +466,17 @@ impl<T: Config>
 
 		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
 		// send it out.
-		Pallet::<T>::construct_xcm_and_send_as_subaccount_without_query_id(
+		let fee = Pallet::<T>::construct_xcm_and_send_as_subaccount_without_query_id(
 			XcmOperationType::TransferBack,
 			call.encode(),
 			from,
 			currency_id,
 			weight_and_fee,
 		)?;
+
+		// withdraw this xcm fee from treasury. If treasury doesn't have this money, stop the
+		// process.
+		Pallet::<T>::burn_fee_from_source_account(fee, currency_id)?;
 
 		Ok(())
 	}
@@ -480,6 +500,14 @@ impl<T: Config>
 		let from_account_id = Pallet::<T>::multilocation_to_account(from)?;
 		let (entrance_account, _) = T::VtokenMinting::get_entrance_and_exit_accounts();
 		ensure!(from_account_id == entrance_account, Error::<T>::InvalidAccount);
+
+		// transfer supplementary fee from treasury to the "from" account. Return the added up
+		// amount
+		let amount = Pallet::<T>::get_transfer_to_added_amount_and_supplement(
+			from_account_id,
+			amount,
+			currency_id,
+		)?;
 
 		Pallet::<T>::do_transfer_to(from, to, amount, currency_id)?;
 
@@ -564,19 +592,6 @@ impl<T: Config>
 			Pallet::<T>::inner_calculate_vtoken_hosting_fee(amount, vtoken, currency_id)?;
 
 		Pallet::<T>::inner_charge_hosting_fee(charge_amount, to, vtoken)
-	}
-
-	/// Deposit some amount as fee to nominator accounts.
-	fn supplement_fee_reserve(
-		&self,
-		amount: BalanceOf<T>,
-		from: &MultiLocation,
-		to: &MultiLocation,
-		currency_id: CurrencyId,
-	) -> Result<(), Error<T>> {
-		Pallet::<T>::do_transfer_to(from, to, amount, currency_id)?;
-
-		Ok(())
 	}
 
 	fn check_delegator_ledger_query_response(

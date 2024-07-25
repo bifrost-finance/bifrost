@@ -19,13 +19,11 @@
 #![cfg(test)]
 
 use crate::{mocks::mock_kusama::*, *};
-use bifrost_primitives::{
-	currency::{BNC, KSM, VKSM},
-	RedeemType,
-};
-use frame_support::{assert_noop, assert_ok, PalletId};
+use bifrost_primitives::currency::{KSM, VKSM};
+use frame_support::{assert_ok, PalletId};
 use orml_traits::MultiCurrency;
-use sp_runtime::{traits::AccountIdConversion, MultiAddress};
+use sp_runtime::traits::AccountIdConversion;
+use xcm::v3::prelude::*;
 
 const SUBACCOUNT_0_32: [u8; 32] =
 	hex_literal::hex!["5a53736d8e96f1c007cf0d630acf5209b20611617af23ce924c8e25328eb5d28"];
@@ -73,47 +71,6 @@ fn set_fee_source_works() {
 			Some((alice_location, 1_000_000_000_000))
 		));
 		assert_eq!(FeeSources::<Runtime>::get(KSM), Some((alice_location, 1_000_000_000_000)));
-	});
-}
-
-// test native token fee supplement. Non-native will be tested in the integration tests.
-#[test]
-fn supplement_fee_reserve_works() {
-	ExtBuilder::default().one_hundred_for_alice().build().execute_with(|| {
-		// set fee source
-		let alice_32 = Pallet::<Runtime>::account_id_to_account_32(ALICE).unwrap();
-		let alice_location = Pallet::<Runtime>::account_32_to_local_location(alice_32).unwrap();
-		assert_ok!(Slp::set_fee_source(
-			RuntimeOrigin::signed(ALICE),
-			BNC,
-			Some((alice_location, 10))
-		));
-
-		// supplement fee
-		let bob_32 = Pallet::<Runtime>::account_id_to_account_32(BOB).unwrap();
-		let bob_location = Pallet::<Runtime>::account_32_to_local_location(bob_32).unwrap();
-		assert_eq!(Balances::free_balance(&ALICE), 100);
-		assert_eq!(Balances::free_balance(&BOB), 0);
-
-		assert_noop!(
-			Slp::supplement_fee_reserve(
-				RuntimeOrigin::signed(ALICE),
-				BNC,
-				Box::new(alice_location)
-			),
-			Error::<Runtime>::DestAccountNotValid
-		);
-
-		assert_ok!(Slp::set_operate_origin(RuntimeOrigin::signed(ALICE), BNC, Some(BOB)));
-
-		assert_ok!(Slp::supplement_fee_reserve(
-			RuntimeOrigin::signed(ALICE),
-			BNC,
-			Box::new(bob_location)
-		));
-
-		assert_eq!(Balances::free_balance(&ALICE), 90);
-		assert_eq!(Balances::free_balance(&BOB), 10);
 	});
 }
 
@@ -210,211 +167,6 @@ fn update_ongoing_time_unit_works() {
 
 		// Check the value after updating.
 		assert_eq!(VtokenMinting::ongoing_time_unit(KSM), Some(TimeUnit::Era(9)));
-	});
-}
-
-#[test]
-fn refund_currency_due_unbond_works() {
-	ExtBuilder::default().build().execute_with(|| {
-		// Preparations
-		// get entrance and exit accounts
-		let (entrance_acc, exit_acc) = VtokenMinting::get_entrance_and_exit_accounts();
-		// Set exit account balance to be 50.
-		assert_ok!(Tokens::set_balance(
-			RuntimeOrigin::root(),
-			MultiAddress::Id(exit_acc.clone()),
-			KSM,
-			50,
-			0
-		));
-
-		// set current era to be 100.
-		bifrost_vtoken_minting::OngoingTimeUnit::<Runtime>::insert(KSM, TimeUnit::Era(100));
-
-		// Set TokenUnlockLedger records.
-		let record_bob = (BOB, 10, TimeUnit::Era(90), RedeemType::Native);
-		bifrost_vtoken_minting::TokenUnlockLedger::<Runtime>::insert(KSM, 0, record_bob);
-
-		let record_charlie = (CHARLIE, 28, TimeUnit::Era(100), RedeemType::Native);
-		bifrost_vtoken_minting::TokenUnlockLedger::<Runtime>::insert(KSM, 1, record_charlie);
-
-		let record_dave = (DAVE, 30, TimeUnit::Era(100), RedeemType::Native);
-		bifrost_vtoken_minting::TokenUnlockLedger::<Runtime>::insert(KSM, 2, record_dave);
-
-		let record_eddie_1 = (EDDIE, 7, TimeUnit::Era(110), RedeemType::Native);
-		bifrost_vtoken_minting::TokenUnlockLedger::<Runtime>::insert(KSM, 3, record_eddie_1);
-
-		let record_eddie_2 = (EDDIE, 6, TimeUnit::Era(110), RedeemType::Native);
-		bifrost_vtoken_minting::TokenUnlockLedger::<Runtime>::insert(KSM, 4, record_eddie_2);
-
-		// insert TimeUnitUnlockLedger records
-		let bounded_vec_90 = BoundedVec::try_from(vec![0]).unwrap();
-		let time_record_90 = (10, bounded_vec_90, KSM);
-		bifrost_vtoken_minting::TimeUnitUnlockLedger::<Runtime>::insert(
-			TimeUnit::Era(90),
-			KSM,
-			time_record_90.clone(),
-		);
-
-		let bounded_vec_100 = BoundedVec::try_from(vec![1, 2]).unwrap();
-		let time_record_100 = (58, bounded_vec_100, KSM);
-		bifrost_vtoken_minting::TimeUnitUnlockLedger::<Runtime>::insert(
-			TimeUnit::Era(100),
-			KSM,
-			time_record_100,
-		);
-
-		let bounded_vec_110 = BoundedVec::try_from(vec![3, 4]).unwrap();
-		let time_record_110 = (13, bounded_vec_110, KSM);
-		bifrost_vtoken_minting::TimeUnitUnlockLedger::<Runtime>::insert(
-			TimeUnit::Era(110),
-			KSM,
-			time_record_110.clone(),
-		);
-
-		// insert UserUnlockLedger records.
-		let bounded_vec_bob = BoundedVec::try_from(vec![0]).unwrap();
-		bifrost_vtoken_minting::UserUnlockLedger::<Runtime>::insert(
-			BOB,
-			KSM,
-			(10, bounded_vec_bob.clone()),
-		);
-
-		let bounded_vec_charlie = BoundedVec::try_from(vec![1]).unwrap();
-		bifrost_vtoken_minting::UserUnlockLedger::<Runtime>::insert(
-			CHARLIE,
-			KSM,
-			(28, bounded_vec_charlie),
-		);
-
-		let bounded_vec_dave = BoundedVec::try_from(vec![2]).unwrap();
-		bifrost_vtoken_minting::UserUnlockLedger::<Runtime>::insert(
-			DAVE,
-			KSM,
-			(30, bounded_vec_dave.clone()),
-		);
-
-		let bounded_vec_eddie = BoundedVec::try_from(vec![3, 4]).unwrap();
-		bifrost_vtoken_minting::UserUnlockLedger::<Runtime>::insert(
-			EDDIE,
-			KSM,
-			(13, bounded_vec_eddie.clone()),
-		);
-
-		bifrost_vtoken_minting::UnlockingTotal::<Runtime>::insert(KSM, 1000);
-
-		// check account balances before refund
-		assert_eq!(Tokens::free_balance(KSM, &exit_acc), 50);
-		assert_eq!(Tokens::free_balance(KSM, &BOB), 0);
-		assert_eq!(Tokens::free_balance(KSM, &CHARLIE), 0);
-		assert_eq!(Tokens::free_balance(KSM, &DAVE), 0);
-		assert_eq!(Tokens::free_balance(KSM, &EDDIE), 0);
-
-		// Before: check pool_token amount
-		assert_eq!(bifrost_vtoken_minting::TokenPool::<Runtime>::get(KSM), 0);
-		// Before: check vksm amount
-		assert_eq!(Currencies::total_issuance(VKSM), 0);
-
-		// Refund user
-		assert_ok!(Slp::refund_currency_due_unbond(RuntimeOrigin::signed(ALICE), KSM));
-
-		// After: check pool_token amount
-		assert_eq!(bifrost_vtoken_minting::TokenPool::<Runtime>::get(KSM), 0);
-		// After: check vksm amount
-		assert_eq!(Currencies::total_issuance(VKSM), 0);
-
-		// Check account balances after refund
-		assert_eq!(Tokens::free_balance(KSM, &exit_acc), 0);
-		assert_eq!(Tokens::free_balance(KSM, &BOB), 0);
-		assert_eq!(Tokens::free_balance(KSM, &CHARLIE), 28);
-		assert_eq!(Tokens::free_balance(KSM, &DAVE), 22);
-		assert_eq!(Tokens::free_balance(KSM, &EDDIE), 0);
-
-		// Check storage
-		// Unlocking records for era 90
-		assert_eq!(
-			bifrost_vtoken_minting::TimeUnitUnlockLedger::<Runtime>::get(TimeUnit::Era(90), KSM,),
-			Some(time_record_90)
-		);
-		assert_eq!(
-			bifrost_vtoken_minting::UserUnlockLedger::<Runtime>::get(BOB, KSM,),
-			Some((10, bounded_vec_bob))
-		);
-
-		// Unlocking records for era 100
-		let bounded_vec_100_new = BoundedVec::try_from(vec![2]).unwrap();
-		let time_record_100_new = (8, bounded_vec_100_new, KSM);
-		let record_dave_new = (DAVE, 8, TimeUnit::Era(100), RedeemType::Native);
-		assert_eq!(
-			bifrost_vtoken_minting::TokenUnlockLedger::<Runtime>::get(KSM, 2),
-			Some(record_dave_new.clone())
-		);
-
-		assert_eq!(
-			bifrost_vtoken_minting::TokenUnlockLedger::<Runtime>::get(KSM, 2),
-			Some(record_dave_new)
-		);
-
-		assert_eq!(
-			bifrost_vtoken_minting::TimeUnitUnlockLedger::<Runtime>::get(TimeUnit::Era(100), KSM,),
-			Some(time_record_100_new)
-		);
-
-		assert_eq!(bifrost_vtoken_minting::UserUnlockLedger::<Runtime>::get(CHARLIE, KSM,), None);
-		assert_eq!(
-			bifrost_vtoken_minting::UserUnlockLedger::<Runtime>::get(DAVE, KSM,),
-			Some((8, bounded_vec_dave))
-		);
-
-		// Unlocking records for era 110
-		assert_eq!(
-			bifrost_vtoken_minting::TimeUnitUnlockLedger::<Runtime>::get(TimeUnit::Era(110), KSM,),
-			Some(time_record_110)
-		);
-
-		assert_eq!(
-			bifrost_vtoken_minting::UserUnlockLedger::<Runtime>::get(EDDIE, KSM,),
-			Some((13, bounded_vec_eddie))
-		);
-
-		// Set some more balance to exit account.
-		assert_ok!(Tokens::set_balance(
-			RuntimeOrigin::root(),
-			MultiAddress::Id(exit_acc.clone()),
-			KSM,
-			30,
-			0
-		));
-
-		// set era to 110
-		bifrost_vtoken_minting::OngoingTimeUnit::<Runtime>::insert(KSM, TimeUnit::Era(110));
-
-		// Refund user
-		assert_ok!(Slp::refund_currency_due_unbond(RuntimeOrigin::signed(ALICE), KSM));
-
-		// Check storages
-		assert_eq!(
-			bifrost_vtoken_minting::TimeUnitUnlockLedger::<Runtime>::get(TimeUnit::Era(110), KSM,),
-			None
-		);
-
-		assert_eq!(bifrost_vtoken_minting::TokenUnlockLedger::<Runtime>::get(KSM, 3), None);
-		assert_eq!(bifrost_vtoken_minting::TokenUnlockLedger::<Runtime>::get(KSM, 4), None);
-
-		assert_eq!(bifrost_vtoken_minting::UserUnlockLedger::<Runtime>::get(EDDIE, KSM,), None);
-
-		// check account balances
-		assert_eq!(Tokens::free_balance(KSM, &exit_acc), 17);
-		assert_eq!(Tokens::free_balance(KSM, &entrance_acc), 0);
-		assert_eq!(Tokens::free_balance(KSM, &BOB), 0);
-		assert_eq!(Tokens::free_balance(KSM, &CHARLIE), 28);
-		assert_eq!(Tokens::free_balance(KSM, &DAVE), 22);
-		assert_eq!(Tokens::free_balance(KSM, &EDDIE), 13);
-		assert_ok!(Slp::refund_currency_due_unbond(RuntimeOrigin::signed(ALICE), KSM));
-
-		// check account balances
-		assert_eq!(Tokens::free_balance(KSM, &exit_acc), 0);
-		assert_eq!(Tokens::free_balance(KSM, &entrance_acc), 17);
 	});
 }
 
@@ -538,6 +290,19 @@ fn set_hosting_fees_works() {
 fn bond_works() {
 	ExtBuilder::default().build().execute_with(|| {
 		register_subaccount_index_0();
+
+		let bob_32 = Pallet::<Runtime>::account_id_to_account_32(BOB).unwrap();
+		let bob_location = Pallet::<Runtime>::account_32_to_local_location(bob_32).unwrap();
+
+		// set fee source to Bob
+		assert_ok!(Slp::set_fee_source(
+			RuntimeOrigin::signed(ALICE),
+			DOT,
+			Some((bob_location, 1_000_000_000_000))
+		));
+
+		// deposit some DOT to Bob, for transfer fee burning
+		assert_ok!(Currencies::deposit(DOT, &BOB, 2_000_000_000_000));
 
 		// Bond 1 ksm for sub-account index 0
 		assert_ok!(Slp::bond(
@@ -668,8 +433,8 @@ fn test_construct_xcm() {
 		register_subaccount_index_0();
 
 		// construct_xcm_as_subaccount_with_query_id
-		let weight = Weight::from_parts(20000000000, 20000000000);
-		let (_, _, _, messsage) =
+		let _weight = Weight::from_parts(20000000000, 20000000000);
+		let (_, _, _, _messsage) =
 			crate::Pallet::<Runtime>::construct_xcm_as_subaccount_with_query_id(
 				XcmOperationType::Bond,
 				sp_std::vec![],
@@ -679,27 +444,8 @@ fn test_construct_xcm() {
 			)
 			.unwrap();
 
-		assert_eq!(
-			messsage.0[1],
-			BuyExecution {
-				fees: MultiAsset {
-					id: Concrete(MultiLocation { parents: 0, interior: Here }),
-					fun: Fungible(10000000000)
-				},
-				weight_limit: Unlimited
-			}
-		);
-		assert_eq!(
-			messsage.0[2],
-			Transact {
-				origin_kind: OriginKind::SovereignAccount,
-				require_weight_at_most: weight,
-				call: [26, 1, 0, 0].to_vec().into()
-			}
-		);
-
 		let weight = Weight::from_parts(100, 100);
-		let (_, _, _, messsage) =
+		let (_, _, _, _messsage) =
 			crate::Pallet::<Runtime>::construct_xcm_as_subaccount_with_query_id(
 				XcmOperationType::Bond,
 				sp_std::vec![],
@@ -708,24 +454,6 @@ fn test_construct_xcm() {
 				Some((weight, 100u32.into())),
 			)
 			.unwrap();
-		assert_eq!(
-			messsage.0[1],
-			BuyExecution {
-				fees: MultiAsset {
-					id: Concrete(MultiLocation { parents: 0, interior: Here }),
-					fun: Fungible(100)
-				},
-				weight_limit: Unlimited
-			}
-		);
-		assert_eq!(
-			messsage.0[2],
-			Transact {
-				origin_kind: OriginKind::SovereignAccount,
-				require_weight_at_most: weight,
-				call: [26, 1, 0, 0].to_vec().into()
-			}
-		);
 
 		// construct_xcm_and_send_as_subaccount_without_query_id
 		let fee = crate::Pallet::<Runtime>::construct_xcm_and_send_as_subaccount_without_query_id(

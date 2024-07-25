@@ -145,7 +145,12 @@ fn test_zenlink() {
 		let ksm_token: AssetId =
 			AssetId::try_convert_from(CurrencyId::Token(TokenSymbol::KSM), 2001).unwrap();
 
-		assert_ok!(ZenlinkProtocol::create_pair(RawOrigin::Root.into(), bnc_token, ksm_token));
+		assert_ok!(ZenlinkProtocol::create_pair(
+			RawOrigin::Root.into(),
+			bnc_token,
+			ksm_token,
+			ALICE
+		));
 		assert_ok!(ZenlinkProtocol::add_liquidity(
 			RawOrigin::Signed(ALICE).into(),
 			bnc_token,
@@ -359,7 +364,42 @@ fn test_add_order() {
 			TargetChain::Astar(source_chain_caller)
 		));
 		assert_eq!(OrderQueue::<Test>::get().len(), 2usize);
+		assert_ok!(Slpx::force_add_order(
+			RuntimeOrigin::root(),
+			ALICE,
+			source_chain_caller,
+			VDOT,
+			TargetChain::Astar(source_chain_caller),
+			BoundedVec::default(),
+			OrderType::Mint
+		));
+		assert_eq!(OrderQueue::<Test>::get().len(), 3usize);
+
 		println!("{:?}", OrderQueue::<Test>::get());
+	})
+}
+
+#[test]
+fn test_mint_with_channel_id() {
+	sp_io::TestExternalities::default().execute_with(|| {
+		assert_ok!(Slpx::add_whitelist(RuntimeOrigin::root(), SupportChain::Astar, ALICE));
+		let source_chain_caller = H160::default();
+		assert_ok!(Slpx::mint_with_channel_id(
+			RuntimeOrigin::signed(ALICE),
+			source_chain_caller,
+			DOT,
+			TargetChain::Astar(source_chain_caller),
+			BoundedVec::default(),
+			0u32
+		));
+		assert_eq!(OrderQueue::<Test>::get().len(), 1usize);
+		assert_ok!(Slpx::redeem(
+			RuntimeOrigin::signed(ALICE),
+			source_chain_caller,
+			VDOT,
+			TargetChain::Astar(source_chain_caller)
+		));
+		assert_eq!(OrderQueue::<Test>::get().len(), 2usize);
 	})
 }
 
