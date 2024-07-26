@@ -27,13 +27,19 @@ mod mock;
 #[cfg(test)]
 mod tests;
 
+mod agents;
 mod call;
 mod vote;
 
 // pub mod migration;
+pub mod traits;
 pub mod weights;
 
-use crate::vote::{Casting, Tally, Voting};
+use crate::{
+	agents::RelaychainAgent,
+	traits::VotingAgent,
+	vote::{Casting, Tally, Voting},
+};
 pub use crate::{
 	call::*,
 	vote::{AccountVote, PollStatus, ReferendumInfo, ReferendumStatus, VoteRole},
@@ -81,6 +87,8 @@ type VotingOf<T> =
 	Voting<BalanceOf<T>, AccountIdOf<T>, BlockNumberFor<T>, PollIndex, <T as Config>::MaxVotes>;
 
 pub type ReferendumInfoOf<T> = ReferendumInfo<BlockNumberFor<T>, TallyOf<T>>;
+
+type VotingAgentBoxType<T> = Box<dyn VotingAgent<BalanceOf<T>, AccountIdOf<T>, pallet::Error<T>>>;
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -479,42 +487,14 @@ pub mod pallet {
 				Ok(())
 			})?;
 
-			// send XCM message
-			let vote_calls = new_delegator_votes
-				.iter()
-				.map(|(_derivative_index, vote)| {
-					<RelayCall<T> as ConvictionVotingCall<T>>::vote(poll_index, *vote)
-				})
-				.collect::<Vec<_>>();
-			let vote_call = if vote_calls.len() == 1 {
-				vote_calls.into_iter().nth(0).ok_or(Error::<T>::NoData)?
-			} else {
-				ensure!(false, Error::<T>::NoPermissionYet);
-				<RelayCall<T> as UtilityCall<RelayCall<T>>>::batch_all(vote_calls)
-			};
-			let notify_call = Call::<T>::notify_vote { query_id: 0, response: Default::default() };
-			let (weight, extra_fee) = T::XcmDestWeightAndFee::get_operation_weight_and_fee(
-				CurrencyId::to_token(&vtoken).map_err(|_| Error::<T>::NoData)?,
-				XcmOperationType::Vote,
-			)
-			.ok_or(Error::<T>::NoData)?;
-
-			let derivative_index = new_delegator_votes[0].0;
-			Self::send_xcm_with_notify(
-				derivative_index,
-				vote_call,
-				notify_call,
-				weight,
-				extra_fee,
-				|query_id| {
-					if !submitted {
-						PendingReferendumInfo::<T>::insert(query_id, (vtoken, poll_index));
-					}
-					PendingVotingInfo::<T>::insert(
-						query_id,
-						(vtoken, poll_index, derivative_index, who.clone(), maybe_old_vote),
-					)
-				},
+			let voting_agent = Self::get_voting_agent(&vtoken)?;
+			voting_agent.vote(
+				who.clone(),
+				new_delegator_votes.clone(),
+				poll_index,
+				vtoken,
+				submitted,
+				maybe_old_vote,
 			)?;
 
 			Self::deposit_event(Event::<T>::Voted {
@@ -1004,7 +984,7 @@ pub mod pallet {
 			}
 		}
 
-		fn send_xcm_with_notify(
+		pub(crate) fn send_xcm_with_notify(
 			derivative_index: DerivativeIndex,
 			call: RelayCall<T>,
 			notify_call: Call<T>,
@@ -1292,6 +1272,15 @@ pub mod pallet {
 			}
 
 			Ok(delegator_votes)
+		}
+
+		pub(crate) fn get_voting_agent(
+			currency_id: &CurrencyIdOf<T>,
+		) -> Result<VotingAgentBoxType<T>, Error<T>> {
+			match *currency_id {
+				VKSM | VDOT => Ok(Box::new(RelaychainAgent::<T>::new())),
+				_ => Err(Error::<T>::VTokenNotSupport),
+			}
 		}
 	}
 }
