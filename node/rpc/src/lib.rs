@@ -141,7 +141,6 @@ pub fn create_full_polkadot<C, P>(
 	deps: FullDepsPolkadot<C, P>,
 ) -> Result<RpcExtension, Box<dyn std::error::Error + Send + Sync>>
 where
-	C: CallApiAt<Block>,
 	C: ProvideRuntimeApi<Block>
 		+ HeaderBackend<Block>
 		+ HeaderMetadata<Block, Error = BlockChainError>
@@ -151,7 +150,6 @@ where
 		+ BlockIdTo<Block>,
 	C::Api: pallet_transaction_payment_rpc::TransactionPaymentRuntimeApi<Block, Balance>,
 	C::Api: substrate_frame_rpc_system::AccountNonceApi<Block, AccountId, Nonce>,
-	C::Api: sp_consensus_aura::AuraApi<Block, AuraId>,
 	C::Api: FarmingRuntimeApi<Block, AccountId, PoolId, CurrencyId>,
 	C::Api: FeeRuntimeApi<Block, AccountId>,
 	C::Api: SalpRuntimeApi<Block, ParaId, AccountId>,
@@ -161,8 +159,7 @@ where
 	C::Api: ZenlinkProtocolRuntimeApi<Block, AccountId, AssetId>,
 	C::Api: StablePoolRuntimeApi<Block>,
 	C::Api: BlockBuilder<Block>,
-	C: HeaderBackend<Block> + HeaderMetadata<Block, Error = BlockChainError> + 'static,
-	P: TransactionPool<Block = Block> + 'static,
+	P: TransactionPool + Sync + Send + 'static,
 {
 	let mut module = RpcExtension::new(());
 	let FullDepsPolkadot { client, pool, deny_unsafe, command_sink } = deps;

@@ -181,8 +181,7 @@ pub mod pallet {
 	pub struct GenesisConfig<T: Config> {
 		pub currency: Vec<(CurrencyId, BalanceOf<T>, Option<(String, String, u8)>)>,
 		pub vcurrency: Vec<CurrencyId>,
-		pub vsbond: Vec<(CurrencyId, u32, u32, u32)>,
-		pub phantom: PhantomData<T>,
+		pub vsbond: Vec<(CurrencyId, u32, u32, u32)>
 	}
 
 	#[pallet::genesis_build]

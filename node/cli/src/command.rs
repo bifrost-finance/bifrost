@@ -189,7 +189,7 @@ impl SubstrateCli for RelayChainCli {
 
 macro_rules! with_runtime_or_err {
 	($chain_spec:expr, { $( $code:tt )* }) => {
-		if $chain_spec.is_bifrost_kusama() || $chain_spec.is_dev() {
+		if $chain_spec.is_bifrost_kusama() {
 			#[cfg(any(feature = "with-bifrost-kusama-runtime",feature = "with-bifrost-runtime"))]
 			#[allow(unused_imports)]
 			use service::collator_kusama::{bifrost_kusama_runtime::{Block, RuntimeApi}, start_node,new_partial};
@@ -245,7 +245,7 @@ pub fn run() -> Result<()> {
 
 			with_runtime_or_err!(chain_spec, {
 				return runner.async_run(|config| {
-					let components = new_partial(&config, &cli.eth_config, false)?;
+					let components = new_partial(&config, false)?;
 					Ok((
 						cmd.run(components.client, components.import_queue),
 						components.task_manager,
@@ -261,7 +261,7 @@ pub fn run() -> Result<()> {
 
 			with_runtime_or_err!(chain_spec, {
 				return runner.async_run(|config| {
-					let components = new_partial(&config, &cli.eth_config, false)?;
+					let components = new_partial(&config, false)?;
 					Ok((cmd.run(components.client, config.database), components.task_manager))
 				});
 			})
@@ -274,7 +274,7 @@ pub fn run() -> Result<()> {
 
 			with_runtime_or_err!(chain_spec, {
 				return runner.async_run(|config| {
-					let components = new_partial(&config, &cli.eth_config, false)?;
+					let components = new_partial(&config, false)?;
 					Ok((cmd.run(components.client, config.chain_spec), components.task_manager))
 				});
 			})
@@ -285,7 +285,7 @@ pub fn run() -> Result<()> {
 
 			with_runtime_or_err!(chain_spec, {
 				return runner.sync_run(|config| {
-					let partials = new_partial(&config, &cli.eth_config, false)?;
+					let partials = new_partial(&config, false)?;
 					cmd.run(partials.client)
 				});
 			})
@@ -313,7 +313,7 @@ pub fn run() -> Result<()> {
 			set_default_ss58_version(chain_spec);
 			with_runtime_or_err!(chain_spec, {
 				return runner.async_run(|config| {
-					let components = new_partial(&config, &cli.eth_config, false)?;
+					let components = new_partial(&config, false)?;
 					Ok((
 						cmd.run(components.client, components.import_queue),
 						components.task_manager,
@@ -347,7 +347,7 @@ pub fn run() -> Result<()> {
 			set_default_ss58_version(chain_spec);
 			with_runtime_or_err!(chain_spec, {
 				return runner.async_run(|config| {
-					let components = new_partial(&config, &cli.eth_config, false)?;
+					let components = new_partial(&config, false)?;
 					Ok((
 						cmd.run(components.client, components.backend, None),
 						components.task_manager,
@@ -383,7 +383,7 @@ pub fn run() -> Result<()> {
 				BenchmarkCmd::Block(cmd) => runner.sync_run(|config| {
 					with_runtime_or_err!(config.chain_spec, {
 						{
-							let partials = new_partial(&config, &cli.eth_config, false)?;
+							let partials = new_partial(&config, false)?;
 							cmd.run(partials.client)
 						}
 					})
@@ -400,7 +400,7 @@ pub fn run() -> Result<()> {
 				BenchmarkCmd::Storage(cmd) => runner.sync_run(|config| {
 					with_runtime_or_err!(config.chain_spec, {
 						{
-							let partials = new_partial(&config, &cli.eth_config, false)?;
+							let partials = new_partial(&config, false)?;
 							let db = partials.backend.expose_db();
 							let storage = partials.backend.expose_storage();
 							cmd.run(config, partials.client.clone(), db, storage)

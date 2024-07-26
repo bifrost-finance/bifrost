@@ -17,9 +17,7 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 use crate::chain_spec::{get_account_id_from_seed, get_from_seed, RelayExtensions};
-use bifrost_polkadot_runtime::{
-	constants::currency::DOLLARS, AccountId, Balance, BlockNumber, SS58Prefix,
-};
+use bifrost_polkadot_runtime::{constants::currency::DOLLARS, AccountId, Balance, BlockNumber, SS58Prefix, RuntimeGenesisConfig, BalancesConfig, IndicesConfig, CouncilMembershipConfig, TechnicalMembershipConfig, OracleMembershipConfig, ParachainInfoConfig, CollatorSelectionConfig, SessionConfig, VestingConfig, TokensConfig, AssetRegistryConfig, PolkadotXcmConfig, SalpConfig, EVMChainIdConfig, EVMConfig, DynamicFeeConfig};
 use bifrost_primitives::{CurrencyId, CurrencyId::*, TokenInfo, TokenSymbol, DOT_TOKEN_ID};
 use bifrost_runtime_common::AuraId;
 use cumulus_primitives_core::ParaId;
@@ -30,6 +28,7 @@ use sc_chain_spec::Properties;
 use sc_service::ChainType;
 use sp_core::{crypto::UncheckedInto, sr25519, H160, U256};
 use std::{collections::BTreeMap, str::FromStr};
+use sp_runtime::traits::Zero;
 
 const DEFAULT_PROTOCOL_ID: &str = "bifrost_polkadot";
 
@@ -117,16 +116,19 @@ pub fn bifrost_polkadot_genesis(
 		"vesting": {
 			"vesting": vestings
 		},
-			"assetRegistry": {
+		"assetRegistry": {
 			"currency": asset_registry.0,
 			"vcurrency": asset_registry.1,
 			"vsbond": asset_registry.2
+		},
+		"polkadotXcm": {
+			"safeXcmVersion": 3
 		},
 		"salp": { "initialMultisigAccount": Some(salp_multisig_key) },
 		"tokens": { "balances": tokens },
 		// EVM compatibility
 		"evmChainId": { "chainId": 42u64 },
-		"dynamicFee": { "minGasPrice": 560174200u64 },
+		// "dynamicFee": { "minGasPrice": U256::from(560174200u64) },
 		"evm": { "accounts": evm_accounts },
 	})
 }
@@ -243,6 +245,8 @@ pub fn local_testnet_config() -> ChainSpec {
 		oracle_membership,
 		evm_accounts,
 	))
+	.with_properties(bifrost_polkadot_properties())
+	.with_protocol_id(DEFAULT_PROTOCOL_ID)
 	.build()
 }
 

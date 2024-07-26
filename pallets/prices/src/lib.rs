@@ -107,6 +107,26 @@ pub mod pallet {
 	pub type ForeignToNativeAsset<T: Config> =
 		StorageMap<_, Twox64Concat, CurrencyId, CurrencyId, OptionQuery>;
 
+	// #[pallet::genesis_config]
+	// #[derive(frame_support::DefaultNoBound)]
+	// pub struct GenesisConfig<T: Config> {
+	// 	pub emergency_price: Vec<(CurrencyId, Price)>,
+	// 	pub foreign_to_native_asset: Vec<(CurrencyId, CurrencyId)>,
+	// 	pub phantom: PhantomData<T>,
+	// }
+	//
+	// #[pallet::genesis_build]
+	// impl<T: Config> BuildGenesisConfig for GenesisConfig<T> {
+	// 	fn build(&self) {
+	// 		for (asset_id, price) in self.emergency_price.iter() {
+	// 			EmergencyPrice::<T>::insert(asset_id, price);
+	// 		}
+	// 		for (foreign_asset_id, native) in self.foreign_to_native_asset.iter() {
+	// 			ForeignToNativeAsset::<T>::insert(foreign_asset_id, native);
+	// 		}
+	// 	}
+	// }
+
 	#[pallet::pallet]
 	#[pallet::without_storage_info]
 	pub struct Pallet<T>(PhantomData<T>);

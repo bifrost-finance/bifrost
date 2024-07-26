@@ -10,8 +10,6 @@ build = "build.rs"
 parity-scale-codec = { workspace = true, features = ["derive", "max-encoded-len"] }
 hex-literal = { workspace = true }
 log = { workspace = true }
-num_enum = { workspace = true }
-primitive-types = { workspace = true }
 scale-info = { workspace = true, features = ["derive"] }
 smallvec = { workspace = true }
 static_assertions = { workspace = true }
@@ -138,7 +136,7 @@ bifrost-vesting = { workspace = true }
 bifrost-vsbond-auction = { workspace = true }
 bifrost-vstoken-conversion = { workspace = true }
 bifrost-vtoken-minting = { workspace = true }
-bifrost-vtoken-voting = { workspace = true, features = ["kusama"] }
+bifrost-vtoken-voting = { workspace = true, features = [ "kusama" ] }
 bifrost-xcm-interface = { workspace = true }
 bifrost-parachain-staking = { workspace = true }
 lend-market = { workspace = true }

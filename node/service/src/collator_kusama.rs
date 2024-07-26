@@ -65,7 +65,6 @@ type ParachainBlockImport = TParachainBlockImport<Block, Arc<FullClient>, FullBa
 
 pub fn new_partial(
 	config: &Configuration,
-	_eth_config: &EthConfiguration,
 	dev: bool,
 ) -> Result<
 	PartialComponents<
@@ -265,7 +264,7 @@ fn start_consensus(
 async fn start_node_impl<Net>(
 	parachain_config: Configuration,
 	polkadot_config: Configuration,
-	eth_config: EthConfiguration,
+	_eth_config: EthConfiguration,
 	collator_options: CollatorOptions,
 	sybil_resistance_level: CollatorSybilResistance,
 	para_id: ParaId,
@@ -276,7 +275,7 @@ where
 {
 	let parachain_config = prepare_node_config(parachain_config);
 
-	let params = new_partial(&parachain_config, &eth_config, false)?;
+	let params = new_partial(&parachain_config, false)?;
 	let (block_import, mut telemetry, telemetry_worker_handle) = params.other;
 
 	let client = params.client.clone();

@@ -73,7 +73,6 @@ type ParachainBlockImport = TParachainBlockImport<Block, Arc<FullClient>, FullBa
 
 pub fn new_partial(
 	config: &Configuration,
-	_eth_config: &EthConfiguration,
 	dev: bool,
 ) -> Result<
 	PartialComponents<
@@ -315,7 +314,7 @@ where
 {
 	let parachain_config = prepare_node_config(parachain_config);
 
-	let params = new_partial(&parachain_config, &eth_config, false)?;
+	let params = new_partial(&parachain_config, false)?;
 	let (
 		block_import,
 		mut telemetry,
@@ -383,7 +382,7 @@ where
 		);
 	}
 
-	let storage_override = Arc::new(StorageOverrideHandler::<Block, _, _>::new(client.clone()));
+	let storage_override = Arc::new(StorageOverrideHandler::new(client.clone()));
 	let block_data_cache = Arc::new(fc_rpc::EthBlockDataCacheTask::new(
 		task_manager.spawn_handle(),
 		storage_override.clone(),
