@@ -20,11 +20,10 @@ use sp_std::vec::Vec;
 
 use bifrost_primitives::{CurrencyId, DerivativeIndex};
 
-use crate::{AccountVote, DispatchResult, PollIndex};
+use crate::{AccountVote, DispatchResult, PollClass, PollIndex};
 
 /// Abstraction over a voting agent for a certain parachain.
 pub trait VotingAgent<Balance, AccountId, Error> {
-	/// Delegator initialization work. Generate a new delegator and return its ID.
 	fn vote(
 		&self,
 		who: AccountId,
@@ -33,6 +32,14 @@ pub trait VotingAgent<Balance, AccountId, Error> {
 		vtoken: CurrencyId,
 		submitted: bool,
 		maybe_old_vote: Option<(AccountVote<Balance>, Balance)>,
+	) -> DispatchResult;
+
+	fn remove_vote(
+		&self,
+		class: PollClass,
+		poll_index: PollIndex,
+		vtoken: CurrencyId,
+		derivative_index: DerivativeIndex,
 	) -> DispatchResult;
 }
 

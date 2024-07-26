@@ -26,7 +26,8 @@ use crate::{
 	pallet::{Error, Pallet},
 	traits::VotingAgent,
 	AccountIdOf, AccountVote, BalanceOf, Call, Config, ConvictionVotingCall, CurrencyIdOf,
-	PendingReferendumInfo, PendingVotingInfo, PollIndex, RelayCall, UtilityCall,
+	PendingReferendumInfo, PendingRemoveDelegatorVote, PendingVotingInfo, PollClass, PollIndex,
+	RelayCall, UtilityCall,
 };
 
 /// StakingAgent implementation for Astar
@@ -85,6 +86,39 @@ impl<T: Config> VotingAgent<BalanceOf<T>, AccountIdOf<T>, Error<T>> for Relaycha
 				)
 			},
 		)?;
+		Ok(())
+	}
+
+	fn remove_vote(
+		&self,
+		class: PollClass,
+		poll_index: PollIndex,
+		vtoken: CurrencyId,
+		derivative_index: DerivativeIndex,
+	) -> DispatchResult {
+		let notify_call =
+			Call::<T>::notify_remove_delegator_vote { query_id: 0, response: Default::default() };
+		let remove_vote_call =
+			<RelayCall<T> as ConvictionVotingCall<T>>::remove_vote(Some(class), poll_index);
+		let (weight, extra_fee) = T::XcmDestWeightAndFee::get_operation_weight_and_fee(
+			CurrencyId::to_token(&vtoken).map_err(|_| Error::<T>::NoData)?,
+			XcmOperationType::RemoveVote,
+		)
+		.ok_or(Error::<T>::NoData)?;
+		Pallet::<T>::send_xcm_with_notify(
+			derivative_index,
+			remove_vote_call,
+			notify_call,
+			weight,
+			extra_fee,
+			|query_id| {
+				PendingRemoveDelegatorVote::<T>::insert(
+					query_id,
+					(vtoken, poll_index, derivative_index),
+				);
+			},
+		)?;
+
 		Ok(())
 	}
 }

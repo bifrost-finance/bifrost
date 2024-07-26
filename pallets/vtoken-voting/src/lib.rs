@@ -47,7 +47,7 @@ pub use crate::{
 use bifrost_primitives::{
 	currency::{VDOT, VKSM},
 	traits::{DerivativeAccountHandler, VTokenSupplyProvider, XcmDestWeightAndFeeHandler},
-	CurrencyId, DerivativeIndex, XcmOperationType,
+	CurrencyId, DerivativeIndex,
 };
 use cumulus_primitives_core::{ParaId, QueryId, Response};
 use frame_support::{
@@ -547,30 +547,8 @@ pub mod pallet {
 			ensure!(DelegatorVotes::<T>::get(vtoken, poll_index).len() > 0, Error::<T>::NoData);
 			Self::ensure_referendum_expired(vtoken, poll_index)?;
 
-			let notify_call = Call::<T>::notify_remove_delegator_vote {
-				query_id: 0,
-				response: Default::default(),
-			};
-			let remove_vote_call =
-				<RelayCall<T> as ConvictionVotingCall<T>>::remove_vote(Some(class), poll_index);
-			let (weight, extra_fee) = T::XcmDestWeightAndFee::get_operation_weight_and_fee(
-				CurrencyId::to_token(&vtoken).map_err(|_| Error::<T>::NoData)?,
-				XcmOperationType::RemoveVote,
-			)
-			.ok_or(Error::<T>::NoData)?;
-			Self::send_xcm_with_notify(
-				derivative_index,
-				remove_vote_call,
-				notify_call,
-				weight,
-				extra_fee,
-				|query_id| {
-					PendingRemoveDelegatorVote::<T>::insert(
-						query_id,
-						(vtoken, poll_index, derivative_index),
-					);
-				},
-			)?;
+			let voting_agent = Self::get_voting_agent(&vtoken)?;
+			voting_agent.remove_vote(class, poll_index, vtoken, derivative_index)?;
 
 			Self::deposit_event(Event::<T>::DelegatorVoteRemoved { who, vtoken, derivative_index });
 
