@@ -67,7 +67,7 @@ use sp_runtime::{
 };
 use sp_std::prelude::*;
 pub use weights::WeightInfo;
-use xcm::v4::{prelude::*, Weight as XcmWeight};
+use xcm::v4::prelude::*;
 
 const CONVICTION_VOTING_ID: LockIdentifier = *b"vtvoting";
 
@@ -960,77 +960,6 @@ pub mod pallet {
 			} else {
 				T::MultiCurrency::set_lock(CONVICTION_VOTING_ID, vtoken, who, amount)
 			}
-		}
-
-		pub(crate) fn send_xcm_with_notify(
-			derivative_index: DerivativeIndex,
-			call: RelayCall<T>,
-			notify_call: Call<T>,
-			transact_weight: XcmWeight,
-			extra_fee: BalanceOf<T>,
-			f: impl FnOnce(QueryId) -> (),
-		) -> DispatchResult {
-			let responder = xcm::v4::Location::parent();
-			let now = frame_system::Pallet::<T>::block_number();
-			let timeout = now.saturating_add(T::QueryTimeout::get());
-			let notify_runtime_call = <T as Config>::RuntimeCall::from(notify_call);
-			let notify_call_weight = notify_runtime_call.get_dispatch_info().weight;
-			let query_id = pallet_xcm::Pallet::<T>::new_notify_query(
-				responder,
-				notify_runtime_call,
-				timeout,
-				xcm::v4::Junctions::Here,
-			);
-			f(query_id);
-
-			let xcm_message = Self::construct_xcm_message(
-				<RelayCall<T> as UtilityCall<RelayCall<T>>>::as_derivative(derivative_index, call)
-					.encode(),
-				extra_fee,
-				transact_weight,
-				notify_call_weight,
-				query_id,
-			)?;
-
-			xcm::v4::send_xcm::<T::XcmRouter>(Parent.into(), xcm_message)
-				.map_err(|_e| Error::<T>::XcmFailure)?;
-
-			Ok(())
-		}
-
-		fn construct_xcm_message(
-			call: Vec<u8>,
-			extra_fee: BalanceOf<T>,
-			transact_weight: XcmWeight,
-			notify_call_weight: XcmWeight,
-			query_id: QueryId,
-		) -> Result<Xcm<()>, Error<T>> {
-			let para_id = T::ParachainId::get().into();
-			let asset = Asset {
-				id: AssetId(Location::here()),
-				fun: Fungible(UniqueSaturatedInto::<u128>::unique_saturated_into(extra_fee)),
-			};
-			let xcm_message = sp_std::vec![
-				WithdrawAsset(asset.clone().into()),
-				BuyExecution { fees: asset, weight_limit: Unlimited },
-				Transact {
-					origin_kind: OriginKind::SovereignAccount,
-					require_weight_at_most: transact_weight,
-					call: call.into(),
-				},
-				ReportTransactStatus(QueryResponseInfo {
-					destination: Location::from(Parachain(para_id)),
-					query_id,
-					max_weight: notify_call_weight,
-				}),
-				RefundSurplus,
-				DepositAsset {
-					assets: All.into(),
-					beneficiary: Location::new(0, [Parachain(para_id)]),
-				},
-			];
-
-			Ok(Xcm(xcm_message))
 		}
 
 		fn ensure_vtoken(vtoken: &CurrencyIdOf<T>) -> Result<(), DispatchError> {

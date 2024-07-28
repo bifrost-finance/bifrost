@@ -16,26 +16,104 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
+use crate::{pallet, AssetId, Parent, Xcm, *};
 use bifrost_primitives::{
 	CurrencyId, DerivativeIndex, XcmDestWeightAndFeeHandler, XcmOperationType,
 };
 use core::marker::PhantomData;
-use frame_support::{dispatch::DispatchResult, ensure};
+use cumulus_primitives_core::QueryId;
+use frame_support::{
+	dispatch::{DispatchResult, GetDispatchInfo},
+	ensure,
+	pallet_prelude::*,
+	traits::Get,
+};
+use sp_runtime::traits::Saturating;
+use xcm::v4::{Location, Weight as XcmWeight};
 
 use crate::{
-	pallet::{Error, Pallet},
-	traits::VotingAgent,
-	AccountIdOf, AccountVote, BalanceOf, Call, Config, ConvictionVotingCall, CurrencyIdOf,
-	PendingReferendumInfo, PendingRemoveDelegatorVote, PendingVotingInfo, PollClass, PollIndex,
-	RelayCall, UtilityCall,
+	pallet::Error, traits::VotingAgent, AccountIdOf, AccountVote, BalanceOf, Call, Config,
+	ConvictionVotingCall, CurrencyIdOf, PendingReferendumInfo, PendingRemoveDelegatorVote,
+	PendingVotingInfo, PollClass, PollIndex, RelayCall, UtilityCall,
 };
 
 /// StakingAgent implementation for Astar
 pub struct RelaychainAgent<T>(PhantomData<T>);
 
-impl<T> RelaychainAgent<T> {
+impl<T: pallet::Config> RelaychainAgent<T> {
 	pub fn new() -> Self {
 		RelaychainAgent(PhantomData::<T>)
+	}
+
+	fn send_xcm_with_notify(
+		derivative_index: DerivativeIndex,
+		call: RelayCall<T>,
+		notify_call: Call<T>,
+		transact_weight: XcmWeight,
+		extra_fee: BalanceOf<T>,
+		f: impl FnOnce(QueryId) -> (),
+	) -> DispatchResult {
+		let responder = xcm::v4::Location::parent();
+		let now = frame_system::Pallet::<T>::block_number();
+		let timeout = now.saturating_add(T::QueryTimeout::get());
+		let notify_runtime_call = <T as Config>::RuntimeCall::from(notify_call);
+		let notify_call_weight = notify_runtime_call.get_dispatch_info().weight;
+		let query_id = pallet_xcm::Pallet::<T>::new_notify_query(
+			responder,
+			notify_runtime_call,
+			timeout,
+			xcm::v4::Junctions::Here,
+		);
+		f(query_id);
+
+		let xcm_message = Self::construct_xcm_message(
+			<RelayCall<T> as UtilityCall<RelayCall<T>>>::as_derivative(derivative_index, call)
+				.encode(),
+			extra_fee,
+			transact_weight,
+			notify_call_weight,
+			query_id,
+		)?;
+
+		xcm::v4::send_xcm::<T::XcmRouter>(Parent.into(), xcm_message)
+			.map_err(|_e| Error::<T>::XcmFailure)?;
+
+		Ok(())
+	}
+
+	fn construct_xcm_message(
+		call: Vec<u8>,
+		extra_fee: BalanceOf<T>,
+		transact_weight: XcmWeight,
+		notify_call_weight: XcmWeight,
+		query_id: QueryId,
+	) -> Result<Xcm<()>, Error<T>> {
+		let para_id = T::ParachainId::get().into();
+		let asset = Asset {
+			id: AssetId(Location::here()),
+			fun: Fungible(UniqueSaturatedInto::<u128>::unique_saturated_into(extra_fee)),
+		};
+		let xcm_message = sp_std::vec![
+			WithdrawAsset(asset.clone().into()),
+			BuyExecution { fees: asset, weight_limit: Unlimited },
+			Transact {
+				origin_kind: OriginKind::SovereignAccount,
+				require_weight_at_most: transact_weight,
+				call: call.into(),
+			},
+			ReportTransactStatus(QueryResponseInfo {
+				destination: Location::from(Parachain(para_id)),
+				query_id,
+				max_weight: notify_call_weight,
+			}),
+			RefundSurplus,
+			DepositAsset {
+				assets: All.into(),
+				beneficiary: Location::new(0, [Parachain(para_id)]),
+			},
+		];
+
+		Ok(Xcm(xcm_message))
 	}
 }
 
@@ -70,7 +148,7 @@ impl<T: Config> VotingAgent<BalanceOf<T>, AccountIdOf<T>, Error<T>> for Relaycha
 		.ok_or(Error::<T>::NoData)?;
 
 		let derivative_index = new_delegator_votes[0].0;
-		Pallet::<T>::send_xcm_with_notify(
+		Self::send_xcm_with_notify(
 			derivative_index,
 			vote_call,
 			notify_call,
@@ -105,7 +183,7 @@ impl<T: Config> VotingAgent<BalanceOf<T>, AccountIdOf<T>, Error<T>> for Relaycha
 			XcmOperationType::RemoveVote,
 		)
 		.ok_or(Error::<T>::NoData)?;
-		Pallet::<T>::send_xcm_with_notify(
+		Self::send_xcm_with_notify(
 			derivative_index,
 			remove_vote_call,
 			notify_call,
