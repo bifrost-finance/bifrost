@@ -32,7 +32,7 @@ pub use polkadot::*;
 
 #[cfg(feature = "kusama")]
 mod kusama {
-	use crate::*;
+	use crate::{agents::*, *};
 
 	#[derive(Encode, Decode, RuntimeDebug)]
 	pub enum RelayCall<T: Config> {
@@ -45,7 +45,7 @@ mod kusama {
 
 #[cfg(feature = "polkadot")]
 mod polkadot {
-	use crate::*;
+	use crate::{agents::*, *};
 
 	#[derive(Encode, Decode, RuntimeDebug)]
 	pub enum RelayCall<T: Config> {

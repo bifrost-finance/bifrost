@@ -32,9 +32,11 @@ use sp_runtime::traits::Saturating;
 use xcm::v4::{Location, Weight as XcmWeight};
 
 use crate::{
-	pallet::Error, traits::VotingAgent, AccountIdOf, AccountVote, BalanceOf, Call, Config,
-	ConvictionVotingCall, CurrencyIdOf, PendingReferendumInfo, PendingRemoveDelegatorVote,
-	PendingVotingInfo, PollClass, PollIndex, RelayCall, UtilityCall,
+	agents::{ConvictionVotingCall, RelayCall, UtilityCall},
+	pallet::Error,
+	traits::VotingAgent,
+	AccountIdOf, AccountVote, BalanceOf, Call, Config, CurrencyIdOf, PendingReferendumInfo,
+	PendingRemoveDelegatorVote, PendingVotingInfo, PollClass, PollIndex,
 };
 
 /// StakingAgent implementation for Astar

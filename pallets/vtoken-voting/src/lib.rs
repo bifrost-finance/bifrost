@@ -28,21 +28,17 @@ mod mock;
 mod tests;
 
 mod agents;
-mod call;
 mod vote;
 
 // pub mod migration;
 pub mod traits;
 pub mod weights;
 
+pub use crate::vote::{AccountVote, PollStatus, ReferendumInfo, ReferendumStatus, VoteRole};
 use crate::{
 	agents::RelaychainAgent,
 	traits::VotingAgent,
 	vote::{Casting, Tally, Voting},
-};
-pub use crate::{
-	call::*,
-	vote::{AccountVote, PollStatus, ReferendumInfo, ReferendumStatus, VoteRole},
 };
 use bifrost_primitives::{
 	currency::{VDOT, VKSM},
