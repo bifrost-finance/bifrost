@@ -56,7 +56,7 @@ use sp_runtime::{
 	create_runtime_str, generic, impl_opaque_keys,
 	traits::{AccountIdConversion, BlakeTwo256, Block as BlockT, Zero},
 	transaction_validity::{TransactionSource, TransactionValidity},
-	ApplyExtrinsicResult, DispatchError, DispatchResult, Perbill, Permill, RuntimeDebug,
+	ApplyExtrinsicResult, DispatchError, DispatchResult, FixedU128, Perbill, Permill, RuntimeDebug,
 };
 use sp_std::{marker::PhantomData, prelude::*};
 #[cfg(feature = "std")]
@@ -1424,14 +1424,22 @@ parameter_types! {
 	pub const ExpiresIn: Moment = 1000 * 60 * 60; // 60 mins
 	pub const MaxHasDispatchedSize: u32 = 100;
 	pub OracleRootOperatorAccountId: AccountId = OraclePalletId::get().into_account_truncating();
+	pub const MinimumTimestampInterval: Moment = 10 * 1000; // 10 mins
+	pub const MinimumValueInterval: Price = FixedU128::from_inner(3_000_000_000_000_000); // 0.3%
 }
 
 type BifrostDataProvider = orml_oracle::Instance1;
 impl orml_oracle::Config<BifrostDataProvider> for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type OnNewData = ();
-	type CombineData =
-		orml_oracle::DefaultCombineData<Runtime, MinimumCount, ExpiresIn, BifrostDataProvider>;
+	type CombineData = orml_oracle::DefaultCombineData<
+		Runtime,
+		MinimumCount,
+		ExpiresIn,
+		MinimumTimestampInterval,
+		MinimumValueInterval,
+		BifrostDataProvider,
+	>;
 	type Time = Timestamp;
 	type OracleKey = CurrencyId;
 	type OracleValue = Price;
@@ -1440,6 +1448,7 @@ impl orml_oracle::Config<BifrostDataProvider> for Runtime {
 	type WeightInfo = weights::orml_oracle::WeightInfo<Runtime>;
 	type Members = OracleMembership;
 	type MaxFeedValues = ConstU32<100>;
+	type ControlOrigin = TechAdminOrCouncil;
 }
 
 pub type TimeStampedPrice = orml_oracle::TimestampedValue<Price, Moment>;
