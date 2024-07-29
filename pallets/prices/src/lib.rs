@@ -27,7 +27,7 @@ use bifrost_primitives::*;
 use frame_support::{dispatch::DispatchClass, pallet_prelude::*, transactional};
 use frame_system::pallet_prelude::*;
 use log;
-use orml_traits::{DataFeeder, DataProvider, DataProviderExtended};
+use orml_oracle::{DataFeeder, DataProvider, DataProviderExtended};
 pub use pallet::*;
 use pallet_traits::*;
 use sp_runtime::{traits::CheckedDiv, FixedU128};
