@@ -30,7 +30,7 @@ mod tests;
 
 pub mod weights;
 
-// pub mod migration;
+pub mod migration;
 
 pub use crate::traits::StableAsset;
 use frame_support::{dispatch::DispatchResult, ensure, traits::Get, weights::Weight};

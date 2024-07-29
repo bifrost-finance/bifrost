@@ -17,7 +17,9 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 use crate::chain_spec::{get_account_id_from_seed, get_from_seed, RelayExtensions};
-use bifrost_polkadot_runtime::{constants::currency::DOLLARS, AccountId, Balance, BlockNumber, SS58Prefix, RuntimeGenesisConfig, BalancesConfig, IndicesConfig, CouncilMembershipConfig, TechnicalMembershipConfig, OracleMembershipConfig, ParachainInfoConfig, CollatorSelectionConfig, SessionConfig, VestingConfig, TokensConfig, AssetRegistryConfig, PolkadotXcmConfig, SalpConfig, EVMChainIdConfig, EVMConfig, DynamicFeeConfig};
+use bifrost_polkadot_runtime::{
+	constants::currency::DOLLARS, AccountId, Balance, BlockNumber, SS58Prefix,
+};
 use bifrost_primitives::{CurrencyId, CurrencyId::*, TokenInfo, TokenSymbol, DOT_TOKEN_ID};
 use bifrost_runtime_common::AuraId;
 use cumulus_primitives_core::ParaId;
@@ -27,8 +29,8 @@ use hex_literal::hex;
 use sc_chain_spec::Properties;
 use sc_service::ChainType;
 use sp_core::{crypto::UncheckedInto, sr25519, H160, U256};
+use sp_runtime::FixedU128;
 use std::{collections::BTreeMap, str::FromStr};
-use sp_runtime::traits::Zero;
 
 const DEFAULT_PROTOCOL_ID: &str = "bifrost_polkadot";
 
@@ -126,9 +128,16 @@ pub fn bifrost_polkadot_genesis(
 		},
 		"salp": { "initialMultisigAccount": Some(salp_multisig_key) },
 		"tokens": { "balances": tokens },
+		"prices": {
+			"emergencyPrice": vec![
+				(Token2(0), FixedU128::from_inner(6_000_000_000_000_000_000u128)),
+				(Token2(13), FixedU128::from_inner(3000_000_000_000_000_000_000u128)),
+				(Native(TokenSymbol::BNC), FixedU128::from_inner(250_000_000_000_000_000u128)),
+			]
+		},
 		// EVM compatibility
 		"evmChainId": { "chainId": 42u64 },
-		// "dynamicFee": { "minGasPrice": U256::from(560174200u64) },
+		"dynamicFee": { "minGasPrice": U256::from(560174200u64) },
 		"evm": { "accounts": evm_accounts },
 	})
 }
