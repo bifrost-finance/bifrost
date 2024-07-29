@@ -22,9 +22,7 @@ use bifrost_primitives::{
 	TokenSymbol::{BNC, KSM},
 };
 use hex_literal::hex;
-use parity_scale_codec::{Decode, Encode};
 use primitive_types::H160;
-use sp_core::bytes::to_hex;
 
 macro_rules! encode {
 	($asset_id:expr) => {{

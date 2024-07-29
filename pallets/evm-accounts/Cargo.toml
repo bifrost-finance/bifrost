@@ -33,7 +33,6 @@ sp-io = { workspace = true }
 frame-benchmarking = { workspace = true }
 orml-tokens = { workspace = true }
 orml-traits = { workspace = true, default-features = false }
-#test-utils = { workspace = true }
 hex-literal = { workspace = true }
 
 [features]

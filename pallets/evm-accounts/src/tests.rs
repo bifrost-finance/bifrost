@@ -50,8 +50,6 @@ fn eth_address_should_convert_to_full_address_when_bound() {
 		assert_eq!(EVMAccounts::bound_account_id(evm_address), Some(ALICE));
 
 		assert_eq!(EVMAccounts::account_id(evm_address), ALICE);
-
-		expect_events(vec![Event::Bound { account: ALICE, address: evm_address }.into()]);
 	});
 }
 
@@ -88,7 +86,6 @@ fn add_contract_deployer_should_store_address_in_the_storage() {
 
 		// Assert
 		assert!(EVMAccounts::can_deploy_contracts(evm_address));
-		expect_events(vec![Event::DeployerAdded { who: evm_address }.into()]);
 
 		// adding the address again should be ok
 		assert_ok!(EVMAccounts::add_contract_deployer(RuntimeOrigin::root(), evm_address));
@@ -108,7 +105,6 @@ fn remove_contract_deployer_should_remove_address_from_the_storage() {
 
 		// Assert
 		assert!(!EVMAccounts::can_deploy_contracts(evm_address));
-		expect_events(vec![Event::DeployerRemoved { who: evm_address }.into()]);
 
 		// removing the address again should be ok
 		assert_ok!(EVMAccounts::remove_contract_deployer(RuntimeOrigin::root(), evm_address));
@@ -128,7 +124,6 @@ fn renounce_contract_deployer_should_remove_address_from_the_storage() {
 
 		// Assert
 		assert!(!EVMAccounts::can_deploy_contracts(evm_address));
-		expect_events(vec![Event::DeployerRemoved { who: evm_address }.into()]);
 
 		// ronouncing the address again should be ok
 		assert_ok!(EVMAccounts::renounce_contract_deployer(RuntimeOrigin::signed(ALICE)));

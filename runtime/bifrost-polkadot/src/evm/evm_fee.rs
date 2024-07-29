@@ -102,9 +102,6 @@ where
 			return Err(Error::<T>::WithdrawFailed);
 		};
 
-		log::debug!(target: "evm", "evm convert from_currency: {:?} == to_currency: {:?} == amount: {:?}", EC::get(), fee_currency, fee);
-		log::debug!(target: "evm", "price: {:?}", price);
-
 		// Ensure that converted fee is not zero
 		if converted == 0 {
 			return Err(Error::<T>::WithdrawFailed);

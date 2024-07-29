@@ -96,7 +96,7 @@ impl<Block: BlockT, I: Clone + BlockImportT<Block>, C> Clone for BlockImport<Blo
 			inner: self.inner.clone(),
 			client: self.client.clone(),
 			backend: self.backend.clone(),
-			evm_since: self.evm_since.clone(),
+			evm_since: self.evm_since,
 			_marker: PhantomData,
 		}
 	}
