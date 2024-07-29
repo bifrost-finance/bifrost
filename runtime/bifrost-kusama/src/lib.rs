@@ -1609,7 +1609,7 @@ parameter_types! {
 	pub const MaxHasDispatchedSize: u32 = 100;
 	pub OracleRootOperatorAccountId: AccountId = OraclePalletId::get().into_account_truncating();
 	pub const MinimumTimestampInterval: Moment = 1000 * 60 * 10; // 10 mins
-	pub const MinimumValueInterval: Price = FixedU128::from_inner(3_000_000_000_000_000); // 0.3%
+	pub const MaximumValueInterval: Price = FixedU128::from_inner(3_000_000_000_000_000); // 0.3%
 }
 
 type BifrostDataProvider = orml_oracle::Instance1;
@@ -1621,7 +1621,7 @@ impl orml_oracle::Config<BifrostDataProvider> for Runtime {
 		MinimumCount,
 		ExpiresIn,
 		MinimumTimestampInterval,
-		MinimumValueInterval,
+		MaximumValueInterval,
 		BifrostDataProvider,
 	>;
 	type Time = Timestamp;
