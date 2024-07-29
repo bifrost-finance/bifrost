@@ -1608,7 +1608,7 @@ parameter_types! {
 	pub const ExpiresIn: Moment = 1000 * 60 * 60; // 60 mins
 	pub const MaxHasDispatchedSize: u32 = 100;
 	pub OracleRootOperatorAccountId: AccountId = OraclePalletId::get().into_account_truncating();
-	pub const MinimumTimestampInterval: Moment = 10 * 1000; // 10 mins
+	pub const MinimumTimestampInterval: Moment = 1000 * 60 * 10; // 10 mins
 	pub const MinimumValueInterval: Price = FixedU128::from_inner(3_000_000_000_000_000); // 0.3%
 }
 
