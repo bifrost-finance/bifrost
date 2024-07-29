@@ -164,27 +164,3 @@ parameter_types! {
 impl pallet_dynamic_fee::Config for Runtime {
 	type MinGasPriceBoundDivisor = BoundDivision;
 }
-
-parameter_types! {
-	pub const DefaultBaseFeePerGas: u128 = DEFAULT_BASE_FEE_PER_GAS;
-	pub const MinBaseFeePerGas: u128 = DEFAULT_BASE_FEE_PER_GAS.saturating_div(10);
-	pub const MaxBaseFeePerGas: u128 = 14415000000; //To reach 10 dollar per omnipool trade
-}
-
-// impl pallet_dynamic_evm_fee::Config for crate::Runtime {
-// 	type AssetId = AssetId;
-// 	type DefaultBaseFeePerGas = DefaultBaseFeePerGas;
-// 	type MinBaseFeePerGas = MinBaseFeePerGas;
-// 	type MaxBaseFeePerGas = MaxBaseFeePerGas;
-// 	type FeeMultiplier = TransactionPaymentMultiplier;
-// 	type NativePriceOracle = AssetFeeOraclePriceProvider<
-// 		NativeAssetId,
-// 		crate::MultiTransactionPayment,
-// 		crate::Router,
-// 		OraclePriceProvider<AssetId, crate::EmaOracle, LRNA>,
-// 		crate::MultiTransactionPayment,
-// 		OracleEvmPeriod,
-// 	>;
-// 	type WethAssetId = WethAssetId;
-// 	type WeightInfo = crate::weights::dynamic_evm_fee::HydraWeight<crate::Runtime>;
-// }
