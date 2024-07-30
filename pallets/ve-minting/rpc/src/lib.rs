@@ -41,7 +41,7 @@ pub trait VeMintingRpcApi<BlockHash, AccountId> {
 	/// rpc method for getting user balance
 	#[method(name = "ve_minting_balanceOf")]
 	fn balance_of(&self, who: AccountId, at: Option<BlockHash>) -> RpcResult<NumberOrHex>;
-	
+
 	/// RPC method to get total supply
 	#[method(name = "ve_minting_totalSupply")]
 	fn total_supply(&self, at: Option<BlockHash>) -> RpcResult<NumberOrHex>;

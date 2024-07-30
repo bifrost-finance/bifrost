@@ -132,7 +132,8 @@ impl<T: Config> Pallet<T> {
 			// .map_err(|_| ArithmeticError::Overflow)?
 			// .unique_saturated_into();
 
-			// If share information is provided, calculate the reward based on the individual share and total share.
+			// If share information is provided, calculate the reward based on the individual share
+			// and total share.
 			match share_info {
 				Some((share, total_share)) => {
 					let reward = increment
@@ -181,7 +182,7 @@ impl<T: Config> Pallet<T> {
 			item.reward_per_token_stored = reward_per_token_stored.clone();
 			item.last_update_time = Self::last_time_reward_applicable(pool_id);
 		});
-		// If an account address is provided, update the rewards 
+		// If an account address is provided, update the rewards
 		if let Some(address) = addr {
 			let earned = Self::earned(pool_id, address, share_info)?;
 			// If the account has earned rewards, update the rewards storage
