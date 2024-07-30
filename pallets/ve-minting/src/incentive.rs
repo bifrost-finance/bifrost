@@ -53,6 +53,7 @@ where
 }
 
 impl<T: Config> Pallet<T> {
+	/// Check if the current block number is within the end time of the reward pool
 	pub fn last_time_reward_applicable(pool_id: PoolId) -> BlockNumberFor<T> {
 		let current_block_number: BlockNumberFor<T> = frame_system::Pallet::<T>::block_number();
 		if current_block_number < Self::incentive_configs(pool_id).period_finish {
@@ -62,6 +63,7 @@ impl<T: Config> Pallet<T> {
 		}
 	}
 
+	/// Calculate the reward per token for the given pool
 	pub fn reward_per_token(
 		pool_id: PoolId,
 	) -> Result<BTreeMap<CurrencyIdOf<T>, BalanceOf<T>>, DispatchError> {
@@ -71,6 +73,7 @@ impl<T: Config> Pallet<T> {
 		if total_supply == BalanceOf::<T>::zero() {
 			return Ok(conf.reward_per_token_stored);
 		}
+		// Iterate over each currency and its associated reward rate
 		conf.reward_rate.iter().try_for_each(|(currency, &reward)| -> DispatchResult {
 			let increment: BalanceOf<T> = U512::from(
 				Self::last_time_reward_applicable(pool_id)
@@ -97,6 +100,7 @@ impl<T: Config> Pallet<T> {
 		Ok(conf.reward_per_token_stored)
 	}
 
+	/// Calculates the reward earned by an account from a specific reward pool
 	pub fn earned(
 		pool_id: PoolId,
 		addr: &AccountIdOf<T>,
@@ -128,6 +132,7 @@ impl<T: Config> Pallet<T> {
 			// .map_err(|_| ArithmeticError::Overflow)?
 			// .unique_saturated_into();
 
+			// If share information is provided, calculate the reward based on the individual share and total share.
 			match share_info {
 				Some((share, total_share)) => {
 					let reward = increment
@@ -145,6 +150,7 @@ impl<T: Config> Pallet<T> {
 						})
 						.or_insert(reward);
 				},
+				// If no share information is provided, calculate the reward directly
 				None => {
 					let reward = u128::try_from(increment)
 						.map_err(|_| ArithmeticError::Overflow)?
@@ -175,8 +181,10 @@ impl<T: Config> Pallet<T> {
 			item.reward_per_token_stored = reward_per_token_stored.clone();
 			item.last_update_time = Self::last_time_reward_applicable(pool_id);
 		});
+		// If an account address is provided, update the rewards 
 		if let Some(address) = addr {
 			let earned = Self::earned(pool_id, address, share_info)?;
+			// If the account has earned rewards, update the rewards storage
 			if earned != BTreeMap::<CurrencyIdOf<T>, BalanceOf<T>>::default() {
 				Rewards::<T>::insert(address, earned);
 			}
@@ -185,12 +193,14 @@ impl<T: Config> Pallet<T> {
 		Ok(())
 	}
 
+	/// Update reward for all pools
 	pub fn update_reward_all(addr: Option<&AccountIdOf<T>>) -> DispatchResult {
 		// TODO: pool_id
 		Self::update_reward(0, addr, None)?;
 		Ok(())
 	}
 
+	///Transfer rewards into an account
 	pub fn get_rewards_inner(
 		pool_id: PoolId,
 		addr: &AccountIdOf<T>,
@@ -199,7 +209,7 @@ impl<T: Config> Pallet<T> {
 		Self::update_reward(pool_id, Some(addr), share_info)?;
 		if Self::balance_of_current_block(addr)? == BalanceOf::<T>::zero() {
 			return Ok(());
-		}
+		} // Excit earlier if balance of token is zero
 		if let Some(rewards) = Self::rewards(addr) {
 			rewards.iter().try_for_each(|(currency, &reward)| -> DispatchResult {
 				T::MultiCurrency::transfer(
