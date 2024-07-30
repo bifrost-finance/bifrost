@@ -147,7 +147,7 @@ pub fn bifrost_polkadot_genesis(
 	})
 }
 
-pub fn local_testnet_config() -> ChainSpec {
+pub fn local_testnet_config(is_dev: bool) -> ChainSpec {
 	let endowed_accounts = vec![
 		get_account_id_from_seed::<sr25519::Public>("Alice"),
 		get_account_id_from_seed::<sr25519::Public>("Bob"),
@@ -225,13 +225,18 @@ pub fn local_testnet_config() -> ChainSpec {
 		},
 	);
 
+	let (chain_type, relay_chain) = match is_dev {
+		true => (ChainType::Development, "polkadot"),
+		false => (ChainType::Local, "polkadot-local"),
+	};
+
 	ChainSpec::builder(
 		bifrost_polkadot_runtime::WASM_BINARY.expect("WASM binary was not built, please build it!"),
-		RelayExtensions { relay_chain: "polkadot-local".into(), para_id: PARA_ID, evm_since: 1 },
+		RelayExtensions { relay_chain: relay_chain.into(), para_id: PARA_ID, evm_since: 1 },
 	)
 	.with_name("Bifrost Polkadot Local Testnet")
 	.with_id("bifrost_polkadot_local_testnet")
-	.with_chain_type(ChainType::Local)
+	.with_chain_type(chain_type)
 	.with_genesis_config_patch(bifrost_polkadot_genesis(
 		vec![
 			(
