@@ -41,7 +41,13 @@ impl Erc20Mapping for BifrostErc20Mapping {
 		let mut evm_address_bytes = [0u8; 20];
 
 		evm_address_bytes[0..4].copy_from_slice(CURRENCY_PRECOMPILE_ADDRESS_PREFIX);
-		evm_address_bytes[18..].copy_from_slice(asset_id_bytes.as_slice());
+		match currency_id {
+			CurrencyId::VSBond(..) | CurrencyId::VSBond2(..) =>
+				evm_address_bytes[6..].copy_from_slice(asset_id_bytes.as_slice()),
+			CurrencyId::LPToken(..) =>
+				evm_address_bytes[15..].copy_from_slice(asset_id_bytes.as_slice()),
+			_ => evm_address_bytes[18..].copy_from_slice(asset_id_bytes.as_slice()),
+		};
 
 		Some(EvmAddress::from(evm_address_bytes))
 	}
@@ -50,6 +56,16 @@ impl Erc20Mapping for BifrostErc20Mapping {
 		if !is_asset_address(evm_address) {
 			return None;
 		}
+
+		let mut currency_id = &evm_address.to_fixed_bytes()[6..];
+		if !currency_id.to_vec().starts_with(&[0, 0]) {
+			return CurrencyId::decode(&mut currency_id).ok();
+		};
+
+		let mut currency_id = &evm_address.to_fixed_bytes()[15..];
+		if !currency_id.to_vec().starts_with(&[0, 0]) {
+			return CurrencyId::decode(&mut currency_id).ok();
+		};
 
 		let mut currency_id = &evm_address.to_fixed_bytes()[18..];
 		CurrencyId::decode(&mut currency_id).ok()
