@@ -219,7 +219,7 @@ pub fn local_testnet_config() -> ChainSpec {
 
 	ChainSpec::builder(
 		bifrost_kusama_runtime::WASM_BINARY.expect("WASM binary was not built, please build it!"),
-		RelayExtensions { relay_chain: "kusama-local".into(), para_id: PARA_ID },
+		RelayExtensions { relay_chain: "kusama-local".into(), para_id: PARA_ID, evm_since: 1 },
 	)
 	.with_name("Bifrost Local Testnet")
 	.with_id("bifrost_local_testnet")
@@ -325,7 +325,7 @@ pub fn chainspec_config() -> ChainSpec {
 
 	ChainSpec::builder(
 		bifrost_kusama_runtime::WASM_BINARY.expect("WASM binary was not built, please build it!"),
-		RelayExtensions { relay_chain: "kusama".into(), para_id: PARA_ID },
+		RelayExtensions { relay_chain: "kusama".into(), para_id: PARA_ID, evm_since: 1 },
 	)
 	.with_name("Bifrost")
 	.with_id("bifrost")

@@ -19,7 +19,8 @@
 use super::*;
 use bifrost_asset_registry::AssetIdMaps;
 use bifrost_primitives::{
-	AccountId, CurrencyId, CurrencyIdMapping, TokenSymbol, DOT_TOKEN_ID, GLMR_TOKEN_ID,
+	currency::WETH_TOKEN_ID, AccountId, CurrencyId, CurrencyIdMapping, TokenSymbol, DOT_TOKEN_ID,
+	GLMR_TOKEN_ID,
 };
 pub use bifrost_xcm_interface::traits::{parachains, XcmBaseWeight};
 use cumulus_primitives_core::AggregateMessageOrigin;
@@ -56,7 +57,7 @@ use bifrost_runtime_common::currency_adapter::{
 	BifrostDropAssets, DepositToAlternative, MultiCurrencyAdapter,
 };
 use parachains_common::message_queue::{NarrowOriginToSibling, ParaIdToSibling};
-use xcm::v4::{prelude::*, Asset, AssetId, InteriorLocation, Location};
+use xcm::v4::{Asset, AssetId, InteriorLocation, Location};
 
 /// Bifrost Asset Matcher
 pub struct BifrostAssetMatcher<CurrencyId, CurrencyIdConvert>(
@@ -512,7 +513,7 @@ impl<T: Get<Location>> ContainsPair<Asset, Location> for NativeAssetFrom<T> {
 parameter_types! {
   /// Location of Asset Hub
   pub AssetHubLocation: Location = (Parent, Parachain(1000)).into();
-	pub EthereumLocation: Location = Location::new(2, [GlobalConsensus(Ethereum { chain_id: 1 })]);
+	pub EthereumLocation: Location = Location::new(2, [GlobalConsensus(NetworkId::Ethereum { chain_id: 1 })]);
 }
 
 pub struct XcmConfig;
@@ -659,6 +660,7 @@ impl bifrost_currencies::Config for Runtime {
 parameter_type_with_key! {
 	pub ExistentialDeposits: |currency_id: CurrencyId| -> Balance {
 		match currency_id {
+			&CurrencyId::Token2(WETH_TOKEN_ID) => 15_000_000_000_000,   // 0.000015 WETH
 			&CurrencyId::Native(TokenSymbol::BNC) => 10 * milli::<Runtime>(NativeCurrencyId::get()),   // 0.01 BNC
 			&CurrencyId::Token2(DOT_TOKEN_ID) => 1_000_000,  // DOT
 			&CurrencyId::LPToken(..) => 1 * micro::<Runtime>(NativeCurrencyId::get()),

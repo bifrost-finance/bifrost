@@ -1,0 +1,14 @@
+[package]
+name = "module-evm-utility-macro"
+version = "2.21.0"
+authors = ["Acala Developers"]
+edition = "2021"
+
+[lib]
+proc-macro = true
+
+[dependencies]
+quote = { workspace = true }
+syn = { workspace = true }
+proc-macro2 = { workspace = true }
+module-evm-utility = { path = ".." }

@@ -31,6 +31,7 @@ use cumulus_client_consensus_aura::collators::basic::{
 use cumulus_client_consensus_common::ParachainBlockImport as TParachainBlockImport;
 use cumulus_client_consensus_proposer::Proposer;
 
+use crate::eth::EthConfiguration;
 use bifrost_primitives::Block;
 use cumulus_client_service::{
 	build_network, build_relay_chain_interface, prepare_node_config, start_relay_chain_tasks,
@@ -265,6 +266,7 @@ fn start_consensus(
 async fn start_node_impl<Net>(
 	parachain_config: Configuration,
 	polkadot_config: Configuration,
+	_eth_config: EthConfiguration,
 	collator_options: CollatorOptions,
 	sybil_resistance_level: CollatorSybilResistance,
 	para_id: ParaId,
@@ -434,6 +436,7 @@ where
 pub async fn start_node<Net: NetworkBackend<Block, Hash>>(
 	parachain_config: Configuration,
 	polkadot_config: Configuration,
+	eth_config: EthConfiguration,
 	collator_options: CollatorOptions,
 	para_id: ParaId,
 	hwbench: Option<sc_sysinfo::HwBench>,
@@ -441,6 +444,7 @@ pub async fn start_node<Net: NetworkBackend<Block, Hash>>(
 	start_node_impl::<Net>(
 		parachain_config,
 		polkadot_config,
+		eth_config,
 		collator_options,
 		CollatorSybilResistance::Resistant,
 		para_id,
