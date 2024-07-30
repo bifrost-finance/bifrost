@@ -24,11 +24,6 @@
 
 use sha3::{Digest, Keccak256};
 
-pub use ethereum;
-pub use evm::{self, backend::Basic as Account};
-pub use evm_gasometer;
-pub use evm_runtime;
-
 pub fn sha3_256(s: &str) -> [u8; 32] {
 	let mut result = [0u8; 32];
 

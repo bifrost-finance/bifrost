@@ -1455,7 +1455,7 @@ dependencies = [
  "cumulus-primitives-timestamp",
  "cumulus-primitives-utility",
  "ethabi",
- "evm 0.41.1",
+ "evm",
  "fp-account",
  "fp-evm",
  "fp-rpc",
@@ -4576,26 +4576,6 @@ dependencies = [
 
 [[package]]
 name = "evm"
-version = "0.36.0"
-source = "git+https://github.com/rust-blockchain/evm?rev=13240a8a551586fdef0b5028ed73af80b248092a#13240a8a551586fdef0b5028ed73af80b248092a"
-dependencies = [
- "auto_impl",
- "environmental",
- "ethereum 0.14.0",
- "evm-core 0.36.0",
- "evm-gasometer 0.36.0",
- "evm-runtime 0.36.0",
- "log",
- "parity-scale-codec",
- "primitive-types",
- "rlp",
- "scale-info",
- "serde",
- "sha3",
-]
-
-[[package]]
-name = "evm"
 version = "0.41.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "767f43e9630cc36cf8ff2777cbb0121b055f0d1fd6eaaa13b46a1808f0d0e7e9"
@@ -4603,9 +4583,9 @@ dependencies = [
  "auto_impl",
  "environmental",
  "ethereum 0.15.0",
- "evm-core 0.41.0",
- "evm-gasometer 0.41.0",
- "evm-runtime 0.41.0",
+ "evm-core",
+ "evm-gasometer",
+ "evm-runtime",
  "log",
  "parity-scale-codec",
  "primitive-types",
@@ -4613,17 +4593,6 @@ dependencies = [
  "scale-info",
  "serde",
  "sha3",
-]
-
-[[package]]
-name = "evm-core"
-version = "0.36.0"
-source = "git+https://github.com/rust-blockchain/evm?rev=13240a8a551586fdef0b5028ed73af80b248092a#13240a8a551586fdef0b5028ed73af80b248092a"
-dependencies = [
- "parity-scale-codec",
- "primitive-types",
- "scale-info",
- "serde",
 ]
 
 [[package]]
@@ -4640,37 +4609,14 @@ dependencies = [
 
 [[package]]
 name = "evm-gasometer"
-version = "0.36.0"
-source = "git+https://github.com/rust-blockchain/evm?rev=13240a8a551586fdef0b5028ed73af80b248092a#13240a8a551586fdef0b5028ed73af80b248092a"
-dependencies = [
- "environmental",
- "evm-core 0.36.0",
- "evm-runtime 0.36.0",
- "primitive-types",
-]
-
-[[package]]
-name = "evm-gasometer"
 version = "0.41.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1dc0eb591abc5cd7b05bef6a036c2bb6c66ab6c5e0c5ce94bfe377ab670b1fd7"
 dependencies = [
  "environmental",
- "evm-core 0.41.0",
- "evm-runtime 0.41.0",
+ "evm-core",
+ "evm-runtime",
  "primitive-types",
-]
-
-[[package]]
-name = "evm-runtime"
-version = "0.36.0"
-source = "git+https://github.com/rust-blockchain/evm?rev=13240a8a551586fdef0b5028ed73af80b248092a#13240a8a551586fdef0b5028ed73af80b248092a"
-dependencies = [
- "auto_impl",
- "environmental",
- "evm-core 0.36.0",
- "primitive-types",
- "sha3",
 ]
 
 [[package]]
@@ -4681,7 +4627,7 @@ checksum = "84bbe09b64ae13a29514048c1bb6fda6374ac0b4f6a1f15a443348ab88ef42cd"
 dependencies = [
  "auto_impl",
  "environmental",
- "evm-core 0.41.0",
+ "evm-core",
  "primitive-types",
  "sha3",
 ]
@@ -4849,7 +4795,7 @@ source = "git+https://github.com/bifrost-finance/frontier?branch=release-polkado
 dependencies = [
  "ethereum 0.15.0",
  "ethereum-types",
- "evm 0.41.1",
+ "evm",
  "fc-api",
  "fc-mapping-sync",
  "fc-rpc-core",
@@ -5181,7 +5127,7 @@ name = "fp-evm"
 version = "3.0.0-dev"
 source = "git+https://github.com/bifrost-finance/frontier?branch=release-polkadot-v1.13.0#24a48ebc221399d129712eff41787ad800dc8a26"
 dependencies = [
- "evm 0.41.1",
+ "evm",
  "frame-support",
  "num_enum 0.7.2",
  "parity-scale-codec",
@@ -7786,9 +7732,6 @@ name = "module-evm-utility"
 version = "2.21.0"
 dependencies = [
  "ethereum 0.14.0",
- "evm 0.36.0",
- "evm-gasometer 0.36.0",
- "evm-runtime 0.36.0",
  "sha3",
  "sp-std 14.0.0 (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.13.0)",
 ]
@@ -9084,7 +9027,7 @@ source = "git+https://github.com/bifrost-finance/frontier?branch=release-polkado
 dependencies = [
  "ethereum 0.15.0",
  "ethereum-types",
- "evm 0.41.1",
+ "evm",
  "fp-consensus",
  "fp-ethereum",
  "fp-evm",
@@ -9105,7 +9048,7 @@ version = "6.0.0-dev"
 source = "git+https://github.com/bifrost-finance/frontier?branch=release-polkadot-v1.13.0#24a48ebc221399d129712eff41787ad800dc8a26"
 dependencies = [
  "environmental",
- "evm 0.41.1",
+ "evm",
  "fp-account",
  "fp-evm",
  "frame-benchmarking",

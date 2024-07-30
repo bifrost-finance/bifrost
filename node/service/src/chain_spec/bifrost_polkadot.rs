@@ -20,7 +20,12 @@ use crate::chain_spec::{get_account_id_from_seed, get_from_seed, RelayExtensions
 use bifrost_polkadot_runtime::{
 	constants::currency::DOLLARS, AccountId, Balance, BlockNumber, SS58Prefix,
 };
-use bifrost_primitives::{CurrencyId, CurrencyId::*, TokenInfo, TokenSymbol, DOT_TOKEN_ID};
+use bifrost_primitives::{
+	currency::{BNCS, DED, IBTC, INTR, PEN, PINK, USDC, WETH},
+	CurrencyId,
+	CurrencyId::*,
+	TokenInfo, TokenSymbol, ASTR, BNC, DOT, DOT_TOKEN_ID, DOT_U, FIL, GLMR, MANTA,
+};
 use bifrost_runtime_common::AuraId;
 use cumulus_primitives_core::ParaId;
 use fp_evm::GenesisAccount;
@@ -130,13 +135,13 @@ pub fn bifrost_polkadot_genesis(
 		"tokens": { "balances": tokens },
 		"prices": {
 			"emergencyPrice": vec![
-				(Token2(0), FixedU128::from_inner(6_000_000_000_000_000_000u128)),
-				(Token2(13), FixedU128::from_inner(3000_000_000_000_000_000_000u128)),
-				(Native(TokenSymbol::BNC), FixedU128::from_inner(250_000_000_000_000_000u128)),
+				(DOT, FixedU128::from_inner(6_000_000_000_000_000_000u128)),
+				(WETH, FixedU128::from_inner(3000_000_000_000_000_000_000u128)),
+				(BNC, FixedU128::from_inner(250_000_000_000_000_000u128)),
 			]
 		},
 		// EVM compatibility
-		"evmChainId": { "chainId": 42u64 },
+		"evmChainId": { "chainId": 996u64 },
 		"dynamicFee": { "minGasPrice": U256::from(560174200u64) },
 		"evm": { "accounts": evm_accounts },
 	})
@@ -158,8 +163,8 @@ pub fn local_testnet_config() -> ChainSpec {
 		.iter()
 		.flat_map(|x| {
 			vec![
-				(x.clone(), Token2(DOT_TOKEN_ID), ENDOWMENT() * 4_000_000),
-				(x.clone(), Token2(13), ENDOWMENT() * 4_000_000),
+				(x.clone(), DOT, ENDOWMENT() * 4_000_000),
+				(x.clone(), WETH, ENDOWMENT() * 4_000_000),
 			]
 		})
 		.collect();
@@ -169,49 +174,41 @@ pub fn local_testnet_config() -> ChainSpec {
 	let salp_multisig: AccountId =
 		hex!["49daa32c7287890f38b7e1a8cd2961723d36d20baa0bf3b82e0c4bdda93b1c0a"].into();
 	let currency = vec![
-		(Native(TokenSymbol::BNC), DOLLARS / 100, None),
 		(
-			Token2(DOT_TOKEN_ID),
-			1_000_000,
-			Some((String::from("Polkadot DOT"), String::from("DOT"), 10u8)),
+			BNC,
+			10_000_000_000,
+			Some((String::from("Bifrost Native Coin"), String::from("BNC"), 12u8)),
 		),
+		(DOT, 1_000_000, Some((String::from("Polkadot DOT"), String::from("DOT"), 10u8))),
 		(
-			Token2(1),
+			GLMR,
 			1_000_000_000_000,
 			Some((String::from("Moonbeam Native Token"), String::from("GLMR"), 18u8)),
 		),
-		(Token2(2), 1_000, Some((String::from("Tether USD"), String::from("USDT"), 6u8))),
+		(DOT_U, 1_000, Some((String::from("Tether USD"), String::from("USDT"), 6u8))),
+		(ASTR, 10_000_000_000_000_000, Some((String::from("Astar"), String::from("ASTR"), 18u8))),
 		(
-			Token2(3),
-			10_000_000_000_000_000,
-			Some((String::from("Astar"), String::from("ASTR"), 18u8)),
-		),
-		(
-			Token2(4),
+			FIL,
 			1_000_000_000_000,
 			Some((String::from("Filecoin Network Token"), String::from("FIL"), 18u8)),
 		),
-		(Token2(5), 1_000, Some((String::from("USD Coin"), String::from("USDC"), 6u8))),
-		(Token2(6), 100, Some((String::from("interBTC"), String::from("IBTC"), 8u8))),
-		(Token2(7), 10_000_000, Some((String::from("Interlay"), String::from("INTR"), 10u8))),
+		(USDC, 1_000, Some((String::from("USD Coin"), String::from("USDC"), 6u8))),
+		(IBTC, 100, Some((String::from("interBTC"), String::from("IBTC"), 8u8))),
+		(INTR, 10_000_000, Some((String::from("Interlay"), String::from("INTR"), 10u8))),
 		(
-			Token2(8),
+			MANTA,
 			10_000_000_000_000,
 			Some((String::from("Manta Network"), String::from("MANTA"), 18u8)),
 		),
 		(
-			Token2(9),
+			BNCS,
 			10_000_000_000,
 			Some((String::from("bncs-20 inscription token BNCS"), String::from("BNCS"), 12u8)),
 		),
-		(Token2(10), 100_000_000, Some((String::from("PINK"), String::from("PINK"), 10u8))),
-		(Token2(11), 1, Some((String::from("DED"), String::from("DED"), 10u8))),
-		(Token2(12), 100_000_000, Some((String::from("Pendulum"), String::from("PEN"), 12u8))),
-		(
-			Token2(13),
-			100_000_000,
-			Some((String::from("SnowBridge WETH"), String::from("SWETH"), 18u8)),
-		),
+		(PINK, 100_000_000, Some((String::from("PINK"), String::from("PINK"), 10u8))),
+		(DED, 1, Some((String::from("DED"), String::from("DED"), 10u8))),
+		(PEN, 100_000_000, Some((String::from("Pendulum"), String::from("PEN"), 12u8))),
+		(WETH, 100_000_000, Some((String::from("SnowBridge WETH"), String::from("SWETH"), 18u8))),
 	];
 	let vcurrency = vec![VSToken2(DOT_TOKEN_ID), VToken(TokenSymbol::BNC), VToken2(DOT_TOKEN_ID)];
 

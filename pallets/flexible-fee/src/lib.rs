@@ -20,10 +20,9 @@
 
 pub use crate::pallet::*;
 use bifrost_primitives::{
+	currency::WETH,
 	traits::{FeeGetter, XcmDestWeightAndFeeHandler},
-	AccountFeeCurrency, CurrencyId,
-	CurrencyId::Token2,
-	ExtraFeeName, TryConvertFrom, XcmOperationType, BNC,
+	AccountFeeCurrency, CurrencyId, ExtraFeeName, TryConvertFrom, XcmOperationType, BNC,
 };
 use bifrost_xcm_interface::{polkadot::RelaychainCall, traits::parachains, PolkadotXcmCall};
 use core::convert::Into;
@@ -650,6 +649,6 @@ where
 /// Provides account's fee payment asset or default fee asset ( Native asset )
 impl<T: Config> AccountFeeCurrency<T::AccountId> for Pallet<T> {
 	fn get(who: &T::AccountId) -> CurrencyId {
-		Pallet::<T>::get_user_default_fee_currency(who).unwrap_or_else(|| Token2(13))
+		Pallet::<T>::get_user_default_fee_currency(who).unwrap_or_else(|| WETH)
 	}
 }

@@ -19,7 +19,8 @@
 use super::*;
 use bifrost_asset_registry::AssetIdMaps;
 use bifrost_primitives::{
-	AccountId, CurrencyId, CurrencyIdMapping, TokenSymbol, DOT_TOKEN_ID, GLMR_TOKEN_ID,
+	currency::WETH_TOKEN_ID, AccountId, CurrencyId, CurrencyIdMapping, TokenSymbol, DOT_TOKEN_ID,
+	GLMR_TOKEN_ID,
 };
 pub use bifrost_xcm_interface::traits::{parachains, XcmBaseWeight};
 use cumulus_primitives_core::AggregateMessageOrigin;
@@ -659,7 +660,7 @@ impl bifrost_currencies::Config for Runtime {
 parameter_type_with_key! {
 	pub ExistentialDeposits: |currency_id: CurrencyId| -> Balance {
 		match currency_id {
-			&CurrencyId::Token2(13) => 10 * milli::<Runtime>(NativeCurrencyId::get()),   // 0.01 BNC
+			&CurrencyId::Token2(WETH_TOKEN_ID) => 15_000_000_000_000,   // 0.000015 WETH
 			&CurrencyId::Native(TokenSymbol::BNC) => 10 * milli::<Runtime>(NativeCurrencyId::get()),   // 0.01 BNC
 			&CurrencyId::Token2(DOT_TOKEN_ID) => 1_000_000,  // DOT
 			&CurrencyId::LPToken(..) => 1 * micro::<Runtime>(NativeCurrencyId::get()),
