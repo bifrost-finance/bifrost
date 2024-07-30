@@ -43,6 +43,7 @@ pub struct RelayExtensions {
 	pub relay_chain: String,
 	/// The id of the Parachain.
 	pub para_id: u32,
+	/// EVM compatible starting block number
 	pub evm_since: BlockNumber,
 }
 

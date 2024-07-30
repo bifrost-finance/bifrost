@@ -38,7 +38,7 @@ test-runtimes:
 
 .PHONY: test-benchmarks
 test-benchmarks:
-	SKIP_WASM_BUILD= cargo test benchmarking  --features="runtime-benchmarks, polkadot"
+	SKIP_WASM_BUILD= cargo test benchmarking  --features="with-bifrost-runtime, runtime-benchmarks, polkadot"
 
 .PHONY: clean # cargo clean
 clean:

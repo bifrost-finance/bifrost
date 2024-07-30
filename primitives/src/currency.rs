@@ -356,10 +356,6 @@ impl CurrencyId {
 			_ => Err(()),
 		}
 	}
-
-	pub fn to_asset_id(self, para_id: ParaId) -> AssetId {
-		AssetId::try_convert_from(self, para_id).expect("Fail to convert")
-	}
 }
 
 impl CurrencyIdExt for CurrencyId {

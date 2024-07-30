@@ -5,8 +5,8 @@ authors = ["Liebi Technologies <bifrost@liebi.com>"]
 edition = "2021"
 
 [dependencies]
-async-trait = "0.1"
 # Substrate Client
+async-trait = { workspace = true }
 sc-basic-authorship = { workspace = true }
 sc-chain-spec = { workspace = true }
 sc-client-api = { workspace = true }
@@ -29,7 +29,7 @@ sc-rpc = { workspace = true }
 sc-keystore = { workspace = true }
 
 # Benchmarking
-frame-benchmarking = { workspace = true, features = ["std"] }
+frame-benchmarking = { workspace = true, features = [ "std" ] }
 frame-benchmarking-cli = { workspace = true }
 
 # Substrate Primitives
@@ -106,8 +106,6 @@ zenlink-protocol-runtime-api = { workspace = true }
 zenlink-stable-amm-runtime-api = { workspace = true }
 
 # Frontier
-#fc-api = { workspace = true }
-#fc-cli = { workspace = true }
 fc-consensus = { workspace = true }
 fc-db = { workspace = true, features = ["default", "sql"] }
 fc-mapping-sync = { workspace = true, features = ["sql"] }
@@ -128,32 +126,32 @@ bifrost-farming-rpc-runtime-api = { workspace = true }
 bifrost-ve-minting-rpc-runtime-api = { workspace = true }
 
 [features]
-default = ["std"]
+default = [ "std" ]
 std = []
 runtime-benchmarks = [
-    "bifrost-kusama-runtime/runtime-benchmarks",
-    "bifrost-polkadot-runtime/runtime-benchmarks",
-    "polkadot-service/runtime-benchmarks",
-    "polkadot-cli/runtime-benchmarks",
+	"bifrost-kusama-runtime/runtime-benchmarks",
+	"bifrost-polkadot-runtime/runtime-benchmarks",
+	"polkadot-service/runtime-benchmarks",
+	"polkadot-cli/runtime-benchmarks",
 ]
 with-bifrost-runtime = [
-    "with-bifrost-kusama-runtime",
-    "with-bifrost-polkadot-runtime",
+	"with-bifrost-kusama-runtime",
+	"with-bifrost-polkadot-runtime",
 ]
 with-bifrost-kusama-runtime = [
-    "bifrost-kusama-runtime",
+	"bifrost-kusama-runtime",
 ]
 with-bifrost-polkadot-runtime = [
-    "bifrost-polkadot-runtime",
+	"bifrost-polkadot-runtime",
 ]
 with-all-runtime = [
-    "with-bifrost-runtime",
+	"with-bifrost-runtime",
 ]
 try-runtime = [
-    "bifrost-kusama-runtime/try-runtime",
-    "bifrost-polkadot-runtime/try-runtime",
+	"bifrost-kusama-runtime/try-runtime",
+	"bifrost-polkadot-runtime/try-runtime",
 ]
 fast-runtime = [
-    "bifrost-kusama-runtime/fast-runtime",
-    "bifrost-polkadot-runtime/fast-runtime",
+	"bifrost-kusama-runtime/fast-runtime",
+	"bifrost-polkadot-runtime/fast-runtime",
 ]
