@@ -42,9 +42,11 @@ pub trait VeMintingRpcApi<BlockHash, AccountId> {
 	#[method(name = "ve_minting_balanceOf")]
 	fn balance_of(&self, who: AccountId, at: Option<BlockHash>) -> RpcResult<NumberOrHex>;
 
+	/// RPC method to get total supply
 	#[method(name = "ve_minting_totalSupply")]
 	fn total_supply(&self, at: Option<BlockHash>) -> RpcResult<NumberOrHex>;
 
+	/// RPC method to find block epoch
 	#[method(name = "ve_minting_findBlockEpoch")]
 	fn find_block_epoch(&self, max_epoch: U256, at: Option<BlockHash>) -> RpcResult<NumberOrHex>;
 }
@@ -75,6 +77,7 @@ where
 	AccountId: Codec,
 	// CallError: From<<C as BlockIdTo<Block>>::Error>,
 {
+	/// Get the balance of the user at a specific block hash
 	fn balance_of(
 		&self,
 		who: AccountId,
@@ -109,6 +112,7 @@ where
 		}
 	}
 
+	/// Get the total supply at a specific block hash
 	fn total_supply(&self, at: Option<<Block as BlockT>::Hash>) -> RpcResult<NumberOrHex> {
 		let lm_rpc_api = self.client.runtime_api();
 		let at = at.unwrap_or_else(|| self.client.info().best_hash);
@@ -139,6 +143,7 @@ where
 		}
 	}
 
+	/// Find the block epoch given a max epoch and block hash
 	fn find_block_epoch(
 		&self,
 		max_epoch: U256,

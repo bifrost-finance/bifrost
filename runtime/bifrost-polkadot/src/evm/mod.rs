@@ -16,22 +16,24 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-pub use crate::evm::accounts_conversion::{ExtendedAddressMapping, FindAuthorTruncated};
-use crate::{
-	evm::runner::WrapRunner, governance::TechAdminOrCouncil, Aura, ConstU32, DynamicFee,
-	EVMChainId, Prices, Runtime, RuntimeEvent, Timestamp, Weight, EVM, MAXIMUM_BLOCK_WEIGHT,
-	NORMAL_DISPATCH_RATIO, WEIGHT_REF_TIME_PER_SECOND,
-};
-use bifrost_primitives::{CurrencyId, CurrencyId::Token2};
-use bifrost_runtime_common::price::{
-	ConvertAmount, FeeAssetBalanceInCurrency, OraclePriceProvider,
-};
 use frame_support::{pallet_prelude::Get, parameter_types, traits::FindAuthor, ConsensusEngineId};
 use orml_tokens::CurrencyAdapter;
 use pallet_ethereum::PostLogContent;
 use pallet_evm::EnsureAddressTruncated;
 use pallet_transaction_payment::Multiplier;
 use primitive_types::U256;
+
+use bifrost_primitives::{currency::WETH, CurrencyId};
+use bifrost_runtime_common::price::{
+	ConvertAmount, FeeAssetBalanceInCurrency, OraclePriceProvider,
+};
+
+pub use crate::evm::accounts_conversion::{ExtendedAddressMapping, FindAuthorTruncated};
+use crate::{
+	evm::runner::WrapRunner, governance::TechAdminOrCouncil, Aura, ConstU32, DynamicFee,
+	EVMChainId, Prices, Runtime, RuntimeEvent, Timestamp, Weight, EVM, MAXIMUM_BLOCK_WEIGHT,
+	NORMAL_DISPATCH_RATIO, WEIGHT_REF_TIME_PER_SECOND,
+};
 
 mod accounts_conversion;
 mod evm_fee;
@@ -59,7 +61,7 @@ precompiles::BifrostPrecompiles::<_>::new();
 pub struct WethAssetId;
 impl Get<CurrencyId> for WethAssetId {
 	fn get() -> CurrencyId {
-		Token2(13)
+		WETH
 	}
 }
 

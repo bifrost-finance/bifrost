@@ -8434,7 +8434,7 @@ dependencies = [
 [[package]]
 name = "orml-oracle"
 version = "0.13.0"
-source = "git+https://github.com/bifrost-finance/open-runtime-module-library?branch=release-polkadot-v1.13.0#809507e5290453afde82e8954c502260e7e59bd7"
+source = "git+https://github.com/bifrost-finance/open-runtime-module-library?branch=release-polkadot-v1.13.0#a7ea052e958275502022b25f1fc1e5b0e146fe51"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -8453,7 +8453,7 @@ dependencies = [
 [[package]]
 name = "orml-tokens"
 version = "0.13.0"
-source = "git+https://github.com/bifrost-finance/open-runtime-module-library?branch=release-polkadot-v1.13.0#809507e5290453afde82e8954c502260e7e59bd7"
+source = "git+https://github.com/bifrost-finance/open-runtime-module-library?branch=release-polkadot-v1.13.0#a7ea052e958275502022b25f1fc1e5b0e146fe51"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -8470,7 +8470,7 @@ dependencies = [
 [[package]]
 name = "orml-traits"
 version = "0.13.0"
-source = "git+https://github.com/bifrost-finance/open-runtime-module-library?branch=release-polkadot-v1.13.0#809507e5290453afde82e8954c502260e7e59bd7"
+source = "git+https://github.com/bifrost-finance/open-runtime-module-library?branch=release-polkadot-v1.13.0#a7ea052e958275502022b25f1fc1e5b0e146fe51"
 dependencies = [
  "frame-support",
  "impl-trait-for-tuples",
@@ -8490,7 +8490,7 @@ dependencies = [
 [[package]]
 name = "orml-unknown-tokens"
 version = "0.13.0"
-source = "git+https://github.com/bifrost-finance/open-runtime-module-library?branch=release-polkadot-v1.13.0#809507e5290453afde82e8954c502260e7e59bd7"
+source = "git+https://github.com/bifrost-finance/open-runtime-module-library?branch=release-polkadot-v1.13.0#a7ea052e958275502022b25f1fc1e5b0e146fe51"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -8505,7 +8505,7 @@ dependencies = [
 [[package]]
 name = "orml-utilities"
 version = "0.13.0"
-source = "git+https://github.com/bifrost-finance/open-runtime-module-library?branch=release-polkadot-v1.13.0#809507e5290453afde82e8954c502260e7e59bd7"
+source = "git+https://github.com/bifrost-finance/open-runtime-module-library?branch=release-polkadot-v1.13.0#a7ea052e958275502022b25f1fc1e5b0e146fe51"
 dependencies = [
  "frame-support",
  "parity-scale-codec",
@@ -8520,7 +8520,7 @@ dependencies = [
 [[package]]
 name = "orml-xcm"
 version = "0.13.0"
-source = "git+https://github.com/bifrost-finance/open-runtime-module-library?branch=release-polkadot-v1.13.0#809507e5290453afde82e8954c502260e7e59bd7"
+source = "git+https://github.com/bifrost-finance/open-runtime-module-library?branch=release-polkadot-v1.13.0#a7ea052e958275502022b25f1fc1e5b0e146fe51"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -8534,7 +8534,7 @@ dependencies = [
 [[package]]
 name = "orml-xcm-support"
 version = "0.13.0"
-source = "git+https://github.com/bifrost-finance/open-runtime-module-library?branch=release-polkadot-v1.13.0#809507e5290453afde82e8954c502260e7e59bd7"
+source = "git+https://github.com/bifrost-finance/open-runtime-module-library?branch=release-polkadot-v1.13.0#a7ea052e958275502022b25f1fc1e5b0e146fe51"
 dependencies = [
  "frame-support",
  "orml-traits",
@@ -8548,7 +8548,7 @@ dependencies = [
 [[package]]
 name = "orml-xtokens"
 version = "0.13.0"
-source = "git+https://github.com/bifrost-finance/open-runtime-module-library?branch=release-polkadot-v1.13.0#809507e5290453afde82e8954c502260e7e59bd7"
+source = "git+https://github.com/bifrost-finance/open-runtime-module-library?branch=release-polkadot-v1.13.0#a7ea052e958275502022b25f1fc1e5b0e146fe51"
 dependencies = [
  "frame-support",
  "frame-system",

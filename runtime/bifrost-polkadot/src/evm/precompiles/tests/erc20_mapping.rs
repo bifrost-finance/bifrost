@@ -18,7 +18,7 @@
 
 use crate::evm::precompiles::erc20_mapping::{BifrostErc20Mapping, Erc20Mapping};
 use bifrost_primitives::{
-	CurrencyId,
+	CurrencyId, TokenSymbol,
 	TokenSymbol::{BNC, KSM},
 };
 use hex_literal::hex;
@@ -49,6 +49,21 @@ fn decode_asset_id_from_evm_address_should_work() {
 	assert_eq!(decode!(hex!("ffffffff00000000000000000000000000000900")), CurrencyId::VToken2(0));
 	assert_eq!(decode!(hex!("ffffffff00000000000000000000000000000204")), CurrencyId::Token(KSM));
 	assert_eq!(decode!(hex!("ffffffff00000000000000000000000000000104")), CurrencyId::VToken(KSM));
+	assert_eq!(decode!(hex!("ffffffff00000000000000000000000000000404")), CurrencyId::VSToken(KSM));
+	assert_eq!(decode!(hex!("ffffffff00000000000000000000000000000a00")), CurrencyId::VSToken2(0));
+	assert_eq!(decode!(hex!("ffffffff00000000000000000000000000000a00")), CurrencyId::VSToken2(0));
+	assert_eq!(
+		decode!(hex!("ffffffff00000b00000000000000000000000000")),
+		CurrencyId::VSBond2(0, 0, 0, 0)
+	);
+	assert_eq!(
+		decode!(hex!("ffffffff00000501000000000000000000000000")),
+		CurrencyId::VSBond(TokenSymbol::BNC, 0, 0, 0)
+	);
+	assert_eq!(
+		decode!(hex!("ffffffff00000000000000000000000601000300")),
+		CurrencyId::LPToken(TokenSymbol::BNC, 0, TokenSymbol::DOT, 0)
+	);
 }
 
 #[test]
@@ -82,5 +97,17 @@ fn encode_asset_id_to_evm_address_should_work() {
 	assert_eq!(
 		encode!(CurrencyId::VToken(KSM)),
 		H160::from(hex!("ffffffff00000000000000000000000000000104"))
+	);
+	assert_eq!(
+		encode!(CurrencyId::VSBond2(0, 0, 0, 0)),
+		H160::from(hex!("ffffffff00000b00000000000000000000000000"))
+	);
+	assert_eq!(
+		encode!(CurrencyId::LPToken(TokenSymbol::BNC, 0, TokenSymbol::DOT, 0)),
+		H160::from(hex!("ffffffff00000000000000000000000601000300"))
+	);
+	assert_eq!(
+		encode!(CurrencyId::VSBond(TokenSymbol::BNC, 0, 0, 0)),
+		H160::from(hex!("ffffffff00000501000000000000000000000000"))
 	);
 }
