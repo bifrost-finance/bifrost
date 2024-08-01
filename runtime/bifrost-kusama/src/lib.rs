@@ -1957,6 +1957,11 @@ parameter_types! {
 	pub const CallSwitchgearPalletName: &'static str = "CallSwitchgear";
 }
 
+impl cumulus_pallet_xcmp_queue::migration::v5::V5Config for Runtime {
+	// This must be the same as the `ChannelInfo` from the `Config`:
+	type ChannelList = ParachainSystem;
+}
+
 /// All migrations that will run on the next runtime upgrade.
 ///
 /// This contains the combined migrations of the last 10 releases. It allows to skip runtime
@@ -1970,10 +1975,13 @@ pub mod migrations {
 
 	/// Unreleased migrations. Add new ones here:
 	pub type Unreleased = (
+		// permanent migration, do not remove
+		pallet_xcm::migration::MigrateToLatestXcmVersion<Runtime>,
 		frame_support::migrations::RemovePallet<
 			CallSwitchgearPalletName,
 			<Runtime as frame_system::Config>::DbWeight,
 		>,
+		cumulus_pallet_xcmp_queue::migration::v5::MigrateV4ToV5<Runtime>,
 	);
 }
 
