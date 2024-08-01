@@ -142,6 +142,7 @@ try-polkadot-runtime-upgrade-snap:build-try-runtime
 			target/release/wbuild/bifrost-polkadot-runtime/bifrost_polkadot_runtime.compact.compressed.wasm \
 		on-runtime-upgrade \
 		--disable-idempotency-checks \
+		--checks=all \
 		snap -p bifrost_polkadot@latest.snap
 
 .PHONY: try-kusama-runtime-create-snap # create kusama runtime snapshot
@@ -155,6 +156,7 @@ try-kusama-runtime-upgrade-snap:build-try-runtime
 			target/release/wbuild/bifrost-kusama-runtime/bifrost_kusama_runtime.compact.compressed.wasm \
 		on-runtime-upgrade \
 		--disable-idempotency-checks \
+		--checks=all \
 		snap -p bifrost@latest.snap
 
 .PHONY: resources # export genesis resources
