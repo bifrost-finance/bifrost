@@ -1982,6 +1982,10 @@ pub mod migrations {
 			<Runtime as frame_system::Config>::DbWeight,
 		>,
 		cumulus_pallet_xcmp_queue::migration::v5::MigrateV4ToV5<Runtime>,
+		crate::migration::opengov::RankedCollectiveV1<
+			Runtime,
+			governance::fellowship::FellowshipCollectiveInstance,
+		>,
 	);
 }
 
