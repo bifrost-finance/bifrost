@@ -256,6 +256,115 @@ pub fn local_testnet_config() -> ChainSpec {
 	.build()
 }
 
+pub fn dev_config() -> ChainSpec {
+	let endowed_accounts = vec![
+		get_account_id_from_seed::<sr25519::Public>("Alice"),
+		get_account_id_from_seed::<sr25519::Public>("Bob"),
+		get_account_id_from_seed::<sr25519::Public>("Charlie"),
+		get_account_id_from_seed::<sr25519::Public>("Dave"),
+		get_account_id_from_seed::<sr25519::Public>("Eve"),
+		get_account_id_from_seed::<sr25519::Public>("Ferdie"),
+		whitelisted_caller(), // Benchmarking whitelist_account
+		account("bechmarking_account_1", 0, 0),
+	];
+	let balances = endowed_accounts.iter().cloned().map(|x| (x, ENDOWMENT())).collect();
+	let tokens = endowed_accounts
+		.iter()
+		.flat_map(|x| {
+			vec![
+				(x.clone(), DOT, ENDOWMENT() * 4_000_000),
+				(x.clone(), WETH, ENDOWMENT() * 4_000_000),
+			]
+		})
+		.collect();
+	let council_membership = vec![get_account_id_from_seed::<sr25519::Public>("Alice")];
+	let technical_committee_membership = vec![get_account_id_from_seed::<sr25519::Public>("Alice")];
+	let oracle_membership = vec![get_account_id_from_seed::<sr25519::Public>("Alice")];
+	let salp_multisig: AccountId =
+		hex!["49daa32c7287890f38b7e1a8cd2961723d36d20baa0bf3b82e0c4bdda93b1c0a"].into();
+	let currency = vec![
+		(
+			BNC,
+			10_000_000_000,
+			Some((String::from("Bifrost Native Coin"), String::from("BNC"), 12u8)),
+		),
+		(DOT, 1_000_000, Some((String::from("Polkadot DOT"), String::from("DOT"), 10u8))),
+		(
+			GLMR,
+			1_000_000_000_000,
+			Some((String::from("Moonbeam Native Token"), String::from("GLMR"), 18u8)),
+		),
+		(DOT_U, 1_000, Some((String::from("Tether USD"), String::from("USDT"), 6u8))),
+		(ASTR, 10_000_000_000_000_000, Some((String::from("Astar"), String::from("ASTR"), 18u8))),
+		(
+			FIL,
+			1_000_000_000_000,
+			Some((String::from("Filecoin Network Token"), String::from("FIL"), 18u8)),
+		),
+		(USDC, 1_000, Some((String::from("USD Coin"), String::from("USDC"), 6u8))),
+		(IBTC, 100, Some((String::from("interBTC"), String::from("IBTC"), 8u8))),
+		(INTR, 10_000_000, Some((String::from("Interlay"), String::from("INTR"), 10u8))),
+		(
+			MANTA,
+			10_000_000_000_000,
+			Some((String::from("Manta Network"), String::from("MANTA"), 18u8)),
+		),
+		(
+			BNCS,
+			10_000_000_000,
+			Some((String::from("bncs-20 inscription token BNCS"), String::from("BNCS"), 12u8)),
+		),
+		(PINK, 100_000_000, Some((String::from("PINK"), String::from("PINK"), 10u8))),
+		(DED, 1, Some((String::from("DED"), String::from("DED"), 10u8))),
+		(PEN, 100_000_000, Some((String::from("Pendulum"), String::from("PEN"), 12u8))),
+		(WETH, 100_000_000, Some((String::from("SnowBridge WETH"), String::from("SWETH"), 18u8))),
+	];
+	let vcurrency = vec![VSToken2(DOT_TOKEN_ID), VToken(TokenSymbol::BNC), VToken2(DOT_TOKEN_ID)];
+
+	let mut evm_accounts = BTreeMap::new();
+	evm_accounts.insert(
+		// H160 address of CI test runner account
+		H160::from_str("6be02d1d3665660d22ff9624b7be0551ee1ac91b")
+			.expect("internal H160 is valid; qed"),
+		fp_evm::GenesisAccount {
+			balance: U256::from(1_000_000_000_000_000_000_000_000u128),
+			code: Default::default(),
+			nonce: Default::default(),
+			storage: Default::default(),
+		},
+	);
+
+	ChainSpec::builder(
+		bifrost_polkadot_runtime::WASM_BINARY.expect("WASM binary was not built, please build it!"),
+		RelayExtensions { relay_chain: "polkadot".into(), para_id: PARA_ID, evm_since: 1 },
+	)
+	.with_name("Bifrost Polkadot Dev Testnet")
+	.with_id("dev")
+	.with_chain_type(ChainType::Development)
+	.with_genesis_config_patch(bifrost_polkadot_genesis(
+		vec![
+			(
+				get_account_id_from_seed::<sr25519::Public>("Alice"),
+				get_from_seed::<AuraId>("Alice"),
+			),
+			(get_account_id_from_seed::<sr25519::Public>("Bob"), get_from_seed::<AuraId>("Bob")),
+		],
+		balances,
+		vec![],
+		PARA_ID.into(),
+		tokens,
+		council_membership,
+		technical_committee_membership,
+		salp_multisig,
+		(currency, vcurrency, vec![]),
+		oracle_membership,
+		evm_accounts,
+	))
+	.with_properties(bifrost_polkadot_properties())
+	.with_protocol_id(DEFAULT_PROTOCOL_ID)
+	.build()
+}
+
 pub fn paseo_config() -> ChainSpec {
 	let invulnerables: Vec<(AccountId, AuraId)> = vec![
 		(

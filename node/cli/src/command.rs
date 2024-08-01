@@ -74,6 +74,8 @@ fn load_spec(id: &str) -> std::result::Result<Box<dyn ChainSpec>, String> {
 			Box::new(service::chain_spec::bifrost_polkadot::local_testnet_config()),
 		#[cfg(any(feature = "with-bifrost-polkadot-runtime", feature = "with-bifrost-runtime"))]
 		"bifrost-paseo" => Box::new(service::chain_spec::bifrost_polkadot::paseo_config()),
+		#[cfg(any(feature = "with-bifrost-polkadot-runtime", feature = "with-bifrost-runtime"))]
+		"bifrost-polkadot-dev" => Box::new(service::chain_spec::bifrost_polkadot::dev_config()),
 		path => {
 			let path = std::path::PathBuf::from(path);
 			if path.to_str().map(|s| s.contains("bifrost-polkadot")) == Some(true) {
@@ -193,7 +195,7 @@ macro_rules! with_runtime_or_err {
 
 			#[cfg(not(any(feature = "with-bifrost-kusama-runtime",feature = "with-bifrost-runtime")))]
 			return Err(service::BIFROST_KUSAMA_RUNTIME_NOT_AVAILABLE.into());
-		} else if $chain_spec.is_bifrost_polkadot() {
+		} else if $chain_spec.is_bifrost_polkadot() || $chain_spec.is_dev() {
 			#[cfg(any(feature = "with-bifrost-polkadot-runtime", feature = "with-bifrost-runtime"))]
 			#[allow(unused_imports)]
 			use service::collator_polkadot::{bifrost_polkadot_runtime::{Block, RuntimeApi}, start_node,new_partial};
@@ -449,6 +451,7 @@ pub fn run() -> Result<()> {
 				info!("Parachain id: {:?}", id);
 				info!("Parachain Account: {}", parachain_account);
 				info!("Is collating: {}", if config.role.is_authority() { "yes" } else { "no" });
+				info!("Is dev modle: {}", if config.chain_spec.is_dev() { "yes" } else { "no" });
 
 				with_runtime_or_err!(config.chain_spec, {
 					{
