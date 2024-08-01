@@ -35,7 +35,7 @@ use cumulus_client_consensus_aura::collators::basic::{
 use cumulus_client_consensus_common::ParachainBlockImport as TParachainBlockImport;
 use cumulus_client_consensus_proposer::Proposer;
 
-use crate::{chain_spec, eth};
+use crate::{chain_spec, eth, IdentifyVariant};
 use bifrost_primitives::Block;
 use cumulus_client_service::{
 	build_network, build_relay_chain_interface, prepare_node_config, start_relay_chain_tasks,
@@ -557,14 +557,18 @@ pub async fn start_node<Net: NetworkBackend<Block, Hash>>(
 	para_id: ParaId,
 	hwbench: Option<sc_sysinfo::HwBench>,
 ) -> sc_service::error::Result<(TaskManager, Arc<FullClient>)> {
-	start_node_impl::<Net>(
-		parachain_config,
-		polkadot_config,
-		eth_config,
-		collator_options,
-		CollatorSybilResistance::Resistant,
-		para_id,
-		hwbench,
-	)
-	.await
+	if parachain_config.chain_spec.is_dev() {
+		crate::dev::start_node::<Net>(parachain_config, eth_config).await
+	} else {
+		start_node_impl::<Net>(
+			parachain_config,
+			polkadot_config,
+			eth_config,
+			collator_options,
+			CollatorSybilResistance::Resistant,
+			para_id,
+			hwbench,
+		)
+		.await
+	}
 }
