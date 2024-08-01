@@ -414,6 +414,12 @@ try-runtime = [
 	"pallet-whitelist/try-runtime",
 	"parachain-info/try-runtime",
 	"zenlink-protocol/try-runtime",
+	"fp-self-contained/try-runtime",
+	"pallet-ethereum/try-runtime",
+	"pallet-evm-accounts/try-runtime",
+	"pallet-evm/try-runtime",
+	"pallet-evm-chain-id/try-runtime",
+	"pallet-dynamic-fee/try-runtime",
 ]
 
 # Enable the metadata hash generation in the wasm builder.
