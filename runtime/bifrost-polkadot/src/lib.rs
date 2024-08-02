@@ -923,6 +923,12 @@ impl FeeGetter<RuntimeCall> for ExtraFeeMatcher {
 				extra_fee_name: ExtraFeeName::StatemineTransfer,
 				extra_fee_currency: RelayCurrencyId::get(),
 			},
+			RuntimeCall::XcmInterface(bifrost_xcm_interface::Call::transfer_ethereum_assets {
+				..
+			}) => ExtraFeeInfo {
+				extra_fee_name: ExtraFeeName::EthereumTransfer,
+				extra_fee_currency: RelayCurrencyId::get(),
+			},
 			RuntimeCall::VtokenVoting(bifrost_vtoken_voting::Call::vote { vtoken, .. }) =>
 				ExtraFeeInfo {
 					extra_fee_name: ExtraFeeName::VoteVtoken,

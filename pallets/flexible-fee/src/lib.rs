@@ -355,7 +355,8 @@ impl<T: Config> Pallet<T> {
 			ExtraFeeName::SalpContribute |
 			ExtraFeeName::VoteVtoken |
 			ExtraFeeName::VoteRemoveDelegatorVote => T::PalletId::get().into_sub_account_truncating(0u64),
-			ExtraFeeName::StatemineTransfer => T::PalletId::get().into_sub_account_truncating(1u64),
+			ExtraFeeName::StatemineTransfer | ExtraFeeName::EthereumTransfer =>
+				T::PalletId::get().into_sub_account_truncating(1u64),
 			ExtraFeeName::NoExtraFee => T::TreasuryAccount::get(),
 		}
 	}
@@ -493,6 +494,7 @@ impl<T: Config> Pallet<T> {
 			let operation = match fee_info.extra_fee_name {
 				ExtraFeeName::SalpContribute => XcmOperationType::UmpContributeTransact,
 				ExtraFeeName::StatemineTransfer => XcmOperationType::StatemineTransfer,
+				ExtraFeeName::EthereumTransfer => XcmOperationType::EthereumTransfer,
 				ExtraFeeName::VoteVtoken => XcmOperationType::Vote,
 				ExtraFeeName::VoteRemoveDelegatorVote => XcmOperationType::RemoveVote,
 				ExtraFeeName::NoExtraFee => XcmOperationType::Any,

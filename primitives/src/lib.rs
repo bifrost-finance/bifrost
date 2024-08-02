@@ -164,6 +164,7 @@ pub enum ExtraFeeName {
 	VoteVtoken,
 	VoteRemoveDelegatorVote,
 	NoExtraFee,
+	EthereumTransfer,
 }
 
 // For vtoken-minting and slp modules
