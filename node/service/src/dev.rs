@@ -18,24 +18,23 @@
 
 use std::{cell::RefCell, sync::Arc};
 
-use cumulus_primitives_core::relay_chain::Hash;
+use crate::{
+	collator_polkadot::FullClient,
+	eth::{spawn_frontier_tasks, EthConfiguration},
+};
+use bifrost_polkadot_runtime::{constants::time::SLOT_DURATION, TransactionConverter};
+use cumulus_client_parachain_inherent::{MockValidationDataInherentDataProvider, MockXcmConfig};
+use cumulus_primitives_core::{relay_chain::Hash, ParaId};
 use fc_storage::StorageOverrideHandler;
 use jsonrpsee::core::async_trait;
 use sc_client_api::Backend;
 use sc_network::NetworkBackend;
 use sc_service::{Configuration, TaskManager};
 use sc_transaction_pool_api::OffchainTransactionPoolFactory;
-
-use bifrost_polkadot_runtime::{constants::time::SLOT_DURATION, TransactionConverter};
-
-use crate::{
-	collator_polkadot::FullClient,
-	eth::{spawn_frontier_tasks, EthConfiguration},
-};
-
+use sp_blockchain::HeaderBackend;
+use sp_core::Encode;
 pub type Block = bifrost_primitives::Block;
 pub type RuntimeApi = bifrost_polkadot_runtime::RuntimeApi;
-
 pub type FullBackend = sc_service::TFullBackend<Block>;
 pub type FullSelectChain = sc_consensus::LongestChain<FullBackend, Block>;
 
@@ -73,6 +72,7 @@ impl sp_inherents::InherentDataProvider for MockTimestampInherentDataProvider {
 pub async fn start_node<Net>(
 	parachain_config: Configuration,
 	eth_config: EthConfiguration,
+	para_id: ParaId,
 ) -> sc_service::error::Result<(TaskManager, Arc<FullClient>)>
 where
 	Net: NetworkBackend<bifrost_primitives::Block, Hash>,
@@ -152,6 +152,12 @@ where
 
 	// Channel for the rpc handler to communicate with the authorship task.
 	let (command_sink, commands_stream) = futures::channel::mpsc::channel(1024);
+	let client_set_aside_for_cidp = client.clone();
+
+	// Create channels for mocked XCM messages.
+	let (_downward_xcm_sender, downward_xcm_receiver) = flume::bounded::<Vec<u8>>(100);
+	let (_hrmp_xcm_sender, hrmp_xcm_receiver) = flume::bounded::<(ParaId, Vec<u8>)>(100);
+
 	let authorship_future =
 		sc_consensus_manual_seal::run_manual_seal(sc_consensus_manual_seal::ManualSealParams {
 			block_import: client.clone(),
@@ -161,8 +167,39 @@ where
 			commands_stream,
 			select_chain,
 			consensus_data_provider: None,
-			create_inherent_data_providers: move |_, ()| async move {
-				Ok(sp_timestamp::InherentDataProvider::from_system_time())
+			create_inherent_data_providers: move |block, ()| {
+				let maybe_current_para_block = client_set_aside_for_cidp.number(block);
+				let maybe_current_para_head = client_set_aside_for_cidp.expect_header(block);
+				let downward_xcm_receiver = downward_xcm_receiver.clone();
+				let hrmp_xcm_receiver = hrmp_xcm_receiver.clone();
+
+				let client_for_xcm = client_set_aside_for_cidp.clone();
+				async move {
+					let time = sp_timestamp::InherentDataProvider::from_system_time();
+
+					let current_para_block = maybe_current_para_block?
+						.ok_or(sp_blockchain::Error::UnknownBlock(block.to_string()))?;
+
+					let current_para_block_head =
+						Some(polkadot_primitives::HeadData(maybe_current_para_head?.encode()));
+
+					let mocked_parachain = MockValidationDataInherentDataProvider {
+						current_para_block,
+						current_para_block_head,
+						para_id,
+						relay_offset: 1000,
+						relay_blocks_per_para_block: 2,
+						// TODO: Recheck
+						para_blocks_per_relay_epoch: 10,
+						relay_randomness_config: (),
+						xcm_config: MockXcmConfig::new(&*client_for_xcm, block, Default::default()),
+						raw_downward_messages: downward_xcm_receiver.drain().collect(),
+						raw_horizontal_messages: hrmp_xcm_receiver.drain().collect(),
+						additional_key_values: None,
+					};
+
+					Ok((time, mocked_parachain))
+				}
 			},
 		});
 	// we spawn the future on a background thread managed by service.

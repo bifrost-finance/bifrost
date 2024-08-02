@@ -69,6 +69,7 @@ cumulus-client-consensus-proposer = { workspace = true }
 cumulus-client-network = { workspace = true }
 cumulus-primitives-core = { workspace = true }
 cumulus-client-service = { workspace = true }
+cumulus-client-parachain-inherent = { workspace = true }
 cumulus-primitives-parachain-inherent = { workspace = true }
 cumulus-relay-chain-interface = { workspace = true }
 cumulus-test-relay-sproof-builder = { workspace = true }
