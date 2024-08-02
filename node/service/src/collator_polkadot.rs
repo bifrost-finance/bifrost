@@ -558,7 +558,7 @@ pub async fn start_node<Net: NetworkBackend<Block, Hash>>(
 	hwbench: Option<sc_sysinfo::HwBench>,
 ) -> sc_service::error::Result<(TaskManager, Arc<FullClient>)> {
 	if parachain_config.chain_spec.is_dev() {
-		crate::dev::start_node::<Net>(parachain_config, eth_config).await
+		crate::dev::start_node::<Net>(parachain_config, eth_config, para_id).await
 	} else {
 		start_node_impl::<Net>(
 			parachain_config,

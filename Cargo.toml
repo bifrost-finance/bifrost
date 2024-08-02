@@ -259,6 +259,7 @@ cumulus-client-consensus-aura                 = { git = "https://github.com/pari
 cumulus-client-consensus-common               = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.13.0" }
 cumulus-client-consensus-relay-chain          = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.13.0" }
 cumulus-client-network                        = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.13.0" }
+cumulus-client-parachain-inherent             = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.13.0" }
 cumulus-client-pov-recovery                   = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.13.0" }
 cumulus-client-service                        = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.13.0" }
 cumulus-relay-chain-inprocess-interface       = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.13.0" }

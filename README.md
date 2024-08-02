@@ -89,8 +89,20 @@ make try-polkadot-runtime-upgrade
 
 ## Run development chain
 
-```bash
-make run-dev
+run node with `--chain=bifrost-polkadot-dev` to enable development mode.
+
+Before use dev mode, modify OnTimestampSet to be ()
+
+```rust
+impl pallet_timestamp::Config for Runtime {
+	type MinimumPeriod = ConstU64<{ SLOT_DURATION / 2 }>;
+	/// A timestamp: milliseconds since the unix epoch.
+	type Moment = Moment;
+   -type OnTimestampSet = Aura;
+   +type OnTimestampSet = ();
+	type WeightInfo = pallet_timestamp::weights::SubstrateWeight<Runtime>;
+}
+
 ```
 
 ## Run local testnet with polkadot-launch
