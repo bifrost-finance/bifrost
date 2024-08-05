@@ -160,6 +160,10 @@ impl xcm_executor::Config for XcmConfig {
 	type AssetExchanger = ();
 	type Aliasers = Nothing;
 	type TransactionalProcessor = FrameTransactionalProcessor;
+	type HrmpNewChannelOpenRequestHandler = ();
+	type HrmpChannelAcceptedHandler = ();
+	type HrmpChannelClosingHandler = ();
+	type XcmRecorder = ();
 }
 
 parameter_type_with_key! {
@@ -416,6 +420,10 @@ impl MockPriceFeeder {
 impl PriceFeeder for MockPriceFeeder {
 	fn get_price(asset_id: &CurrencyId) -> Option<PriceDetail> {
 		Self::PRICES.with(|prices| *prices.borrow().get(&CurrencyIdWrap(*asset_id)).unwrap())
+	}
+
+	fn get_normal_price(_asset_id: &CurrencyId) -> Option<u128> {
+		todo!()
 	}
 }
 

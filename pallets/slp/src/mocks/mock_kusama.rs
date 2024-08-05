@@ -24,7 +24,7 @@ use crate as bifrost_slp;
 use crate::{Config, DispatchResult, QueryResponseManager};
 use bifrost_asset_registry::AssetIdMaps;
 use bifrost_primitives::{
-	currency::{BNC, KSM, MANTA, VKSM},
+	currency::{BNC, KSM, MANTA},
 	Amount, Balance, CurrencyId, DoNothingExecuteXcm, DoNothingRouter, SlpxOperator, TokenSymbol,
 	XcmDestWeightAndFeeHandler, XcmOperationType,
 };
@@ -616,6 +616,10 @@ impl xcm_executor::Config for XcmConfig {
 	type AssetExchanger = ();
 	type Aliasers = Nothing;
 	type TransactionalProcessor = FrameTransactionalProcessor;
+	type HrmpNewChannelOpenRequestHandler = ();
+	type HrmpChannelAcceptedHandler = ();
+	type HrmpChannelClosingHandler = ();
+	type XcmRecorder = ();
 }
 
 #[cfg(feature = "runtime-benchmarks")]
@@ -660,15 +664,6 @@ impl Default for ExtBuilder {
 }
 
 impl ExtBuilder {
-	pub fn balances(mut self, endowed_accounts: Vec<(AccountId, CurrencyId, Balance)>) -> Self {
-		self.endowed_accounts = endowed_accounts;
-		self
-	}
-
-	pub fn one_hundred_for_alice(self) -> Self {
-		self.balances(vec![(ALICE, BNC, 100), (ALICE, KSM, 100), (ALICE, VKSM, 100)])
-	}
-
 	pub fn build(self) -> sp_io::TestExternalities {
 		let mut t = frame_system::GenesisConfig::<Runtime>::default().build_storage().unwrap();
 

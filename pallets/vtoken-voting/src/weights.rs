@@ -174,30 +174,30 @@ impl WeightInfo for () {
 			.saturating_add(RocksDbWeight::get().reads(8_u64))
 			.saturating_add(RocksDbWeight::get().writes(4_u64))
 	}
-	/// Storage: VtokenVoting ReferendumInfoFor (r:1 w:0)
-	/// Proof: VtokenVoting ReferendumInfoFor (max_values: None, max_size: Some(88), added: 2563, mode: MaxEncodedLen)
-	/// Storage: VtokenVoting VoteLockingPeriod (r:1 w:0)
-	/// Proof: VtokenVoting VoteLockingPeriod (max_values: None, max_size: Some(26), added: 2501, mode: MaxEncodedLen)
-	/// Storage: ParachainSystem ValidationData (r:1 w:0)
-	/// Proof Skipped: ParachainSystem ValidationData (max_values: Some(1), max_size: None, mode: Measured)
-	/// Storage: VtokenVoting DelegatorVote (r:1 w:0)
-	/// Proof: VtokenVoting DelegatorVote (max_values: None, max_size: Some(81), added: 2556, mode: MaxEncodedLen)
-	/// Storage: XcmInterface XcmWeightAndFee (r:1 w:0)
-	/// Proof Skipped: XcmInterface XcmWeightAndFee (max_values: None, max_size: None, mode: Measured)
-	/// Storage: PolkadotXcm QueryCounter (r:1 w:1)
-	/// Proof Skipped: PolkadotXcm QueryCounter (max_values: Some(1), max_size: None, mode: Measured)
-	/// Storage: ParachainInfo ParachainId (r:1 w:0)
-	/// Proof: ParachainInfo ParachainId (max_values: Some(1), max_size: Some(4), added: 499, mode: MaxEncodedLen)
-	/// Storage: VtokenVoting PendingRemoveDelegatorVote (r:0 w:1)
-	/// Proof: VtokenVoting PendingRemoveDelegatorVote (max_values: None, max_size: Some(36), added: 2511, mode: MaxEncodedLen)
-	/// Storage: PolkadotXcm Queries (r:0 w:1)
-	/// Proof Skipped: PolkadotXcm Queries (max_values: None, max_size: None, mode: Measured)
+	/// Storage: `VtokenVoting::DelegatorVotes` (r:1 w:0)
+	/// Proof: `VtokenVoting::DelegatorVotes` (`max_values`: None, `max_size`: Some(5136), added: 7611, mode: `MaxEncodedLen`)
+	/// Storage: `VtokenVoting::ReferendumInfoFor` (r:1 w:0)
+	/// Proof: `VtokenVoting::ReferendumInfoFor` (`max_values`: None, `max_size`: Some(88), added: 2563, mode: `MaxEncodedLen`)
+	/// Storage: `ParachainSystem::ValidationData` (r:1 w:0)
+	/// Proof: `ParachainSystem::ValidationData` (`max_values`: Some(1), `max_size`: None, mode: `Measured`)
+	/// Storage: `ParachainSystem::LastRelayChainBlockNumber` (r:1 w:0)
+	/// Proof: `ParachainSystem::LastRelayChainBlockNumber` (`max_values`: Some(1), `max_size`: None, mode: `Measured`)
+	/// Storage: `XcmInterface::XcmWeightAndFee` (r:1 w:0)
+	/// Proof: `XcmInterface::XcmWeightAndFee` (`max_values`: None, `max_size`: None, mode: `Measured`)
+	/// Storage: `PolkadotXcm::QueryCounter` (r:1 w:1)
+	/// Proof: `PolkadotXcm::QueryCounter` (`max_values`: Some(1), `max_size`: None, mode: `Measured`)
+	/// Storage: `ParachainInfo::ParachainId` (r:1 w:0)
+	/// Proof: `ParachainInfo::ParachainId` (`max_values`: Some(1), `max_size`: Some(4), added: 499, mode: `MaxEncodedLen`)
+	/// Storage: `VtokenVoting::PendingRemoveDelegatorVote` (r:0 w:1)
+	/// Proof: `VtokenVoting::PendingRemoveDelegatorVote` (`max_values`: None, `max_size`: Some(36), added: 2511, mode: `MaxEncodedLen`)
+	/// Storage: `PolkadotXcm::Queries` (r:0 w:1)
+	/// Proof: `PolkadotXcm::Queries` (`max_values`: None, `max_size`: None, mode: `Measured`)
 	fn remove_delegator_vote() -> Weight {
 		// Proof Size summary in bytes:
-		//  Measured:  `965`
-		//  Estimated: `4430`
-		// Minimum execution time: 86_949_000 picoseconds.
-		Weight::from_parts(112_996_000, 4430)
+		//  Measured:  `1048`
+		//  Estimated: `8601`
+		// Minimum execution time: 35_000_000 picoseconds.
+		Weight::from_parts(36_000_000, 8601)
 			.saturating_add(RocksDbWeight::get().reads(7_u64))
 			.saturating_add(RocksDbWeight::get().writes(3_u64))
 	}

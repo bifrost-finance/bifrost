@@ -19,8 +19,8 @@
 #![cfg(test)]
 
 use crate::{mocks::mock_kusama::*, *};
-use bifrost_primitives::currency::{BNC, KSM, VKSM};
-use frame_support::{assert_noop, assert_ok, PalletId};
+use bifrost_primitives::currency::{KSM, VKSM};
+use frame_support::{assert_ok, PalletId};
 use orml_traits::MultiCurrency;
 use sp_runtime::traits::AccountIdConversion;
 use xcm::v3::prelude::*;
@@ -71,47 +71,6 @@ fn set_fee_source_works() {
 			Some((alice_location, 1_000_000_000_000))
 		));
 		assert_eq!(FeeSources::<Runtime>::get(KSM), Some((alice_location, 1_000_000_000_000)));
-	});
-}
-
-// test native token fee supplement. Non-native will be tested in the integration tests.
-#[test]
-fn supplement_fee_reserve_works() {
-	ExtBuilder::default().one_hundred_for_alice().build().execute_with(|| {
-		// set fee source
-		let alice_32 = Pallet::<Runtime>::account_id_to_account_32(ALICE).unwrap();
-		let alice_location = Pallet::<Runtime>::account_32_to_local_location(alice_32).unwrap();
-		assert_ok!(Slp::set_fee_source(
-			RuntimeOrigin::signed(ALICE),
-			BNC,
-			Some((alice_location, 10))
-		));
-
-		// supplement fee
-		let bob_32 = Pallet::<Runtime>::account_id_to_account_32(BOB).unwrap();
-		let bob_location = Pallet::<Runtime>::account_32_to_local_location(bob_32).unwrap();
-		assert_eq!(Balances::free_balance(&ALICE), 100);
-		assert_eq!(Balances::free_balance(&BOB), 0);
-
-		assert_noop!(
-			Slp::supplement_fee_reserve(
-				RuntimeOrigin::signed(ALICE),
-				BNC,
-				Box::new(alice_location)
-			),
-			Error::<Runtime>::DestAccountNotValid
-		);
-
-		assert_ok!(Slp::set_operate_origin(RuntimeOrigin::signed(ALICE), BNC, Some(BOB)));
-
-		assert_ok!(Slp::supplement_fee_reserve(
-			RuntimeOrigin::signed(ALICE),
-			BNC,
-			Box::new(bob_location)
-		));
-
-		assert_eq!(Balances::free_balance(&ALICE), 90);
-		assert_eq!(Balances::free_balance(&BOB), 10);
 	});
 }
 

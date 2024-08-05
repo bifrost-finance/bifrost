@@ -21,6 +21,7 @@ pub mod bifrost_kusama;
 #[cfg(any(feature = "with-bifrost-polkadot-runtime", feature = "with-bifrost-runtime"))]
 pub mod bifrost_polkadot;
 
+use bifrost_primitives::BlockNumber;
 pub use bifrost_primitives::{AccountId, Block, Signature};
 use sc_chain_spec::ChainSpecExtension;
 use serde::{Deserialize, Serialize};
@@ -42,11 +43,14 @@ pub struct RelayExtensions {
 	pub relay_chain: String,
 	/// The id of the Parachain.
 	pub para_id: u32,
+	/// EVM compatible starting block number
+	pub evm_since: BlockNumber,
 }
 
 impl RelayExtensions {
 	/// Try to get the extension from the given `ChainSpec`.
-	pub fn try_get(chain_spec: &dyn sc_service::ChainSpec) -> Option<&Self> {
+	#[allow(clippy::borrowed_box)]
+	pub fn try_get(chain_spec: &Box<dyn sc_service::ChainSpec>) -> Option<&Self> {
 		sc_chain_spec::get_extension(chain_spec.extensions())
 	}
 }

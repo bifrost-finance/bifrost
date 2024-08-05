@@ -164,6 +164,7 @@ pub enum ExtraFeeName {
 	VoteVtoken,
 	VoteRemoveDelegatorVote,
 	NoExtraFee,
+	EthereumTransfer,
 }
 
 // For vtoken-minting and slp modules
@@ -329,6 +330,8 @@ pub enum XcmOperationType {
 	RemoveVote,
 	Any,
 	SupplementaryFee,
+	EthereumTransfer,
+	TeleportAssets,
 }
 
 pub struct ExtraFeeInfo {

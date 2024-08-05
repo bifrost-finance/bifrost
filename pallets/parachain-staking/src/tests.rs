@@ -5146,10 +5146,9 @@ fn deferred_payment_steady_state_event_flow() {
 			let reset_issuance = || {
 				let new_issuance = Balances::total_issuance();
 				let diff = new_issuance - initial_issuance;
-				let burned = Balances::burn(diff);
-				Balances::settle(
+				let _ = Balances::withdraw(
 					&111,
-					burned,
+					diff,
 					WithdrawReasons::FEE,
 					ExistenceRequirement::AllowDeath,
 				)

@@ -17,6 +17,7 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 use bifrost_service::{self as service, IdentifyVariant};
+use cumulus_client_service::storage_proof_size::HostFunctions as ReclaimHostFunctions;
 use cumulus_primitives_core::ParaId;
 use frame_benchmarking_cli::{BenchmarkCmd, SUBSTRATE_REFERENCE_HARDWARE};
 use log::info;
@@ -25,7 +26,7 @@ use sc_cli::{
 	NetworkParams, Result, SharedParams, SubstrateCli,
 };
 use sc_service::config::{BasePath, PrometheusConfig};
-use sp_runtime::traits::AccountIdConversion;
+use sp_runtime::traits::{AccountIdConversion, HashingFor};
 
 use crate::{Cli, RelayChainCli, Subcommand};
 
@@ -73,6 +74,8 @@ fn load_spec(id: &str) -> std::result::Result<Box<dyn ChainSpec>, String> {
 			Box::new(service::chain_spec::bifrost_polkadot::local_testnet_config()),
 		#[cfg(any(feature = "with-bifrost-polkadot-runtime", feature = "with-bifrost-runtime"))]
 		"bifrost-paseo" => Box::new(service::chain_spec::bifrost_polkadot::paseo_config()),
+		#[cfg(any(feature = "with-bifrost-polkadot-runtime", feature = "with-bifrost-runtime"))]
+		"bifrost-polkadot-dev" => Box::new(service::chain_spec::bifrost_polkadot::dev_config()),
 		path => {
 			let path = std::path::PathBuf::from(path);
 			if path.to_str().map(|s| s.contains("bifrost-polkadot")) == Some(true) {
@@ -182,7 +185,7 @@ impl SubstrateCli for RelayChainCli {
 
 macro_rules! with_runtime_or_err {
 	($chain_spec:expr, { $( $code:tt )* }) => {
-		if $chain_spec.is_bifrost_kusama() || $chain_spec.is_dev() {
+		if $chain_spec.is_bifrost_kusama() {
 			#[cfg(any(feature = "with-bifrost-kusama-runtime",feature = "with-bifrost-runtime"))]
 			#[allow(unused_imports)]
 			use service::collator_kusama::{bifrost_kusama_runtime::{Block, RuntimeApi}, start_node,new_partial};
@@ -192,7 +195,7 @@ macro_rules! with_runtime_or_err {
 
 			#[cfg(not(any(feature = "with-bifrost-kusama-runtime",feature = "with-bifrost-runtime")))]
 			return Err(service::BIFROST_KUSAMA_RUNTIME_NOT_AVAILABLE.into());
-		} else if $chain_spec.is_bifrost_polkadot() {
+		} else if $chain_spec.is_bifrost_polkadot() || $chain_spec.is_dev() {
 			#[cfg(any(feature = "with-bifrost-polkadot-runtime", feature = "with-bifrost-runtime"))]
 			#[allow(unused_imports)]
 			use service::collator_polkadot::{bifrost_polkadot_runtime::{Block, RuntimeApi}, start_node,new_partial};
@@ -362,7 +365,11 @@ pub fn run() -> Result<()> {
 				BenchmarkCmd::Pallet(cmd) =>
 					if cfg!(feature = "runtime-benchmarks") {
 						with_runtime_or_err!(chain_spec, {
-							return runner.sync_run(|config| cmd.run::<Block, ()>(config));
+							return runner.sync_run(|config| {
+								cmd.run_with_spec::<HashingFor<Block>, ReclaimHostFunctions>(Some(
+									config.chain_spec,
+								))
+							});
 						})
 					} else {
 						Err("Benchmarking wasn't enabled when building the node. \
@@ -418,7 +425,7 @@ pub fn run() -> Result<()> {
 					.flatten();
 
 				let para_id =
-					bifrost_service::chain_spec::RelayExtensions::try_get(&*config.chain_spec)
+					bifrost_service::chain_spec::RelayExtensions::try_get(&config.chain_spec)
 						.map(|e| e.para_id)
 						.ok_or("Could not find parachain ID in chain-spec.")?;
 
@@ -444,13 +451,21 @@ pub fn run() -> Result<()> {
 				info!("Parachain id: {:?}", id);
 				info!("Parachain Account: {}", parachain_account);
 				info!("Is collating: {}", if config.role.is_authority() { "yes" } else { "no" });
+				info!("Is dev modle: {}", if config.chain_spec.is_dev() { "yes" } else { "no" });
 
 				with_runtime_or_err!(config.chain_spec, {
 					{
-						start_node(config, polkadot_config, collator_options, id, hwbench)
-							.await
-							.map(|r| r.0)
-							.map_err(Into::into)
+						start_node::<sc_network::NetworkWorker<_, _>>(
+							config,
+							polkadot_config,
+							cli.eth_config,
+							collator_options,
+							id,
+							hwbench,
+						)
+						.await
+						.map(|r| r.0)
+						.map_err(Into::into)
 					}
 				})
 			})

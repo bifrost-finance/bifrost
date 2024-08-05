@@ -17,6 +17,7 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 #![cfg_attr(not(feature = "std"), no_std)]
+#![allow(unused_imports)]
 
 pub mod calls;
 pub mod traits;
@@ -25,20 +26,19 @@ use bifrost_primitives::{traits::XcmDestWeightAndFeeHandler, CurrencyIdMapping, 
 pub use calls::*;
 use orml_traits::MultiCurrency;
 pub use pallet::*;
+use sp_runtime::traits::UniqueSaturatedInto;
 pub use traits::{ChainId, MessageId, Nonce, SalpHelper};
 
 macro_rules! use_relay {
     ({ $( $code:tt )* }) => {
         if T::RelayNetwork::get() == NetworkId::Polkadot {
             use polkadot::RelaychainCall;
+            use polkadot::AssetHubCall;
 
 			$( $code )*
         } else if T::RelayNetwork::get() == NetworkId::Kusama {
             use kusama::RelaychainCall;
-
-			$( $code )*
-        } else if T::RelayNetwork::get() == NetworkId::Rococo {
-            use rococo::RelaychainCall;
+            use kusama::AssetHubCall;
 
 			$( $code )*
         } else {
@@ -135,6 +135,7 @@ pub mod pallet {
 	pub enum Event<T: Config> {
 		XcmDestWeightAndFeeUpdated(XcmOperationType, CurrencyIdOf<T>, Weight, BalanceOf<T>),
 		TransferredStatemineMultiAsset(AccountIdOf<T>, BalanceOf<T>),
+		TransferredEthereumAssets(AccountIdOf<T>, sp_core::H160, BalanceOf<T>),
 	}
 
 	/// The current storage version, we set to 2 our new version(after migrate stroage
@@ -276,6 +277,76 @@ pub mod pallet {
 
 			Self::deposit_event(Event::<T>::TransferredStatemineMultiAsset(dest, amount));
 
+			Ok(())
+		}
+
+		#[pallet::call_index(2)]
+		#[pallet::weight({2_000_000_000})]
+		pub fn transfer_ethereum_assets(
+			origin: OriginFor<T>,
+			currency_id: CurrencyIdOf<T>,
+			amount: BalanceOf<T>,
+			to: sp_core::H160,
+		) -> DispatchResult {
+			let who = ensure_signed(origin.clone())?;
+			let asset_location =
+				T::CurrencyIdConvert::get_location(currency_id).ok_or(Error::<T>::FailToConvert)?;
+
+			let asset: Asset = Asset {
+				id: AssetId(asset_location),
+				fun: Fungible(UniqueSaturatedInto::<u128>::unique_saturated_into(amount)),
+			};
+
+			let (require_weight_at_most, xcm_fee) =
+				Self::xcm_dest_weight_and_fee(currency_id, XcmOperationType::EthereumTransfer)
+					.ok_or(Error::<T>::OperationWeightAndFeeNotExist)?;
+
+			let fee: Asset = Asset {
+				id: AssetId(Location::parent()),
+				fun: Fungible(UniqueSaturatedInto::<u128>::unique_saturated_into(xcm_fee)),
+			};
+
+			T::MultiCurrency::withdraw(currency_id, &who, amount)?;
+
+			let remote_call: DoubleEncoded<()> = use_relay!({
+				AssetHubCall::PolkadotXcm(PolkadotXcmCall::LimitedReserveTransferAssets(
+					Box::new(Location::new(2, [GlobalConsensus(Ethereum { chain_id: 1 })]).into()),
+					Box::new(
+						Location::new(
+							0,
+							[AccountKey20 { network: None, key: to.to_fixed_bytes() }],
+						)
+						.into(),
+					),
+					Box::new(asset.into()),
+					0,
+					Unlimited,
+				))
+				.encode()
+				.into()
+			});
+
+			let remote_xcm = Xcm(vec![
+				WithdrawAsset(fee.clone().into()),
+				BuyExecution { fees: fee.clone(), weight_limit: Unlimited },
+				Transact {
+					origin_kind: OriginKind::SovereignAccount,
+					require_weight_at_most,
+					call: remote_call,
+				},
+				DepositAsset {
+					assets: All.into(),
+					beneficiary: Location::new(1, [Parachain(T::ParachainId::get().into())]),
+				},
+			]);
+			let (ticket, _) = <T as pallet_xcm::Config>::XcmRouter::validate(
+				&mut Some(Location::new(1, [Parachain(parachains::Statemine::ID)])),
+				&mut Some(remote_xcm),
+			)
+			.map_err(|_| Error::<T>::UnweighableMessage)?;
+			<T as pallet_xcm::Config>::XcmRouter::deliver(ticket)
+				.map_err(|_| Error::<T>::XcmExecutionFailed)?;
+			Self::deposit_event(Event::<T>::TransferredEthereumAssets(who, to, amount));
 			Ok(())
 		}
 	}

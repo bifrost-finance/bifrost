@@ -1,6 +1,6 @@
 [package]
 name = "bifrost-cli"
-version = "0.11.0"
+version = "0.12.0"
 authors = ["Liebi Technologies <bifrost@liebi.com>"]
 description = "Bifrost Parachain Node"
 build = "build.rs"
@@ -33,6 +33,7 @@ sc-sysinfo = { workspace = true }
 sc-telemetry = { workspace = true }
 sc-tracing = { workspace = true }
 sc-offchain = { workspace = true }
+sc-network = { workspace = true }
 
 # node-specific dependencies
 bifrost-service = { workspace = true }
@@ -40,7 +41,6 @@ bifrost-primitives = { workspace = true }
 
 # CLI-specific dependencies
 sc-cli = { workspace = true, optional = true }
-try-runtime-cli = { workspace = true, optional = true }
 frame-try-runtime = { workspace = true, optional = true }
 frame-benchmarking-cli = { workspace = true, optional = true }
 node-inspect = { workspace = true, optional = true }
@@ -64,7 +64,6 @@ cli = [
     "node-inspect",
     "sc-cli",
     "frame-benchmarking-cli",
-    'try-runtime-cli',
     "sc-service",
     "substrate-build-script-utils",
 ]
@@ -76,5 +75,5 @@ with-bifrost-runtime = [
 with-bifrost-kusama-runtime = ["bifrost-service/with-bifrost-kusama-runtime"]
 with-bifrost-polkadot-runtime = ["bifrost-service/with-bifrost-polkadot-runtime"]
 with-all-runtime = ["with-bifrost-runtime"]
-try-runtime = ["bifrost-service/try-runtime", "try-runtime-cli/try-runtime"]
+try-runtime = ["bifrost-service/try-runtime"]
 fast-runtime = ["bifrost-service/fast-runtime"]

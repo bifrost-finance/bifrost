@@ -21,8 +21,8 @@
 #![allow(clippy::unnecessary_cast)]
 
 use crate::{
-	AssetIds, DerivativeIndex, ExtraFeeInfo, LeasePeriod, ParaId, PoolId, RedeemType, TokenId,
-	TokenSymbol, XcmOperationType,
+	AssetIds, CurrencyId, DerivativeIndex, ExtraFeeInfo, LeasePeriod, ParaId, PoolId, RedeemType,
+	TokenId, TokenSymbol, XcmOperationType,
 };
 use frame_support::pallet_prelude::{DispatchResultWithPostInfo, Weight};
 use parity_scale_codec::{Decode, Encode, FullCodec};
@@ -550,4 +550,21 @@ impl<CurrencyId, Balance, AccountId> SlpHostingFeeProvider<CurrencyId, Balance, 
 	) -> Result<(), DispatchError> {
 		Ok(())
 	}
+}
+
+/// Provides account's fee payment currency id
+pub trait AccountFeeCurrency<AccountId> {
+	fn get(a: &AccountId) -> CurrencyId;
+}
+
+/// Provides account's balance of fee asset currency in a given currency
+pub trait AccountFeeCurrencyBalanceInCurrency<AccountId> {
+	type Output;
+	fn get_balance_in_currency(to_currency: CurrencyId, account: &AccountId) -> Self::Output;
+}
+
+pub trait PriceProvider {
+	type Price;
+
+	fn get_price(asset_a: CurrencyId, asset_b: CurrencyId) -> Option<Self::Price>;
 }

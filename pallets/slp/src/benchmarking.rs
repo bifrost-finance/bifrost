@@ -201,7 +201,6 @@ mod benchmarks {
 	use super::*;
 	use crate::primitives::{PhalaLedger, SubstrateValidatorsByDelegatorUpdateEntry};
 	use bifrost_primitives::VKSM;
-	use frame_benchmarking::impl_benchmark_test_suite;
 	use sp_arithmetic::traits::SaturatedConversion;
 
 	#[benchmark]
@@ -707,31 +706,6 @@ mod benchmarks {
 		#[extrinsic_call]
 		_(origin as <T as frame_system::Config>::RuntimeOrigin, KSM, TimeUnit::Era(0));
 
-		Ok(())
-	}
-
-	#[benchmark]
-	fn supplement_fee_reserve() -> Result<(), BenchmarkError> {
-		let origin = <T as Config>::ControlOrigin::try_successful_origin()
-			.map_err(|_| BenchmarkError::Weightless)?;
-		set_mins_and_maxs::<T>(origin.clone());
-
-		let (entrance_account, _) = <T as Config>::VtokenMinting::get_entrance_and_exit_accounts();
-		let entrance_account_32 = Pallet::<T>::account_id_to_account_32(entrance_account).unwrap();
-		let from = Pallet::<T>::account_32_to_local_location(entrance_account_32).unwrap();
-
-		DelegatorsMultilocation2Index::<T>::insert(KSM, DELEGATOR1, 0);
-
-		FeeSources::<T>::insert(KSM, (from, BalanceOf::<T>::from(4100000000u32)));
-
-		T::XcmWeightAndFeeHandler::set_xcm_dest_weight_and_fee(
-			KSM,
-			XcmOperationType::TransferTo,
-			Some((Weight::from_parts(4000000000, 100000), 0u32.into())),
-		)?;
-
-		#[extrinsic_call]
-		_(origin as <T as frame_system::Config>::RuntimeOrigin, KSM, Box::new(DELEGATOR1));
 		Ok(())
 	}
 

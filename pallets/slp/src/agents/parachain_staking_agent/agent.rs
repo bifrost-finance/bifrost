@@ -1532,27 +1532,6 @@ impl<T: Config>
 		Pallet::<T>::inner_charge_hosting_fee(charge_amount, to, vtoken)
 	}
 
-	/// Deposit some amount as fee to nominator accounts.
-	fn supplement_fee_reserve(
-		&self,
-		amount: BalanceOf<T>,
-		from: &MultiLocation,
-		to: &MultiLocation,
-		currency_id: CurrencyId,
-	) -> Result<(), Error<T>> {
-		if currency_id == BNC {
-			ensure!(!amount.is_zero(), Error::<T>::AmountZero);
-			let from_account_id = Pallet::<T>::multilocation_to_account(from)?;
-			let to_account_id = Pallet::<T>::multilocation_to_account(to)?;
-			T::MultiCurrency::transfer(currency_id, &from_account_id, &to_account_id, amount)
-				.map_err(|_e| Error::<T>::MultiCurrencyError)?;
-		} else {
-			Pallet::<T>::do_transfer_to(from, to, amount, currency_id)?;
-		}
-
-		Ok(())
-	}
-
 	fn check_delegator_ledger_query_response(
 		&self,
 		query_id: QueryId,

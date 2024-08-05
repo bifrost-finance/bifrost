@@ -327,6 +327,10 @@ impl xcm_executor::Config for XcmConfig {
 	type Aliasers = Nothing;
 	type AssetExchanger = ();
 	type TransactionalProcessor = FrameTransactionalProcessor;
+	type HrmpNewChannelOpenRequestHandler = ();
+	type HrmpChannelAcceptedHandler = ();
+	type HrmpChannelClosingHandler = ();
+	type XcmRecorder = ();
 }
 
 parameter_type_with_key! {

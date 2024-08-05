@@ -20,6 +20,21 @@ fn utilization_rate_works() {
 #[test]
 fn interest_rate_model_works() {
 	new_test_ext().execute_with(|| {
+		assert_ok!(LendMarket::add_market_bond(
+			RuntimeOrigin::root(),
+			KSM,
+			vec![DOT, BNC, KSM, DOT_U, PHA]
+		));
+		assert_ok!(LendMarket::add_market_bond(
+			RuntimeOrigin::root(),
+			DOT,
+			vec![DOT, BNC, KSM, DOT_U, PHA]
+		));
+		assert_ok!(LendMarket::add_market_bond(
+			RuntimeOrigin::root(),
+			BNC,
+			vec![DOT, BNC, KSM, DOT_U, PHA]
+		));
 		let rate_decimal: u128 = 1_000_000_000_000_000_000;
 		assert_ok!(Tokens::set_balance(
 			RuntimeOrigin::root(),
@@ -113,6 +128,21 @@ fn interest_rate_model_works() {
 #[test]
 fn last_accrued_interest_time_should_be_update_correctly() {
 	new_test_ext().execute_with(|| {
+		assert_ok!(LendMarket::add_market_bond(
+			RuntimeOrigin::root(),
+			KSM,
+			vec![DOT, BNC, KSM, DOT_U, PHA]
+		));
+		assert_ok!(LendMarket::add_market_bond(
+			RuntimeOrigin::root(),
+			DOT,
+			vec![DOT, BNC, KSM, DOT_U, PHA]
+		));
+		assert_ok!(LendMarket::add_market_bond(
+			RuntimeOrigin::root(),
+			BNC,
+			vec![DOT, BNC, KSM, DOT_U, PHA]
+		));
 		assert_eq!(LendMarket::borrow_index(DOT), Rate::one());
 		assert_eq!(LendMarket::last_accrued_interest_time(DOT), 0);
 		assert_ok!(LendMarket::mint(RuntimeOrigin::signed(ALICE), DOT, unit(200)));
@@ -129,6 +159,21 @@ fn last_accrued_interest_time_should_be_update_correctly() {
 #[test]
 fn accrue_interest_works_after_mint() {
 	new_test_ext().execute_with(|| {
+		assert_ok!(LendMarket::add_market_bond(
+			RuntimeOrigin::root(),
+			KSM,
+			vec![DOT, BNC, KSM, DOT_U, PHA]
+		));
+		assert_ok!(LendMarket::add_market_bond(
+			RuntimeOrigin::root(),
+			DOT,
+			vec![DOT, BNC, KSM, DOT_U, PHA]
+		));
+		assert_ok!(LendMarket::add_market_bond(
+			RuntimeOrigin::root(),
+			BNC,
+			vec![DOT, BNC, KSM, DOT_U, PHA]
+		));
 		assert_ok!(LendMarket::mint(RuntimeOrigin::signed(ALICE), DOT, unit(200)));
 		assert_ok!(LendMarket::collateral_asset(RuntimeOrigin::signed(ALICE), DOT, true));
 		assert_ok!(LendMarket::borrow(RuntimeOrigin::signed(ALICE), DOT, unit(100)));
@@ -142,6 +187,21 @@ fn accrue_interest_works_after_mint() {
 #[test]
 fn accrue_interest_works_after_borrow() {
 	new_test_ext().execute_with(|| {
+		assert_ok!(LendMarket::add_market_bond(
+			RuntimeOrigin::root(),
+			KSM,
+			vec![DOT, BNC, KSM, DOT_U, PHA]
+		));
+		assert_ok!(LendMarket::add_market_bond(
+			RuntimeOrigin::root(),
+			DOT,
+			vec![DOT, BNC, KSM, DOT_U, PHA]
+		));
+		assert_ok!(LendMarket::add_market_bond(
+			RuntimeOrigin::root(),
+			BNC,
+			vec![DOT, BNC, KSM, DOT_U, PHA]
+		));
 		assert_ok!(LendMarket::mint(RuntimeOrigin::signed(ALICE), DOT, unit(200)));
 		assert_ok!(LendMarket::collateral_asset(RuntimeOrigin::signed(ALICE), DOT, true));
 		assert_eq!(LendMarket::borrow_index(DOT), Rate::one());
@@ -154,6 +214,21 @@ fn accrue_interest_works_after_borrow() {
 #[test]
 fn accrue_interest_works_after_redeem() {
 	new_test_ext().execute_with(|| {
+		assert_ok!(LendMarket::add_market_bond(
+			RuntimeOrigin::root(),
+			KSM,
+			vec![DOT, BNC, KSM, DOT_U, PHA]
+		));
+		assert_ok!(LendMarket::add_market_bond(
+			RuntimeOrigin::root(),
+			DOT,
+			vec![DOT, BNC, KSM, DOT_U, PHA]
+		));
+		assert_ok!(LendMarket::add_market_bond(
+			RuntimeOrigin::root(),
+			BNC,
+			vec![DOT, BNC, KSM, DOT_U, PHA]
+		));
 		assert_ok!(LendMarket::mint(RuntimeOrigin::signed(ALICE), DOT, unit(200)));
 		assert_ok!(LendMarket::collateral_asset(RuntimeOrigin::signed(ALICE), DOT, true));
 		assert_ok!(LendMarket::borrow(RuntimeOrigin::signed(ALICE), DOT, unit(10)));
@@ -173,6 +248,21 @@ fn accrue_interest_works_after_redeem() {
 #[test]
 fn accrue_interest_works_after_redeem_all() {
 	new_test_ext().execute_with(|| {
+		assert_ok!(LendMarket::add_market_bond(
+			RuntimeOrigin::root(),
+			KSM,
+			vec![DOT, BNC, KSM, DOT_U, PHA]
+		));
+		assert_ok!(LendMarket::add_market_bond(
+			RuntimeOrigin::root(),
+			DOT,
+			vec![DOT, BNC, KSM, DOT_U, PHA]
+		));
+		assert_ok!(LendMarket::add_market_bond(
+			RuntimeOrigin::root(),
+			BNC,
+			vec![DOT, BNC, KSM, DOT_U, PHA]
+		));
 		assert_ok!(LendMarket::mint(RuntimeOrigin::signed(BOB), DOT, unit(20)));
 		assert_ok!(LendMarket::mint(RuntimeOrigin::signed(ALICE), DOT, unit(200)));
 		assert_ok!(LendMarket::collateral_asset(RuntimeOrigin::signed(ALICE), DOT, true));
@@ -194,6 +284,21 @@ fn accrue_interest_works_after_redeem_all() {
 #[test]
 fn accrue_interest_works_after_repay() {
 	new_test_ext().execute_with(|| {
+		assert_ok!(LendMarket::add_market_bond(
+			RuntimeOrigin::root(),
+			KSM,
+			vec![DOT, BNC, KSM, DOT_U, PHA]
+		));
+		assert_ok!(LendMarket::add_market_bond(
+			RuntimeOrigin::root(),
+			DOT,
+			vec![DOT, BNC, KSM, DOT_U, PHA]
+		));
+		assert_ok!(LendMarket::add_market_bond(
+			RuntimeOrigin::root(),
+			BNC,
+			vec![DOT, BNC, KSM, DOT_U, PHA]
+		));
 		assert_ok!(LendMarket::mint(RuntimeOrigin::signed(ALICE), DOT, unit(200)));
 		assert_ok!(LendMarket::collateral_asset(RuntimeOrigin::signed(ALICE), DOT, true));
 		assert_ok!(LendMarket::borrow(RuntimeOrigin::signed(ALICE), DOT, unit(20)));
@@ -207,6 +312,21 @@ fn accrue_interest_works_after_repay() {
 #[test]
 fn accrue_interest_works_after_repay_all() {
 	new_test_ext().execute_with(|| {
+		assert_ok!(LendMarket::add_market_bond(
+			RuntimeOrigin::root(),
+			KSM,
+			vec![DOT, BNC, KSM, DOT_U, PHA]
+		));
+		assert_ok!(LendMarket::add_market_bond(
+			RuntimeOrigin::root(),
+			DOT,
+			vec![DOT, BNC, KSM, DOT_U, PHA]
+		));
+		assert_ok!(LendMarket::add_market_bond(
+			RuntimeOrigin::root(),
+			BNC,
+			vec![DOT, BNC, KSM, DOT_U, PHA]
+		));
 		assert_ok!(LendMarket::mint(RuntimeOrigin::signed(BOB), KSM, unit(200)));
 		assert_ok!(LendMarket::mint(RuntimeOrigin::signed(ALICE), DOT, unit(200)));
 		assert_ok!(LendMarket::collateral_asset(RuntimeOrigin::signed(ALICE), DOT, true));
@@ -225,7 +345,21 @@ fn accrue_interest_works_after_repay_all() {
 #[test]
 fn accrue_interest_works_after_liquidate_borrow() {
 	new_test_ext().execute_with(|| {
-		// Bob deposits 200 KSM
+		assert_ok!(LendMarket::add_market_bond(
+			RuntimeOrigin::root(),
+			KSM,
+			vec![DOT, BNC, KSM, DOT_U, PHA]
+		));
+		assert_ok!(LendMarket::add_market_bond(
+			RuntimeOrigin::root(),
+			DOT,
+			vec![DOT, BNC, KSM, DOT_U, PHA]
+		));
+		assert_ok!(LendMarket::add_market_bond(
+			RuntimeOrigin::root(),
+			BNC,
+			vec![DOT, BNC, KSM, DOT_U, PHA]
+		)); // Bob deposits 200 KSM
 		assert_ok!(LendMarket::mint(RuntimeOrigin::signed(BOB), KSM, unit(200)));
 		// Alice deposits 300 DOT as collateral
 		assert_ok!(LendMarket::mint(RuntimeOrigin::signed(ALICE), DOT, unit(300)));
@@ -254,6 +388,21 @@ fn accrue_interest_works_after_liquidate_borrow() {
 #[test]
 fn different_markets_can_accrue_interest_in_one_block() {
 	new_test_ext().execute_with(|| {
+		assert_ok!(LendMarket::add_market_bond(
+			RuntimeOrigin::root(),
+			KSM,
+			vec![DOT, BNC, KSM, DOT_U, PHA]
+		));
+		assert_ok!(LendMarket::add_market_bond(
+			RuntimeOrigin::root(),
+			DOT,
+			vec![DOT, BNC, KSM, DOT_U, PHA]
+		));
+		assert_ok!(LendMarket::add_market_bond(
+			RuntimeOrigin::root(),
+			BNC,
+			vec![DOT, BNC, KSM, DOT_U, PHA]
+		));
 		assert_ok!(LendMarket::mint(RuntimeOrigin::signed(ALICE), DOT, unit(200)));
 		assert_ok!(LendMarket::collateral_asset(RuntimeOrigin::signed(ALICE), DOT, true));
 		assert_ok!(LendMarket::mint(RuntimeOrigin::signed(ALICE), KSM, unit(200)));
@@ -271,6 +420,21 @@ fn different_markets_can_accrue_interest_in_one_block() {
 #[test]
 fn a_market_can_only_accrue_interest_once_in_a_block() {
 	new_test_ext().execute_with(|| {
+		assert_ok!(LendMarket::add_market_bond(
+			RuntimeOrigin::root(),
+			KSM,
+			vec![DOT, BNC, KSM, DOT_U, PHA]
+		));
+		assert_ok!(LendMarket::add_market_bond(
+			RuntimeOrigin::root(),
+			DOT,
+			vec![DOT, BNC, KSM, DOT_U, PHA]
+		));
+		assert_ok!(LendMarket::add_market_bond(
+			RuntimeOrigin::root(),
+			BNC,
+			vec![DOT, BNC, KSM, DOT_U, PHA]
+		));
 		assert_ok!(LendMarket::mint(RuntimeOrigin::signed(ALICE), DOT, unit(200)));
 		assert_ok!(LendMarket::collateral_asset(RuntimeOrigin::signed(ALICE), DOT, true));
 		assert_ok!(LendMarket::mint(RuntimeOrigin::signed(BOB), DOT, unit(200)));

@@ -11,20 +11,23 @@ frame-benchmarking = { workspace = true, optional = true }
 frame-support = { workspace = true }
 frame-system = { workspace = true }
 pallet-transaction-payment = { workspace = true }
+pallet-balances = { workspace = true }
 sp-arithmetic = { workspace = true }
 sp-runtime = { workspace = true }
 sp-std = { workspace = true }
 bifrost-primitives = { workspace = true }
+bifrost-xcm-interface = { workspace = true }
 zenlink-protocol = { workspace = true }
 orml-traits = { workspace = true }
 cumulus-primitives-core = { workspace = true }
 bifrost-asset-registry = { workspace = true }
+polkadot-parachain-primitives = { workspace = true }
 log = { workspace = true }
+xcm = { workspace = true }
 
 [dev-dependencies]
 orml-tokens = { workspace = true }
 bifrost-currencies = { workspace = true }
-pallet-balances = { workspace = true }
 sp-core = { workspace = true }
 sp-io = { workspace = true }
 cumulus-primitives-core = { workspace = true }
@@ -33,7 +36,6 @@ bifrost-asset-registry = { workspace = true }
 bifrost-xcm-interface = { workspace = true }
 xcm-executor = { workspace = true }
 xcm-builder = { workspace = true }
-xcm = { workspace = true }
 pallet-xcm = { workspace = true }
 bifrost-vtoken-voting = { workspace = true, features = ["kusama"] }
 

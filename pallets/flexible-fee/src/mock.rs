@@ -31,7 +31,7 @@ use cumulus_primitives_core::ParaId as Pid;
 use frame_support::{
 	derive_impl, ord_parameter_types, parameter_types,
 	sp_runtime::{DispatchError, DispatchResult},
-	traits::{Everything, Get, LockIdentifier, Nothing},
+	traits::{ConstU128, Everything, Get, LockIdentifier, Nothing},
 	weights::{ConstantMultiplier, IdentityFee},
 	PalletId,
 };
@@ -48,7 +48,7 @@ use sp_runtime::{
 };
 use sp_std::marker::PhantomData;
 use std::convert::TryInto;
-use xcm::{prelude::*, v3::MultiLocation};
+use xcm::v3::MultiLocation;
 use xcm_builder::{FixedWeightBounds, FrameTransactionalProcessor};
 use xcm_executor::XcmExecutor;
 use zenlink_protocol::{
@@ -175,6 +175,7 @@ impl orml_tokens::Config for Test {
 parameter_types! {
 	pub const TreasuryAccount: AccountId32 = TREASURY_ACCOUNT;
 	pub const MaxFeeCurrencyOrderListLen: u32 = 50;
+	pub const FlexibleFeePalletId: PalletId = PalletId(*b"bf/flexi");
 }
 
 ord_parameter_types! {
@@ -194,6 +195,11 @@ impl crate::Config for Test {
 	type ParachainId = ParaInfo;
 	type ControlOrigin = EnsureRoot<AccountId>;
 	type XcmWeightAndFeeHandler = XcmDestWeightAndFee;
+	type MinAssetHubExecutionFee = ConstU128<3>;
+	type MinRelaychainExecutionFee = ConstU128<3>;
+	type RelaychainCurrencyId = RelayCurrencyId;
+	type XcmRouter = ();
+	type PalletId = FlexibleFeePalletId;
 }
 
 pub struct XcmDestWeightAndFee;
@@ -346,7 +352,7 @@ pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
 // Mock XcmExecutor
 pub struct MockXcmExecutor;
 
-impl XcmHelper<AccountIdOf<Test>, crate::pallet::PalletBalanceOf<Test>> for MockXcmExecutor {
+impl XcmHelper<AccountIdOf<Test>, PalletBalanceOf<Test>> for MockXcmExecutor {
 	fn contribute(
 		_contributer: AccountId,
 		_index: ParaId,
@@ -443,6 +449,10 @@ impl xcm_executor::Config for XcmConfig {
 	type AssetExchanger = ();
 	type Aliasers = Nothing;
 	type TransactionalProcessor = FrameTransactionalProcessor;
+	type HrmpNewChannelOpenRequestHandler = ();
+	type HrmpChannelAcceptedHandler = ();
+	type HrmpChannelClosingHandler = ();
+	type XcmRecorder = ();
 }
 
 #[cfg(feature = "runtime-benchmarks")]
