@@ -15,6 +15,7 @@
     ]
   ],
   "protocolId": "bifrost",
+  "evmSince": 1,
   "properties": {
     "ss58Format": 6,
     "tokenDecimals": [
