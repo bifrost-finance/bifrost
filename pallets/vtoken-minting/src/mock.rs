@@ -346,6 +346,10 @@ impl xcm_executor::Config for XcmConfig {
 	type AssetExchanger = ();
 	type Aliasers = Nothing;
 	type TransactionalProcessor = FrameTransactionalProcessor;
+	type HrmpNewChannelOpenRequestHandler = ();
+	type HrmpChannelAcceptedHandler = ();
+	type HrmpChannelClosingHandler = ();
+	type XcmRecorder = ();
 }
 
 #[cfg(feature = "runtime-benchmarks")]

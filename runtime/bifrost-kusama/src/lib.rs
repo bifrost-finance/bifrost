@@ -56,7 +56,7 @@ use sp_runtime::{
 		AccountIdConversion, AccountIdLookup, BlakeTwo256, Block as BlockT, StaticLookup, Zero,
 	},
 	transaction_validity::{TransactionSource, TransactionValidity},
-	ApplyExtrinsicResult, DispatchError, DispatchResult, Perbill, Permill, RuntimeDebug,
+	ApplyExtrinsicResult, DispatchError, DispatchResult, FixedU128, Perbill, Permill, RuntimeDebug,
 	SaturatedConversion,
 };
 use sp_std::{marker::PhantomData, prelude::*};
@@ -89,13 +89,13 @@ use constants::currency::*;
 use cumulus_pallet_parachain_system::{RelayNumberStrictlyIncreases, RelaychainDataProvider};
 use frame_support::{
 	dispatch::DispatchClass,
-	genesis_builder_helper::{build_config, create_default_config},
+	genesis_builder_helper::{build_state, get_preset},
 	sp_runtime::traits::{Convert, ConvertInto},
 	traits::{
 		fungible::HoldConsideration,
 		tokens::{PayFromAccount, UnityAssetBalanceConversion},
-		Currency, EitherOf, EitherOfDiverse, Get, Imbalance, LinearStoragePrice, LockIdentifier,
-		OnUnbalanced,
+		Currency, EitherOf, EitherOfDiverse, Get, Imbalance, InsideBoth, LinearStoragePrice,
+		LockIdentifier, OnUnbalanced,
 	},
 };
 use frame_system::{EnsureRoot, EnsureRootWithSuccess, EnsureSigned};
@@ -143,7 +143,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: create_runtime_str!("bifrost"),
 	impl_name: create_runtime_str!("bifrost"),
 	authoring_version: 1,
-	spec_version: 11000,
+	spec_version: 12000,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 1,
@@ -194,118 +194,6 @@ parameter_types! {
 	pub const SS58Prefix: u8 = 6;
 }
 
-pub struct CallFilter;
-impl Contains<RuntimeCall> for CallFilter {
-	fn contains(call: &RuntimeCall) -> bool {
-		let is_core_call = matches!(
-			call,
-			RuntimeCall::System(_) | RuntimeCall::Timestamp(_) | RuntimeCall::ParachainSystem(_)
-		);
-		if is_core_call {
-			// always allow core call
-			return true;
-		}
-
-		if bifrost_call_switchgear::OverallToggleFilter::<Runtime>::get_overall_toggle_status() {
-			return false;
-		}
-
-		// temporarily ban PhragmenElection
-		let is_temporarily_banned = matches!(call, RuntimeCall::PhragmenElection(_));
-
-		if is_temporarily_banned {
-			return false;
-		}
-
-		let is_switched_off =
-			bifrost_call_switchgear::SwitchOffTransactionFilter::<Runtime>::contains(call);
-		if is_switched_off {
-			// no switched off call
-			return false;
-		}
-
-		// disable transfer
-		let is_transfer = matches!(
-			call,
-			RuntimeCall::Currencies(_) | RuntimeCall::Tokens(_) | RuntimeCall::Balances(_)
-		);
-		if is_transfer {
-			let is_disabled = match *call {
-				// bifrost-currencies module
-				RuntimeCall::Currencies(bifrost_currencies::Call::transfer {
-					dest: _,
-					currency_id,
-					amount: _,
-				}) => bifrost_call_switchgear::DisableTransfersFilter::<Runtime>::contains(
-					&currency_id,
-				),
-				RuntimeCall::Currencies(bifrost_currencies::Call::transfer_native_currency {
-					dest: _,
-					amount: _,
-				}) => bifrost_call_switchgear::DisableTransfersFilter::<Runtime>::contains(
-					&NativeCurrencyId::get(),
-				),
-				// orml-tokens module
-				RuntimeCall::Tokens(orml_tokens::Call::transfer {
-					dest: _,
-					currency_id,
-					amount: _,
-				}) => bifrost_call_switchgear::DisableTransfersFilter::<Runtime>::contains(
-					&currency_id,
-				),
-				RuntimeCall::Tokens(orml_tokens::Call::transfer_all {
-					dest: _,
-					currency_id,
-					keep_alive: _,
-				}) => bifrost_call_switchgear::DisableTransfersFilter::<Runtime>::contains(
-					&currency_id,
-				),
-				RuntimeCall::Tokens(orml_tokens::Call::transfer_keep_alive {
-					dest: _,
-					currency_id,
-					amount: _,
-				}) => bifrost_call_switchgear::DisableTransfersFilter::<Runtime>::contains(
-					&currency_id,
-				),
-				// Balances module
-				RuntimeCall::Balances(pallet_balances::Call::transfer_allow_death {
-					dest: _,
-					value: _,
-				}) => bifrost_call_switchgear::DisableTransfersFilter::<Runtime>::contains(
-					&NativeCurrencyId::get(),
-				),
-				RuntimeCall::Balances(pallet_balances::Call::transfer_keep_alive {
-					dest: _,
-					value: _,
-				}) => bifrost_call_switchgear::DisableTransfersFilter::<Runtime>::contains(
-					&NativeCurrencyId::get(),
-				),
-				RuntimeCall::Balances(pallet_balances::Call::transfer_all {
-					dest: _,
-					keep_alive: _,
-				}) => bifrost_call_switchgear::DisableTransfersFilter::<Runtime>::contains(
-					&NativeCurrencyId::get(),
-				),
-				_ => false,
-			};
-
-			if is_disabled {
-				// no switched off call
-				return false;
-			}
-		}
-
-		true
-	}
-}
-
-pub struct BaseFilter;
-impl Contains<RuntimeCall> for BaseFilter {
-	fn contains(_c: &RuntimeCall) -> bool {
-		true
-	}
-}
-
 parameter_types! {
 	pub const NativeCurrencyId: CurrencyId = CurrencyId::Native(TokenSymbol::BNC);
 	pub const RelayCurrencyId: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
@@ -342,13 +230,14 @@ parameter_types! {
 	pub const CommissionPalletId: PalletId = PalletId(*b"bf/comms");
 	pub IncentivePoolAccount: PalletId = PalletId(*b"bf/inpoo");
 	pub const FarmingGaugeRewardIssuerPalletId: PalletId = PalletId(*b"bf/fmgar");
+	pub const FlexibleFeePalletId: PalletId = PalletId(*b"bf/flexi");
 }
 
 impl frame_system::Config for Runtime {
 	type AccountData = pallet_balances::AccountData<Balance>;
 	/// The identifier used to distinguish between accounts.
 	type AccountId = AccountId;
-	type BaseCallFilter = CallFilter;
+	type BaseCallFilter = InsideBoth<Everything, TxPause>;
 	/// Maximum number of block number to block hash mappings to keep (oldest pruned first).
 	type BlockHashCount = BlockHashCount;
 	type BlockLength = RuntimeBlockLength;
@@ -380,6 +269,11 @@ impl frame_system::Config for Runtime {
 	type Version = Version;
 	type MaxConsumers = ConstU32<16>;
 	type RuntimeTask = ();
+	type SingleBlockMigrations = ();
+	type MultiBlockMigrator = ();
+	type PreInherents = ();
+	type PostInherents = ();
+	type PostTransactions = ();
 }
 
 impl pallet_timestamp::Config for Runtime {
@@ -892,6 +786,25 @@ impl pallet_transaction_payment::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 }
 
+/// Calls that can bypass the tx-pause pallet.
+/// We always allow system calls and timestamp since it is required for block production
+pub struct TxPauseWhitelistedCalls;
+impl Contains<pallet_tx_pause::RuntimeCallNameOf<Runtime>> for TxPauseWhitelistedCalls {
+	fn contains(full_name: &pallet_tx_pause::RuntimeCallNameOf<Runtime>) -> bool {
+		matches!(full_name.0.as_slice(), b"System" | b"Timestamp" | b"TxPause")
+	}
+}
+
+impl pallet_tx_pause::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type RuntimeCall = RuntimeCall;
+	type PauseOrigin = TechAdminOrCouncil;
+	type UnpauseOrigin = TechAdminOrCouncil;
+	type WhitelistedCalls = TxPauseWhitelistedCalls;
+	type MaxNameLen = ConstU32<256>;
+	type WeightInfo = pallet_tx_pause::weights::SubstrateWeight<Runtime>;
+}
+
 impl<LocalCall> frame_system::offchain::CreateSignedTransaction<LocalCall> for Runtime
 where
 	RuntimeCall: From<LocalCall>,
@@ -923,6 +836,7 @@ where
 			frame_system::CheckNonce::<Runtime>::from(nonce),
 			frame_system::CheckWeight::<Runtime>::new(),
 			pallet_transaction_payment::ChargeTransactionPayment::<Runtime>::from(tip),
+			frame_metadata_hash_extension::CheckMetadataHash::<Runtime>::new(false),
 		);
 		let raw_payload = SignedPayload::new(call, extra)
 			.map_err(|e| {
@@ -1083,6 +997,7 @@ impl pallet_aura::Config for Runtime {
 	type DisabledValidators = ();
 	type MaxAuthorities = ConstU32<100_000>;
 	type AllowMultipleBlocksPerSlot = ConstBool<false>;
+	type SlotDuration = ConstU64<SLOT_DURATION>;
 }
 
 // culumus runtime end
@@ -1151,6 +1066,11 @@ impl bifrost_flexible_fee::Config for Runtime {
 	type ParachainId = ParachainInfo;
 	type ControlOrigin = TechAdminOrCouncil;
 	type XcmWeightAndFeeHandler = XcmInterface;
+	type MinAssetHubExecutionFee = ConstU128<{ 3 * DOLLARS }>;
+	type MinRelaychainExecutionFee = ConstU128<{ 3 * DOLLARS }>;
+	type RelaychainCurrencyId = RelayCurrencyId;
+	type XcmRouter = XcmRouter;
+	type PalletId = FlexibleFeePalletId;
 }
 
 parameter_types! {
@@ -1309,12 +1229,6 @@ impl bifrost_token_issuer::Config for Runtime {
 	type ControlOrigin = EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
 	type WeightInfo = weights::bifrost_token_issuer::BifrostWeight<Runtime>;
 	type MaxLengthLimit = MaxLengthLimit;
-}
-
-impl bifrost_call_switchgear::Config for Runtime {
-	type RuntimeEvent = RuntimeEvent;
-	type UpdateOrigin = CoreAdminOrCouncil;
-	type WeightInfo = weights::bifrost_call_switchgear::BifrostWeight<Runtime>;
 }
 
 impl bifrost_asset_registry::Config for Runtime {
@@ -1694,14 +1608,22 @@ parameter_types! {
 	pub const ExpiresIn: Moment = 1000 * 60 * 60; // 60 mins
 	pub const MaxHasDispatchedSize: u32 = 100;
 	pub OracleRootOperatorAccountId: AccountId = OraclePalletId::get().into_account_truncating();
+	pub const MinimumTimestampInterval: Moment = 1000 * 60 * 10; // 10 mins
+	pub const MaximumValueInterval: Price = FixedU128::from_inner(3_000_000_000_000_000); // 0.3%
 }
 
 type BifrostDataProvider = orml_oracle::Instance1;
 impl orml_oracle::Config<BifrostDataProvider> for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type OnNewData = ();
-	type CombineData =
-		orml_oracle::DefaultCombineData<Runtime, MinimumCount, ExpiresIn, BifrostDataProvider>;
+	type CombineData = orml_oracle::DefaultCombineData<
+		Runtime,
+		MinimumCount,
+		ExpiresIn,
+		MinimumTimestampInterval,
+		MaximumValueInterval,
+		BifrostDataProvider,
+	>;
 	type Time = Timestamp;
 	type OracleKey = CurrencyId;
 	type OracleValue = Price;
@@ -1710,6 +1632,7 @@ impl orml_oracle::Config<BifrostDataProvider> for Runtime {
 	type WeightInfo = weights::orml_oracle::WeightInfo<Runtime>;
 	type Members = OracleMembership;
 	type MaxFeedValues = ConstU32<100>;
+	type ControlOrigin = TechAdminOrCouncil;
 }
 
 pub type TimeStampedPrice = orml_oracle::TimestampedValue<Price, Moment>;
@@ -1906,6 +1829,7 @@ construct_runtime! {
 		Indices: pallet_indices = 2,
 		ParachainSystem: cumulus_pallet_parachain_system = 5,
 		ParachainInfo: parachain_info = 6,
+		TxPause: pallet_tx_pause = 7,
 
 		// Monetary stuff
 		Balances: pallet_balances = 10,
@@ -1965,7 +1889,6 @@ construct_runtime! {
 		FlexibleFee: bifrost_flexible_fee = 100,
 		Salp: bifrost_salp = 105,
 		TokenIssuer: bifrost_token_issuer = 109,
-		CallSwitchgear: bifrost_call_switchgear = 112,
 		VSBondAuction: bifrost_vsbond_auction = 113,
 		AssetRegistry: bifrost_asset_registry = 114,
 		VtokenMinting: bifrost_vtoken_minting = 115,
@@ -2020,6 +1943,7 @@ pub type SignedExtra = (
 	frame_system::CheckNonce<Runtime>,
 	frame_system::CheckWeight<Runtime>,
 	pallet_transaction_payment::ChargeTransactionPayment<Runtime>,
+	frame_metadata_hash_extension::CheckMetadataHash<Runtime>,
 );
 /// Unchecked extrinsic type as expected by this runtime.
 pub type UncheckedExtrinsic =
@@ -2030,7 +1954,12 @@ pub type CheckedExtrinsic = generic::CheckedExtrinsic<AccountId, RuntimeCall, Si
 pub type SignedPayload = generic::SignedPayload<RuntimeCall, SignedExtra>;
 
 parameter_types! {
-	pub const DmpQueuePalletName: &'static str = "DmpQueue";
+	pub const CallSwitchgearPalletName: &'static str = "CallSwitchgear";
+}
+
+impl cumulus_pallet_xcmp_queue::migration::v5::V5Config for Runtime {
+	// This must be the same as the `ChannelInfo` from the `Config`:
+	type ChannelList = ParachainSystem;
 }
 
 /// All migrations that will run on the next runtime upgrade.
@@ -2046,12 +1975,17 @@ pub mod migrations {
 
 	/// Unreleased migrations. Add new ones here:
 	pub type Unreleased = (
-		bifrost_slpx::migration::v1::MigrateToV1<Runtime>,
+		// permanent migration, do not remove
+		pallet_xcm::migration::MigrateToLatestXcmVersion<Runtime>,
 		frame_support::migrations::RemovePallet<
-			DmpQueuePalletName,
+			CallSwitchgearPalletName,
 			<Runtime as frame_system::Config>::DbWeight,
 		>,
-		pallet_xcm::migration::MigrateToLatestXcmVersion<Runtime>,
+		cumulus_pallet_xcmp_queue::migration::v5::MigrateV4ToV5<Runtime>,
+		crate::migration::opengov::RankedCollectiveV1<
+			Runtime,
+			governance::fellowship::FellowshipCollectiveInstance,
+		>,
 	);
 }
 
@@ -2073,7 +2007,6 @@ extern crate frame_benchmarking;
 mod benches {
 	define_benchmarks!(
 		[bifrost_asset_registry, AssetRegistry]
-		[bifrost_call_switchgear, CallSwitchgear]
 		[bifrost_cross_in_out, CrossInOut]
 		[bifrost_farming, Farming]
 		[bifrost_fee_share, FeeShare]
@@ -2115,7 +2048,7 @@ impl_runtime_apis! {
 			Executive::execute_block(block);
 		}
 
-		fn initialize_block(header: &<Block as BlockT>::Header) {
+		fn initialize_block(header: &<Block as BlockT>::Header) -> sp_runtime::ExtrinsicInclusionMode {
 			Executive::initialize_block(header)
 		}
 	}
@@ -2212,7 +2145,7 @@ impl_runtime_apis! {
 		}
 
 		fn authorities() -> Vec<AuraId> {
-			Aura::authorities().into_inner()
+			pallet_aura::Authorities::<Runtime>::get().into_inner()
 		}
 	}
 
@@ -2472,12 +2405,16 @@ impl_runtime_apis! {
 	}
 
 	impl sp_genesis_builder::GenesisBuilder<Block> for Runtime {
-		fn create_default_config() -> Vec<u8> {
-			create_default_config::<RuntimeGenesisConfig>()
+		fn build_state(config: Vec<u8>) -> sp_genesis_builder::Result {
+			build_state::<RuntimeGenesisConfig>(config)
 		}
 
-		fn build_config(config: Vec<u8>) -> sp_genesis_builder::Result {
-			build_config::<RuntimeGenesisConfig>(config)
+		fn get_preset(id: &Option<sp_genesis_builder::PresetId>) -> Option<Vec<u8>> {
+			get_preset::<RuntimeGenesisConfig>(id, |_| None)
+		}
+
+		fn preset_names() -> Vec<sp_genesis_builder::PresetId> {
+			vec![]
 		}
 	}
 }

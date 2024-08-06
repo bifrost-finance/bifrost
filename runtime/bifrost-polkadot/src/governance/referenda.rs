@@ -35,7 +35,7 @@ impl pallet_conviction_voting::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type Currency = Balances;
 	type Polls = Referenda;
-	type MaxTurnout = frame_support::traits::TotalIssuanceOf<Balances, Self::AccountId>;
+	type MaxTurnout = frame_support::traits::ActiveIssuanceOf<Balances, Self::AccountId>;
 	// Maximum number of concurrent votes an account may have
 	type MaxVotes = ConstU32<512>;
 	// Minimum period of vote locking

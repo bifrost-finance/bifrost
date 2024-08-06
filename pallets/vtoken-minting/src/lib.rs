@@ -186,6 +186,7 @@ pub mod pallet {
 			vtoken_amount: BalanceOf<T>,
 			fee: BalanceOf<T>,
 			remark: BoundedVec<u8, ConstU32<32>>,
+			channel_id: Option<u32>,
 		},
 		Redeemed {
 			address: AccountIdOf<T>,
@@ -1596,6 +1597,7 @@ pub mod pallet {
 				vtoken_amount,
 				fee,
 				remark,
+				channel_id,
 			});
 			Ok(vtoken_amount.into())
 		}

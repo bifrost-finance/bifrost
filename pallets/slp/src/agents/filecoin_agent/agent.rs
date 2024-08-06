@@ -497,17 +497,6 @@ impl<T: Config>
 		Pallet::<T>::inner_charge_hosting_fee(amount, to, currency_id)
 	}
 
-	/// Deposit some amount as fee to nominator accounts.
-	fn supplement_fee_reserve(
-		&self,
-		_amount: BalanceOf<T>,
-		_from: &MultiLocation,
-		_to: &MultiLocation,
-		_currency_id: CurrencyId,
-	) -> Result<(), Error<T>> {
-		Err(Error::<T>::Unsupported)
-	}
-
 	fn check_delegator_ledger_query_response(
 		&self,
 		_query_id: QueryId,

@@ -62,6 +62,8 @@ fn init() {
 	assert_ok!(LendMarket::mint(RuntimeOrigin::signed(0), DOT, unit(100)));
 	assert_ok!(LendMarket::mint(RuntimeOrigin::signed(0), VDOT, unit(100)));
 	assert_ok!(LendMarket::mint(RuntimeOrigin::signed(1), VDOT, 100_000));
+
+	assert_ok!(LendMarket::add_market_bond(RuntimeOrigin::root(), DOT, vec![DOT, BNC, VDOT]));
 }
 
 #[test]

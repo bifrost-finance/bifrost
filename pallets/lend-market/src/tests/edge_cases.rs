@@ -23,6 +23,7 @@ fn exceeded_supply_cap() {
 #[test]
 fn repay_borrow_all_no_underflow() {
 	new_test_ext().execute_with(|| {
+		assert_ok!(LendMarket::add_market_bond(RuntimeOrigin::root(), KSM, vec![KSM]));
 		// Alice deposits 200 KSM as collateral
 		assert_ok!(LendMarket::mint(RuntimeOrigin::signed(ALICE), KSM, unit(200)));
 		assert_ok!(LendMarket::collateral_asset(RuntimeOrigin::signed(ALICE), KSM, true));
@@ -69,6 +70,7 @@ fn ensure_capacity_fails_when_market_not_existed() {
 #[test]
 fn redeem_all_should_be_accurate() {
 	new_test_ext().execute_with(|| {
+		assert_ok!(LendMarket::add_market_bond(RuntimeOrigin::root(), KSM, vec![KSM]));
 		assert_ok!(LendMarket::mint(RuntimeOrigin::signed(ALICE), KSM, unit(200)));
 		assert_ok!(LendMarket::collateral_asset(RuntimeOrigin::signed(ALICE), KSM, true));
 		assert_ok!(LendMarket::borrow(RuntimeOrigin::signed(ALICE), KSM, unit(50)));

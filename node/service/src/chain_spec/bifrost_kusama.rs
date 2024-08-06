@@ -18,7 +18,7 @@
 
 use bifrost_kusama_runtime::{
 	constants::currency::DOLLARS, AccountId, Balance, BalancesConfig, BlockNumber,
-	DefaultBlocksPerRound, InflationInfo, Range, RuntimeGenesisConfig, SS58Prefix, VestingConfig,
+	DefaultBlocksPerRound, InflationInfo, Range, SS58Prefix, VestingConfig,
 };
 use bifrost_primitives::{CurrencyId, CurrencyId::*, TokenInfo, TokenSymbol::*};
 use bifrost_runtime_common::AuraId;
@@ -42,7 +42,7 @@ use crate::chain_spec::{get_account_id_from_seed, get_from_seed, RelayExtensions
 const DEFAULT_PROTOCOL_ID: &str = "bifrost";
 
 /// Specialized `ChainSpec` for the bifrost runtime.
-pub type ChainSpec = sc_service::GenericChainSpec<RuntimeGenesisConfig, RelayExtensions>;
+pub type ChainSpec = sc_service::GenericChainSpec<RelayExtensions>;
 
 #[allow(non_snake_case)]
 pub fn ENDOWMENT() -> u128 {
@@ -219,7 +219,7 @@ pub fn local_testnet_config() -> ChainSpec {
 
 	ChainSpec::builder(
 		bifrost_kusama_runtime::WASM_BINARY.expect("WASM binary was not built, please build it!"),
-		RelayExtensions { relay_chain: "kusama-local".into(), para_id: PARA_ID },
+		RelayExtensions { relay_chain: "kusama-local".into(), para_id: PARA_ID, evm_since: 1 },
 	)
 	.with_name("Bifrost Local Testnet")
 	.with_id("bifrost_local_testnet")
@@ -325,7 +325,7 @@ pub fn chainspec_config() -> ChainSpec {
 
 	ChainSpec::builder(
 		bifrost_kusama_runtime::WASM_BINARY.expect("WASM binary was not built, please build it!"),
-		RelayExtensions { relay_chain: "kusama".into(), para_id: PARA_ID },
+		RelayExtensions { relay_chain: "kusama".into(), para_id: PARA_ID, evm_since: 1 },
 	)
 	.with_name("Bifrost")
 	.with_id("bifrost")

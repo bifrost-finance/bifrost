@@ -28,6 +28,7 @@ include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
 use bifrost_slp::{DerivativeAccountProvider, QueryResponseManager};
 use core::convert::TryInto;
+use pallet_traits::evm::InspectEvmAccounts;
 // A few exports that help ease life for downstream crates.
 use cumulus_pallet_parachain_system::{RelayNumberStrictlyIncreases, RelaychainDataProvider};
 pub use frame_support::{
@@ -51,12 +52,12 @@ pub use pallet_balances::Call as BalancesCall;
 pub use pallet_timestamp::Call as TimestampCall;
 use sp_api::impl_runtime_apis;
 use sp_arithmetic::Percent;
-use sp_core::{OpaqueMetadata, U256};
+use sp_core::{OpaqueMetadata, H160, H256, U256};
 use sp_runtime::{
 	create_runtime_str, generic, impl_opaque_keys,
 	traits::{AccountIdConversion, BlakeTwo256, Block as BlockT, Zero},
 	transaction_validity::{TransactionSource, TransactionValidity},
-	ApplyExtrinsicResult, DispatchError, DispatchResult, Perbill, Permill, RuntimeDebug,
+	ApplyExtrinsicResult, DispatchError, DispatchResult, FixedU128, Perbill, Permill, RuntimeDebug,
 };
 use sp_std::{marker::PhantomData, prelude::*};
 #[cfg(feature = "std")]
@@ -65,6 +66,7 @@ use sp_version::RuntimeVersion;
 
 /// Constant values used within the runtime.
 pub mod constants;
+mod evm;
 mod migration;
 pub mod weights;
 use bifrost_asset_registry::{AssetIdMaps, FixedRateOfAsset};
@@ -87,18 +89,21 @@ use bifrost_slp::QueryId;
 use bifrost_ve_minting::traits::VeMintingInterface;
 use constants::currency::*;
 use cumulus_primitives_core::ParaId as CumulusParaId;
+use fp_evm::FeeCalculator;
+use fp_rpc::TransactionStatus;
 use frame_support::{
 	dispatch::DispatchClass,
-	genesis_builder_helper::{build_config, create_default_config},
+	genesis_builder_helper::{build_state, get_preset},
 	sp_runtime::traits::{Convert, ConvertInto},
 	traits::{
 		fungible::HoldConsideration,
 		tokens::{PayFromAccount, UnityAssetBalanceConversion},
-		Currency, EitherOf, EitherOfDiverse, Get, LinearStoragePrice,
+		Currency, EitherOf, EitherOfDiverse, Get, InsideBoth, LinearStoragePrice, OnFinalize,
 	},
 };
 use frame_system::{EnsureRoot, EnsureRootWithSuccess, EnsureSigned};
 use hex_literal::hex;
+use pallet_ethereum::Transaction;
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 // zenlink imports
 use zenlink_protocol::{
@@ -108,10 +113,15 @@ use zenlink_protocol::{
 // xcm config
 pub mod xcm_config;
 use orml_traits::{currency::MutationHooks, location::RelativeReserveProvider};
+use pallet_evm::{GasWeightMapping, Runner};
 use pallet_identity::legacy::IdentityInfo;
 use pallet_xcm::{EnsureResponse, QueryStatus};
 use polkadot_runtime_common::prod_or_fast;
-use sp_runtime::traits::{IdentityLookup, Verify};
+use sp_arithmetic::traits::UniqueSaturatedInto;
+use sp_runtime::{
+	traits::{DispatchInfoOf, Dispatchable, IdentityLookup, PostDispatchInfoOf, Verify},
+	transaction_validity::TransactionValidityError,
+};
 use static_assertions::const_assert;
 use xcm::{v3::MultiLocation, v4::prelude::*};
 pub use xcm_config::{
@@ -129,9 +139,29 @@ use governance::{
 	TechAdminOrCouncil,
 };
 
-impl_opaque_keys! {
-	pub struct SessionKeys {
-		pub aura: Aura,
+/// Opaque types. These are used by the CLI to instantiate machinery that don't need to know
+/// the specifics of the runtime. They can then be made to be agnostic over specific formats
+/// of data like extrinsics, allowing for them to continue syncing the network through upgrades
+/// to even the core data structures.
+pub mod opaque {
+	use super::*;
+	use cumulus_primitives_core::relay_chain::HashT;
+
+	pub use sp_runtime::OpaqueExtrinsic as UncheckedExtrinsic;
+
+	/// Opaque block header type.
+	pub type Header = generic::Header<BlockNumber, BlakeTwo256>;
+	/// Opaque block type.
+	pub type Block = generic::Block<Header, UncheckedExtrinsic>;
+	/// Opaque block identifier type.
+	pub type BlockId = generic::BlockId<Block>;
+	/// Opaque block hash type.
+	pub type Hash = <BlakeTwo256 as HashT>::Output;
+
+	impl_opaque_keys! {
+		pub struct SessionKeys {
+			pub aura: Aura,
+		}
 	}
 }
 
@@ -141,7 +171,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: create_runtime_str!("bifrost_polkadot"),
 	impl_name: create_runtime_str!("bifrost_polkadot"),
 	authoring_version: 0,
-	spec_version: 11000,
+	spec_version: 12000,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 1,
@@ -192,111 +222,6 @@ parameter_types! {
 	pub const SS58Prefix: u8 = 6;
 }
 
-pub struct CallFilter;
-impl Contains<RuntimeCall> for CallFilter {
-	fn contains(call: &RuntimeCall) -> bool {
-		let is_core_call = matches!(
-			call,
-			RuntimeCall::System(_) | RuntimeCall::Timestamp(_) | RuntimeCall::ParachainSystem(_)
-		);
-		if is_core_call {
-			// always allow core call
-			return true;
-		}
-
-		if bifrost_call_switchgear::OverallToggleFilter::<Runtime>::get_overall_toggle_status() {
-			return false;
-		}
-
-		// temporarily ban PhragmenElection
-		let is_temporarily_banned = matches!(call, RuntimeCall::PhragmenElection(_));
-
-		if is_temporarily_banned {
-			return false;
-		}
-
-		let is_switched_off =
-			bifrost_call_switchgear::SwitchOffTransactionFilter::<Runtime>::contains(call);
-		if is_switched_off {
-			// no switched off call
-			return false;
-		}
-
-		// disable transfer
-		let is_transfer = matches!(
-			call,
-			RuntimeCall::Currencies(_) | RuntimeCall::Tokens(_) | RuntimeCall::Balances(_)
-		);
-		if is_transfer {
-			let is_disabled = match *call {
-				// bifrost-currencies module
-				RuntimeCall::Currencies(bifrost_currencies::Call::transfer {
-					dest: _,
-					currency_id,
-					amount: _,
-				}) => bifrost_call_switchgear::DisableTransfersFilter::<Runtime>::contains(
-					&currency_id,
-				),
-				RuntimeCall::Currencies(bifrost_currencies::Call::transfer_native_currency {
-					dest: _,
-					amount: _,
-				}) => bifrost_call_switchgear::DisableTransfersFilter::<Runtime>::contains(
-					&NativeCurrencyId::get(),
-				),
-				// orml-tokens module
-				RuntimeCall::Tokens(orml_tokens::Call::transfer {
-					dest: _,
-					currency_id,
-					amount: _,
-				}) => bifrost_call_switchgear::DisableTransfersFilter::<Runtime>::contains(
-					&currency_id,
-				),
-				RuntimeCall::Tokens(orml_tokens::Call::transfer_all {
-					dest: _,
-					currency_id,
-					keep_alive: _,
-				}) => bifrost_call_switchgear::DisableTransfersFilter::<Runtime>::contains(
-					&currency_id,
-				),
-				RuntimeCall::Tokens(orml_tokens::Call::transfer_keep_alive {
-					dest: _,
-					currency_id,
-					amount: _,
-				}) => bifrost_call_switchgear::DisableTransfersFilter::<Runtime>::contains(
-					&currency_id,
-				),
-				// Balances module
-				RuntimeCall::Balances(pallet_balances::Call::transfer_allow_death {
-					dest: _,
-					value: _,
-				}) => bifrost_call_switchgear::DisableTransfersFilter::<Runtime>::contains(
-					&NativeCurrencyId::get(),
-				),
-				RuntimeCall::Balances(pallet_balances::Call::transfer_keep_alive {
-					dest: _,
-					value: _,
-				}) => bifrost_call_switchgear::DisableTransfersFilter::<Runtime>::contains(
-					&NativeCurrencyId::get(),
-				),
-				RuntimeCall::Balances(pallet_balances::Call::transfer_all {
-					dest: _,
-					keep_alive: _,
-				}) => bifrost_call_switchgear::DisableTransfersFilter::<Runtime>::contains(
-					&NativeCurrencyId::get(),
-				),
-				_ => false,
-			};
-
-			if is_disabled {
-				// no switched off call
-				return false;
-			}
-		}
-
-		true
-	}
-}
-
 parameter_types! {
 	pub const NativeCurrencyId: CurrencyId = CurrencyId::Native(TokenSymbol::BNC);
 	pub const RelayCurrencyId: CurrencyId = CurrencyId::Token2(DOT_TOKEN_ID);
@@ -329,13 +254,14 @@ parameter_types! {
 	pub const FarmingGaugeRewardIssuerPalletId: PalletId = PalletId(*b"bf/fmgar");
 	pub const BuyBackAccount: PalletId = PalletId(*b"bf/bybck");
 	pub const LiquidityAccount: PalletId = PalletId(*b"bf/liqdt");
+	pub const FlexibleFeePalletId: PalletId = PalletId(*b"bf/flexi");
 }
 
 impl frame_system::Config for Runtime {
 	type AccountData = pallet_balances::AccountData<Balance>;
 	/// The identifier used to distinguish between accounts.
 	type AccountId = AccountId;
-	type BaseCallFilter = CallFilter;
+	type BaseCallFilter = InsideBoth<Everything, TxPause>;
 	/// Maximum number of block number to block hash mappings to keep (oldest pruned first).
 	type BlockHashCount = BlockHashCount;
 	type BlockLength = RuntimeBlockLength;
@@ -367,6 +293,11 @@ impl frame_system::Config for Runtime {
 	type Version = Version;
 	type MaxConsumers = ConstU32<16>;
 	type RuntimeTask = ();
+	type SingleBlockMigrations = ();
+	type MultiBlockMigrator = ();
+	type PreInherents = ();
+	type PostInherents = ();
+	type PostTransactions = ();
 }
 
 impl pallet_timestamp::Config for Runtime {
@@ -861,6 +792,25 @@ impl pallet_transaction_payment::Config for Runtime {
 	type WeightToFee = WeightToFee;
 }
 
+/// Calls that can bypass the tx-pause pallet.
+/// We always allow system calls and timestamp since it is required for block production
+pub struct TxPauseWhitelistedCalls;
+impl Contains<pallet_tx_pause::RuntimeCallNameOf<Runtime>> for TxPauseWhitelistedCalls {
+	fn contains(full_name: &pallet_tx_pause::RuntimeCallNameOf<Runtime>) -> bool {
+		matches!(full_name.0.as_slice(), b"System" | b"Timestamp" | b"TxPause")
+	}
+}
+
+impl pallet_tx_pause::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type RuntimeCall = RuntimeCall;
+	type PauseOrigin = TechAdminOrCouncil;
+	type UnpauseOrigin = TechAdminOrCouncil;
+	type WhitelistedCalls = TxPauseWhitelistedCalls;
+	type MaxNameLen = ConstU32<256>;
+	type WeightInfo = pallet_tx_pause::weights::SubstrateWeight<Runtime>;
+}
+
 // culumus runtime start
 parameter_types! {
 	pub const ReservedXcmpWeight: Weight = MAXIMUM_BLOCK_WEIGHT.saturating_div(4);
@@ -892,10 +842,11 @@ parameter_types! {
 
 impl pallet_session::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
-	type Keys = SessionKeys;
+	type Keys = opaque::SessionKeys;
 	type NextSessionRotation = pallet_session::PeriodicSessions<Period, Offset>;
 	// Essentially just Aura, but lets be pedantic.
-	type SessionHandler = <SessionKeys as sp_runtime::traits::OpaqueKeys>::KeyTypeIdProviders;
+	type SessionHandler =
+		<opaque::SessionKeys as sp_runtime::traits::OpaqueKeys>::KeyTypeIdProviders;
 	type SessionManager = CollatorSelection;
 	type ShouldEndSession = pallet_session::PeriodicSessions<Period, Offset>;
 	type ValidatorId = <Self as frame_system::Config>::AccountId;
@@ -914,6 +865,7 @@ impl pallet_aura::Config for Runtime {
 	type DisabledValidators = ();
 	type MaxAuthorities = ConstU32<100_000>;
 	type AllowMultipleBlocksPerSlot = ConstBool<false>;
+	type SlotDuration = ConstU64<SLOT_DURATION>;
 }
 
 parameter_types! {
@@ -971,6 +923,12 @@ impl FeeGetter<RuntimeCall> for ExtraFeeMatcher {
 				extra_fee_name: ExtraFeeName::StatemineTransfer,
 				extra_fee_currency: RelayCurrencyId::get(),
 			},
+			RuntimeCall::XcmInterface(bifrost_xcm_interface::Call::transfer_ethereum_assets {
+				..
+			}) => ExtraFeeInfo {
+				extra_fee_name: ExtraFeeName::EthereumTransfer,
+				extra_fee_currency: RelayCurrencyId::get(),
+			},
 			RuntimeCall::VtokenVoting(bifrost_vtoken_voting::Call::vote { vtoken, .. }) =>
 				ExtraFeeInfo {
 					extra_fee_name: ExtraFeeName::VoteVtoken,
@@ -1005,6 +963,11 @@ impl bifrost_flexible_fee::Config for Runtime {
 	type ParachainId = ParachainInfo;
 	type ControlOrigin = TechAdminOrCouncil;
 	type XcmWeightAndFeeHandler = XcmInterface;
+	type MinAssetHubExecutionFee = ConstU128<{ 20 * CENTS }>;
+	type MinRelaychainExecutionFee = ConstU128<{ 20 * CENTS }>;
+	type RelaychainCurrencyId = RelayCurrencyId;
+	type XcmRouter = XcmRouter;
+	type PalletId = FlexibleFeePalletId;
 }
 
 parameter_types! {
@@ -1137,12 +1100,6 @@ impl bifrost_salp::Config for Runtime {
 	type VtokenMinting = VtokenMinting;
 	type LockId = SalpLockId;
 	type BatchLimit = BatchLimit;
-}
-
-impl bifrost_call_switchgear::Config for Runtime {
-	type RuntimeEvent = RuntimeEvent;
-	type UpdateOrigin = CoreAdminOrCouncil;
-	type WeightInfo = weights::bifrost_call_switchgear::BifrostWeight<Runtime>;
 }
 
 impl bifrost_asset_registry::Config for Runtime {
@@ -1504,14 +1461,22 @@ parameter_types! {
 	pub const ExpiresIn: Moment = 1000 * 60 * 60; // 60 mins
 	pub const MaxHasDispatchedSize: u32 = 100;
 	pub OracleRootOperatorAccountId: AccountId = OraclePalletId::get().into_account_truncating();
+	pub const MinimumTimestampInterval: Moment = 1000 * 60 * 10; // 10 mins
+	pub const MaximumValueInterval: Price = FixedU128::from_inner(3_000_000_000_000_000); // 0.3%
 }
 
 type BifrostDataProvider = orml_oracle::Instance1;
 impl orml_oracle::Config<BifrostDataProvider> for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type OnNewData = ();
-	type CombineData =
-		orml_oracle::DefaultCombineData<Runtime, MinimumCount, ExpiresIn, BifrostDataProvider>;
+	type CombineData = orml_oracle::DefaultCombineData<
+		Runtime,
+		MinimumCount,
+		ExpiresIn,
+		MinimumTimestampInterval,
+		MaximumValueInterval,
+		BifrostDataProvider,
+	>;
 	type Time = Timestamp;
 	type OracleKey = CurrencyId;
 	type OracleValue = Price;
@@ -1520,6 +1485,7 @@ impl orml_oracle::Config<BifrostDataProvider> for Runtime {
 	type WeightInfo = weights::orml_oracle::WeightInfo<Runtime>;
 	type Members = OracleMembership;
 	type MaxFeedValues = ConstU32<100>;
+	type ControlOrigin = TechAdminOrCouncil;
 }
 
 pub type TimeStampedPrice = orml_oracle::TimestampedValue<Price, Moment>;
@@ -1741,6 +1707,7 @@ construct_runtime! {
 		Indices: pallet_indices = 2,
 		ParachainSystem: cumulus_pallet_parachain_system = 5,
 		ParachainInfo: parachain_info = 6,
+		TxPause: pallet_tx_pause = 7,
 
 		// Monetary stuff
 		Balances: pallet_balances = 10,
@@ -1785,6 +1752,13 @@ construct_runtime! {
 		Treasury: pallet_treasury = 61,
 		Preimage: pallet_preimage = 64,
 
+		// Frontier and EVM pallets
+		Ethereum: pallet_ethereum = 65,
+		EVM: pallet_evm = 66,
+		EVMChainId: pallet_evm_chain_id = 67,
+		DynamicFee: pallet_dynamic_fee = 68,
+		EVMAccounts: pallet_evm_accounts = 69,
+
 		// Third party modules
 		XTokens: orml_xtokens = 70,
 		Tokens: orml_tokens = 71,
@@ -1797,7 +1771,6 @@ construct_runtime! {
 		// Bifrost modules
 		FlexibleFee: bifrost_flexible_fee = 100,
 		Salp: bifrost_salp = 105,
-		CallSwitchgear: bifrost_call_switchgear = 112,
 		AssetRegistry: bifrost_asset_registry = 114,
 		VtokenMinting: bifrost_vtoken_minting = 115,
 		Slp: bifrost_slp = 116,
@@ -1823,6 +1796,31 @@ construct_runtime! {
 		ChannelCommission: bifrost_channel_commission = 136,
 		CloudsConvert: bifrost_clouds_convert = 137,
 		BuyBack: bifrost_buy_back = 138,
+	}
+}
+
+#[derive(Clone)]
+pub struct TransactionConverter;
+
+impl fp_rpc::ConvertTransaction<UncheckedExtrinsic> for TransactionConverter {
+	fn convert_transaction(&self, transaction: pallet_ethereum::Transaction) -> UncheckedExtrinsic {
+		UncheckedExtrinsic::new_unsigned(
+			pallet_ethereum::Call::<Runtime>::transact { transaction }.into(),
+		)
+	}
+}
+
+impl fp_rpc::ConvertTransaction<opaque::UncheckedExtrinsic> for TransactionConverter {
+	fn convert_transaction(
+		&self,
+		transaction: pallet_ethereum::Transaction,
+	) -> opaque::UncheckedExtrinsic {
+		let extrinsic = UncheckedExtrinsic::new_unsigned(
+			pallet_ethereum::Call::<Runtime>::transact { transaction }.into(),
+		);
+		let encoded = extrinsic.encode();
+		opaque::UncheckedExtrinsic::decode(&mut &encoded[..])
+			.expect("Encoded extrinsic is always valid")
 	}
 }
 
@@ -1854,17 +1852,24 @@ pub type SignedExtra = (
 	frame_system::CheckNonce<Runtime>,
 	frame_system::CheckWeight<Runtime>,
 	pallet_transaction_payment::ChargeTransactionPayment<Runtime>,
+	frame_metadata_hash_extension::CheckMetadataHash<Runtime>,
 );
 /// Unchecked extrinsic type as expected by this runtime.
 pub type UncheckedExtrinsic =
-	generic::UncheckedExtrinsic<Address, RuntimeCall, Signature, SignedExtra>;
+	fp_self_contained::UncheckedExtrinsic<Address, RuntimeCall, Signature, SignedExtra>;
 /// Extrinsic type that has already been checked.
-pub type CheckedExtrinsic = generic::CheckedExtrinsic<AccountId, RuntimeCall, SignedExtra>;
+pub type CheckedExtrinsic =
+	fp_self_contained::CheckedExtrinsic<AccountId, RuntimeCall, SignedExtra, H160>;
 /// The payload being signed in transactions.
 pub type SignedPayload = generic::SignedPayload<RuntimeCall, SignedExtra>;
 
 parameter_types! {
-	pub const DmpQueuePalletName: &'static str = "DmpQueue";
+	pub const CallSwitchgearPalletName: &'static str = "CallSwitchgear";
+}
+
+impl cumulus_pallet_xcmp_queue::migration::v5::V5Config for Runtime {
+	// This must be the same as the `ChannelInfo` from the `Config`:
+	type ChannelList = ParachainSystem;
 }
 
 /// All migrations that will run on the next runtime upgrade.
@@ -1880,12 +1885,17 @@ pub mod migrations {
 
 	/// Unreleased migrations. Add new ones here:
 	pub type Unreleased = (
-		bifrost_slpx::migration::v1::MigrateToV1<Runtime>,
+		// permanent migration, do not remove
+		pallet_xcm::migration::MigrateToLatestXcmVersion<Runtime>,
 		frame_support::migrations::RemovePallet<
-			DmpQueuePalletName,
+			CallSwitchgearPalletName,
 			<Runtime as frame_system::Config>::DbWeight,
 		>,
-		pallet_xcm::migration::MigrateToLatestXcmVersion<Runtime>,
+		cumulus_pallet_xcmp_queue::migration::v5::MigrateV4ToV5<Runtime>,
+		crate::migration::opengov::RankedCollectiveV1<
+			Runtime,
+			governance::fellowship::FellowshipCollectiveInstance,
+		>,
 	);
 }
 
@@ -1898,6 +1908,62 @@ pub type Executive = frame_executive::Executive<
 	AllPalletsWithSystem,
 	Migrations,
 >;
+
+impl fp_self_contained::SelfContainedCall for RuntimeCall {
+	type SignedInfo = H160;
+
+	fn is_self_contained(&self) -> bool {
+		match self {
+			RuntimeCall::Ethereum(call) => call.is_self_contained(),
+			_ => false,
+		}
+	}
+
+	fn check_self_contained(&self) -> Option<Result<Self::SignedInfo, TransactionValidityError>> {
+		match self {
+			RuntimeCall::Ethereum(call) => call.check_self_contained(),
+			_ => None,
+		}
+	}
+
+	fn validate_self_contained(
+		&self,
+		info: &Self::SignedInfo,
+		dispatch_info: &DispatchInfoOf<RuntimeCall>,
+		len: usize,
+	) -> Option<TransactionValidity> {
+		match self {
+			RuntimeCall::Ethereum(call) => call.validate_self_contained(info, dispatch_info, len),
+			_ => None,
+		}
+	}
+
+	fn pre_dispatch_self_contained(
+		&self,
+		info: &Self::SignedInfo,
+		dispatch_info: &DispatchInfoOf<RuntimeCall>,
+		len: usize,
+	) -> Option<Result<(), TransactionValidityError>> {
+		match self {
+			RuntimeCall::Ethereum(call) =>
+				call.pre_dispatch_self_contained(info, dispatch_info, len),
+			_ => None,
+		}
+	}
+
+	fn apply_self_contained(
+		self,
+		info: Self::SignedInfo,
+	) -> Option<sp_runtime::DispatchResultWithInfo<PostDispatchInfoOf<Self>>> {
+		match self {
+			call @ RuntimeCall::Ethereum(pallet_ethereum::Call::transact { .. }) =>
+				Some(call.dispatch(RuntimeOrigin::from(
+					pallet_ethereum::RawOrigin::EthereumTransaction(info),
+				))),
+			_ => None,
+		}
+	}
+}
 
 #[cfg(feature = "runtime-benchmarks")]
 #[macro_use]
@@ -1931,7 +1997,7 @@ impl_runtime_apis! {
 			Executive::execute_block(block);
 		}
 
-		fn initialize_block(header: &<Block as BlockT>::Header) {
+		fn initialize_block(header: &<Block as BlockT>::Header) -> sp_runtime::ExtrinsicInclusionMode {
 			Executive::initialize_block(header)
 		}
 	}
@@ -1959,6 +2025,275 @@ impl_runtime_apis! {
 	impl frame_system_rpc_runtime_api::AccountNonceApi<Block, AccountId, Nonce> for Runtime {
 		fn account_nonce(account: AccountId) -> Nonce {
 			System::account_nonce(account)
+		}
+	}
+
+impl fp_rpc::EthereumRuntimeRPCApi<Block> for Runtime {
+		fn chain_id() -> u64 {
+			<Runtime as pallet_evm::Config>::ChainId::get()
+		}
+
+		fn account_basic(address: H160) -> pallet_evm::Account {
+			let (account, _) = EVM::account_basic(&address);
+			account
+		}
+
+		fn gas_price() -> U256 {
+			let (gas_price, _) = <Runtime as pallet_evm::Config>::FeeCalculator::min_gas_price();
+			gas_price
+		}
+
+		fn account_code_at(address: H160) -> Vec<u8> {
+			pallet_evm::AccountCodes::<Runtime>::get(address)
+		}
+
+		fn author() -> H160 {
+			<pallet_evm::Pallet<Runtime>>::find_author()
+		}
+
+		fn storage_at(address: H160, index: U256) -> H256 {
+			let mut tmp = [0u8; 32];
+			index.to_big_endian(&mut tmp);
+			pallet_evm::AccountStorages::<Runtime>::get(address, H256::from_slice(&tmp[..]))
+		}
+
+		fn call(
+			from: H160,
+			to: H160,
+			data: Vec<u8>,
+			value: U256,
+			gas_limit: U256,
+			max_fee_per_gas: Option<U256>,
+			max_priority_fee_per_gas: Option<U256>,
+			nonce: Option<U256>,
+			estimate: bool,
+			access_list: Option<Vec<(H160, Vec<H256>)>>,
+		) -> Result<pallet_evm::CallInfo, sp_runtime::DispatchError> {
+			let mut config = <Runtime as pallet_evm::Config>::config().clone();
+			config.estimate = estimate;
+
+			let is_transactional = false;
+			let validate = true;
+
+			// Estimated encoded transaction size must be based on the heaviest transaction
+			// type (EIP1559Transaction) to be compatible with all transaction types.
+			let mut estimated_transaction_len = data.len() +
+				// pallet ethereum index: 1
+				// transact call index: 1
+				// Transaction enum variant: 1
+				// chain_id 8 bytes
+				// nonce: 32
+				// max_priority_fee_per_gas: 32
+				// max_fee_per_gas: 32
+				// gas_limit: 32
+				// action: 21 (enum varianrt + call address)
+				// value: 32
+				// access_list: 1 (empty vec size)
+				// 65 bytes signature
+				258;
+
+			if access_list.is_some() {
+				estimated_transaction_len += access_list.encoded_size();
+			}
+
+			let gas_limit = gas_limit.min(u64::MAX.into()).low_u64();
+			let without_base_extrinsic_weight = true;
+
+			let (weight_limit, proof_size_base_cost) =
+						match <Runtime as pallet_evm::Config>::GasWeightMapping::gas_to_weight(
+							gas_limit,
+							without_base_extrinsic_weight
+						) {
+							weight_limit if weight_limit.proof_size() > 0 => {
+								(Some(weight_limit), Some(estimated_transaction_len as u64))
+							}
+							_ => (None, None),
+						};
+
+			// don't allow calling EVM RPC or Runtime API from a bound address
+			if EVMAccounts::bound_account_id(from).is_some() {
+				return Err(pallet_evm_accounts::Error::<Runtime>::BoundAddressCannotBeUsed.into())
+			};
+
+			<Runtime as pallet_evm::Config>::Runner::call(
+				from,
+				to,
+				data,
+				value,
+				gas_limit.unique_saturated_into(),
+				max_fee_per_gas,
+				max_priority_fee_per_gas,
+				nonce,
+				access_list.unwrap_or_default(),
+				is_transactional,
+				validate,
+				weight_limit,
+				proof_size_base_cost,
+				&config,
+			)
+			.map_err(|err| err.error.into())
+		}
+
+		fn create(
+			from: H160,
+			data: Vec<u8>,
+			value: U256,
+			gas_limit: U256,
+			max_fee_per_gas: Option<U256>,
+			max_priority_fee_per_gas: Option<U256>,
+			nonce: Option<U256>,
+			estimate: bool,
+			access_list: Option<Vec<(H160, Vec<H256>)>>,
+		) -> Result<pallet_evm::CreateInfo, sp_runtime::DispatchError> {
+			let config = if estimate {
+				let mut config = <Runtime as pallet_evm::Config>::config().clone();
+				config.estimate = true;
+				Some(config)
+			} else {
+				None
+			};
+
+			let is_transactional = false;
+			let validate = true;
+
+			// Reused approach from Moonbeam since Frontier implementation doesn't support this
+			let mut estimated_transaction_len = data.len() +
+				// to: 20
+				// from: 20
+				// value: 32
+				// gas_limit: 32
+				// nonce: 32
+				// 1 byte transaction action variant
+				// chain id 8 bytes
+				// 65 bytes signature
+				210;
+			if max_fee_per_gas.is_some() {
+				estimated_transaction_len += 32;
+			}
+			if max_priority_fee_per_gas.is_some() {
+				estimated_transaction_len += 32;
+			}
+			if access_list.is_some() {
+				estimated_transaction_len += access_list.encoded_size();
+			}
+
+			let gas_limit = gas_limit.min(u64::MAX.into()).low_u64();
+			let without_base_extrinsic_weight = true;
+
+			let (weight_limit, proof_size_base_cost) =
+				match <Runtime as pallet_evm::Config>::GasWeightMapping::gas_to_weight(
+					gas_limit,
+					without_base_extrinsic_weight
+				) {
+					weight_limit if weight_limit.proof_size() > 0 => {
+						(Some(weight_limit), Some(estimated_transaction_len as u64))
+					}
+					_ => (None, None),
+				};
+
+			// don't allow calling EVM RPC or Runtime API from a bound address
+			if EVMAccounts::bound_account_id(from).is_some() {
+				return Err(pallet_evm_accounts::Error::<Runtime>::BoundAddressCannotBeUsed.into())
+				};
+
+			// the address needs to have a permission to deploy smart contract
+			if !EVMAccounts::can_deploy_contracts(from) {
+				return Err(pallet_evm_accounts::Error::<Runtime>::AddressNotWhitelisted.into())
+			};
+
+			#[allow(clippy::or_fun_call)] // suggestion not helpful here
+			<Runtime as pallet_evm::Config>::Runner::create(
+				from,
+				data,
+				value,
+				gas_limit.unique_saturated_into(),
+				max_fee_per_gas,
+				max_priority_fee_per_gas,
+				nonce,
+				Vec::new(),
+				is_transactional,
+				validate,
+				weight_limit,
+				proof_size_base_cost,
+				config
+					.as_ref()
+					.unwrap_or(<Runtime as pallet_evm::Config>::config()),
+				)
+				.map_err(|err| err.error.into())
+		}
+
+		fn current_transaction_statuses() -> Option<Vec<TransactionStatus>> {
+			pallet_ethereum::CurrentTransactionStatuses::<Runtime>::get()
+		}
+
+		fn current_block() -> Option<pallet_ethereum::Block> {
+			pallet_ethereum::CurrentBlock::<Runtime>::get()
+		}
+
+		fn current_receipts() -> Option<Vec<pallet_ethereum::Receipt>> {
+			pallet_ethereum::CurrentReceipts::<Runtime>::get()
+		}
+
+		fn current_all() -> (
+			Option<pallet_ethereum::Block>,
+			Option<Vec<pallet_ethereum::Receipt>>,
+			Option<Vec<TransactionStatus>>,
+		) {
+			(
+				pallet_ethereum::CurrentBlock::<Runtime>::get(),
+				pallet_ethereum::CurrentReceipts::<Runtime>::get(),
+				pallet_ethereum::CurrentTransactionStatuses::<Runtime>::get(),
+			)
+		}
+
+		fn extrinsic_filter(xts: Vec<<Block as BlockT>::Extrinsic>) -> Vec<Transaction> {
+			xts.into_iter()
+				.filter_map(|xt| match xt.0.function {
+					RuntimeCall::Ethereum(pallet_ethereum::Call::transact { transaction }) => Some(transaction),
+					_ => None,
+				})
+				.collect::<Vec<Transaction>>()
+		}
+
+		fn elasticity() -> Option<Permill> {
+			None
+		}
+
+		fn gas_limit_multiplier_support() {}
+
+		fn pending_block(
+			xts: Vec<<Block as BlockT>::Extrinsic>,
+		) -> (Option<pallet_ethereum::Block>, Option<Vec<TransactionStatus>>) {
+			for ext in xts.into_iter() {
+				let _ = Executive::apply_extrinsic(ext);
+			}
+
+			Ethereum::on_finalize(System::block_number() + 1);
+
+			(
+				pallet_ethereum::CurrentBlock::<Runtime>::get(),
+				pallet_ethereum::CurrentTransactionStatuses::<Runtime>::get()
+			)
+		}
+	}
+
+	impl fp_rpc::ConvertTransactionRuntimeApi<Block> for Runtime {
+		fn convert_transaction(transaction: Transaction) -> <Block as BlockT>::Extrinsic {
+			UncheckedExtrinsic::new_unsigned(
+				pallet_ethereum::Call::<Runtime>::transact { transaction }.into(),
+			)
+		}
+	}
+
+	impl pallet_evm_accounts_rpc_runtime_api::EvmAccountsApi<Block, AccountId, H160> for Runtime {
+		fn evm_address(account_id: AccountId) -> H160 {
+			EVMAccounts::evm_address(&account_id)
+		}
+		fn bound_account_id(evm_address: H160) -> Option<AccountId> {
+			EVMAccounts::bound_account_id(evm_address)
+		}
+		fn account_id(evm_address: H160) -> AccountId {
+			EVMAccounts::account_id(evm_address)
 		}
 	}
 
@@ -2008,11 +2343,11 @@ impl_runtime_apis! {
 		fn decode_session_keys(
 			encoded: Vec<u8>,
 		) -> Option<Vec<(Vec<u8>, sp_core::crypto::KeyTypeId)>> {
-			SessionKeys::decode_into_raw_public_keys(&encoded)
+			opaque::SessionKeys::decode_into_raw_public_keys(&encoded)
 		}
 
 		fn generate_session_keys(seed: Option<Vec<u8>>) -> Vec<u8> {
-			SessionKeys::generate(seed)
+			opaque::SessionKeys::generate(seed)
 		}
 	}
 
@@ -2028,13 +2363,14 @@ impl_runtime_apis! {
 		}
 
 		fn authorities() -> Vec<AuraId> {
-			Aura::authorities().into_inner()
+			pallet_aura::Authorities::<Runtime>::get().into_inner()
 		}
 	}
 
 	impl bifrost_flexible_fee_rpc_runtime_api::FlexibleFeeRuntimeApi<Block, AccountId> for Runtime {
-		fn get_fee_token_and_amount(who: AccountId, fee: Balance, utx: <Block as BlockT>::Extrinsic) -> (CurrencyId, Balance) {
-			let call = utx.function;
+		fn get_fee_token_and_amount(who: AccountId, fee: Balance,utx: <Block as BlockT>::Extrinsic) -> (CurrencyId, Balance) {
+			let call = utx.0.function;
+
 			let rs = FlexibleFee::cal_fee_token_and_amount(&who, fee, &call);
 
 			match rs {
@@ -2242,12 +2578,16 @@ impl_runtime_apis! {
 	}
 
 	impl sp_genesis_builder::GenesisBuilder<Block> for Runtime {
-		fn create_default_config() -> Vec<u8> {
-			create_default_config::<RuntimeGenesisConfig>()
+		fn build_state(config: Vec<u8>) -> sp_genesis_builder::Result {
+			build_state::<RuntimeGenesisConfig>(config)
 		}
 
-		fn build_config(config: Vec<u8>) -> sp_genesis_builder::Result {
-			build_config::<RuntimeGenesisConfig>(config)
+		fn get_preset(id: &Option<sp_genesis_builder::PresetId>) -> Option<Vec<u8>> {
+			get_preset::<RuntimeGenesisConfig>(id, |_| None)
+		}
+
+		fn preset_names() -> Vec<sp_genesis_builder::PresetId> {
+			vec![]
 		}
 	}
 }

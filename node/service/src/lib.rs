@@ -23,7 +23,9 @@ pub mod chain_spec;
 pub mod collator_kusama;
 #[cfg(feature = "with-bifrost-polkadot-runtime")]
 pub mod collator_polkadot;
+pub mod eth;
 pub use bifrost_rpc as rpc;
+pub mod dev;
 
 /// Can be called for a `Configuration` to check if it is a configuration for the `Bifrost` network.
 pub trait IdentifyVariant {

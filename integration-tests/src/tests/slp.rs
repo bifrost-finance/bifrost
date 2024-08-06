@@ -59,7 +59,7 @@ fn cross_dot_to_bifrost(to: AccountId32, amount: u128) {
 			100_000_000_000,
 		);
 		let _ = RelayBalances::deposit_creating(&to, amount);
-		assert_ok!(RelayXcmPallet::reserve_transfer_assets(
+		assert_ok!(RelayXcmPallet::limited_reserve_transfer_assets(
 			Some(to.clone()).into(),
 			Box::new(VersionedLocation::V4(Parachain(2030).into())),
 			Box::new(VersionedLocation::V4(
@@ -67,6 +67,7 @@ fn cross_dot_to_bifrost(to: AccountId32, amount: u128) {
 			)),
 			Box::new(VersionedAssets::V4((Here, amount / 10).into())),
 			0,
+			Unlimited
 		));
 	});
 }

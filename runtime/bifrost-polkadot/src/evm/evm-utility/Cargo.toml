@@ -1,0 +1,18 @@
+[package]
+name = "module-evm-utility"
+version = "2.21.0"
+authors = ["Acala Developers"]
+edition = "2021"
+
+[dependencies]
+sha3 = { workspace = true }
+sp-std = { workspace = true }
+ethereum = { workspace = true }
+
+[features]
+default = ["std"]
+std = [
+	"sha3/std",
+	"sp-std/std",
+	"ethereum/with-serde",
+]

@@ -1,17 +1,17 @@
-<a href="https://bifrost.finance"><img align="center" src="./docs/res/readme/bifrost-banner.svg" alt="Bifrost Banner"/></a>
+<a href="https://bifrost.io"><img align="center" src="./docs/res/readme/bifrost-banner.svg" alt="Bifrost Banner"/></a>
 
-<a href="https://bifrost.finance"><img align="right" width="100" src="./docs/res/readme/bifrost-black-logo.svg" alt="Bifrost Logo"/></a>
+<a href="https://bifrost.io"><img align="right" width="100" src="./docs/res/readme/bifrost-black-logo.svg" alt="Bifrost Logo"/></a>
 
-<h1 align="left"><a href="https://bifrost.finance">Homepage</a></h1>
+<h1 align="left"><a href="https://bifrost.io">Homepage</a></h1>
 
 Welcome,
 
 Bifrost is a Web3 derivatives protocol that provides decentralized cross-chain liquidity for staked assets. By leveraging on the cross-consensus message ([XCM](https://wiki.polkadot.network/docs/learn-xcm)) it can provide cross-chain liquid staking services for multiple chains.
 
-[Our mission](https://bifrost-finance.notion.site/7df6abf2acb54b398df75230e157c7da?v=02ecfe941c5242c3b5f8c77654512b80) is to provide standardized cross-chain interest-bearing derivatives for [Polkadot](https://polkadot.network) relay chains, parachains, and heterogeneous chains bridged with Polkadot.
+[Our mission](https://notion.bifrost.io/Bifrost-Roadmap-ba6c44bd4f684e5aa875ec44388b2330) is to provide standardized cross-chain interest-bearing derivatives for [Polkadot](https://polkadot.network) relay chains, parachains, and heterogeneous chains bridged with Polkadot.
 
-👉 _Discover the Bifrost at [bifrost.finance](https://bifrost.finance/)._  
-👉 _Learn to use the Bifrost with our [wiki](https://wiki.bifrost.finance/)._
+👉 _Discover the Bifrost at [bifrost.io](https://bifrost.io/)._  
+👉 _Learn to use the Bifrost with our [docs](https://docs.bifrost.io/)._
 
 <h4>🐣 Supported by</h4>
 
@@ -25,10 +25,10 @@ Bifrost is a Web3 derivatives protocol that provides decentralized cross-chain l
 [![Codacy Badge](https://app.codacy.com/project/badge/Grade/acec53276777415593c2b02b2200f62e)](https://www.codacy.com/gh/bifrost-finance/bifrost?utm_source=github.com&utm_medium=referral&utm_content=bifrost-finance/bifrost&utm_campaign=Badge_Grade)
 [![Substrate Version](https://img.shields.io/badge/Substrate-latest-brightgreen?logo=Parity%20Substrate)](https://github.com/paritytech/substrate)
 [![License](https://img.shields.io/github/license/bifrost-finance/bifrost?color=blue)](https://github.com/bifrost-finance/bifrost/blob/master/LICENSE)
-[![Dapp](https://img.shields.io/badge/Dapp-5c5c5c?logo=Icinga)](https://bifrost.app)
-[![Analytics](https://img.shields.io/badge/-Analytics-5c5c5c?logo=Google%20Analytics)](https://stats.bifrost.app)
+[![Dapp](https://img.shields.io/badge/Dapp-5c5c5c?logo=Icinga)](https://app.bifrost.io)
+[![Analytics](https://img.shields.io/badge/-Analytics-5c5c5c?logo=Google%20Analytics)](https://stats.bifrost.io)
 [![Discord](https://img.shields.io/badge/-Discord-5c5c5c?logo=Discord)](https://discord.gg/bifrost-finance)
-[![Twitter](https://img.shields.io/badge/-Twitter-5c5c5c?logo=Twitter)](https://twitter.com/BifrostFinance)
+[![Twitter](https://img.shields.io/badge/-X-5c5c5c?logo=X&logoColor=white)](https://x.com/Bifrost)
 
 ## Get Build Help
 
@@ -89,8 +89,20 @@ make try-polkadot-runtime-upgrade
 
 ## Run development chain
 
-```bash
-make run-dev
+run node with `--chain=bifrost-polkadot-dev` to enable development mode.
+
+Before use dev mode, modify OnTimestampSet to be ()
+
+```rust
+impl pallet_timestamp::Config for Runtime {
+	type MinimumPeriod = ConstU64<{ SLOT_DURATION / 2 }>;
+	/// A timestamp: milliseconds since the unix epoch.
+	type Moment = Moment;
+   -type OnTimestampSet = Aura;
+   +type OnTimestampSet = ();
+	type WeightInfo = pallet_timestamp::weights::SubstrateWeight<Runtime>;
+}
+
 ```
 
 ## Run local testnet with polkadot-launch

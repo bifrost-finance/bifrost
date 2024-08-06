@@ -619,13 +619,18 @@ impl<T: Config> fungibles::Inspect<T::AccountId> for Pallet<T> {
 }
 
 impl<T: Config> fungibles::Unbalanced<T::AccountId> for Pallet<T> {
-	fn handle_dust(_dust: fungibles::Dust<T::AccountId, Self>) {
-		// https://github.com/paritytech/substrate/blob/569aae5341ea0c1d10426fa1ec13a36c0b64393b/frame/support/src/traits/tokens/fungibles/regular.rs#L124
-		// Note: currently the field of Dust type is private and there is no constructor for it, so
-		// we can't construct a Dust value and pass it. Do nothing here.
-		// `Pallet<T>` overwrites these functions which can be called as user-level operation of
-		// fungibles traits when calling these functions, it will not actually reach
-		// `Unbalanced::handle_dust`.
+	fn handle_dust(dust: fungibles::Dust<T::AccountId, Self>) {
+		let asset = dust.0;
+		if asset == T::GetNativeCurrencyId::get() {
+			<T::NativeCurrency as fungible::Unbalanced<T::AccountId>>::handle_dust(fungible::Dust(
+				dust.1.into(),
+			))
+		} else {
+			<T::MultiCurrency as fungibles::Unbalanced<T::AccountId>>::handle_dust(fungibles::Dust(
+				dust.0.into(),
+				dust.1.into(),
+			))
+		}
 	}
 
 	fn write_balance(
@@ -668,16 +673,26 @@ impl<T: Config> fungibles::Mutate<T::AccountId> for Pallet<T> {
 		asset_id: Self::AssetId,
 		who: &T::AccountId,
 		amount: Self::Balance,
+		preservation: Preservation,
 		precision: Precision,
 		fortitude: Fortitude,
 	) -> Result<Self::Balance, DispatchError> {
 		match asset_id {
 			id if id == T::GetNativeCurrencyId::get() =>
 				<T::NativeCurrency as fungible::Mutate<_>>::burn_from(
-					who, amount, precision, fortitude,
+					who,
+					amount,
+					preservation,
+					precision,
+					fortitude,
 				),
 			_ => <T::MultiCurrency as fungibles::Mutate<_>>::burn_from(
-				asset_id, who, amount, precision, fortitude,
+				asset_id,
+				who,
+				amount,
+				preservation,
+				precision,
+				fortitude,
 			),
 		}
 	}
@@ -1246,10 +1261,17 @@ where
 	fn burn_from(
 		who: &T::AccountId,
 		amount: Self::Balance,
+		preservation: Preservation,
 		precision: Precision,
 		fortitude: Fortitude,
 	) -> Result<Self::Balance, DispatchError> {
-		<Currency as fungible::Mutate<_>>::burn_from(who, amount, precision, fortitude)
+		<Currency as fungible::Mutate<_>>::burn_from(
+			who,
+			amount,
+			preservation,
+			precision,
+			fortitude,
+		)
 	}
 
 	fn transfer(
