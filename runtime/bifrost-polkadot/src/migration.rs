@@ -398,3 +398,33 @@ pub mod opengov {
 		}
 	}
 }
+
+pub mod genesis_evm_storage {
+	use crate::{Runtime, Weight};
+	use frame_support::traits::OnRuntimeUpgrade;
+	use pallet_dynamic_fee::MinGasPrice;
+	use pallet_evm_chain_id::ChainId;
+	use primitive_types::U256;
+
+	pub struct GenesisEVMStorage;
+
+	impl OnRuntimeUpgrade for GenesisEVMStorage {
+		#[cfg(feature = "try-runtime")]
+		fn pre_upgrade() -> Result<Vec<u8>, &'static str> {
+			Ok(vec![])
+		}
+
+		fn on_runtime_upgrade() -> Weight {
+			let evm_id: u64 = 996u64;
+			let min_gas_fee: U256 = U256::from(560174200u64);
+			ChainId::<Runtime>::put(evm_id);
+			MinGasPrice::<Runtime>::put(min_gas_fee);
+			<Runtime as frame_system::Config>::DbWeight::get().reads_writes(0, 2)
+		}
+
+		#[cfg(feature = "try-runtime")]
+		fn post_upgrade(_state: Vec<u8>) -> Result<(), &'static str> {
+			Ok(())
+		}
+	}
+}

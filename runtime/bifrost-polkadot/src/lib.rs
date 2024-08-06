@@ -1896,6 +1896,7 @@ pub mod migrations {
 			Runtime,
 			governance::fellowship::FellowshipCollectiveInstance,
 		>,
+		crate::migration::genesis_evm_storage::GenesisEVMStorage,
 	);
 }
 
