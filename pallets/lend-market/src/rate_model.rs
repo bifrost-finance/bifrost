@@ -107,9 +107,9 @@ impl JumpModel {
 
 	/// Check the jump model for sanity
 	pub fn check_model(&self) -> bool {
-		if self.base_rate > Self::MAX_BASE_RATE
-			|| self.jump_rate > Self::MAX_JUMP_RATE
-			|| self.full_rate > Self::MAX_FULL_RATE
+		if self.base_rate > Self::MAX_BASE_RATE ||
+			self.jump_rate > Self::MAX_JUMP_RATE ||
+			self.full_rate > Self::MAX_FULL_RATE
 		{
 			return false;
 		}
@@ -229,9 +229,9 @@ mod tests {
 		let excess_util = util.saturating_sub(jump_utilization);
 		assert_eq!(
 			borrow_rate,
-			(jump_model.full_rate - jump_model.jump_rate).saturating_mul(excess_util.into())
-				/ FixedU128::saturating_from_rational(20, 100)
-				+ normal_rate,
+			(jump_model.full_rate - jump_model.jump_rate).saturating_mul(excess_util.into()) /
+				FixedU128::saturating_from_rational(20, 100) +
+				normal_rate,
 		);
 	}
 

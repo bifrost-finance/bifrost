@@ -236,10 +236,9 @@ impl<T: Config> Pallet<T> {
 				percent_check.checked_add(proportion).ok_or(Error::<T>::PercentOverflow)?;
 			BoostVotingPools::<T>::mutate(pid, |maybe_total_votes| -> DispatchResult {
 				match maybe_total_votes.as_mut() {
-					Some(total_votes) => {
+					Some(total_votes) =>
 						*total_votes =
-							total_votes.checked_add(&increace).ok_or(ArithmeticError::Overflow)?
-					},
+							total_votes.checked_add(&increace).ok_or(ArithmeticError::Overflow)?,
 					None => *maybe_total_votes = Some(increace),
 				}
 				Ok(())

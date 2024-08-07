@@ -532,36 +532,32 @@ impl<T: Config> fungibles::Inspect<T::AccountId> for Pallet<T> {
 
 	fn total_issuance(asset_id: Self::AssetId) -> Self::Balance {
 		match asset_id {
-			id if id == T::GetNativeCurrencyId::get() => {
-				<T::NativeCurrency as fungible::Inspect<_>>::total_issuance()
-			},
+			id if id == T::GetNativeCurrencyId::get() =>
+				<T::NativeCurrency as fungible::Inspect<_>>::total_issuance(),
 			_ => <T::MultiCurrency as fungibles::Inspect<_>>::total_issuance(asset_id),
 		}
 	}
 
 	fn minimum_balance(asset_id: Self::AssetId) -> Self::Balance {
 		match asset_id {
-			id if id == T::GetNativeCurrencyId::get() => {
-				<T::NativeCurrency as fungible::Inspect<_>>::minimum_balance()
-			},
+			id if id == T::GetNativeCurrencyId::get() =>
+				<T::NativeCurrency as fungible::Inspect<_>>::minimum_balance(),
 			_ => <T::MultiCurrency as fungibles::Inspect<_>>::minimum_balance(asset_id),
 		}
 	}
 
 	fn balance(asset_id: Self::AssetId, who: &T::AccountId) -> Self::Balance {
 		match asset_id {
-			id if id == T::GetNativeCurrencyId::get() => {
-				<T::NativeCurrency as fungible::Inspect<_>>::balance(who)
-			},
+			id if id == T::GetNativeCurrencyId::get() =>
+				<T::NativeCurrency as fungible::Inspect<_>>::balance(who),
 			_ => <T::MultiCurrency as fungibles::Inspect<_>>::balance(asset_id, who),
 		}
 	}
 
 	fn total_balance(asset_id: Self::AssetId, who: &T::AccountId) -> Self::Balance {
 		match asset_id {
-			id if id == T::GetNativeCurrencyId::get() => {
-				<T::NativeCurrency as fungible::Inspect<_>>::total_balance(who)
-			},
+			id if id == T::GetNativeCurrencyId::get() =>
+				<T::NativeCurrency as fungible::Inspect<_>>::total_balance(who),
 			_ => <T::MultiCurrency as fungibles::Inspect<_>>::total_balance(asset_id, who),
 		}
 	}
@@ -594,9 +590,8 @@ impl<T: Config> fungibles::Inspect<T::AccountId> for Pallet<T> {
 		provenance: Provenance,
 	) -> DepositConsequence {
 		match asset_id {
-			id if id == T::GetNativeCurrencyId::get() => {
-				<T::NativeCurrency as fungible::Inspect<_>>::can_deposit(who, amount, provenance)
-			},
+			id if id == T::GetNativeCurrencyId::get() =>
+				<T::NativeCurrency as fungible::Inspect<_>>::can_deposit(who, amount, provenance),
 			_ => <T::MultiCurrency as fungibles::Inspect<_>>::can_deposit(
 				asset_id, who, amount, provenance,
 			),
@@ -609,9 +604,8 @@ impl<T: Config> fungibles::Inspect<T::AccountId> for Pallet<T> {
 		amount: Self::Balance,
 	) -> WithdrawConsequence<Self::Balance> {
 		match asset_id {
-			id if id == T::GetNativeCurrencyId::get() => {
-				<T::NativeCurrency as fungible::Inspect<_>>::can_withdraw(who, amount)
-			},
+			id if id == T::GetNativeCurrencyId::get() =>
+				<T::NativeCurrency as fungible::Inspect<_>>::can_withdraw(who, amount),
 			_ => <T::MultiCurrency as fungibles::Inspect<_>>::can_withdraw(asset_id, who, amount),
 		}
 	}
@@ -645,23 +639,19 @@ impl<T: Config> fungibles::Unbalanced<T::AccountId> for Pallet<T> {
 		amount: Self::Balance,
 	) -> Result<Option<Self::Balance>, DispatchError> {
 		match asset_id {
-			id if id == T::GetNativeCurrencyId::get() => {
-				<T::NativeCurrency as fungible::Unbalanced<_>>::write_balance(who, amount)
-			},
-			_ => {
-				<T::MultiCurrency as fungibles::Unbalanced<_>>::write_balance(asset_id, who, amount)
-			},
+			id if id == T::GetNativeCurrencyId::get() =>
+				<T::NativeCurrency as fungible::Unbalanced<_>>::write_balance(who, amount),
+			_ =>
+				<T::MultiCurrency as fungibles::Unbalanced<_>>::write_balance(asset_id, who, amount),
 		}
 	}
 
 	fn set_total_issuance(asset_id: Self::AssetId, amount: Self::Balance) {
 		match asset_id {
-			id if id == T::GetNativeCurrencyId::get() => {
-				<T::NativeCurrency as fungible::Unbalanced<_>>::set_total_issuance(amount)
-			},
-			_ => {
-				<T::MultiCurrency as fungibles::Unbalanced<_>>::set_total_issuance(asset_id, amount)
-			},
+			id if id == T::GetNativeCurrencyId::get() =>
+				<T::NativeCurrency as fungible::Unbalanced<_>>::set_total_issuance(amount),
+			_ =>
+				<T::MultiCurrency as fungibles::Unbalanced<_>>::set_total_issuance(asset_id, amount),
 		}
 	}
 }
@@ -673,9 +663,8 @@ impl<T: Config> fungibles::Mutate<T::AccountId> for Pallet<T> {
 		amount: Self::Balance,
 	) -> Result<Self::Balance, DispatchError> {
 		match asset_id {
-			id if id == T::GetNativeCurrencyId::get() => {
-				<T::NativeCurrency as fungible::Mutate<_>>::mint_into(who, amount)
-			},
+			id if id == T::GetNativeCurrencyId::get() =>
+				<T::NativeCurrency as fungible::Mutate<_>>::mint_into(who, amount),
 			_ => <T::MultiCurrency as fungibles::Mutate<_>>::mint_into(asset_id, who, amount),
 		}
 	}
@@ -689,15 +678,14 @@ impl<T: Config> fungibles::Mutate<T::AccountId> for Pallet<T> {
 		fortitude: Fortitude,
 	) -> Result<Self::Balance, DispatchError> {
 		match asset_id {
-			id if id == T::GetNativeCurrencyId::get() => {
+			id if id == T::GetNativeCurrencyId::get() =>
 				<T::NativeCurrency as fungible::Mutate<_>>::burn_from(
 					who,
 					amount,
 					preservation,
 					precision,
 					fortitude,
-				)
-			},
+				),
 			_ => <T::MultiCurrency as fungibles::Mutate<_>>::burn_from(
 				asset_id,
 				who,

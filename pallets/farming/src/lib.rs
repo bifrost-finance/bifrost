@@ -348,8 +348,8 @@ pub mod pallet {
 					PoolInfos::<T>::insert(pid, &pool_info);
 				},
 				PoolState::Charged => {
-					if n >= pool_info.after_block_to_start
-						&& pool_info.total_shares >= pool_info.min_deposit_to_start
+					if n >= pool_info.after_block_to_start &&
+						pool_info.total_shares >= pool_info.min_deposit_to_start
 					{
 						pool_info.block_startup = Some(n);
 						pool_info.state = PoolState::Ongoing;
@@ -466,8 +466,8 @@ pub mod pallet {
 				},
 				false => {
 					ensure!(
-						pool_info.state == PoolState::UnCharged
-							|| pool_info.state == PoolState::Ongoing,
+						pool_info.state == PoolState::UnCharged ||
+							pool_info.state == PoolState::Ongoing,
 						Error::<T>::InvalidPoolState
 					);
 					rewards.iter().try_for_each(|(reward_currency, reward)| -> DispatchResult {
@@ -545,9 +545,9 @@ pub mod pallet {
 
 			let pool_info = Self::pool_infos(&pid).ok_or(Error::<T>::PoolDoesNotExist)?;
 			ensure!(
-				pool_info.state == PoolState::Ongoing
-					|| pool_info.state == PoolState::Charged
-					|| pool_info.state == PoolState::Dead,
+				pool_info.state == PoolState::Ongoing ||
+					pool_info.state == PoolState::Charged ||
+					pool_info.state == PoolState::Dead,
 				Error::<T>::InvalidPoolState
 			);
 			let share_info = Self::shares_and_withdrawn_rewards(&pid, &exchanger)
@@ -580,8 +580,8 @@ pub mod pallet {
 			let share_info = Self::shares_and_withdrawn_rewards(&pid, &exchanger)
 				.ok_or(Error::<T>::ShareInfoNotExists)?;
 			ensure!(
-				share_info.claim_last_block.saturating_add(pool_info.claim_limit_time)
-					<= current_block_number,
+				share_info.claim_last_block.saturating_add(pool_info.claim_limit_time) <=
+					current_block_number,
 				Error::<T>::CanNotClaim
 			);
 
@@ -756,10 +756,10 @@ pub mod pallet {
 
 			let mut pool_info = Self::pool_infos(&pid).ok_or(Error::<T>::PoolDoesNotExist)?;
 			ensure!(
-				pool_info.state == PoolState::Retired
-					|| pool_info.state == PoolState::Ongoing
-					|| pool_info.state == PoolState::Charged
-					|| pool_info.state == PoolState::UnCharged,
+				pool_info.state == PoolState::Retired ||
+					pool_info.state == PoolState::Ongoing ||
+					pool_info.state == PoolState::Charged ||
+					pool_info.state == PoolState::UnCharged,
 				Error::<T>::InvalidPoolState
 			);
 			if let Some(basic_rewards) = basic_rewards {

@@ -434,10 +434,10 @@ impl<T: Config> Pallet<T> {
 					share_info.withdraw_list = tmp;
 
 					// if withdraw_list and share both are empty, and if_remove is true, remove it.
-					if share_info.withdraw_list
-						!= Vec::<(BlockNumberFor<T>, BalanceOf<T>)>::default()
-						|| !share_info.share.is_zero()
-						|| !if_remove
+					if share_info.withdraw_list !=
+						Vec::<(BlockNumberFor<T>, BalanceOf<T>)>::default() ||
+						!share_info.share.is_zero() ||
+						!if_remove
 					{
 						*share_info_old = Some(share_info);
 					};

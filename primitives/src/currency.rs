@@ -339,9 +339,8 @@ impl CurrencyId {
 		let vsbond_origin = CurrencyId::VSBond(symbol, index, first_slot, last_slot);
 
 		let vsbond_fixed = match vsbond_origin {
-			Self::VSBond(TokenSymbol::KSM, 2001, 13, 20) => {
-				Self::VSBond(TokenSymbol::BNC, 2001, 13, 20)
-			},
+			Self::VSBond(TokenSymbol::KSM, 2001, 13, 20) =>
+				Self::VSBond(TokenSymbol::BNC, 2001, 13, 20),
 			_ => vsbond_origin,
 		};
 

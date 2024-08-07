@@ -243,9 +243,9 @@ pub mod pallet {
 			T::ControlOrigin::ensure_origin(origin)?;
 			let fee_denominator: T::AtLeast64BitUnsigned = T::FeePrecision::get();
 			ensure!(
-				mint_fee.map(|x| x < fee_denominator).unwrap_or(true)
-					&& swap_fee.map(|x| x < fee_denominator).unwrap_or(true)
-					&& redeem_fee.map(|x| x < fee_denominator).unwrap_or(true),
+				mint_fee.map(|x| x < fee_denominator).unwrap_or(true) &&
+					swap_fee.map(|x| x < fee_denominator).unwrap_or(true) &&
+					redeem_fee.map(|x| x < fee_denominator).unwrap_or(true),
 				bifrost_stable_asset::Error::<T>::ArgumentsError
 			);
 			Pools::<T>::try_mutate_exists(pool_id, |maybe_pool_info| -> DispatchResult {
@@ -461,8 +461,8 @@ impl<T: Config> Pallet<T> {
 				continue;
 			}
 			ensure!(
-				amounts_old[i]
-					>= Self::downscale(
+				amounts_old[i] >=
+					Self::downscale(
 						*amount,
 						pool_id,
 						*pool_info
@@ -547,8 +547,8 @@ impl<T: Config> Pallet<T> {
 		let zero = Zero::zero();
 		for i in 0..amounts.len() {
 			ensure!(
-				amounts[i]
-					>= *min_redeem_amounts
+				amounts[i] >=
+					*min_redeem_amounts
 						.get(i as usize)
 						.ok_or(bifrost_stable_asset::Error::<T>::ArgumentsMismatch)?,
 				bifrost_stable_asset::Error::<T>::RedeemUnderMin
@@ -994,12 +994,12 @@ impl<T: Config> Pallet<T> {
 		currency_id_out: &AssetIdOf<T>,
 	) -> Option<(StableAssetPoolId, PoolTokenIndex, PoolTokenIndex)> {
 		Pools::<T>::iter().find_map(|(pool_id, pool_info)| {
-			if pool_info.assets.get(0) == Some(currency_id_in)
-				&& pool_info.assets.get(1) == Some(currency_id_out)
+			if pool_info.assets.get(0) == Some(currency_id_in) &&
+				pool_info.assets.get(1) == Some(currency_id_out)
 			{
 				Some((pool_id, 0, 1))
-			} else if pool_info.assets.get(0) == Some(currency_id_out)
-				&& pool_info.assets.get(1) == Some(currency_id_in)
+			} else if pool_info.assets.get(0) == Some(currency_id_out) &&
+				pool_info.assets.get(1) == Some(currency_id_in)
 			{
 				Some((pool_id, 1, 0))
 			} else {

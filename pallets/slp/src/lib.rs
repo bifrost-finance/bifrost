@@ -2227,9 +2227,7 @@ pub mod pallet {
 			match origin.clone().into() {
 				Ok(RawOrigin::Signed(ref signer))
 					if Some(signer) == <OperateOrigins<T>>::get(currency_id).as_ref() =>
-				{
-					Ok(())
-				},
+					Ok(()),
 				_ => {
 					T::ControlOrigin::ensure_origin(origin)
 						.map_err(|_| Error::<T>::NotAuthorized)?;

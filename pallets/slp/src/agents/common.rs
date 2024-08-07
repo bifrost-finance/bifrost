@@ -383,10 +383,10 @@ impl<T: Config> Pallet<T> {
 		let responder = Self::convert_currency_to_dest_location(currency_id)?;
 
 		let (notify_call_weight, callback_option) = match (currency_id, operation) {
-			(DOT, &XcmOperationType::Delegate)
-			| (DOT, &XcmOperationType::Undelegate)
-			| (KSM, &XcmOperationType::Delegate)
-			| (KSM, &XcmOperationType::Undelegate) => {
+			(DOT, &XcmOperationType::Delegate) |
+			(DOT, &XcmOperationType::Undelegate) |
+			(KSM, &XcmOperationType::Delegate) |
+			(KSM, &XcmOperationType::Undelegate) => {
 				let notify_call = Self::confirm_validators_by_delegator_call();
 				(notify_call.get_dispatch_info().weight, Some(notify_call))
 			},
@@ -576,17 +576,16 @@ impl<T: Config> Pallet<T> {
 		let delays = CurrencyDelays::<T>::get(currency_id).ok_or(Error::<T>::DelaysNotExist)?;
 
 		let unlock_time_unit = match (currency_id, current_time_unit) {
-			(ASTR, TimeUnit::Era(current_era))
-			| (KSM, TimeUnit::Era(current_era))
-			| (DOT, TimeUnit::Era(current_era)) => {
+			(ASTR, TimeUnit::Era(current_era)) |
+			(KSM, TimeUnit::Era(current_era)) |
+			(DOT, TimeUnit::Era(current_era)) =>
 				if let TimeUnit::Era(delay_era) = delays.unlock_delay {
 					let unlock_era =
 						current_era.checked_add(delay_era).ok_or(Error::<T>::OverFlow)?;
 					TimeUnit::Era(unlock_era)
 				} else {
 					Err(Error::<T>::InvalidTimeUnit)?
-				}
-			},
+				},
 			(PHA, TimeUnit::Hour(current_hour)) => {
 				if let TimeUnit::Hour(delay_hour) = delays.unlock_delay {
 					let unlock_hour =
@@ -596,10 +595,10 @@ impl<T: Config> Pallet<T> {
 					Err(Error::<T>::InvalidTimeUnit)?
 				}
 			},
-			(BNC, TimeUnit::Round(current_round))
-			| (MOVR, TimeUnit::Round(current_round))
-			| (GLMR, TimeUnit::Round(current_round))
-			| (MANTA, TimeUnit::Round(current_round)) => {
+			(BNC, TimeUnit::Round(current_round)) |
+			(MOVR, TimeUnit::Round(current_round)) |
+			(GLMR, TimeUnit::Round(current_round)) |
+			(MANTA, TimeUnit::Round(current_round)) => {
 				let mut delay = delays.unlock_delay;
 				if if_leave {
 					delay = delays.leave_delegators_delay;

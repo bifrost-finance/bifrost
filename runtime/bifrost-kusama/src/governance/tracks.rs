@@ -206,8 +206,8 @@ impl pallet_referenda::TracksInfo<Balance, BlockNumber> for TracksInfo {
 fn vote_locking_always_longer_than_enactment_period() {
 	for (_, track) in TRACKS_DATA {
 		assert!(
-			<Runtime as pallet_conviction_voting::Config>::VoteLockingPeriod::get()
-				>= track.min_enactment_period,
+			<Runtime as pallet_conviction_voting::Config>::VoteLockingPeriod::get() >=
+				track.min_enactment_period,
 			"Track {} has enactment period {} < vote locking period {}",
 			track.name,
 			track.min_enactment_period,

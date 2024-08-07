@@ -84,8 +84,8 @@ orml_traits::parameter_type_with_key! {
 pub struct DustRemovalWhitelist;
 impl Contains<AccountId> for DustRemovalWhitelist {
 	fn contains(a: &AccountId) -> bool {
-		BifrostTreasuryAccount::get().eq(a)
-			|| AccountIdConversion::<AccountId>::into_account_truncating(
+		BifrostTreasuryAccount::get().eq(a) ||
+			AccountIdConversion::<AccountId>::into_account_truncating(
 				&VsbondAuctionPalletId::get(),
 			)
 			.eq(a)

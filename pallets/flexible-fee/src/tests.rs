@@ -312,8 +312,8 @@ fn ensure_can_charge_fee_should_work() {
 			WithdrawReasons::TRANSACTION_PAYMENT,
 		));
 		assert_eq!(<Test as crate::Config>::Currency::free_balance(&BOB), 100); // no exitential deposit requirement. 100 is enough
-																		// Bob should be deducted 100 from Asset 0 since Asset 0 has enough balance.
-																		// Currency 1 should not be affected.
+																		  // Bob should be deducted 100 from Asset 0 since Asset 0 has enough balance.
+																		  // Currency 1 should not be affected.
 		assert_eq!(Currencies::total_balance(CURRENCY_ID_1, &BOB), 200);
 	});
 }

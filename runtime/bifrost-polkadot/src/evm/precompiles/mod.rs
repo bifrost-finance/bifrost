@@ -145,9 +145,9 @@ where
 	}
 
 	fn is_precompile(&self, address: H160, _remaining_gas: u64) -> IsPrecompileResult {
-		let is_precompile = address == DISPATCH_ADDR
-			|| is_asset_address(address)
-			|| is_standard_precompile(address);
+		let is_precompile = address == DISPATCH_ADDR ||
+			is_asset_address(address) ||
+			is_standard_precompile(address);
 		IsPrecompileResult::Answer { is_precompile, extra_cost: 0 }
 	}
 }

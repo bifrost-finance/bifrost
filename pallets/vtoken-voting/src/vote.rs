@@ -73,9 +73,8 @@ pub enum VoteRole {
 impl<Balance> From<AccountVote<Balance>> for VoteRole {
 	fn from(a: AccountVote<Balance>) -> VoteRole {
 		match a {
-			AccountVote::Standard { vote, balance: _ } => {
-				VoteRole::Standard { aye: vote.aye, conviction: vote.conviction }
-			},
+			AccountVote::Standard { vote, balance: _ } =>
+				VoteRole::Standard { aye: vote.aye, conviction: vote.conviction },
 			AccountVote::Split { .. } => VoteRole::Split,
 			AccountVote::SplitAbstain { .. } => VoteRole::SplitAbstain,
 		}
@@ -85,9 +84,8 @@ impl<Balance> From<AccountVote<Balance>> for VoteRole {
 impl<Balance: Zero> From<VoteRole> for AccountVote<Balance> {
 	fn from(v: VoteRole) -> AccountVote<Balance> {
 		match v {
-			VoteRole::Standard { aye, conviction } => {
-				AccountVote::Standard { vote: Vote { aye, conviction }, balance: Zero::zero() }
-			},
+			VoteRole::Standard { aye, conviction } =>
+				AccountVote::Standard { vote: Vote { aye, conviction }, balance: Zero::zero() },
 			VoteRole::Split => AccountVote::Split { aye: Zero::zero(), nay: Zero::zero() },
 			VoteRole::SplitAbstain => AccountVote::SplitAbstain {
 				aye: Zero::zero(),
@@ -182,9 +180,8 @@ impl<Balance: Saturating> AccountVote<Balance> {
 		match self {
 			AccountVote::Standard { balance, .. } => balance,
 			AccountVote::Split { aye, nay } => aye.saturating_add(nay),
-			AccountVote::SplitAbstain { aye, nay, abstain } => {
-				aye.saturating_add(nay).saturating_add(abstain)
-			},
+			AccountVote::SplitAbstain { aye, nay, abstain } =>
+				aye.saturating_add(nay).saturating_add(abstain),
 		}
 	}
 
@@ -417,18 +414,16 @@ where
 	/// The amount of this account's balance that must currently be locked due to voting.
 	pub fn locked_balance(&self) -> Balance {
 		match self {
-			Voting::Casting(Casting { votes, prior, .. }) => {
-				votes.iter().map(|i| i.3).fold(prior.locked(), |a, i| a.max(i))
-			},
+			Voting::Casting(Casting { votes, prior, .. }) =>
+				votes.iter().map(|i| i.3).fold(prior.locked(), |a, i| a.max(i)),
 			Voting::Delegating(Delegating { balance, prior, .. }) => *balance.max(&prior.locked()),
 		}
 	}
 
 	pub fn locked_vtoken_balance(&self) -> Balance {
 		match self {
-			Voting::Casting(Casting { votes, .. }) => {
-				votes.iter().map(|i| i.3).fold(Zero::zero(), |a, i| a.max(i))
-			},
+			Voting::Casting(Casting { votes, .. }) =>
+				votes.iter().map(|i| i.3).fold(Zero::zero(), |a, i| a.max(i)),
 			Voting::Delegating(Delegating { .. }) => Zero::zero(),
 		}
 	}
@@ -439,12 +434,10 @@ where
 		prior: PriorLock<BlockNumber, Balance>,
 	) {
 		let (d, p) = match self {
-			Voting::Casting(Casting { ref mut delegations, ref mut prior, .. }) => {
-				(delegations, prior)
-			},
-			Voting::Delegating(Delegating { ref mut delegations, ref mut prior, .. }) => {
-				(delegations, prior)
-			},
+			Voting::Casting(Casting { ref mut delegations, ref mut prior, .. }) =>
+				(delegations, prior),
+			Voting::Delegating(Delegating { ref mut delegations, ref mut prior, .. }) =>
+				(delegations, prior),
 		};
 		*d = delegations;
 		*p = prior;

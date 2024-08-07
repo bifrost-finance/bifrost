@@ -503,13 +503,13 @@ pub mod pallet {
 			);
 			ensure!(market.rate_model.check_model(), Error::<T>::InvalidRateModelParam);
 			ensure!(
-				market.collateral_factor >= Ratio::zero()
-					&& market.collateral_factor < Ratio::one(),
+				market.collateral_factor >= Ratio::zero() &&
+					market.collateral_factor < Ratio::one(),
 				Error::<T>::InvalidFactor,
 			);
 			ensure!(
-				market.liquidation_threshold < Ratio::one()
-					&& market.liquidation_threshold >= market.collateral_factor,
+				market.liquidation_threshold < Ratio::one() &&
+					market.liquidation_threshold >= market.collateral_factor,
 				Error::<T>::InvalidFactor
 			);
 			ensure!(
@@ -517,8 +517,8 @@ pub mod pallet {
 				Error::<T>::InvalidFactor,
 			);
 			ensure!(
-				market.liquidate_incentive_reserved_factor > Ratio::zero()
-					&& market.liquidate_incentive_reserved_factor < Ratio::one(),
+				market.liquidate_incentive_reserved_factor > Ratio::zero() &&
+					market.liquidate_incentive_reserved_factor < Ratio::one(),
 				Error::<T>::InvalidFactor,
 			);
 			ensure!(market.supply_cap > Zero::zero(), Error::<T>::InvalidSupplyCap,);
@@ -1631,8 +1631,8 @@ impl<T: Config> Pallet<T> {
 			account_borrows_value
 		};
 
-		if market.close_factor.mul_ceil(effects_borrows_value.into_inner())
-			< repay_value.into_inner()
+		if market.close_factor.mul_ceil(effects_borrows_value.into_inner()) <
+			repay_value.into_inner()
 		{
 			return Err(Error::<T>::TooMuchRepay.into());
 		}
@@ -2191,8 +2191,8 @@ impl<T: Config> LendMarketTrait<AssetIdOf<T>, AccountIdOf<T>, BalanceOf<T>> for 
 			collateral_asset_value.into_inner(),
 			total_borrowed_value.into_inner(),
 		);
-		if total_collateral_value
-			< total_borrowed_value
+		if total_collateral_value <
+			total_borrowed_value
 				.checked_add(&collateral_asset_value)
 				.ok_or(ArithmeticError::Overflow)?
 		{

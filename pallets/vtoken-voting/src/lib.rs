@@ -388,8 +388,8 @@ pub mod pallet {
 		fn on_idle(n: BlockNumberFor<T>, remaining_weight: Weight) -> Weight {
 			let db_weight = T::DbWeight::get();
 			let mut used_weight = db_weight.reads(3);
-			if remaining_weight.any_lt(used_weight)
-				|| n % T::ReferendumCheckInterval::get() != Zero::zero()
+			if remaining_weight.any_lt(used_weight) ||
+				n % T::ReferendumCheckInterval::get() != Zero::zero()
 			{
 				return Weight::zero();
 			}
@@ -408,12 +408,11 @@ pub mod pallet {
 					for (vtoken, poll_index) in info_list.iter() {
 						ReferendumInfoFor::<T>::mutate(vtoken, poll_index, |maybe_info| {
 							match maybe_info {
-								Some(info) => {
+								Some(info) =>
 									if let ReferendumInfo::Ongoing(_) = info {
 										*info =
 											ReferendumInfo::Completed(relay_current_block_number);
-									}
-								},
+									},
 								None => {},
 							}
 						});
@@ -1126,9 +1125,10 @@ pub mod pallet {
 					let locking_period =
 						VoteLockingPeriod::<T>::get(vtoken).ok_or(Error::<T>::NoData)?;
 					ensure!(
-						T::RelaychainBlockNumberProvider::current_block_number()
-							>= moment
-								.saturating_add(locking_period.saturating_mul(lock_periods.into())),
+						T::RelaychainBlockNumberProvider::current_block_number() >=
+							moment.saturating_add(
+								locking_period.saturating_mul(lock_periods.into())
+							),
 						Error::<T>::NotExpired
 					);
 					Ok(())
@@ -1212,9 +1212,8 @@ pub mod pallet {
 
 		pub(crate) fn vote_to_capital(conviction: Conviction, vote: BalanceOf<T>) -> BalanceOf<T> {
 			let capital = match conviction {
-				Conviction::None => {
-					vote.checked_mul(&10u8.into()).unwrap_or_else(BalanceOf::<T>::max_value)
-				},
+				Conviction::None =>
+					vote.checked_mul(&10u8.into()).unwrap_or_else(BalanceOf::<T>::max_value),
 				x => vote.checked_div(&u8::from(x).into()).unwrap_or_else(Zero::zero),
 			};
 			capital

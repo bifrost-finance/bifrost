@@ -2332,9 +2332,8 @@ impl<T: Config> StableAsset for Pallet<T> {
 	) -> Option<SwapResult<Self::Balance>> {
 		let pool_info_opt = Self::pool(pool_id);
 		match pool_info_opt {
-			Some(pool_info) => {
-				Self::get_swap_amount(&pool_info, input_index, output_index, dx_bal).ok()
-			},
+			Some(pool_info) =>
+				Self::get_swap_amount(&pool_info, input_index, output_index, dx_bal).ok(),
 			None => None,
 		}
 	}
@@ -2347,9 +2346,8 @@ impl<T: Config> StableAsset for Pallet<T> {
 	) -> Option<SwapResult<Self::Balance>> {
 		let pool_info_opt = Self::pool(pool_id);
 		match pool_info_opt {
-			Some(pool_info) => {
-				Self::get_swap_amount_exact(&pool_info, input_index, output_index, dy_bal)
-			},
+			Some(pool_info) =>
+				Self::get_swap_amount_exact(&pool_info, input_index, output_index, dy_bal),
 			None => None,
 		}
 	}
