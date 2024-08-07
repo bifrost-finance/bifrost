@@ -410,7 +410,7 @@ pub mod genesis_evm_storage {
 
 	impl OnRuntimeUpgrade for GenesisEVMStorage {
 		#[cfg(feature = "try-runtime")]
-		fn pre_upgrade() -> Result<Vec<u8>, &'static str> {
+		fn pre_upgrade() -> Result<sp_std::vec::Vec<u8>, &'static str> {
 			Ok(sp_std::vec![])
 		}
 
@@ -423,7 +423,7 @@ pub mod genesis_evm_storage {
 		}
 
 		#[cfg(feature = "try-runtime")]
-		fn post_upgrade(_state: Vec<u8>) -> Result<(), &'static str> {
+		fn post_upgrade(_state: sp_std::vec::Vec<u8>) -> Result<(), &'static str> {
 			Ok(())
 		}
 	}
