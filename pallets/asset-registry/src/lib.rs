@@ -129,21 +129,18 @@ pub mod pallet {
 	///
 	/// NextForeignAssetId: ForeignAssetId
 	#[pallet::storage]
-	#[pallet::getter(fn next_foreign_asset_id)]
 	pub type NextForeignAssetId<T: Config> = StorageValue<_, ForeignAssetId, ValueQuery>;
 
 	/// Next available TokenId ID.
 	///
 	/// NextTokenId: TokenId
 	#[pallet::storage]
-	#[pallet::getter(fn next_token_id)]
 	pub type NextTokenId<T: Config> = StorageValue<_, TokenId, ValueQuery>;
 
 	/// The storages for Locations.
 	///
 	/// CurrencyIdToLocations: map CurrencyId => Option<Location>
 	#[pallet::storage]
-	#[pallet::getter(fn currency_id_to_locations)]
 	pub type CurrencyIdToLocations<T: Config> =
 		StorageMap<_, Twox64Concat, CurrencyId, xcm::v3::Location, OptionQuery>;
 
@@ -151,12 +148,10 @@ pub mod pallet {
 	///
 	/// LocationToCurrencyIds: map Location => Option<CurrencyId>
 	#[pallet::storage]
-	#[pallet::getter(fn location_to_currency_ids)]
 	pub type LocationToCurrencyIds<T: Config> =
 		StorageMap<_, Twox64Concat, xcm::v3::Location, CurrencyId, OptionQuery>;
 
 	#[pallet::storage]
-	#[pallet::getter(fn currency_id_to_weight)]
 	pub type CurrencyIdToWeights<T: Config> =
 		StorageMap<_, Twox64Concat, CurrencyId, Weight, OptionQuery>;
 
@@ -164,7 +159,6 @@ pub mod pallet {
 	///
 	/// AssetMetadatas: map AssetIds => Option<AssetMetadata>
 	#[pallet::storage]
-	#[pallet::getter(fn asset_metadatas)]
 	pub type AssetMetadatas<T: Config> =
 		StorageMap<_, Twox64Concat, AssetIds, AssetMetadata<BalanceOf<T>>, OptionQuery>;
 
@@ -172,7 +166,6 @@ pub mod pallet {
 	///
 	/// CurrencyMetadatas: map CurrencyId => Option<AssetMetadata>
 	#[pallet::storage]
-	#[pallet::getter(fn currency_metadatas)]
 	pub type CurrencyMetadatas<T: Config> =
 		StorageMap<_, Twox64Concat, CurrencyId, AssetMetadata<BalanceOf<T>>, OptionQuery>;
 
@@ -639,11 +632,11 @@ impl<T: Config> CurrencyIdMapping<CurrencyId, MultiLocation, AssetMetadata<Balan
 	for AssetIdMaps<T>
 {
 	fn get_asset_metadata(asset_ids: AssetIds) -> Option<AssetMetadata<BalanceOf<T>>> {
-		Pallet::<T>::asset_metadatas(asset_ids)
+		AssetMetadatas::<T>::get(asset_ids)
 	}
 
 	fn get_currency_metadata(currency_id: CurrencyId) -> Option<AssetMetadata<BalanceOf<T>>> {
-		Pallet::<T>::currency_metadatas(currency_id)
+		CurrencyMetadatas::<T>::get(currency_id)
 	}
 
 	fn get_all_currency() -> Vec<CurrencyId> {
@@ -651,13 +644,12 @@ impl<T: Config> CurrencyIdMapping<CurrencyId, MultiLocation, AssetMetadata<Balan
 	}
 
 	fn get_location(currency_id: CurrencyId) -> Option<Location> {
-		Pallet::<T>::currency_id_to_locations(currency_id)
-			.map(|location| location.try_into().ok())?
+		CurrencyIdToLocations::<T>::get(currency_id).map(|location| location.try_into().ok())?
 	}
 
 	fn get_currency_id(multi_location: Location) -> Option<CurrencyId> {
 		let v3_location = xcm::v3::Location::try_from(multi_location).ok()?;
-		Pallet::<T>::location_to_currency_ids(v3_location)
+		LocationToCurrencyIds::<T>::get(v3_location)
 	}
 }
 
@@ -942,8 +934,8 @@ where
 		let v3_location =
 			xcm::v3::Location::try_from(location.clone()).map_err(|_| XcmError::InvalidLocation)?;
 
-		if let Some(currency_id) = Pallet::<T>::location_to_currency_ids(v3_location) {
-			if let Some(currency_metadatas) = Pallet::<T>::currency_metadatas(currency_id) {
+		if let Some(currency_id) = LocationToCurrencyIds::<T>::get(v3_location) {
+			if let Some(currency_metadatas) = CurrencyMetadatas::<T>::get(currency_id) {
 				// The integration tests can ensure the ed is non-zero.
 				let ed_ratio = FixedU128::saturating_from_rational(
 					currency_metadatas.minimal_balance.into(),
