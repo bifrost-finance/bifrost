@@ -275,8 +275,9 @@ impl<AccountId, Balance: Copy + Ord + sp_std::ops::AddAssign + Zero + Saturating
 	/// Return the capacity status for bottom delegations
 	pub fn bottom_capacity<T: Config>(&self) -> CapacityStatus {
 		match &self.delegations {
-			x if x.len() as u32 >= T::MaxBottomDelegationsPerCandidate::get() =>
-				CapacityStatus::Full,
+			x if x.len() as u32 >= T::MaxBottomDelegationsPerCandidate::get() => {
+				CapacityStatus::Full
+			},
 			x if x.is_empty() => CapacityStatus::Empty,
 			_ => CapacityStatus::Partial,
 		}
@@ -596,8 +597,8 @@ impl<
 			.expect("CandidateInfo existence => BottomDelegations existence");
 		// if bottom is full, kick the lowest bottom (which is expected to be lower than input
 		// as per check)
-		let increase_delegation_count = if bottom_delegations.delegations.len() as u32 ==
-			T::MaxBottomDelegationsPerCandidate::get()
+		let increase_delegation_count = if bottom_delegations.delegations.len() as u32
+			== T::MaxBottomDelegationsPerCandidate::get()
 		{
 			let lowest_bottom_to_be_kicked = bottom_delegations
 				.delegations
@@ -955,8 +956,8 @@ impl<
 		let bond_after_less_than_highest_bottom =
 			bond.saturating_sub(less).into() < self.highest_bottom_delegation_amount;
 		// The top delegations is full and the bottom delegations has at least one delegation
-		let full_top_and_nonempty_bottom = matches!(self.top_capacity, CapacityStatus::Full) &&
-			!matches!(self.bottom_capacity, CapacityStatus::Empty);
+		let full_top_and_nonempty_bottom = matches!(self.top_capacity, CapacityStatus::Full)
+			&& !matches!(self.bottom_capacity, CapacityStatus::Empty);
 		let mut top_delegations =
 			<TopDelegations<T>>::get(candidate).ok_or(Error::<T>::CandidateDNE)?;
 		let in_top_after = if bond_after_less_than_highest_bottom && full_top_and_nonempty_bottom {
@@ -1055,12 +1056,12 @@ impl<
 // Temporary manual implementation for migration testing purposes
 impl<A: PartialEq, B: PartialEq> PartialEq for CollatorCandidate<A, B> {
 	fn eq(&self, other: &Self) -> bool {
-		let must_be_true = self.id == other.id &&
-			self.bond == other.bond &&
-			self.total_counted == other.total_counted &&
-			self.total_backing == other.total_backing &&
-			self.request == other.request &&
-			self.state == other.state;
+		let must_be_true = self.id == other.id
+			&& self.bond == other.bond
+			&& self.total_counted == other.total_counted
+			&& self.total_backing == other.total_backing
+			&& self.request == other.request
+			&& self.state == other.state;
 		if !must_be_true {
 			return false;
 		}
@@ -1148,10 +1149,10 @@ pub struct Delegator<AccountId, Balance> {
 // Temporary manual implementation for migration testing purposes
 impl<A: PartialEq, B: PartialEq> PartialEq for Delegator<A, B> {
 	fn eq(&self, other: &Self) -> bool {
-		let must_be_true = self.id == other.id &&
-			self.total == other.total &&
-			self.less_total == other.less_total &&
-			self.status == other.status;
+		let must_be_true = self.id == other.id
+			&& self.total == other.total
+			&& self.less_total == other.less_total
+			&& self.status == other.status;
 		if !must_be_true {
 			return false;
 		}
@@ -1367,8 +1368,8 @@ impl<
 		match additional_required_balance {
 			BondAdjust::Increase(amount) => {
 				ensure!(
-					<Pallet<T>>::get_delegator_stakable_free_balance(&self.id.clone().into()) >=
-						amount.into(),
+					<Pallet<T>>::get_delegator_stakable_free_balance(&self.id.clone().into())
+						>= amount.into(),
 					Error::<T>::InsufficientBalance,
 				);
 

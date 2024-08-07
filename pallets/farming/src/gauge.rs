@@ -190,8 +190,8 @@ where
 					current_block_number
 				};
 
-				let latest_claimed_time_factor = gauge_info.latest_time_factor +
-					gauge_info
+				let latest_claimed_time_factor = gauge_info.latest_time_factor
+					+ gauge_info
 						.gauge_amount
 						.saturated_into::<u128>()
 						.checked_mul(

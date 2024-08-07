@@ -459,10 +459,12 @@ pub mod pallet {
 			let (token_to_get, amount_to_get, token_to_pay, amount_to_pay) = match order_info
 				.order_type
 			{
-				OrderType::Buy =>
-					(T::InvoicingCurrency::get(), price_to_pay, order_info.vsbond, quantity_clinchd),
-				OrderType::Sell =>
-					(order_info.vsbond, quantity_clinchd, T::InvoicingCurrency::get(), price_to_pay),
+				OrderType::Buy => {
+					(T::InvoicingCurrency::get(), price_to_pay, order_info.vsbond, quantity_clinchd)
+				},
+				OrderType::Sell => {
+					(order_info.vsbond, quantity_clinchd, T::InvoicingCurrency::get(), price_to_pay)
+				},
 			};
 
 			// Calculate the transaction fee

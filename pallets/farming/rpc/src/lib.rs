@@ -66,8 +66,7 @@ impl<C, Block> FarmingRpc<C, Block> {
 
 #[async_trait]
 impl<C, Block, AccountId, PoolId, CurrencyId>
-	FarmingRpcApiServer<<Block as BlockT>::Hash, AccountId, PoolId, CurrencyId>
-	for FarmingRpc<C, Block>
+	FarmingRpcApiServer<<Block as BlockT>::Hash, AccountId, PoolId, CurrencyId> for FarmingRpc<C, Block>
 where
 	Block: BlockT,
 	C: Send + Sync + 'static + ProvideRuntimeApi<Block> + HeaderBackend<Block>,

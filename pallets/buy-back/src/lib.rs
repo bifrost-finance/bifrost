@@ -148,8 +148,8 @@ pub mod pallet {
 					continue;
 				}
 
-				if info.last_add_liquidity == BlockNumberFor::<T>::from(0u32) ||
-					info.last_add_liquidity + info.add_liquidity_duration == n
+				if info.last_add_liquidity == BlockNumberFor::<T>::from(0u32)
+					|| info.last_add_liquidity + info.add_liquidity_duration == n
 				{
 					if let Some(e) = Self::add_liquidity(&liquidity_address, asset_id, &info).err()
 					{
@@ -171,8 +171,8 @@ pub mod pallet {
 					info.last_add_liquidity = n;
 					Infos::<T>::insert(asset_id, info.clone());
 				}
-				if info.last_buyback == BlockNumberFor::<T>::from(0u32) ||
-					info.last_buyback + info.buyback_duration == n
+				if info.last_buyback == BlockNumberFor::<T>::from(0u32)
+					|| info.last_buyback + info.buyback_duration == n
 				{
 					if let Some(e) = Self::buy_back(&buyback_address, asset_id, &info).err() {
 						log::error!(
@@ -208,10 +208,11 @@ pub mod pallet {
 			T::ControlOrigin::ensure_origin(origin)?;
 
 			match asset_id {
-				CurrencyId::Token(token_symbol) =>
+				CurrencyId::Token(token_symbol) => {
 					if !T::CurrencyIdRegister::check_vtoken_registered(token_symbol) {
 						return Err(Error::<T>::ArgumentsError.into());
-					},
+					}
+				},
 				CurrencyId::Token2(token_id) => {
 					if !T::CurrencyIdRegister::check_vtoken2_registered(token_id) {
 						return Err(Error::<T>::ArgumentsError.into());

@@ -37,8 +37,8 @@ pub mod currency {
 	pub const MICROBNC: Balance = 1_000_000;
 
 	pub fn deposit<Runtime: Config>(items: u32, bytes: u32) -> Balance {
-		items as Balance * 15 * cent::<Runtime>(CurrencyId::Native(TokenSymbol::BNC)) +
-			(bytes as Balance) * 6 * cent::<Runtime>(CurrencyId::Native(TokenSymbol::BNC))
+		items as Balance * 15 * cent::<Runtime>(CurrencyId::Native(TokenSymbol::BNC))
+			+ (bytes as Balance) * 6 * cent::<Runtime>(CurrencyId::Native(TokenSymbol::BNC))
 	}
 
 	pub struct WeightToFee;

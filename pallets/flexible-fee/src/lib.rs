@@ -353,11 +353,12 @@ impl<T: Config> Pallet<T> {
 
 	fn get_fee_receiver(extra_fee_name: ExtraFeeName) -> T::AccountId {
 		match extra_fee_name {
-			ExtraFeeName::SalpContribute |
-			ExtraFeeName::VoteVtoken |
-			ExtraFeeName::VoteRemoveDelegatorVote => T::PalletId::get().into_sub_account_truncating(0u64),
-			ExtraFeeName::StatemineTransfer | ExtraFeeName::EthereumTransfer =>
-				T::PalletId::get().into_sub_account_truncating(1u64),
+			ExtraFeeName::SalpContribute
+			| ExtraFeeName::VoteVtoken
+			| ExtraFeeName::VoteRemoveDelegatorVote => T::PalletId::get().into_sub_account_truncating(0u64),
+			ExtraFeeName::StatemineTransfer | ExtraFeeName::EthereumTransfer => {
+				T::PalletId::get().into_sub_account_truncating(1u64)
+			},
 			ExtraFeeName::NoExtraFee => T::TreasuryAccount::get(),
 		}
 	}

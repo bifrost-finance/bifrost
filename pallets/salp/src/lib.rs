@@ -469,7 +469,7 @@ pub mod pallet {
 			Funds::<T>::insert(index, Some(fund_new));
 
 			match T::RelayChainToken::get() {
-				CurrencyId::Token(token_symbol) =>
+				CurrencyId::Token(token_symbol) => {
 					if !T::CurrencyIdRegister::check_vsbond_registered(
 						token_symbol,
 						index,
@@ -482,7 +482,8 @@ pub mod pallet {
 							first_slot,
 							last_slot,
 						)?;
-					},
+					}
+				},
 				CurrencyId::Token2(token_id) => {
 					if !T::CurrencyIdRegister::check_vsbond2_registered(
 						token_id, index, first_slot, last_slot,
@@ -529,8 +530,8 @@ pub mod pallet {
 
 			let fund = Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
 			ensure!(
-				fund.status == FundStatus::RefundWithdrew ||
-					fund.status == FundStatus::RedeemWithdrew,
+				fund.status == FundStatus::RefundWithdrew
+					|| fund.status == FundStatus::RedeemWithdrew,
 				Error::<T>::InvalidFundStatus
 			);
 
@@ -575,7 +576,7 @@ pub mod pallet {
 			);
 
 			match T::RelayChainToken::get() {
-				CurrencyId::Token(token_symbol) =>
+				CurrencyId::Token(token_symbol) => {
 					if !T::CurrencyIdRegister::check_vsbond_registered(
 						token_symbol,
 						index,
@@ -588,7 +589,8 @@ pub mod pallet {
 							first_slot,
 							last_slot,
 						)?;
-					},
+					}
+				},
 				CurrencyId::Token2(token_id) => {
 					if !T::CurrencyIdRegister::check_vsbond2_registered(
 						token_id, index, first_slot, last_slot,
@@ -665,10 +667,10 @@ pub mod pallet {
 
 			let (contributed, status) = Self::contribution(fund.trie_index, &who);
 			ensure!(
-				status == ContributionStatus::Idle ||
-					status == ContributionStatus::Refunded ||
-					status == ContributionStatus::Redeemed ||
-					status == ContributionStatus::Unlocked,
+				status == ContributionStatus::Idle
+					|| status == ContributionStatus::Refunded
+					|| status == ContributionStatus::Redeemed
+					|| status == ContributionStatus::Unlocked,
 				Error::<T>::InvalidContributionStatus
 			);
 
@@ -709,9 +711,9 @@ pub mod pallet {
 				.ok_or(Error::<T>::NotFindContributionValue)?;
 
 			let fund = Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
-			let can_confirm = fund.status == FundStatus::Ongoing ||
-				fund.status == FundStatus::Failed ||
-				fund.status == FundStatus::Success;
+			let can_confirm = fund.status == FundStatus::Ongoing
+				|| fund.status == FundStatus::Failed
+				|| fund.status == FundStatus::Success;
 			ensure!(can_confirm, Error::<T>::InvalidFundStatus);
 
 			let (contributed, status) = Self::contribution(fund.trie_index, &contributer);
@@ -987,8 +989,8 @@ pub mod pallet {
 			let mut fund = Self::find_fund(index, first_slot, last_slot)
 				.map_err(|_| Error::<T>::InvalidFundNotExist)?;
 			ensure!(
-				fund.status == FundStatus::FailedToContinue ||
-					fund.status == FundStatus::RefundWithdrew,
+				fund.status == FundStatus::FailedToContinue
+					|| fund.status == FundStatus::RefundWithdrew,
 				Error::<T>::InvalidRefund
 			);
 			ensure!(
@@ -1218,9 +1220,9 @@ pub mod pallet {
 				.ok_or(Error::<T>::NotFindContributionValue)?;
 
 			let fund = Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
-			let can_confirm = fund.status == FundStatus::Ongoing ||
-				fund.status == FundStatus::Failed ||
-				fund.status == FundStatus::Success;
+			let can_confirm = fund.status == FundStatus::Ongoing
+				|| fund.status == FundStatus::Failed
+				|| fund.status == FundStatus::Success;
 			ensure!(can_confirm, Error::<T>::InvalidFundStatus);
 
 			let (contributed, status) = Self::contribution(fund.trie_index, &contributer);
@@ -1692,8 +1694,8 @@ pub mod pallet {
 			let mut fund = Self::find_fund(index, first_slot, last_slot)
 				.map_err(|_| Error::<T>::InvalidFundNotExist)?;
 			ensure!(
-				fund.status == FundStatus::FailedToContinue ||
-					fund.status == FundStatus::RefundWithdrew,
+				fund.status == FundStatus::FailedToContinue
+					|| fund.status == FundStatus::RefundWithdrew,
 				Error::<T>::InvalidRefund
 			);
 			ensure!(

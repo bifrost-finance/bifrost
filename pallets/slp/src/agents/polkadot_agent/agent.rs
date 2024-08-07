@@ -623,9 +623,10 @@ impl<T: Config>
 		};
 		// Construct xcm message.
 		let call = match currency_id {
-			KSM =>
+			KSM => {
 				KusamaCall::Staking(StakingCall::<T>::PayoutStakers(validator_account, payout_era))
-					.encode(),
+					.encode()
+			},
 			DOT => PolkadotCall::Staking(StakingCall::<T>::PayoutStakers(
 				validator_account,
 				payout_era,
@@ -679,8 +680,9 @@ impl<T: Config>
 
 		// Construct xcm message.
 		let call = match currency_id {
-			KSM =>
-				KusamaCall::Staking(StakingCall::<T>::WithdrawUnbonded(num_slashing_spans)).encode(),
+			KSM => {
+				KusamaCall::Staking(StakingCall::<T>::WithdrawUnbonded(num_slashing_spans)).encode()
+			},
 			DOT => PolkadotCall::Staking(StakingCall::<T>::WithdrawUnbonded(num_slashing_spans))
 				.encode(),
 			_ => Err(Error::NotSupportedCurrencyId)?,

@@ -497,8 +497,8 @@ pub mod pallet {
 				u_old.bias = u_old
 					.slope
 					.checked_mul(
-						(old_locked.end.saturated_into::<u128>() as i128) -
-							(current_block_number.saturated_into::<u128>() as i128),
+						(old_locked.end.saturated_into::<u128>() as i128)
+							- (current_block_number.saturated_into::<u128>() as i128),
 					)
 					.ok_or(ArithmeticError::Overflow)?;
 			}
@@ -512,8 +512,8 @@ pub mod pallet {
 				u_new.bias = u_new
 					.slope
 					.checked_mul(
-						(new_locked.end.saturated_into::<u128>() as i128) -
-							(current_block_number.saturated_into::<u128>() as i128),
+						(new_locked.end.saturated_into::<u128>() as i128)
+							- (current_block_number.saturated_into::<u128>() as i128),
 					)
 					.ok_or(ArithmeticError::Overflow)?;
 			}

@@ -130,8 +130,9 @@ impl<T: Get<ParaId>> Convert<CurrencyId, Option<Location>> for BifrostCurrencyId
 
 		match id {
 			Token(KSM) => Some(Location::parent()),
-			Native(ASG) | Native(BNC) | VSToken(KSM) | Token(ZLK) =>
-				Some(native_currency_location(id)),
+			Native(ASG) | Native(BNC) | VSToken(KSM) | Token(ZLK) => {
+				Some(native_currency_location(id))
+			},
 			// Karura currencyId types
 			Token(KAR) => Some(Location::new(
 				1,
@@ -188,14 +189,15 @@ impl<T: Get<ParaId>> Convert<Location, Option<CurrencyId>> for BifrostCurrencyId
 		}
 
 		match location.unpack() {
-			(1, [Parachain(id), GeneralKey { data, length }]) if *id == parachains::karura::ID =>
+			(1, [Parachain(id), GeneralKey { data, length }]) if *id == parachains::karura::ID => {
 				if data[..*length as usize] == parachains::karura::KAR_KEY.to_vec() {
 					Some(Token(KAR))
 				} else if data[..*length as usize] == parachains::karura::KUSD_KEY.to_vec() {
 					Some(Stable(KUSD))
 				} else {
 					None
-				},
+				}
+			},
 			(1, [Parachain(id), GeneralIndex(key)]) if *id == parachains::Statemine::ID => {
 				if *key == parachains::Statemine::RMRK_ID as u128 {
 					Some(Token(RMRK))
@@ -204,8 +206,8 @@ impl<T: Get<ParaId>> Convert<Location, Option<CurrencyId>> for BifrostCurrencyId
 				}
 			},
 			(1, [Parachain(id), PalletInstance(index), GeneralIndex(key)])
-				if (*id == parachains::Statemine::ID &&
-					*index == parachains::Statemine::PALLET_ID) =>
+				if (*id == parachains::Statemine::ID
+					&& *index == parachains::Statemine::PALLET_ID) =>
 			{
 				if *key == parachains::Statemine::RMRK_ID as u128 {
 					Some(Token(RMRK))
@@ -215,16 +217,19 @@ impl<T: Get<ParaId>> Convert<Location, Option<CurrencyId>> for BifrostCurrencyId
 			},
 			(1, [Parachain(id)]) if *id == parachains::phala::ID => Some(Token(PHA)),
 			(1, [Parachain(id), PalletInstance(index)])
-				if (*id == parachains::moonriver::ID) &&
-					(*index == parachains::moonriver::PALLET_ID) =>
-				Some(Token(MOVR)),
+				if (*id == parachains::moonriver::ID)
+					&& (*index == parachains::moonriver::PALLET_ID) =>
+			{
+				Some(Token(MOVR))
+			},
 			(0, [GeneralKey { data, length }]) => {
 				// decode the general key
 				let key = &data[..*length as usize];
 				if let Ok(currency_id) = CurrencyId::decode(&mut &key[..]) {
 					match currency_id {
-						Native(ASG) | Native(BNC) | VToken(KSM) | VSToken(KSM) | Token(ZLK) =>
-							Some(currency_id),
+						Native(ASG) | Native(BNC) | VToken(KSM) | VSToken(KSM) | Token(ZLK) => {
+							Some(currency_id)
+						},
 						_ => None,
 					}
 				} else {
@@ -638,8 +643,8 @@ where
 {
 	fn contains(asset: &Asset, origin: &Location) -> bool {
 		let loc = Origin::get();
-		&loc == origin &&
-			matches!(asset, Asset { id: AssetId(asset_loc), fun: Fungible(_a) }
+		&loc == origin
+			&& matches!(asset, Asset { id: AssetId(asset_loc), fun: Fungible(_a) }
 			if asset_loc.starts_with(&Prefix::get()))
 	}
 }
@@ -649,8 +654,8 @@ pub struct NativeAssetFrom<T>(PhantomData<T>);
 impl<T: Get<Location>> ContainsPair<Asset, Location> for NativeAssetFrom<T> {
 	fn contains(asset: &Asset, origin: &Location) -> bool {
 		let loc = T::get();
-		&loc == origin &&
-			matches!(asset, Asset { id: AssetId(asset_loc), fun: Fungible(_a) }
+		&loc == origin
+			&& matches!(asset, Asset { id: AssetId(asset_loc), fun: Fungible(_a) }
 			if *asset_loc == Location::from(Parent))
 	}
 }
@@ -839,8 +844,8 @@ parameter_type_with_key! {
 pub struct DustRemovalWhitelist;
 impl Contains<AccountId> for DustRemovalWhitelist {
 	fn contains(a: &AccountId) -> bool {
-		AccountIdConversion::<AccountId>::into_account_truncating(&TreasuryPalletId::get()).eq(a) ||
-			AccountIdConversion::<AccountId>::into_account_truncating(&BifrostCrowdloanId::get())
+		AccountIdConversion::<AccountId>::into_account_truncating(&TreasuryPalletId::get()).eq(a)
+			|| AccountIdConversion::<AccountId>::into_account_truncating(&BifrostCrowdloanId::get())
 				.eq(a) || AccountIdConversion::<AccountId>::into_account_truncating(
 			&BifrostSalpLiteCrowdloanId::get(),
 		)
@@ -850,9 +855,9 @@ impl Contains<AccountId> for DustRemovalWhitelist {
 		.eq(a) || AccountIdConversion::<AccountId>::into_account_truncating(
 			&VsbondAuctionPalletId::get(),
 		)
-		.eq(a) || LiquidityMiningPalletId::get().check_sub_account::<PoolId>(a) ||
-			LiquidityMiningDOTPalletId::get().check_sub_account::<PoolId>(a) ||
-			AccountIdConversion::<AccountId>::into_account_truncating(
+		.eq(a) || LiquidityMiningPalletId::get().check_sub_account::<PoolId>(a)
+			|| LiquidityMiningDOTPalletId::get().check_sub_account::<PoolId>(a)
+			|| AccountIdConversion::<AccountId>::into_account_truncating(
 				&ParachainStakingPalletId::get(),
 			)
 			.eq(a) || AccountIdConversion::<AccountId>::into_account_truncating(
@@ -862,18 +867,18 @@ impl Contains<AccountId> for DustRemovalWhitelist {
 			&SlpEntrancePalletId::get(),
 		)
 		.eq(a) || AccountIdConversion::<AccountId>::into_account_truncating(&SlpExitPalletId::get())
-			.eq(a) || FarmingKeeperPalletId::get().check_sub_account::<PoolId>(a) ||
-			FarmingRewardIssuerPalletId::get().check_sub_account::<PoolId>(a) ||
-			AccountIdConversion::<AccountId>::into_account_truncating(
+			.eq(a) || FarmingKeeperPalletId::get().check_sub_account::<PoolId>(a)
+			|| FarmingRewardIssuerPalletId::get().check_sub_account::<PoolId>(a)
+			|| AccountIdConversion::<AccountId>::into_account_truncating(
 				&SystemStakingPalletId::get(),
 			)
 			.eq(a) || AccountIdConversion::<AccountId>::into_account_truncating(&BuybackPalletId::get())
 			.eq(a) || AccountIdConversion::<AccountId>::into_account_truncating(
 			&SystemMakerPalletId::get(),
 		)
-		.eq(a) || FeeSharePalletId::get().check_sub_account::<DistributionId>(a) ||
-			a.eq(&ZenklinkFeeAccount::get()) ||
-			AccountIdConversion::<AccountId>::into_account_truncating(&CommissionPalletId::get())
+		.eq(a) || FeeSharePalletId::get().check_sub_account::<DistributionId>(a)
+			|| a.eq(&ZenklinkFeeAccount::get())
+			|| AccountIdConversion::<AccountId>::into_account_truncating(&CommissionPalletId::get())
 				.eq(a)
 	}
 }

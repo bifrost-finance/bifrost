@@ -159,9 +159,11 @@ impl<T: Get<ParaId>> Convert<Location, Option<CurrencyId>> for BifrostCurrencyId
 
 		match &location.unpack() {
 			(0, [Parachain(id), PalletInstance(index)])
-				if (*id == parachains::moonbeam::ID) &&
-					(*index == parachains::moonbeam::PALLET_ID) =>
-				Some(Token2(GLMR_TOKEN_ID)),
+				if (*id == parachains::moonbeam::ID)
+					&& (*index == parachains::moonbeam::PALLET_ID) =>
+			{
+				Some(Token2(GLMR_TOKEN_ID))
+			},
 			(0, [Parachain(id), GeneralKey { data, length }])
 				if *id == u32::from(ParachainInfo::parachain_id()) =>
 			{
@@ -493,8 +495,8 @@ where
 {
 	fn contains(asset: &Asset, origin: &Location) -> bool {
 		let loc = Origin::get();
-		&loc == origin &&
-			matches!(asset, Asset { id: AssetId(asset_loc), fun: Fungible(_a) }
+		&loc == origin
+			&& matches!(asset, Asset { id: AssetId(asset_loc), fun: Fungible(_a) }
 			if asset_loc.starts_with(&Prefix::get()))
 	}
 }
@@ -504,8 +506,8 @@ pub struct NativeAssetFrom<T>(PhantomData<T>);
 impl<T: Get<Location>> ContainsPair<Asset, Location> for NativeAssetFrom<T> {
 	fn contains(asset: &Asset, origin: &Location) -> bool {
 		let loc = T::get();
-		&loc == origin &&
-			matches!(asset, Asset { id: AssetId(asset_loc), fun: Fungible(_a) }
+		&loc == origin
+			&& matches!(asset, Asset { id: AssetId(asset_loc), fun: Fungible(_a) }
 			if *asset_loc == Location::from(Parent))
 	}
 }
@@ -677,8 +679,8 @@ parameter_type_with_key! {
 pub struct DustRemovalWhitelist;
 impl Contains<AccountId> for DustRemovalWhitelist {
 	fn contains(a: &AccountId) -> bool {
-		AccountIdConversion::<AccountId>::into_account_truncating(&TreasuryPalletId::get()).eq(a) ||
-			AccountIdConversion::<AccountId>::into_account_truncating(&BifrostCrowdloanId::get())
+		AccountIdConversion::<AccountId>::into_account_truncating(&TreasuryPalletId::get()).eq(a)
+			|| AccountIdConversion::<AccountId>::into_account_truncating(&BifrostCrowdloanId::get())
 				.eq(a) || AccountIdConversion::<AccountId>::into_account_truncating(
 			&BifrostVsbondPalletId::get(),
 		)
@@ -686,18 +688,18 @@ impl Contains<AccountId> for DustRemovalWhitelist {
 			&SlpEntrancePalletId::get(),
 		)
 		.eq(a) || AccountIdConversion::<AccountId>::into_account_truncating(&SlpExitPalletId::get())
-			.eq(a) || FarmingKeeperPalletId::get().check_sub_account::<PoolId>(a) ||
-			FarmingRewardIssuerPalletId::get().check_sub_account::<PoolId>(a) ||
-			AccountIdConversion::<AccountId>::into_account_truncating(&BuybackPalletId::get())
+			.eq(a) || FarmingKeeperPalletId::get().check_sub_account::<PoolId>(a)
+			|| FarmingRewardIssuerPalletId::get().check_sub_account::<PoolId>(a)
+			|| AccountIdConversion::<AccountId>::into_account_truncating(&BuybackPalletId::get())
 				.eq(a) || AccountIdConversion::<AccountId>::into_account_truncating(
 			&SystemMakerPalletId::get(),
 		)
-		.eq(a) || FeeSharePalletId::get().check_sub_account::<DistributionId>(a) ||
-			a.eq(&ZenklinkFeeAccount::get()) ||
-			AccountIdConversion::<AccountId>::into_account_truncating(&CommissionPalletId::get())
+		.eq(a) || FeeSharePalletId::get().check_sub_account::<DistributionId>(a)
+			|| a.eq(&ZenklinkFeeAccount::get())
+			|| AccountIdConversion::<AccountId>::into_account_truncating(&CommissionPalletId::get())
 				.eq(a) || AccountIdConversion::<AccountId>::into_account_truncating(&BuyBackAccount::get())
-			.eq(a) ||
-			AccountIdConversion::<AccountId>::into_account_truncating(&LiquidityAccount::get())
+			.eq(a)
+			|| AccountIdConversion::<AccountId>::into_account_truncating(&LiquidityAccount::get())
 				.eq(a)
 	}
 }

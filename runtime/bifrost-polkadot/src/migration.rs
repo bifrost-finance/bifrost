@@ -200,10 +200,10 @@ pub mod v1 {
 
 				match referendum_info {
 					ReferendumInfo::Ongoing(_) | ReferendumInfo::Killed(_) => (),
-					ReferendumInfo::Approved(_e, s, d) |
-					ReferendumInfo::Rejected(_e, s, d) |
-					ReferendumInfo::Cancelled(_e, s, d) |
-					ReferendumInfo::TimedOut(_e, s, d) => {
+					ReferendumInfo::Approved(_e, s, d)
+					| ReferendumInfo::Rejected(_e, s, d)
+					| ReferendumInfo::Cancelled(_e, s, d)
+					| ReferendumInfo::TimedOut(_e, s, d) => {
 						match (s, item.deposit1) {
 							(Some(s), Some(a)) => {
 								ensure!(s.amount == a.amount, "amount not equal");

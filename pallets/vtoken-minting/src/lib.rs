@@ -764,10 +764,11 @@ pub mod pallet {
 			}
 
 			match token_id {
-				CurrencyId::Token(token_symbol) =>
+				CurrencyId::Token(token_symbol) => {
 					if !T::CurrencyIdRegister::check_vtoken_registered(token_symbol) {
 						T::CurrencyIdRegister::register_vtoken_metadata(token_symbol)?;
-					},
+					}
+				},
 				CurrencyId::Token2(token_id) => {
 					if !T::CurrencyIdRegister::check_vtoken2_registered(token_id) {
 						T::CurrencyIdRegister::register_vtoken2_metadata(token_id)?;
@@ -1383,11 +1384,11 @@ pub mod pallet {
 				};
 			} else {
 				match redeem_type {
-					RedeemType::Astar(_) |
-					RedeemType::Moonbeam(_) |
-					RedeemType::Hydradx(_) |
-					RedeemType::Manta(_) |
-					RedeemType::Interlay(_) => {
+					RedeemType::Astar(_)
+					| RedeemType::Moonbeam(_)
+					| RedeemType::Hydradx(_)
+					| RedeemType::Manta(_)
+					| RedeemType::Interlay(_) => {
 						return Ok(());
 					},
 					RedeemType::Native => {},
@@ -1938,7 +1939,7 @@ pub mod pallet {
 					let vtoken_amount = Self::get_vtoken_amount(token_id, 1000u128)?;
 					result.push((token_id, vtoken_amount));
 				},
-				None =>
+				None => {
 					for token_id in T::AssetIdMaps::get_all_currency() {
 						if token_id.is_vtoken() {
 							let vtoken_id = token_id;
@@ -1948,7 +1949,8 @@ pub mod pallet {
 							let vtoken_amount = Self::get_vtoken_amount(token_id, 1000u128)?;
 							result.push((token_id, vtoken_amount));
 						}
-					},
+					}
+				},
 			}
 			Ok(result)
 		}

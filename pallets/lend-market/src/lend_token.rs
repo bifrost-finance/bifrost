@@ -141,8 +141,8 @@ impl<T: Config> Pallet<T> {
 		_keep_alive: bool,
 	) -> Result<BalanceOf<T>, DispatchError> {
 		ensure!(
-			amount <=
-				Self::reducible_balance(
+			amount
+				<= Self::reducible_balance(
 					lend_token_id,
 					source,
 					Preservation::Expendable,

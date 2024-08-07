@@ -656,23 +656,25 @@ impl<T: Config> CurrencyIdMapping<CurrencyId, MultiLocation, AssetMetadata<Balan
 impl<T: Config> CurrencyIdConversion<CurrencyId> for AssetIdMaps<T> {
 	fn convert_to_token(currency_id: CurrencyId) -> Result<CurrencyId, ()> {
 		match currency_id {
-			CurrencyId::VSBond(TokenSymbol::BNC, 2001, 13, 20) =>
-				Ok(CurrencyId::Token(TokenSymbol::KSM)),
+			CurrencyId::VSBond(TokenSymbol::BNC, 2001, 13, 20) => {
+				Ok(CurrencyId::Token(TokenSymbol::KSM))
+			},
 			CurrencyId::VToken(TokenSymbol::BNC) => Ok(CurrencyId::Native(TokenSymbol::BNC)),
-			CurrencyId::VToken(token_symbol) |
-			CurrencyId::VSToken(token_symbol) |
-			CurrencyId::VSBond(token_symbol, ..) => Ok(CurrencyId::Token(token_symbol)),
-			CurrencyId::VToken2(token_id) |
-			CurrencyId::VSToken2(token_id) |
-			CurrencyId::VSBond2(token_id, ..) => Ok(CurrencyId::Token2(token_id)),
+			CurrencyId::VToken(token_symbol)
+			| CurrencyId::VSToken(token_symbol)
+			| CurrencyId::VSBond(token_symbol, ..) => Ok(CurrencyId::Token(token_symbol)),
+			CurrencyId::VToken2(token_id)
+			| CurrencyId::VSToken2(token_id)
+			| CurrencyId::VSBond2(token_id, ..) => Ok(CurrencyId::Token2(token_id)),
 			_ => Err(()),
 		}
 	}
 
 	fn convert_to_vtoken(currency_id: CurrencyId) -> Result<CurrencyId, ()> {
 		match currency_id {
-			CurrencyId::Token(token_symbol) | CurrencyId::Native(token_symbol) =>
-				Ok(CurrencyId::VToken(token_symbol)),
+			CurrencyId::Token(token_symbol) | CurrencyId::Native(token_symbol) => {
+				Ok(CurrencyId::VToken(token_symbol))
+			},
 			CurrencyId::Token2(token_id) => Ok(CurrencyId::VToken2(token_id)),
 			_ => Err(()),
 		}
@@ -701,8 +703,9 @@ impl<T: Config> CurrencyIdConversion<CurrencyId> for AssetIdMaps<T> {
 				}
 				Ok(vs_bond)
 			},
-			CurrencyId::Token2(token_id) =>
-				Ok(CurrencyId::VSBond2(token_id, index, first_slot, last_slot)),
+			CurrencyId::Token2(token_id) => {
+				Ok(CurrencyId::VSBond2(token_id, index, first_slot, last_slot))
+			},
 			_ => Err(()),
 		}
 	}
@@ -775,8 +778,8 @@ impl<T: Config> CurrencyIdRegister<CurrencyId> for AssetIdMaps<T> {
 		let option_token_metadata =
 			if CurrencyMetadatas::<T>::contains_key(CurrencyId::Token(token_symbol)) {
 				CurrencyMetadatas::<T>::get(CurrencyId::Token(token_symbol))
-			} else if token_symbol == TokenSymbol::BNC &&
-				CurrencyMetadatas::<T>::contains_key(CurrencyId::Native(token_symbol))
+			} else if token_symbol == TokenSymbol::BNC
+				&& CurrencyMetadatas::<T>::contains_key(CurrencyId::Native(token_symbol))
 			{
 				CurrencyMetadatas::<T>::get(CurrencyId::Native(token_symbol))
 			} else {

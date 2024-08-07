@@ -53,10 +53,12 @@ pub struct MockDataProvider;
 impl DataProvider<CurrencyId, TimeStampedPrice> for MockDataProvider {
 	fn get(asset_id: &CurrencyId) -> Option<TimeStampedPrice> {
 		match *asset_id {
-			DOT =>
-				Some(TimeStampedPrice { value: Price::saturating_from_integer(100), timestamp: 0 }),
-			KSM =>
-				Some(TimeStampedPrice { value: Price::saturating_from_integer(500), timestamp: 0 }),
+			DOT => {
+				Some(TimeStampedPrice { value: Price::saturating_from_integer(100), timestamp: 0 })
+			},
+			KSM => {
+				Some(TimeStampedPrice { value: Price::saturating_from_integer(500), timestamp: 0 })
+			},
 			VDOT => Some(TimeStampedPrice {
 				value: Price::from_inner(15000000000_0000000000),
 				timestamp: 0,
@@ -77,10 +79,12 @@ impl DataProvider<CurrencyId, TimeStampedPrice> for MockDataProvider {
 impl DataProviderExtended<CurrencyId, TimeStampedPrice> for MockDataProvider {
 	fn get_no_op(asset_id: &CurrencyId) -> Option<TimeStampedPrice> {
 		match *asset_id {
-			DOT =>
-				Some(TimeStampedPrice { value: Price::saturating_from_integer(100), timestamp: 0 }),
-			KSM =>
-				Some(TimeStampedPrice { value: Price::saturating_from_integer(500), timestamp: 0 }),
+			DOT => {
+				Some(TimeStampedPrice { value: Price::saturating_from_integer(100), timestamp: 0 })
+			},
+			KSM => {
+				Some(TimeStampedPrice { value: Price::saturating_from_integer(500), timestamp: 0 })
+			},
 			_ => None,
 		}
 	}

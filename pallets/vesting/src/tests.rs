@@ -687,8 +687,8 @@ fn merging_shifts_other_schedules_index() {
 		// The merged schedule will have the max possible starting block,
 		let sched3_start = sched1.starting_block().max(sched2.starting_block());
 		// `locked` equal to the sum of the two schedules locked through the current block,
-		let sched3_locked = sched2.locked_at::<Identity>(cur_block, Some(sched2.starting_block())) +
-			sched0.locked_at::<Identity>(cur_block, Some(sched0.starting_block()));
+		let sched3_locked = sched2.locked_at::<Identity>(cur_block, Some(sched2.starting_block()))
+			+ sched0.locked_at::<Identity>(cur_block, Some(sched0.starting_block()));
 		// and will end at the max possible block.
 		let sched3_end = sched2
 			.ending_block_as_balance::<Identity>()
@@ -731,8 +731,8 @@ fn merge_ongoing_and_yet_to_be_started_schedules() {
 		Vesting::vest(Some(2).into()).unwrap();
 
 		// After vesting the usable balance increases by the unlocked amount.
-		let sched0_vested_now = sched0.locked() -
-			sched0.locked_at::<Identity>(cur_block, Some(sched0.starting_block()));
+		let sched0_vested_now = sched0.locked()
+			- sched0.locked_at::<Identity>(cur_block, Some(sched0.starting_block()));
 		usable_balance += sched0_vested_now;
 		assert_eq!(Balances::usable_balance(&2), usable_balance);
 
@@ -759,8 +759,8 @@ fn merge_ongoing_and_yet_to_be_started_schedules() {
 		// The resulting schedule will have the later starting block of the two,
 		let sched2_start = sched1.starting_block();
 		// `locked` equal to the sum of the two schedules locked through the current block,
-		let sched2_locked = sched0.locked_at::<Identity>(cur_block, Some(sched0.starting_block())) +
-			sched1.locked_at::<Identity>(cur_block, Some(sched1.starting_block()));
+		let sched2_locked = sched0.locked_at::<Identity>(cur_block, Some(sched0.starting_block()))
+			+ sched1.locked_at::<Identity>(cur_block, Some(sched1.starting_block()));
 		// and will end at the max possible block.
 		let sched2_end = sched0
 			.ending_block_as_balance::<Identity>()
@@ -824,10 +824,10 @@ fn merge_finished_and_ongoing_schedules() {
 		// sched0 has finished, so its funds are fully unlocked.
 		let sched0_unlocked_now = sched0.locked();
 		// The remaining schedules are ongoing, so their funds are partially unlocked.
-		let sched1_unlocked_now = sched1.locked() -
-			sched1.locked_at::<Identity>(cur_block, Some(sched1.starting_block()));
-		let sched2_unlocked_now = sched2.locked() -
-			sched2.locked_at::<Identity>(cur_block, Some(sched2.starting_block()));
+		let sched1_unlocked_now = sched1.locked()
+			- sched1.locked_at::<Identity>(cur_block, Some(sched1.starting_block()));
+		let sched2_unlocked_now = sched2.locked()
+			- sched2.locked_at::<Identity>(cur_block, Some(sched2.starting_block()));
 
 		// Since merging also vests all the schedules, the users usable balance after merging
 		// includes all pre-existing schedules unlocked through the current block, including
@@ -1074,16 +1074,16 @@ fn vested_transfer_less_than_existential_deposit_fails() {
 	ExtBuilder::default().existential_deposit(4 * ED).build().execute_with(|| {
 		// MinVestedTransfer is less the ED.
 		assert!(
-			<Test as Config>::Currency::minimum_balance() >
-				<Test as Config>::MinVestedTransfer::get()
+			<Test as Config>::Currency::minimum_balance()
+				> <Test as Config>::MinVestedTransfer::get()
 		);
 
 		let sched =
 			VestingInfo::new(<Test as Config>::MinVestedTransfer::get() as u64, 1u64, 10u64);
 		// The new account balance with the schedule's locked amount would be less than ED.
 		assert!(
-			Balances::free_balance(&99) + sched.locked() <
-				<Test as Config>::Currency::minimum_balance()
+			Balances::free_balance(&99) + sched.locked()
+				< <Test as Config>::Currency::minimum_balance()
 		);
 
 		// vested_transfer fails.

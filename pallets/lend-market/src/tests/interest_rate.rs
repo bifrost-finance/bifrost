@@ -88,8 +88,8 @@ fn interest_rate_model_works() {
 			total_reserves = Markets::<Test>::get(&DOT)
 				.unwrap()
 				.reserve_factor
-				.mul_floor(interest_accumulated) +
-				total_reserves;
+				.mul_floor(interest_accumulated)
+				+ total_reserves;
 			assert_eq!(LendMarket::total_reserves(DOT), total_reserves);
 
 			// exchangeRate = (totalCash + totalBorrows - totalReserves) / totalSupply
