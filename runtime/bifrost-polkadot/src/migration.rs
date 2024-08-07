@@ -411,7 +411,7 @@ pub mod genesis_evm_storage {
 	impl OnRuntimeUpgrade for GenesisEVMStorage {
 		#[cfg(feature = "try-runtime")]
 		fn pre_upgrade() -> Result<Vec<u8>, &'static str> {
-			Ok(vec![])
+			Ok(sp_std::vec![])
 		}
 
 		fn on_runtime_upgrade() -> Weight {
