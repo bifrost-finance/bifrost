@@ -36,12 +36,12 @@ pub mod weights;
 
 pub use crate::vote::{AccountVote, PollStatus, ReferendumInfo, ReferendumStatus, VoteRole};
 use crate::{
-	agents::RelaychainAgent,
+	agents::{BifrostAgent, RelaychainAgent},
 	traits::VotingAgent,
 	vote::{Casting, Tally, Voting},
 };
 use bifrost_primitives::{
-	currency::{VDOT, VKSM},
+	currency::{BNC, DOT, KSM, VBNC, VDOT, VKSM},
 	traits::{DerivativeAccountHandler, VTokenSupplyProvider, XcmDestWeightAndFeeHandler},
 	CurrencyId, DerivativeIndex,
 };
@@ -63,7 +63,7 @@ use sp_runtime::{
 };
 use sp_std::prelude::*;
 pub use weights::WeightInfo;
-use xcm::v4::prelude::*;
+use xcm::v4::{prelude::*, Location};
 
 const CONVICTION_VOTING_ID: LockIdentifier = *b"vtvoting";
 
@@ -114,7 +114,7 @@ pub mod pallet {
 
 		type ResponseOrigin: EnsureOrigin<
 			<Self as frame_system::Config>::RuntimeOrigin,
-			Success = xcm::v4::Location,
+			Success = Location,
 		>;
 
 		type XcmDestWeightAndFee: XcmDestWeightAndFeeHandler<CurrencyIdOf<Self>, BalanceOf<Self>>;
@@ -199,7 +199,7 @@ pub mod pallet {
 			success: bool,
 		},
 		ResponseReceived {
-			responder: xcm::v4::Location,
+			responder: Location,
 			query_id: QueryId,
 			response: Response,
 		},
@@ -370,20 +370,25 @@ pub mod pallet {
 	#[pallet::genesis_config]
 	#[derive(frame_support::DefaultNoBound)]
 	pub struct GenesisConfig<T: Config> {
-		pub delegators: (CurrencyIdOf<T>, Vec<DerivativeIndex>),
+		pub delegators: Vec<(CurrencyIdOf<T>, Vec<DerivativeIndex>)>,
 		pub undeciding_timeouts: Vec<(CurrencyIdOf<T>, BlockNumberFor<T>)>,
-		pub vote_cap_ratio: (CurrencyIdOf<T>, Perbill),
+		pub vote_cap_ratio: Vec<(CurrencyIdOf<T>, Perbill)>,
 	}
 
 	#[pallet::genesis_build]
 	impl<T: Config> BuildGenesisConfig for GenesisConfig<T> {
 		fn build(&self) {
-			let (vtoken, delegators) = &self.delegators;
-			Delegators::<T>::insert(vtoken, BoundedVec::truncate_from(delegators.clone()));
+			self.delegators.iter().for_each(|(vtoken, delegators)| {
+				Delegators::<T>::insert(vtoken, BoundedVec::truncate_from(delegators.clone()));
+			});
+
 			self.undeciding_timeouts.iter().for_each(|(vtoken, undeciding_timeout)| {
 				UndecidingTimeout::<T>::insert(vtoken, undeciding_timeout);
 			});
-			VoteCapRatio::<T>::insert(self.vote_cap_ratio.0, self.vote_cap_ratio.1);
+
+			self.vote_cap_ratio.iter().for_each(|(vtoken, cap_ratio)| {
+				VoteCapRatio::<T>::insert(vtoken, cap_ratio);
+			});
 		}
 	}
 
@@ -959,7 +964,7 @@ pub mod pallet {
 		}
 
 		fn ensure_vtoken(vtoken: &CurrencyIdOf<T>) -> Result<(), DispatchError> {
-			ensure!([VKSM, VDOT].contains(vtoken), Error::<T>::VTokenNotSupport);
+			ensure!([VKSM, VDOT, VBNC].contains(vtoken), Error::<T>::VTokenNotSupport);
 			Ok(())
 		}
 
@@ -1039,7 +1044,7 @@ pub mod pallet {
 
 		fn ensure_xcm_response_or_governance(
 			origin: OriginFor<T>,
-		) -> Result<xcm::v4::Location, DispatchError> {
+		) -> Result<Location, DispatchError> {
 			let responder = T::ResponseOrigin::ensure_origin(origin.clone()).or_else(|_| {
 				T::ControlOrigin::ensure_origin(origin).map(|_| xcm::v4::Junctions::Here.into())
 			})?;
@@ -1181,7 +1186,22 @@ pub mod pallet {
 			currency_id: &CurrencyIdOf<T>,
 		) -> Result<VotingAgentBoxType<T>, Error<T>> {
 			match *currency_id {
-				VKSM | VDOT => Ok(Box::new(RelaychainAgent::<T>::new())),
+				VKSM | VDOT => Ok(Box::new(RelaychainAgent::<T>::new(*currency_id)?)),
+				VBNC => Ok(Box::new(BifrostAgent::<T>::new(*currency_id)?)),
+				_ => Err(Error::<T>::VTokenNotSupport),
+			}
+		}
+
+		pub(crate) fn convert_vtoken_to_dest_location(
+			vtoken: CurrencyId,
+		) -> Result<Location, Error<T>> {
+			let token = CurrencyId::to_token(&vtoken).map_err(|_| Error::<T>::NoData)?;
+			match token {
+				KSM | DOT => Ok(Location::parent()),
+				BNC => Ok(xcm::v4::Location::new(
+					1,
+					[xcm::v4::prelude::Parachain(T::ParachainId::get().into())],
+				)),
 				_ => Err(Error::<T>::VTokenNotSupport),
 			}
 		}

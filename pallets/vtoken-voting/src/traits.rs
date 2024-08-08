@@ -16,11 +16,9 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-use sp_std::vec::Vec;
-
+use crate::{AccountVote, DispatchResult, PollClass, PollIndex, *};
 use bifrost_primitives::{CurrencyId, DerivativeIndex};
-
-use crate::{AccountVote, DispatchResult, PollClass, PollIndex};
+use sp_std::vec::Vec;
 
 /// Abstraction over a voting agent for a certain parachain.
 pub trait VotingAgent<Balance, AccountId, Error> {
@@ -43,15 +41,14 @@ pub trait VotingAgent<Balance, AccountId, Error> {
 	) -> DispatchResult;
 }
 
-/// Helper to communicate with pallet_xcm's Queries storage for Substrate chains in runtime.
-pub trait QueryResponseManager<QueryId, AccountId, BlockNumber, RuntimeCall> {
-	// If the query exists and we've already got the Response, then True is returned. Otherwise,
-	// False is returned.
-	fn get_query_response_record(query_id: QueryId) -> bool;
-	fn create_query_record(
-		responder: AccountId,
-		call_back: Option<RuntimeCall>,
-		timeout: BlockNumber,
-	) -> u64;
-	fn remove_query_record(query_id: QueryId) -> bool;
+pub trait ConvictionVotingCall<T: Config> {
+	fn vote(poll_index: PollIndex, vote: AccountVote<BalanceOf<T>>) -> Self;
+
+	fn remove_vote(class: Option<PollClass>, poll_index: PollIndex) -> Self;
+}
+
+pub trait UtilityCall<Call> {
+	fn as_derivative(derivative_index: DerivativeIndex, call: Call) -> Call;
+
+	fn batch_all(calls: Vec<Call>) -> Call;
 }

@@ -348,15 +348,29 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
 	.unwrap();
 
 	orml_tokens::GenesisConfig::<Runtime> {
-		balances: vec![(1, VKSM, 10), (2, VKSM, 20), (3, VKSM, 30), (4, VKSM, 40), (5, VKSM, 50)],
+		balances: vec![
+			(1, VKSM, 10),
+			(2, VKSM, 20),
+			(3, VKSM, 30),
+			(4, VKSM, 40),
+			(5, VKSM, 50),
+			(1, VBNC, 10),
+			(2, VBNC, 20),
+			(3, VBNC, 30),
+			(4, VBNC, 40),
+			(5, VBNC, 50),
+		],
 	}
 	.assimilate_storage(&mut t)
 	.unwrap();
 
 	vtoken_voting::GenesisConfig::<Runtime> {
-		delegators: (VKSM, vec![0, 1, 2, 3, 4, 5, 10, 11, 15, 20, 21]),
-		undeciding_timeouts: vec![(VKSM, 100)],
-		vote_cap_ratio: (VKSM, Perbill::from_percent(10)),
+		delegators: vec![
+			(VKSM, vec![0, 1, 2, 3, 4, 5, 10, 11, 15, 20, 21]),
+			(VBNC, vec![0, 1, 2, 3, 4, 5, 10, 11, 15, 20, 21]),
+		],
+		undeciding_timeouts: vec![(VKSM, 100), (VBNC, 100)],
+		vote_cap_ratio: vec![(VKSM, Perbill::from_percent(10)), (VBNC, Perbill::from_percent(10))],
 	}
 	.assimilate_storage(&mut t)
 	.unwrap();

@@ -24,40 +24,25 @@ use parity_scale_codec::{Decode, Encode};
 use sp_runtime::{traits::StaticLookup, RuntimeDebug};
 use sp_std::prelude::*;
 
-#[cfg(feature = "kusama")]
-pub use kusama::*;
+pub use bifrost::*;
 
-#[cfg(feature = "polkadot")]
-pub use polkadot::*;
-
-#[cfg(feature = "kusama")]
-mod kusama {
-	use crate::{agents::*, *};
+mod bifrost {
+	use crate::{
+		agents::{bifrost_agent::*, *},
+		*,
+	};
 
 	#[derive(Encode, Decode, RuntimeDebug)]
-	pub enum RelayCall<T: Config> {
-		#[codec(index = 20)]
-		ConvictionVoting(ConvictionVoting<T>),
-		#[codec(index = 24)]
-		Utility(Utility<Self>),
-	}
-}
-
-#[cfg(feature = "polkadot")]
-mod polkadot {
-	use crate::{agents::*, *};
-
-	#[derive(Encode, Decode, RuntimeDebug)]
-	pub enum RelayCall<T: Config> {
-		#[codec(index = 20)]
-		ConvictionVoting(ConvictionVoting<T>),
-		#[codec(index = 26)]
-		Utility(Utility<Self>),
+	pub enum BifrostCall<T: Config> {
+		#[codec(index = 36)]
+		BifrostConvictionVoting(BifrostConvictionVoting<T>),
+		#[codec(index = 50)]
+		BifrostUtility(BifrostUtility<Self>),
 	}
 }
 
 #[derive(Encode, Decode, RuntimeDebug, Clone)]
-pub enum ConvictionVoting<T: Config> {
+pub enum BifrostConvictionVoting<T: Config> {
 	#[codec(index = 0)]
 	Vote(#[codec(compact)] PollIndex, AccountVote<BalanceOf<T>>),
 	#[codec(index = 3)]
@@ -66,30 +51,30 @@ pub enum ConvictionVoting<T: Config> {
 	RemoveVote(Option<PollClass>, PollIndex),
 }
 
-impl<T: Config> ConvictionVotingCall<T> for RelayCall<T> {
+impl<T: Config> ConvictionVotingCall<T> for BifrostCall<T> {
 	fn vote(poll_index: PollIndex, vote: AccountVote<BalanceOf<T>>) -> Self {
-		Self::ConvictionVoting(ConvictionVoting::Vote(poll_index, vote))
+		Self::BifrostConvictionVoting(BifrostConvictionVoting::Vote(poll_index, vote))
 	}
 
 	fn remove_vote(class: Option<PollClass>, poll_index: PollIndex) -> Self {
-		Self::ConvictionVoting(ConvictionVoting::RemoveVote(class, poll_index))
+		Self::BifrostConvictionVoting(BifrostConvictionVoting::RemoveVote(class, poll_index))
 	}
 }
 
 #[derive(Encode, Decode, RuntimeDebug, Clone)]
-pub enum Utility<Call> {
+pub enum BifrostUtility<Call> {
 	#[codec(index = 1)]
 	AsDerivative(DerivativeIndex, Box<Call>),
 	#[codec(index = 2)]
 	BatchAll(Vec<Call>),
 }
 
-impl<T: Config> UtilityCall<RelayCall<T>> for RelayCall<T> {
+impl<T: Config> UtilityCall<BifrostCall<T>> for BifrostCall<T> {
 	fn as_derivative(derivative_index: DerivativeIndex, call: Self) -> Self {
-		Self::Utility(Utility::AsDerivative(derivative_index, Box::new(call)))
+		Self::BifrostUtility(BifrostUtility::AsDerivative(derivative_index, Box::new(call)))
 	}
 
 	fn batch_all(calls: Vec<Self>) -> Self {
-		Self::Utility(Utility::BatchAll(calls))
+		Self::BifrostUtility(BifrostUtility::BatchAll(calls))
 	}
 }

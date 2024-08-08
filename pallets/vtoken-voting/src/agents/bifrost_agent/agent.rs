@@ -16,7 +16,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-use crate::{pallet, AssetId, Xcm, *};
+use crate::{agents::bifrost_agent::BifrostCall, pallet, AssetId, Xcm, *};
 use bifrost_primitives::{
 	CurrencyId, DerivativeIndex, XcmDestWeightAndFeeHandler, XcmOperationType,
 };
@@ -31,14 +31,15 @@ use frame_support::{
 use sp_runtime::traits::Saturating;
 use xcm::v4::{Location, Weight as XcmWeight};
 
-use crate::{agents::*, pallet::Error, traits::*};
+use crate::{pallet::Error, traits::*};
 
-/// VotingAgent implementation for relay chain
-pub struct RelaychainAgent<T> {
+/// VotingAgent implementation for Bifrost
+pub struct BifrostAgent<T> {
 	location: Location,
 	_marker: PhantomData<T>,
 }
-impl<T: pallet::Config> RelaychainAgent<T> {
+
+impl<T: pallet::Config> BifrostAgent<T> {
 	pub fn new(vtoken: CurrencyId) -> Result<Self, Error<T>> {
 		let location = Pallet::<T>::convert_vtoken_to_dest_location(vtoken)?;
 		Ok(Self { location, _marker: PhantomData })
@@ -51,7 +52,7 @@ impl<T: pallet::Config> RelaychainAgent<T> {
 	fn send_xcm_with_notify(
 		&self,
 		derivative_index: DerivativeIndex,
-		call: RelayCall<T>,
+		call: BifrostCall<T>,
 		notify_call: Call<T>,
 		transact_weight: XcmWeight,
 		extra_fee: BalanceOf<T>,
@@ -71,7 +72,7 @@ impl<T: pallet::Config> RelaychainAgent<T> {
 		f(query_id);
 
 		let xcm_message = self.construct_xcm_message(
-			<RelayCall<T> as UtilityCall<RelayCall<T>>>::as_derivative(derivative_index, call)
+			<BifrostCall<T> as UtilityCall<BifrostCall<T>>>::as_derivative(derivative_index, call)
 				.encode(),
 			extra_fee,
 			transact_weight,
@@ -122,7 +123,7 @@ impl<T: pallet::Config> RelaychainAgent<T> {
 	}
 }
 
-impl<T: Config> VotingAgent<BalanceOf<T>, AccountIdOf<T>, Error<T>> for RelaychainAgent<T> {
+impl<T: Config> VotingAgent<BalanceOf<T>, AccountIdOf<T>, Error<T>> for BifrostAgent<T> {
 	fn vote(
 		&self,
 		who: AccountIdOf<T>,
@@ -136,14 +137,14 @@ impl<T: Config> VotingAgent<BalanceOf<T>, AccountIdOf<T>, Error<T>> for Relaycha
 		let vote_calls = new_delegator_votes
 			.iter()
 			.map(|(_derivative_index, vote)| {
-				<RelayCall<T> as ConvictionVotingCall<T>>::vote(poll_index, *vote)
+				<BifrostCall<T> as ConvictionVotingCall<T>>::vote(poll_index, *vote)
 			})
 			.collect::<Vec<_>>();
 		let vote_call = if vote_calls.len() == 1 {
 			vote_calls.into_iter().nth(0).ok_or(Error::<T>::NoData)?
 		} else {
 			ensure!(false, Error::<T>::NoPermissionYet);
-			<RelayCall<T> as UtilityCall<RelayCall<T>>>::batch_all(vote_calls)
+			<BifrostCall<T> as UtilityCall<BifrostCall<T>>>::batch_all(vote_calls)
 		};
 		let notify_call = Call::<T>::notify_vote { query_id: 0, response: Default::default() };
 		let (weight, extra_fee) = T::XcmDestWeightAndFee::get_operation_weight_and_fee(
@@ -182,7 +183,7 @@ impl<T: Config> VotingAgent<BalanceOf<T>, AccountIdOf<T>, Error<T>> for Relaycha
 		let notify_call =
 			Call::<T>::notify_remove_delegator_vote { query_id: 0, response: Default::default() };
 		let remove_vote_call =
-			<RelayCall<T> as ConvictionVotingCall<T>>::remove_vote(Some(class), poll_index);
+			<BifrostCall<T> as ConvictionVotingCall<T>>::remove_vote(Some(class), poll_index);
 		let (weight, extra_fee) = T::XcmDestWeightAndFee::get_operation_weight_and_fee(
 			CurrencyId::to_token(&vtoken).map_err(|_| Error::<T>::NoData)?,
 			XcmOperationType::RemoveVote,

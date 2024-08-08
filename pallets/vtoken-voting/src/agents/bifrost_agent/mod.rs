@@ -15,9 +15,8 @@
 
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
+pub mod agent;
+mod call;
 
-mod bifrost_agent;
-mod relaychain_agent;
-
-pub use bifrost_agent::*;
-pub use relaychain_agent::*;
+pub use agent::*;
+pub use call::*;
