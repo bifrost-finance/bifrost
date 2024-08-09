@@ -195,7 +195,7 @@ macro_rules! with_runtime_or_err {
 
 			#[cfg(not(any(feature = "with-bifrost-kusama-runtime",feature = "with-bifrost-runtime")))]
 			return Err(service::BIFROST_KUSAMA_RUNTIME_NOT_AVAILABLE.into());
-		} else if $chain_spec.is_bifrost_polkadot() || $chain_spec.is_dev() {
+		} else if $chain_spec.is_bifrost_polkadot() || $chain_spec.is_bifrost_paseo() || $chain_spec.is_dev() {
 			#[cfg(any(feature = "with-bifrost-polkadot-runtime", feature = "with-bifrost-runtime"))]
 			#[allow(unused_imports)]
 			use service::collator_polkadot::{bifrost_polkadot_runtime::{Block, RuntimeApi}, start_node,new_partial};

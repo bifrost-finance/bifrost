@@ -35,17 +35,26 @@ pub trait IdentifyVariant {
 	/// Returns if this is a configuration for the `Bifrost-Polkadot` network.
 	fn is_bifrost_polkadot(&self) -> bool;
 
+	/// Returns if this is a configuration for the `Bifrost-Paseo` network.
+	fn is_bifrost_paseo(&self) -> bool;
+
 	/// Returns if this is a configuration for the `Dev` network.
 	fn is_dev(&self) -> bool;
 }
 
 impl IdentifyVariant for Box<dyn sc_service::ChainSpec> {
 	fn is_bifrost_kusama(&self) -> bool {
-		self.id().starts_with("bifrost") && !self.id().starts_with("bifrost_polkadot")
+		self.id().starts_with("bifrost") &&
+			!self.id().starts_with("bifrost_polkadot") &&
+			!self.id().starts_with("bifrost_paseo")
 	}
 
 	fn is_bifrost_polkadot(&self) -> bool {
 		self.id().starts_with("bifrost_polkadot")
+	}
+
+	fn is_bifrost_paseo(&self) -> bool {
+		self.id().starts_with("bifrost_paseo")
 	}
 
 	fn is_dev(&self) -> bool {
