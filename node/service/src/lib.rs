@@ -46,7 +46,7 @@ impl IdentifyVariant for Box<dyn sc_service::ChainSpec> {
 	fn is_bifrost_kusama(&self) -> bool {
 		self.id().starts_with("bifrost") &&
 			!self.id().starts_with("bifrost_polkadot") &&
-			!self.id().starts_with("bifrost_paseo")
+			!self.id().starts_with("bifrost-paseo")
 	}
 
 	fn is_bifrost_polkadot(&self) -> bool {
@@ -54,7 +54,7 @@ impl IdentifyVariant for Box<dyn sc_service::ChainSpec> {
 	}
 
 	fn is_bifrost_paseo(&self) -> bool {
-		self.id().starts_with("bifrost_paseo")
+		self.id().starts_with("bifrost-paseo")
 	}
 
 	fn is_dev(&self) -> bool {
