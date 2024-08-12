@@ -96,11 +96,8 @@ pub mod pallet {
 	use crate::{
 		delegation_requests::{CancelledScheduledRequest, DelegationAction, ScheduledRequest},
 		set::OrderedSet,
-		// traits::*,
 		types::*,
-		InflationInfo,
-		Range,
-		WeightInfo,
+		InflationInfo, Range, WeightInfo,
 	};
 	use bifrost_primitives::parachain_staking::*;
 
