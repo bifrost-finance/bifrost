@@ -329,7 +329,7 @@ primitive-types       = { version = "0.12.0", default-features = false }
 proc-macro2           = { version = "1.0.40" }
 quote                 = { version = "1.0.20" }
 scale-info            = { version = "2.11.3", default-features = false }
-serde                 = { version = "1.0.203", default-features = false }
+serde                 = { version = "1.0.205", default-features = false }
 serde_json            = { version = "1.0.122", default-features = false }
 sha3                  = { version = "0.10.6", default-features = false }
 similar-asserts       = { version = "1.1.0" }
