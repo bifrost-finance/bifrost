@@ -1920,7 +1920,7 @@ dependencies = [
  "cumulus-pallet-xcm",
  "cumulus-primitives-core",
  "ethabi",
- "ethereum 0.14.0",
+ "ethereum",
  "frame-benchmarking",
  "frame-support",
  "frame-system",
@@ -2356,7 +2356,7 @@ name = "binary-merkle-tree"
 version = "13.0.0"
 source = "git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.13.0#d5160c1d567cc73c7df6c816d41e21aa3adb188d"
 dependencies = [
- "hash-db 0.16.0",
+ "hash-db",
  "log",
 ]
 
@@ -4487,31 +4487,13 @@ dependencies = [
 
 [[package]]
 name = "ethereum"
-version = "0.14.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6a89fb87a9e103f71b903b80b670200b54cc67a07578f070681f1fffb7396fb7"
-dependencies = [
- "bytes",
- "ethereum-types",
- "hash-db 0.15.2",
- "hash256-std-hasher",
- "parity-scale-codec",
- "rlp",
- "scale-info",
- "serde",
- "sha3",
- "triehash",
-]
-
-[[package]]
-name = "ethereum"
 version = "0.15.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2e04d24d20b8ff2235cffbf242d5092de3aa45f77c5270ddbfadd2778ca13fea"
 dependencies = [
  "bytes",
  "ethereum-types",
- "hash-db 0.16.0",
+ "hash-db",
  "hash256-std-hasher",
  "parity-scale-codec",
  "rlp",
@@ -4583,7 +4565,7 @@ checksum = "767f43e9630cc36cf8ff2777cbb0121b055f0d1fd6eaaa13b46a1808f0d0e7e9"
 dependencies = [
  "auto_impl",
  "environmental",
- "ethereum 0.15.0",
+ "ethereum",
  "evm-core",
  "evm-gasometer",
  "evm-runtime",
@@ -4742,7 +4724,7 @@ version = "2.0.0-dev"
 source = "git+https://github.com/bifrost-finance/frontier?branch=release-polkadot-v1.13.0#24a48ebc221399d129712eff41787ad800dc8a26"
 dependencies = [
  "async-trait",
- "ethereum 0.15.0",
+ "ethereum",
  "fc-api",
  "fc-storage",
  "fp-consensus",
@@ -4794,7 +4776,7 @@ name = "fc-rpc"
 version = "2.0.0-dev"
 source = "git+https://github.com/bifrost-finance/frontier?branch=release-polkadot-v1.13.0#24a48ebc221399d129712eff41787ad800dc8a26"
 dependencies = [
- "ethereum 0.15.0",
+ "ethereum",
  "ethereum-types",
  "evm",
  "fc-api",
@@ -4848,7 +4830,7 @@ name = "fc-rpc-core"
 version = "1.1.0-dev"
 source = "git+https://github.com/bifrost-finance/frontier?branch=release-polkadot-v1.13.0#24a48ebc221399d129712eff41787ad800dc8a26"
 dependencies = [
- "ethereum 0.15.0",
+ "ethereum",
  "ethereum-types",
  "jsonrpsee",
  "rlp",
@@ -4863,7 +4845,7 @@ name = "fc-storage"
 version = "1.0.0-dev"
 source = "git+https://github.com/bifrost-finance/frontier?branch=release-polkadot-v1.13.0#24a48ebc221399d129712eff41787ad800dc8a26"
 dependencies = [
- "ethereum 0.15.0",
+ "ethereum",
  "ethereum-types",
  "fp-rpc",
  "fp-storage",
@@ -5083,7 +5065,7 @@ name = "fp-consensus"
 version = "2.0.0-dev"
 source = "git+https://github.com/bifrost-finance/frontier?branch=release-polkadot-v1.13.0#24a48ebc221399d129712eff41787ad800dc8a26"
 dependencies = [
- "ethereum 0.15.0",
+ "ethereum",
  "parity-scale-codec",
  "sp-core",
  "sp-runtime",
@@ -5104,7 +5086,7 @@ name = "fp-ethereum"
 version = "1.0.0-dev"
 source = "git+https://github.com/bifrost-finance/frontier?branch=release-polkadot-v1.13.0#24a48ebc221399d129712eff41787ad800dc8a26"
 dependencies = [
- "ethereum 0.15.0",
+ "ethereum",
  "ethereum-types",
  "fp-evm",
  "frame-support",
@@ -5131,7 +5113,7 @@ name = "fp-rpc"
 version = "3.0.0-dev"
 source = "git+https://github.com/bifrost-finance/frontier?branch=release-polkadot-v1.13.0#24a48ebc221399d129712eff41787ad800dc8a26"
 dependencies = [
- "ethereum 0.15.0",
+ "ethereum",
  "ethereum-types",
  "fp-evm",
  "parity-scale-codec",
@@ -5823,12 +5805,6 @@ dependencies = [
  "serde_json",
  "thiserror",
 ]
-
-[[package]]
-name = "hash-db"
-version = "0.15.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d23bd4e7b5eda0d0f3a307e8b381fdc8ba9000f26fbe912250c0a4cc3956364a"
 
 [[package]]
 name = "hash-db"
@@ -7518,7 +7494,7 @@ version = "0.32.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "808b50db46293432a45e63bc15ea51e0ab4c0a1647b8eb114e31a3e698dd6fbe"
 dependencies = [
- "hash-db 0.16.0",
+ "hash-db",
 ]
 
 [[package]]
@@ -7720,7 +7696,7 @@ dependencies = [
 name = "module-evm-utility"
 version = "2.21.0"
 dependencies = [
- "ethereum 0.14.0",
+ "ethereum",
  "sha3",
  "sp-std 14.0.0 (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.13.0)",
 ]
@@ -8234,7 +8210,7 @@ version = "0.7.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "af1844ef2428cc3e1cb900be36181049ef3d3193c63e43026cfe202983b27a56"
 dependencies = [
- "proc-macro-crate 3.1.0",
+ "proc-macro-crate 1.1.3",
  "proc-macro2",
  "quote",
  "syn 2.0.71",
@@ -8994,7 +8970,7 @@ name = "pallet-ethereum"
 version = "4.0.0-dev"
 source = "git+https://github.com/bifrost-finance/frontier?branch=release-polkadot-v1.13.0#24a48ebc221399d129712eff41787ad800dc8a26"
 dependencies = [
- "ethereum 0.15.0",
+ "ethereum",
  "ethereum-types",
  "evm",
  "fp-consensus",
@@ -9023,7 +8999,7 @@ dependencies = [
  "frame-benchmarking",
  "frame-support",
  "frame-system",
- "hash-db 0.16.0",
+ "hash-db",
  "hex-literal 0.4.1",
  "impl-trait-for-tuples",
  "log",
@@ -9980,8 +9956,8 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4e69bf016dc406eff7d53a7d3f7cf1c2e72c82b9088aac1118591e36dd2cd3e9"
 dependencies = [
  "bitcoin_hashes 0.13.0",
- "rand 0.8.5",
- "rand_core 0.6.4",
+ "rand 0.7.3",
+ "rand_core 0.5.1",
  "serde",
  "unicode-normalization",
 ]
@@ -12918,7 +12894,7 @@ name = "sc-client-db"
 version = "0.35.0"
 source = "git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.13.0#d5160c1d567cc73c7df6c816d41e21aa3adb188d"
 dependencies = [
- "hash-db 0.16.0",
+ "hash-db",
  "kvdb",
  "kvdb-memorydb",
  "kvdb-rocksdb",
@@ -14637,7 +14613,7 @@ name = "sp-api"
 version = "26.0.0"
 source = "git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.13.0#d5160c1d567cc73c7df6c816d41e21aa3adb188d"
 dependencies = [
- "hash-db 0.16.0",
+ "hash-db",
  "log",
  "parity-scale-codec",
  "scale-info",
@@ -14865,7 +14841,7 @@ dependencies = [
  "dyn-clonable",
  "ed25519-zebra",
  "futures 0.3.30",
- "hash-db 0.16.0",
+ "hash-db",
  "hash256-std-hasher",
  "impl-serde",
  "itertools 0.11.0",
@@ -15273,7 +15249,7 @@ name = "sp-state-machine"
 version = "0.35.0"
 source = "git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.13.0#d5160c1d567cc73c7df6c816d41e21aa3adb188d"
 dependencies = [
- "hash-db 0.16.0",
+ "hash-db",
  "log",
  "parity-scale-codec",
  "parking_lot 0.12.3",
@@ -15409,7 +15385,7 @@ version = "29.0.0"
 source = "git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.13.0#d5160c1d567cc73c7df6c816d41e21aa3adb188d"
 dependencies = [
  "ahash",
- "hash-db 0.16.0",
+ "hash-db",
  "lazy_static",
  "memory-db",
  "nohash-hasher",
@@ -16590,7 +16566,7 @@ version = "0.29.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0c992b4f40c234a074d48a757efeabb1a6be88af84c0c23f7ca158950cb0ae7f"
 dependencies = [
- "hash-db 0.16.0",
+ "hash-db",
  "log",
  "rustc-hex",
  "smallvec",
@@ -16602,17 +16578,7 @@ version = "0.18.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d4ed310ef5ab98f5fa467900ed906cb9232dd5376597e00fd4cba2a449d06c0b"
 dependencies = [
- "hash-db 0.16.0",
-]
-
-[[package]]
-name = "triehash"
-version = "0.8.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a1631b201eb031b563d2e85ca18ec8092508e262a3196ce9bd10a67ec87b9f5c"
-dependencies = [
- "hash-db 0.15.2",
- "rlp",
+ "hash-db",
 ]
 
 [[package]]
@@ -16747,7 +16713,7 @@ checksum = "97fee6b57c6a41524a810daee9286c02d7752c4253064d0b05472833a438f675"
 dependencies = [
  "cfg-if",
  "digest 0.10.7",
- "rand 0.8.5",
+ "rand 0.7.3",
  "static_assertions",
 ]
 
