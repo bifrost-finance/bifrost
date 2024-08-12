@@ -279,7 +279,8 @@ fn set_hosting_fees_works() {
 			Some((pct, treasury_location))
 		));
 
-		let (fee, location) = Slp::get_hosting_fee(KSM).unwrap();
+		// let (fee, location) = Slp::get_hosting_fee(KSM).unwrap();
+		let (fee, location) = HostingFees::<Runtime>::get(KSM).unwrap();
 		assert_eq!(fee, pct);
 		assert_eq!(location, treasury_location);
 	});
