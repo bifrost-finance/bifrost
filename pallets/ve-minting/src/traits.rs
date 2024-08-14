@@ -91,11 +91,12 @@ impl<T: Config> VeMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>
 		UserPositions::<T>::insert(who, user_positions);
 		Position::<T>::set(new_position + 1);
 
-		let ve_config = Self::ve_configs();
+		let ve_config = VeConfigs::<T>::get();
 		ensure!(_value >= ve_config.min_mint, Error::<T>::BelowMinimumMint);
 
 		let current_block_number: BlockNumberFor<T> = frame_system::Pallet::<T>::block_number();
-		let _locked: LockedBalance<BalanceOf<T>, BlockNumberFor<T>> = Self::locked(new_position);
+		let _locked: LockedBalance<BalanceOf<T>, BlockNumberFor<T>> =
+			Locked::<T>::get(new_position);
 		let unlock_time: BlockNumberFor<T> = _unlock_time
 			.saturating_add(current_block_number)
 			.checked_div(&T::Week::get())
@@ -132,8 +133,8 @@ impl<T: Config> VeMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>
 		position: u128,
 		_unlock_time: BlockNumberFor<T>,
 	) -> DispatchResult {
-		let ve_config = Self::ve_configs();
-		let _locked: LockedBalance<BalanceOf<T>, BlockNumberFor<T>> = Self::locked(position);
+		let ve_config = VeConfigs::<T>::get();
+		let _locked: LockedBalance<BalanceOf<T>, BlockNumberFor<T>> = Locked::<T>::get(position);
 		let current_block_number: BlockNumberFor<T> = frame_system::Pallet::<T>::block_number();
 
 		let unlock_time: BlockNumberFor<T> = _unlock_time
@@ -172,9 +173,9 @@ impl<T: Config> VeMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>
 		position: u128,
 		value: BalanceOf<T>,
 	) -> DispatchResult {
-		let ve_config = Self::ve_configs();
+		let ve_config = VeConfigs::<T>::get();
 		ensure!(value >= ve_config.min_mint, Error::<T>::BelowMinimumMint);
-		let _locked: LockedBalance<BalanceOf<T>, BlockNumberFor<T>> = Self::locked(position);
+		let _locked: LockedBalance<BalanceOf<T>, BlockNumberFor<T>> = Locked::<T>::get(position);
 		ensure!(_locked.amount > BalanceOf::<T>::zero(), Error::<T>::LockNotExist); // Need to be executed after create_lock
 		let current_block_number: BlockNumberFor<T> = frame_system::Pallet::<T>::block_number();
 		ensure!(_locked.end > current_block_number, Error::<T>::Expired); // Cannot add to expired/non-existent lock
@@ -184,12 +185,12 @@ impl<T: Config> VeMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>
 	}
 
 	fn deposit_for(who: &AccountIdOf<T>, position: u128, value: BalanceOf<T>) -> DispatchResult {
-		let _locked: LockedBalance<BalanceOf<T>, BlockNumberFor<T>> = Self::locked(position);
+		let _locked: LockedBalance<BalanceOf<T>, BlockNumberFor<T>> = Locked::<T>::get(position);
 		Self::_deposit_for(who, position, value, Zero::zero(), _locked)
 	}
 
 	fn withdraw_inner(who: &AccountIdOf<T>, position: u128) -> DispatchResult {
-		let mut _locked = Self::locked(position);
+		let mut _locked = Locked::<T>::get(position);
 		let current_block_number: BlockNumberFor<T> = frame_system::Pallet::<T>::block_number();
 		ensure!(current_block_number >= _locked.end, Error::<T>::Expired);
 		Self::withdraw_no_ensure(who, position, _locked, None)
@@ -214,7 +215,7 @@ impl<T: Config> VeMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>
 			}
 			let _mid = (_min + _max + 1) / 2;
 
-			if Self::point_history(_mid).block <= _block {
+			if PointHistory::<T>::get(_mid).block <= _block {
 				_min = _mid
 			} else {
 				_max = _mid - 1
@@ -224,8 +225,8 @@ impl<T: Config> VeMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>
 	}
 
 	fn total_supply(t: BlockNumberFor<T>) -> Result<BalanceOf<T>, DispatchError> {
-		let g_epoch: U256 = Self::epoch();
-		let last_point = Self::point_history(g_epoch);
+		let g_epoch: U256 = Epoch::<T>::get();
+		let last_point = PointHistory::<T>::get(g_epoch);
 		Self::supply_at(last_point, t)
 	}
 
@@ -246,7 +247,7 @@ impl<T: Config> VeMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>
 			if t_i > t {
 				t_i = t
 			} else {
-				d_slope = Self::slope_changes(t_i)
+				d_slope = SlopeChanges::<T>::get(t_i)
 			}
 
 			last_point.bias = last_point
@@ -284,7 +285,7 @@ impl<T: Config> VeMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>
 		n: BlockNumberFor<T>,
 		rewards: Vec<(CurrencyIdOf<T>, BalanceOf<T>)>,
 	) -> DispatchResult {
-		let conf = Self::incentive_configs(pool_id);
+		let conf = IncentiveConfigs::<T>::get(pool_id);
 		if n == conf.last_update_time + conf.rewards_duration {
 			Self::notify_reward_amount(pool_id, &conf.incentive_controller, rewards)?;
 		}
@@ -312,7 +313,7 @@ impl<T: Config> VeMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>
 		rewards_duration: Option<BlockNumberFor<T>>,
 		controller: Option<AccountIdOf<T>>,
 	) {
-		let mut incentive_config = Self::incentive_configs(pool_id);
+		let mut incentive_config = IncentiveConfigs::<T>::get(pool_id);
 
 		if let Some(rewards_duration) = rewards_duration {
 			incentive_config.rewards_duration = rewards_duration;
