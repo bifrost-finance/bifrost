@@ -270,40 +270,34 @@ pub mod pallet {
 
 	/// The timestamp of the last calculation of accrued interest
 	#[pallet::storage]
-	#[pallet::getter(fn last_accrued_interest_time)]
 	pub type LastAccruedInterestTime<T: Config> =
 		StorageMap<_, Blake2_128Concat, AssetIdOf<T>, Timestamp, ValueQuery>;
 
 	/// Liquidation free collateral.
 	#[pallet::storage]
-	#[pallet::getter(fn liquidation_free_collaterals)]
 	pub type LiquidationFreeCollaterals<T: Config> = StorageValue<_, Vec<AssetIdOf<T>>, ValueQuery>;
 
 	/// Total number of collateral tokens in circulation
 	/// CollateralType -> Balance
 	#[pallet::storage]
-	#[pallet::getter(fn total_supply)]
 	pub type TotalSupply<T: Config> =
 		StorageMap<_, Blake2_128Concat, AssetIdOf<T>, BalanceOf<T>, ValueQuery>;
 
 	/// Total amount of outstanding borrows of the underlying in this market
 	/// CurrencyId -> Balance
 	#[pallet::storage]
-	#[pallet::getter(fn total_borrows)]
 	pub type TotalBorrows<T: Config> =
 		StorageMap<_, Blake2_128Concat, AssetIdOf<T>, BalanceOf<T>, ValueQuery>;
 
 	/// Total amount of reserves of the underlying held in this market
 	/// CurrencyId -> Balance
 	#[pallet::storage]
-	#[pallet::getter(fn total_reserves)]
 	pub type TotalReserves<T: Config> =
 		StorageMap<_, Blake2_128Concat, AssetIdOf<T>, BalanceOf<T>, ValueQuery>;
 
 	/// Mapping of account addresses to outstanding borrow balances
 	/// CurrencyId -> Owner -> BorrowSnapshot
 	#[pallet::storage]
-	#[pallet::getter(fn account_borrows)]
 	pub type AccountBorrows<T: Config> = StorageDoubleMap<
 		_,
 		Blake2_128Concat,
@@ -317,7 +311,6 @@ pub mod pallet {
 	/// Mapping of account addresses to deposit details
 	/// CollateralType -> Owner -> Deposits
 	#[pallet::storage]
-	#[pallet::getter(fn account_deposits)]
 	pub type AccountDeposits<T: Config> = StorageDoubleMap<
 		_,
 		Blake2_128Concat,
@@ -331,7 +324,6 @@ pub mod pallet {
 	/// Mapping of account addresses to total deposit interest accrual
 	/// CurrencyId -> Owner -> EarnedSnapshot
 	#[pallet::storage]
-	#[pallet::getter(fn account_earned)]
 	pub type AccountEarned<T: Config> = StorageDoubleMap<
 		_,
 		Blake2_128Concat,
@@ -345,31 +337,26 @@ pub mod pallet {
 	/// Accumulator of the total earned interest rate since the opening of the market
 	/// CurrencyId -> u128
 	#[pallet::storage]
-	#[pallet::getter(fn borrow_index)]
 	pub type BorrowIndex<T: Config> =
 		StorageMap<_, Blake2_128Concat, AssetIdOf<T>, Rate, ValueQuery>;
 
 	/// The exchange rate from the underlying to the internal collateral
 	#[pallet::storage]
-	#[pallet::getter(fn exchange_rate)]
 	pub type ExchangeRate<T: Config> =
 		StorageMap<_, Blake2_128Concat, AssetIdOf<T>, Rate, ValueQuery>;
 
 	/// Mapping of borrow rate to currency type
 	#[pallet::storage]
-	#[pallet::getter(fn borrow_rate)]
 	pub type BorrowRate<T: Config> =
 		StorageMap<_, Blake2_128Concat, AssetIdOf<T>, Rate, ValueQuery>;
 
 	/// Mapping of supply rate to currency type
 	#[pallet::storage]
-	#[pallet::getter(fn supply_rate)]
 	pub type SupplyRate<T: Config> =
 		StorageMap<_, Blake2_128Concat, AssetIdOf<T>, Rate, ValueQuery>;
 
 	/// Borrow utilization ratio
 	#[pallet::storage]
-	#[pallet::getter(fn utilization_ratio)]
 	pub type UtilizationRatio<T: Config> =
 		StorageMap<_, Blake2_128Concat, AssetIdOf<T>, Ratio, ValueQuery>;
 
@@ -387,19 +374,16 @@ pub mod pallet {
 
 	/// Mapping of token id to supply reward speed
 	#[pallet::storage]
-	#[pallet::getter(fn reward_supply_speed)]
 	pub type RewardSupplySpeed<T: Config> =
 		StorageMap<_, Blake2_128Concat, AssetIdOf<T>, BalanceOf<T>, ValueQuery>;
 
 	/// Mapping of token id to borrow reward speed
 	#[pallet::storage]
-	#[pallet::getter(fn reward_borrow_speed)]
 	pub type RewardBorrowSpeed<T: Config> =
 		StorageMap<_, Blake2_128Concat, AssetIdOf<T>, BalanceOf<T>, ValueQuery>;
 
 	/// The Reward market supply state for each market
 	#[pallet::storage]
-	#[pallet::getter(fn reward_supply_state)]
 	pub type RewardSupplyState<T: Config> = StorageMap<
 		_,
 		Blake2_128Concat,
@@ -410,7 +394,6 @@ pub mod pallet {
 
 	/// The Reward market borrow state for each market
 	#[pallet::storage]
-	#[pallet::getter(fn reward_borrow_state)]
 	pub type RewardBorrowState<T: Config> = StorageMap<
 		_,
 		Blake2_128Concat,
@@ -421,7 +404,6 @@ pub mod pallet {
 
 	///  The Reward index for each market for each supplier as of the last time they accrued Reward
 	#[pallet::storage]
-	#[pallet::getter(fn reward_supplier_index)]
 	pub type RewardSupplierIndex<T: Config> = StorageDoubleMap<
 		_,
 		Blake2_128Concat,
@@ -434,7 +416,6 @@ pub mod pallet {
 
 	///  The Reward index for each market for each borrower as of the last time they accrued Reward
 	#[pallet::storage]
-	#[pallet::getter(fn reward_borrower_index)]
 	pub type RewardBorrowerIndex<T: Config> = StorageDoubleMap<
 		_,
 		Blake2_128Concat,
@@ -448,7 +429,6 @@ pub mod pallet {
 	/// The reward accrued but not yet transferred to each user.
 	#[pallet::storage]
 	#[pallet::storage_prefix = "RewardAccured"]
-	#[pallet::getter(fn reward_accrued)]
 	pub type RewardAccrued<T: Config> =
 		StorageMap<_, Blake2_128Concat, T::AccountId, BalanceOf<T>, ValueQuery>;
 
@@ -953,7 +933,7 @@ pub mod pallet {
 			let who = ensure_signed(origin)?;
 			Self::ensure_active_market(asset_id)?;
 			ensure!(AccountDeposits::<T>::contains_key(asset_id, &who), Error::<T>::NoDeposit);
-			let deposits = Self::account_deposits(asset_id, &who);
+			let deposits = AccountDeposits::<T>::get(asset_id, &who);
 			if deposits.is_collateral == enable {
 				return Err(Error::<T>::DuplicateOperation.into());
 			}
@@ -981,7 +961,7 @@ pub mod pallet {
 		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 			ensure!(
-				!Self::liquidation_free_collaterals().contains(&collateral_asset_id),
+				!LiquidationFreeCollaterals::<T>::get().contains(&collateral_asset_id),
 				Error::<T>::CollateralReserved
 			);
 			Self::accrue_interest(liquidation_asset_id)?;
@@ -1023,7 +1003,7 @@ pub mod pallet {
 				add_amount,
 				Preservation::Expendable,
 			)?;
-			let total_reserves = Self::total_reserves(asset_id);
+			let total_reserves = TotalReserves::<T>::get(asset_id);
 			let total_reserves_new =
 				total_reserves.checked_add(add_amount).ok_or(ArithmeticError::Overflow)?;
 			TotalReserves::<T>::insert(asset_id, total_reserves_new);
@@ -1058,7 +1038,7 @@ pub mod pallet {
 			let receiver = T::Lookup::lookup(receiver)?;
 			Self::ensure_active_market(asset_id)?;
 
-			let total_reserves = Self::total_reserves(asset_id);
+			let total_reserves = TotalReserves::<T>::get(asset_id);
 			if reduce_amount > total_reserves {
 				return Err(Error::<T>::InsufficientReserves.into());
 			}
@@ -1168,7 +1148,7 @@ impl<T: Config> Pallet<T> {
 	fn get_lf_base_position(account: &T::AccountId) -> Result<FixedU128, DispatchError> {
 		let mut total_asset_value: FixedU128 = FixedU128::zero();
 		for (asset_id, _market) in Self::active_markets()
-			.filter(|(asset_id, _)| Self::liquidation_free_collaterals().contains(asset_id))
+			.filter(|(asset_id, _)| LiquidationFreeCollaterals::<T>::get().contains(asset_id))
 		{
 			total_asset_value = total_asset_value
 				.checked_add(&Self::collateral_asset_value(account, asset_id)?)
@@ -1182,7 +1162,7 @@ impl<T: Config> Pallet<T> {
 	) -> Result<FixedU128, DispatchError> {
 		let mut total_asset_value: FixedU128 = FixedU128::zero();
 		for (asset_id, _market) in Self::active_markets()
-			.filter(|(asset_id, _)| Self::liquidation_free_collaterals().contains(asset_id))
+			.filter(|(asset_id, _)| LiquidationFreeCollaterals::<T>::get().contains(asset_id))
 		{
 			total_asset_value = total_asset_value
 				.checked_add(&Self::liquidation_threshold_asset_value(account, asset_id)?)
@@ -1305,7 +1285,7 @@ impl<T: Config> Pallet<T> {
 		if !AccountDeposits::<T>::contains_key(asset_id, supplier) {
 			return Ok(BalanceOf::<T>::zero());
 		}
-		let deposits = Self::account_deposits(asset_id, supplier);
+		let deposits = AccountDeposits::<T>::get(asset_id, supplier);
 		if !deposits.is_collateral {
 			return Ok(BalanceOf::<T>::zero());
 		}
@@ -1337,7 +1317,7 @@ impl<T: Config> Pallet<T> {
 		if !AccountDeposits::<T>::contains_key(asset_id, borrower) {
 			return Ok(FixedU128::zero());
 		}
-		let deposits = Self::account_deposits(asset_id, borrower);
+		let deposits = AccountDeposits::<T>::get(asset_id, borrower);
 		if !deposits.is_collateral {
 			return Ok(FixedU128::zero());
 		}
@@ -1390,7 +1370,7 @@ impl<T: Config> Pallet<T> {
 			redeemer,
 			voucher_amount,
 		);
-		let deposit = Self::account_deposits(asset_id, redeemer);
+		let deposit = AccountDeposits::<T>::get(asset_id, redeemer);
 		if deposit.voucher_balance < voucher_amount {
 			return Err(Error::<T>::InsufficientDeposit.into());
 		}
@@ -1416,7 +1396,7 @@ impl<T: Config> Pallet<T> {
 		Self::ensure_liquidity(
 			redeemer,
 			redeem_effects_value,
-			Self::liquidation_free_collaterals().contains(&asset_id),
+			LiquidationFreeCollaterals::<T>::get().contains(&asset_id),
 		)?;
 
 		Ok(())
@@ -1521,7 +1501,7 @@ impl<T: Config> Pallet<T> {
 		)?;
 		let account_borrows_new =
 			account_borrows.checked_sub(repay_amount).ok_or(ArithmeticError::Underflow)?;
-		let total_borrows = Self::total_borrows(asset_id);
+		let total_borrows = TotalBorrows::<T>::get(asset_id);
 		// NOTE : total_borrows use a different way to calculate interest
 		// so when user repays all borrows, total_borrows can be less than account_borrows
 		// which will cause it to fail with `ArithmeticError::Underflow`
@@ -1533,7 +1513,7 @@ impl<T: Config> Pallet<T> {
 			borrower,
 			BorrowSnapshot {
 				principal: account_borrows_new,
-				borrow_index: Self::borrow_index(asset_id),
+				borrow_index: BorrowIndex::<T>::get(asset_id),
 			},
 		);
 		TotalBorrows::<T>::insert(asset_id, total_borrows_new);
@@ -1547,13 +1527,13 @@ impl<T: Config> Pallet<T> {
 		who: &T::AccountId,
 		asset_id: AssetIdOf<T>,
 	) -> Result<BalanceOf<T>, DispatchError> {
-		let snapshot: BorrowSnapshot<BalanceOf<T>> = Self::account_borrows(asset_id, who);
+		let snapshot: BorrowSnapshot<BalanceOf<T>> = AccountBorrows::<T>::get(asset_id, who);
 		if snapshot.principal.is_zero() || snapshot.borrow_index.is_zero() {
 			return Ok(Zero::zero());
 		}
 		// Calculate new borrow balance using the interest index:
 		// recent_borrow_balance = snapshot.principal * borrow_index / snapshot.borrow_index
-		let recent_borrow_balance = Self::borrow_index(asset_id)
+		let recent_borrow_balance = BorrowIndex::<T>::get(asset_id)
 			.checked_div(&snapshot.borrow_index)
 			.and_then(|r| r.checked_mul_int(snapshot.principal))
 			.ok_or(ArithmeticError::Overflow)?;
@@ -1756,7 +1736,7 @@ impl<T: Config> Pallet<T> {
 		let account_borrows = Self::current_borrow_balance(borrower, liquidation_asset_id)?;
 		let account_borrows_new =
 			account_borrows.checked_sub(repay_amount).ok_or(ArithmeticError::Underflow)?;
-		let total_borrows = Self::total_borrows(liquidation_asset_id);
+		let total_borrows = TotalBorrows::<T>::get(liquidation_asset_id);
 		let total_borrows_new =
 			total_borrows.checked_sub(repay_amount).ok_or(ArithmeticError::Underflow)?;
 		AccountBorrows::<T>::insert(
@@ -1764,7 +1744,7 @@ impl<T: Config> Pallet<T> {
 			borrower,
 			BorrowSnapshot {
 				principal: account_borrows_new,
-				borrow_index: Self::borrow_index(liquidation_asset_id),
+				borrow_index: BorrowIndex::<T>::get(liquidation_asset_id),
 			},
 		);
 		TotalBorrows::<T>::insert(liquidation_asset_id, total_borrows_new);
@@ -1858,7 +1838,7 @@ impl<T: Config> Pallet<T> {
 	/// Make sure the borrowing under the borrow cap
 	fn ensure_under_borrow_cap(asset_id: AssetIdOf<T>, amount: BalanceOf<T>) -> DispatchResult {
 		let market = Self::market(asset_id)?;
-		let total_borrows = Self::total_borrows(asset_id);
+		let total_borrows = TotalBorrows::<T>::get(asset_id);
 		let new_total_borrows =
 			total_borrows.checked_add(amount).ok_or(ArithmeticError::Overflow)?;
 		ensure!(new_total_borrows <= market.borrow_cap, Error::<T>::BorrowCapacityExceeded);
@@ -1869,7 +1849,7 @@ impl<T: Config> Pallet<T> {
 	/// Make sure there is enough cash available in the pool
 	fn ensure_enough_cash(asset_id: AssetIdOf<T>, amount: BalanceOf<T>) -> DispatchResult {
 		let reducible_cash = Self::get_total_cash(asset_id)
-			.checked_sub(Self::total_reserves(asset_id))
+			.checked_sub(TotalReserves::<T>::get(asset_id))
 			.ok_or(ArithmeticError::Underflow)?;
 		if reducible_cash < amount {
 			return Err(Error::<T>::InsufficientCash.into());
@@ -2142,7 +2122,7 @@ impl<T: Config> LendMarketTrait<AssetIdOf<T>, AccountIdOf<T>, BalanceOf<T>> for 
 		let account_borrows = Self::current_borrow_balance(borrower, asset_id)?;
 		let account_borrows_new =
 			account_borrows.checked_add(amount).ok_or(ArithmeticError::Overflow)?;
-		let total_borrows = Self::total_borrows(asset_id);
+		let total_borrows = TotalBorrows::<T>::get(asset_id);
 		let total_borrows_new =
 			total_borrows.checked_add(amount).ok_or(ArithmeticError::Overflow)?;
 		AccountBorrows::<T>::insert(
@@ -2150,7 +2130,7 @@ impl<T: Config> LendMarketTrait<AssetIdOf<T>, AccountIdOf<T>, BalanceOf<T>> for 
 			borrower,
 			BorrowSnapshot {
 				principal: account_borrows_new,
-				borrow_index: Self::borrow_index(asset_id),
+				borrow_index: BorrowIndex::<T>::get(asset_id),
 			},
 		);
 		TotalBorrows::<T>::insert(asset_id, total_borrows_new);
@@ -2172,7 +2152,7 @@ impl<T: Config> LendMarketTrait<AssetIdOf<T>, AccountIdOf<T>, BalanceOf<T>> for 
 	) -> Result<(), DispatchError> {
 		Self::ensure_active_market(asset_id)?;
 		ensure!(AccountDeposits::<T>::contains_key(asset_id, supplier), Error::<T>::NoDeposit);
-		let mut deposits = Self::account_deposits(asset_id, supplier);
+		let mut deposits = AccountDeposits::<T>::get(asset_id, supplier);
 		// turn on the collateral button
 		if enable {
 			deposits.is_collateral = true;
