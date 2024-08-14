@@ -114,7 +114,6 @@ pub mod pallet {
 	}
 
 	#[pallet::storage]
-	#[pallet::getter(fn infos)]
 	pub type Infos<T: Config> = StorageMap<_, Twox64Concat, CurrencyIdOf<T>, Info<BalanceOf<T>>>;
 
 	#[derive(Clone, Encode, Decode, PartialEq, Eq, RuntimeDebug, TypeInfo)]
