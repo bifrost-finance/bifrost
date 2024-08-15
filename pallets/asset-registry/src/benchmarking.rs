@@ -232,12 +232,12 @@ benchmarks! {
 	}: {call.dispatch_bypass_filter(origin)?}
 	verify {
 		assert_eq!(
-			LocationToCurrencyIds::<T>::get(location.clone()),
+			LocationToCurrencyIds::<T>::get(location),
 			Some(Token2(0))
 		);
 		assert_eq!(
 			CurrencyIdToLocations::<T>::get(Token2(0)),
-			Some(location.clone())
+			Some(location)
 		);
 		assert_eq!(CurrencyIdToWeights::<T>::get(Token2(0)), Some(Weight::from_parts(2000_000_000, u64::MAX)));
 	}
