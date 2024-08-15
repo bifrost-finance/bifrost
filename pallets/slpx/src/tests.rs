@@ -58,7 +58,7 @@ fn test_whitelist_work() {
 		assert_ok!(Slpx::add_whitelist(RuntimeOrigin::root(), SupportChain::Astar, ALICE));
 		assert_ok!(Slpx::add_whitelist(RuntimeOrigin::root(), SupportChain::Astar, BOB));
 		assert_eq!(
-			Slpx::whitelist_account_ids(SupportChain::Astar),
+			WhitelistAccountId::<Test>::get(SupportChain::Astar),
 			BoundedVec::<AccountId, ConstU32<10>>::try_from(vec![ALICE, BOB]).unwrap()
 		);
 		assert_noop!(
@@ -67,7 +67,7 @@ fn test_whitelist_work() {
 		);
 		assert_ok!(Slpx::remove_whitelist(RuntimeOrigin::root(), SupportChain::Astar, ALICE));
 		assert_eq!(
-			Slpx::whitelist_account_ids(SupportChain::Astar),
+			WhitelistAccountId::<Test>::get(SupportChain::Astar),
 			BoundedVec::<AccountId, ConstU32<10>>::try_from(vec![BOB]).unwrap()
 		);
 
@@ -111,7 +111,7 @@ fn test_execution_fee_work() {
 			CurrencyId::Token2(0),
 			10 * 1_000_000_000
 		));
-		assert_eq!(Slpx::execution_fee(CurrencyId::Token2(0)), Some(10 * 1_000_000_000));
+		assert_eq!(ExecutionFee::<Test>::get(CurrencyId::Token2(0)), Some(10 * 1_000_000_000));
 
 		let balance_exclude_fee =
 			Slpx::charge_execution_fee(CurrencyId::Token2(0), &ALICE).unwrap();
@@ -122,7 +122,7 @@ fn test_execution_fee_work() {
 			SupportChain::Moonbeam,
 			10 * 1_000_000_000
 		));
-		assert_eq!(Slpx::transfer_to_fee(SupportChain::Moonbeam), Some(10 * 1_000_000_000));
+		assert_eq!(TransferToFee::<Test>::get(SupportChain::Moonbeam), Some(10 * 1_000_000_000));
 	});
 }
 
@@ -277,13 +277,13 @@ fn test_ethereum_call() {
 fn test_set_currency_ethereum_call_switch() {
 	sp_io::TestExternalities::default().execute_with(|| {
 		assert_ok!(Slpx::set_currency_ethereum_call_switch(RuntimeOrigin::root(), BNC, true));
-		assert_eq!(Slpx::currency_id_list().to_vec(), vec![BNC]);
+		assert_eq!(CurrencyIdList::<Test>::get().to_vec(), vec![BNC]);
 
 		assert_ok!(Slpx::set_currency_ethereum_call_switch(RuntimeOrigin::root(), KSM, true));
-		assert_eq!(Slpx::currency_id_list().to_vec(), vec![BNC, KSM]);
+		assert_eq!(CurrencyIdList::<Test>::get().to_vec(), vec![BNC, KSM]);
 
 		assert_ok!(Slpx::set_currency_ethereum_call_switch(RuntimeOrigin::root(), BNC, false));
-		assert_eq!(Slpx::currency_id_list().to_vec(), vec![KSM]);
+		assert_eq!(CurrencyIdList::<Test>::get().to_vec(), vec![KSM]);
 	})
 }
 
@@ -299,7 +299,7 @@ fn test_set_ethereum_call_configration() {
 		));
 
 		assert_eq!(
-			Slpx::xcm_ethereum_call_configuration().unwrap(),
+			XcmEthereumCallConfiguration::<Test>::get().unwrap(),
 			EthereumCallConfiguration {
 				xcm_fee: 1_000_000_000_000_000_000u128,
 				xcm_weight: Weight::default(),
@@ -318,7 +318,7 @@ fn test_set_ethereum_call_configration() {
 		));
 
 		assert_eq!(
-			Slpx::xcm_ethereum_call_configuration().unwrap(),
+			XcmEthereumCallConfiguration::<Test>::get().unwrap(),
 			EthereumCallConfiguration {
 				xcm_fee: 1u128,
 				xcm_weight: Weight::default(),
@@ -334,13 +334,13 @@ fn test_set_ethereum_call_configration() {
 fn test_set_currency_to_support_xcm_fee() {
 	sp_io::TestExternalities::default().execute_with(|| {
 		assert_ok!(Slpx::set_currency_support_xcm_fee(RuntimeOrigin::root(), BNC, true));
-		assert_eq!(Slpx::support_xcm_fee_list().to_vec(), vec![BNC]);
+		assert_eq!(SupportXcmFeeList::<Test>::get().to_vec(), vec![BNC]);
 
 		assert_ok!(Slpx::set_currency_support_xcm_fee(RuntimeOrigin::root(), KSM, true));
-		assert_eq!(Slpx::support_xcm_fee_list().to_vec(), vec![BNC, KSM]);
+		assert_eq!(SupportXcmFeeList::<Test>::get().to_vec(), vec![BNC, KSM]);
 
 		assert_ok!(Slpx::set_currency_support_xcm_fee(RuntimeOrigin::root(), BNC, false));
-		assert_eq!(Slpx::support_xcm_fee_list().to_vec(), vec![KSM]);
+		assert_eq!(SupportXcmFeeList::<Test>::get().to_vec(), vec![KSM]);
 	})
 }
 

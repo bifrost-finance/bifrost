@@ -309,39 +309,31 @@ pub mod pallet {
 	}
 
 	#[pallet::storage]
-	#[pallet::getter(fn fees)]
 	pub type Fees<T: Config> = StorageValue<_, (Permill, Permill), ValueQuery>;
 
 	#[pallet::storage]
-	#[pallet::getter(fn token_pool)]
 	pub type TokenPool<T: Config> =
 		StorageMap<_, Twox64Concat, CurrencyIdOf<T>, BalanceOf<T>, ValueQuery>;
 
 	#[pallet::storage]
-	#[pallet::getter(fn unlock_duration)]
 	pub type UnlockDuration<T: Config> = StorageMap<_, Twox64Concat, CurrencyIdOf<T>, TimeUnit>;
 
 	#[pallet::storage]
-	#[pallet::getter(fn ongoing_time_unit)]
 	pub type OngoingTimeUnit<T: Config> = StorageMap<_, Twox64Concat, CurrencyIdOf<T>, TimeUnit>;
 
 	#[pallet::storage]
-	#[pallet::getter(fn minimum_mint)]
 	pub type MinimumMint<T: Config> =
 		StorageMap<_, Twox64Concat, CurrencyIdOf<T>, BalanceOf<T>, ValueQuery>;
 
 	#[pallet::storage]
-	#[pallet::getter(fn minimum_redeem)]
 	pub type MinimumRedeem<T: Config> =
 		StorageMap<_, Twox64Concat, CurrencyIdOf<T>, BalanceOf<T>, ValueQuery>;
 
 	#[pallet::storage]
-	#[pallet::getter(fn token_unlock_next_id)]
 	pub type TokenUnlockNextId<T: Config> =
 		StorageMap<_, Twox64Concat, CurrencyIdOf<T>, u32, ValueQuery>;
 
 	#[pallet::storage]
-	#[pallet::getter(fn token_unlock_ledger)]
 	pub type TokenUnlockLedger<T: Config> = StorageDoubleMap<
 		_,
 		Blake2_128Concat,
@@ -353,7 +345,6 @@ pub mod pallet {
 	>;
 
 	#[pallet::storage]
-	#[pallet::getter(fn user_unlock_ledger)]
 	pub type UserUnlockLedger<T: Config> = StorageDoubleMap<
 		_,
 		Blake2_128Concat,
@@ -365,7 +356,6 @@ pub mod pallet {
 	>;
 
 	#[pallet::storage]
-	#[pallet::getter(fn time_unit_unlock_ledger)]
 	pub type TimeUnitUnlockLedger<T: Config> = StorageDoubleMap<
 		_,
 		Blake2_128Concat,
@@ -377,39 +367,32 @@ pub mod pallet {
 	>;
 
 	#[pallet::storage]
-	#[pallet::getter(fn token_to_rebond)]
 	pub type TokenToRebond<T: Config> = StorageMap<_, Twox64Concat, CurrencyIdOf<T>, BalanceOf<T>>;
 
 	#[pallet::storage]
-	#[pallet::getter(fn min_time_unit)]
 	pub type MinTimeUnit<T: Config> =
 		StorageMap<_, Twox64Concat, CurrencyIdOf<T>, TimeUnit, ValueQuery>;
 
 	#[pallet::storage]
-	#[pallet::getter(fn unlocking_total)]
 	pub type UnlockingTotal<T: Config> =
 		StorageMap<_, Twox64Concat, CurrencyIdOf<T>, BalanceOf<T>, ValueQuery>;
 
 	#[pallet::storage]
-	#[pallet::getter(fn hook_iteration_limit)]
 	pub type HookIterationLimit<T: Config> = StorageValue<_, u32, ValueQuery>;
 
 	//【vtoken -> Blocks】, the locked blocks for each vtoken when minted in an incentive mode
 	#[pallet::storage]
-	#[pallet::getter(fn get_mint_with_lock_blocks)]
 	pub type MintWithLockBlocks<T: Config> =
 		StorageMap<_, Blake2_128Concat, CurrencyId, BlockNumberFor<T>>;
 
 	//【vtoken -> incentive coefficient】,the incentive coefficient for each vtoken when minted in
 	// an incentive mode
 	#[pallet::storage]
-	#[pallet::getter(fn get_vtoken_incentive_coef)]
 	pub type VtokenIncentiveCoef<T: Config> = StorageMap<_, Blake2_128Concat, CurrencyId, u128>;
 
 	//【user + vtoken -> (total_locked, vec[(locked_amount, due_block_num)])】, the locked vtoken
 	// records for each user
 	#[pallet::storage]
-	#[pallet::getter(fn get_vtoken_lock_ledger)]
 	pub type VtokenLockLedger<T: Config> = StorageDoubleMap<
 		_,
 		Blake2_128Concat,
@@ -477,9 +460,9 @@ pub mod pallet {
 			let vtoken_id = T::CurrencyIdConversion::convert_to_vtoken(token_id)
 				.map_err(|_| Error::<T>::NotSupportTokenType)?;
 			let _token_amount_to_rebond =
-				Self::token_to_rebond(token_id).ok_or(Error::<T>::InvalidRebondToken)?;
+				TokenToRebond::<T>::get(token_id).ok_or(Error::<T>::InvalidRebondToken)?;
 			if let Some((user_unlock_amount, mut ledger_list)) =
-				Self::user_unlock_ledger(&exchanger, token_id)
+				UserUnlockLedger::<T>::get(&exchanger, token_id)
 			{
 				ensure!(user_unlock_amount >= token_amount, Error::<T>::NotEnoughBalanceToUnlock);
 				let mut tmp_amount = token_amount;
@@ -491,7 +474,7 @@ pub mod pallet {
 					.iter()
 					.map(|&index| -> Result<(UnlockId, bool), Error<T>> {
 						if let Some((_, unlock_amount, time_unit, _)) =
-							Self::token_unlock_ledger(token_id, index)
+							TokenUnlockLedger::<T>::get(token_id, index)
 						{
 							if tmp_amount >= unlock_amount {
 								if let Some((_, _, time_unit, _)) =
@@ -645,9 +628,9 @@ pub mod pallet {
 			let vtoken_id = T::CurrencyIdConversion::convert_to_vtoken(token_id)
 				.map_err(|_| Error::<T>::NotSupportTokenType)?;
 			let _token_amount_to_rebond =
-				Self::token_to_rebond(token_id).ok_or(Error::<T>::InvalidRebondToken)?;
+				TokenToRebond::<T>::get(token_id).ok_or(Error::<T>::InvalidRebondToken)?;
 
-			let unlock_amount = match Self::token_unlock_ledger(token_id, unlock_id) {
+			let unlock_amount = match TokenUnlockLedger::<T>::get(token_id, unlock_id) {
 				Some((who, unlock_amount, time_unit, _)) => {
 					ensure!(who == exchanger, Error::<T>::CanNotRebond);
 					TimeUnitUnlockLedger::<T>::mutate_exists(
@@ -824,7 +807,7 @@ pub mod pallet {
 
 			if TokenToRebond::<T>::contains_key(token_id) {
 				let token_amount_to_rebond =
-					Self::token_to_rebond(token_id).ok_or(Error::<T>::InvalidRebondToken)?;
+					TokenToRebond::<T>::get(token_id).ok_or(Error::<T>::InvalidRebondToken)?;
 				ensure!(
 					token_amount_to_rebond == BalanceOf::<T>::zero(),
 					Error::<T>::TokenToRebondNotZero
@@ -1163,7 +1146,7 @@ pub mod pallet {
 			token_id: CurrencyId,
 			token_amount: BalanceOf<T>,
 		) -> Result<(BalanceOf<T>, BalanceOf<T>, BalanceOf<T>), DispatchError> {
-			let token_pool_amount = Self::token_pool(token_id);
+			let token_pool_amount = TokenPool::<T>::get(token_id);
 			let vtoken_total_issuance = T::MultiCurrency::total_issuance(vtoken_id);
 			let (mint_rate, _redeem_rate) = Fees::<T>::get();
 			let mint_fee = mint_rate * token_amount;
@@ -1505,9 +1488,9 @@ pub mod pallet {
 			if let Some((_total_locked, ledger_list, token_id)) =
 				TimeUnitUnlockLedger::<T>::get(time_unit.clone(), currency)
 			{
-				for index in ledger_list.iter().take(Self::hook_iteration_limit() as usize) {
+				for index in ledger_list.iter().take(HookIterationLimit::<T>::get() as usize) {
 					if let Some((account, unlock_amount, time_unit, redeem_type)) =
-						Self::token_unlock_ledger(token_id, index)
+						TokenUnlockLedger::<T>::get(token_id, index)
 					{
 						let entrance_account_balance = T::MultiCurrency::free_balance(
 							token_id,
@@ -1633,7 +1616,7 @@ pub mod pallet {
 				redeem_fee,
 			)?;
 
-			let token_pool_amount = Self::token_pool(token_id);
+			let token_pool_amount = TokenPool::<T>::get(token_id);
 			let vtoken_total_issuance = T::MultiCurrency::total_issuance(vtoken_id);
 			let token_amount: BalanceOf<T> = U256::from(vtoken_amount.saturated_into::<u128>())
 				.saturating_mul(token_pool_amount.saturated_into::<u128>().into())
@@ -1643,12 +1626,12 @@ pub mod pallet {
 				.map_err(|_| Error::<T>::CalculationOverflow)?
 				.unique_saturated_into();
 
-			let next_id = Self::token_unlock_next_id(token_id);
+			let next_id = TokenUnlockNextId::<T>::get(token_id);
 			match OngoingTimeUnit::<T>::get(token_id) {
 				Some(time_unit) => {
 					// Calculate the time to be locked
 					let result_time_unit = Self::add_time_unit(
-						Self::unlock_duration(token_id)
+						UnlockDuration::<T>::get(token_id)
 							.ok_or(Error::<T>::UnlockDurationNotFound)?,
 						time_unit,
 					)?;
@@ -1768,7 +1751,7 @@ pub mod pallet {
 			vtoken_id: CurrencyIdOf<T>,
 			token_amount: BalanceOf<T>,
 		) -> Result<BalanceOf<T>, DispatchError> {
-			let token_pool_amount = Self::token_pool(token_id);
+			let token_pool_amount = TokenPool::<T>::get(token_id);
 			let vtoken_total_issuance = T::MultiCurrency::total_issuance(vtoken_id);
 
 			let value = U256::from(token_amount.saturated_into::<u128>())
@@ -1786,7 +1769,7 @@ pub mod pallet {
 			vtoken_id: CurrencyIdOf<T>,
 			vtoken_amount: BalanceOf<T>,
 		) -> Result<BalanceOf<T>, DispatchError> {
-			let token_pool_amount = Self::token_pool(token_id);
+			let token_pool_amount = TokenPool::<T>::get(token_id);
 			let vtoken_total_issuance = T::MultiCurrency::total_issuance(vtoken_id);
 
 			let value = U256::from(vtoken_amount.saturated_into::<u128>())
@@ -1834,7 +1817,7 @@ pub mod pallet {
 				&vtoken_id,
 				|value| -> Result<(), Error<T>> {
 					// get the vtoken lock duration from VtokenIncentiveCoef
-					let lock_duration = Self::get_mint_with_lock_blocks(vtoken_id)
+					let lock_duration = MintWithLockBlocks::<T>::get(vtoken_id)
 						.ok_or(Error::<T>::IncentiveLockBlocksNotSet)?;
 					let current_block = frame_system::Pallet::<T>::block_number();
 					let due_block = current_block
@@ -1906,7 +1889,7 @@ pub mod pallet {
 			let vtoken_total_issuance = T::MultiCurrency::total_issuance(vtoken_id);
 
 			// get the incentive coef for the vtoken
-			let incentive_coef = Self::get_vtoken_incentive_coef(vtoken_id)
+			let incentive_coef = VtokenIncentiveCoef::<T>::get(vtoken_id)
 				.ok_or(Error::<T>::IncentiveCoefNotFound)?;
 
 			// calculate the incentive amount, but mind the overflow
@@ -1957,7 +1940,7 @@ pub mod pallet {
 			let vtoken_id = T::CurrencyIdConversion::convert_to_vtoken(token)
 				.map_err(|_| Error::<T>::NotSupportTokenType)?;
 
-			let token_pool_amount = Self::token_pool(token);
+			let token_pool_amount = TokenPool::<T>::get(token);
 			let vtoken_total_issuance = T::MultiCurrency::total_issuance(vtoken_id);
 
 			let mut vtoken_amount = U256::from(amount);
@@ -1980,7 +1963,7 @@ impl<T: Config> VtokenMintingOperator<CurrencyId, BalanceOf<T>, AccountIdOf<T>, 
 	for Pallet<T>
 {
 	fn get_token_pool(currency_id: CurrencyId) -> BalanceOf<T> {
-		Self::token_pool(currency_id)
+		TokenPool::<T>::get(currency_id)
 	}
 
 	fn increase_token_pool(currency_id: CurrencyId, token_amount: BalanceOf<T>) -> DispatchResult {
@@ -2012,14 +1995,14 @@ impl<T: Config> VtokenMintingOperator<CurrencyId, BalanceOf<T>, AccountIdOf<T>, 
 	}
 
 	fn get_ongoing_time_unit(currency_id: CurrencyId) -> Option<TimeUnit> {
-		Self::ongoing_time_unit(currency_id)
+		OngoingTimeUnit::<T>::get(currency_id)
 	}
 
 	fn get_unlock_records(
 		currency_id: CurrencyId,
 		time_unit: TimeUnit,
 	) -> Option<(BalanceOf<T>, Vec<u32>)> {
-		if let Some((balance, list, _)) = Self::time_unit_unlock_ledger(&time_unit, currency_id) {
+		if let Some((balance, list, _)) = TimeUnitUnlockLedger::<T>::get(&time_unit, currency_id) {
 			Some((balance, list.into_inner()))
 		} else {
 			None
@@ -2033,7 +2016,7 @@ impl<T: Config> VtokenMintingOperator<CurrencyId, BalanceOf<T>, AccountIdOf<T>, 
 		deduct_amount: BalanceOf<T>,
 	) -> DispatchResult {
 		if let Some((who, unlock_amount, time_unit, _)) =
-			Self::token_unlock_ledger(currency_id, index)
+			TokenUnlockLedger::<T>::get(currency_id, index)
 		{
 			ensure!(unlock_amount >= deduct_amount, Error::<T>::NotEnoughBalanceToUnlock);
 
@@ -2123,7 +2106,7 @@ impl<T: Config> VtokenMintingOperator<CurrencyId, BalanceOf<T>, AccountIdOf<T>, 
 		currency_id: CurrencyId,
 		index: u32,
 	) -> Option<(AccountIdOf<T>, BalanceOf<T>, TimeUnit, RedeemType<AccountIdOf<T>>)> {
-		Self::token_unlock_ledger(currency_id, index)
+		TokenUnlockLedger::<T>::get(currency_id, index)
 	}
 
 	fn get_astar_parachain_id() -> u32 {
@@ -2202,7 +2185,7 @@ impl<T: Config> VtokenMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceO
 	}
 
 	fn get_token_pool(currency_id: CurrencyId) -> BalanceOf<T> {
-		Self::token_pool(currency_id)
+		TokenPool::<T>::get(currency_id)
 	}
 
 	fn get_astar_parachain_id() -> u32 {
@@ -2233,7 +2216,7 @@ impl<T: Config> VTokenSupplyProvider<CurrencyIdOf<T>, BalanceOf<T>> for Pallet<T
 
 	fn get_token_supply(token: CurrencyIdOf<T>) -> Option<BalanceOf<T>> {
 		if CurrencyId::is_token(&token) {
-			Some(Self::token_pool(token))
+			Some(TokenPool::<T>::get(token))
 		} else {
 			None
 		}

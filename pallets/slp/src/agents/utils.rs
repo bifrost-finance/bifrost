@@ -16,8 +16,9 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 use crate::{
-	blake2_256, pallet::Error, AccountIdOf, Config, Decode, LedgerUpdateEntry, MinimumsAndMaximums,
-	Pallet, TrailingZeroInput, Validators, ValidatorsByDelegatorUpdateEntry, ASTR, DOT, GLMR, H160,
+	blake2_256, pallet::Error, AccountIdOf, Config, Decode, DelegatorLedgerXcmUpdateQueue,
+	LedgerUpdateEntry, MinimumsAndMaximums, Pallet, TrailingZeroInput, Validators,
+	ValidatorsByDelegatorUpdateEntry, ValidatorsByDelegatorXcmUpdateQueue, ASTR, DOT, GLMR, H160,
 	KSM, MANTA, MOVR, PHA,
 };
 use bifrost_primitives::{parachains, CurrencyId};
@@ -210,7 +211,7 @@ impl<T: Config> Pallet<T> {
 		// See if the query exists. If it exists, call corresponding chain storage update
 		// function.
 		let (entry, timeout) =
-			Self::get_delegator_ledger_update_entry(query_id).ok_or(Error::<T>::QueryNotExist)?;
+			DelegatorLedgerXcmUpdateQueue::<T>::get(query_id).ok_or(Error::<T>::QueryNotExist)?;
 
 		let now = frame_system::Pallet::<T>::block_number();
 		let mut updated = true;
@@ -243,7 +244,7 @@ impl<T: Config> Pallet<T> {
 	) -> Result<bool, Error<T>> {
 		// See if the query exists. If it exists, call corresponding chain storage update
 		// function.
-		let (entry, timeout) = Self::get_validators_by_delegator_update_entry(query_id)
+		let (entry, timeout) = ValidatorsByDelegatorXcmUpdateQueue::<T>::get(query_id)
 			.ok_or(Error::<T>::QueryNotExist)?;
 
 		let now = frame_system::Pallet::<T>::block_number();
@@ -273,7 +274,7 @@ impl<T: Config> Pallet<T> {
 		// See if the query exists. If it exists, call corresponding chain storage update
 		// function.
 		let (entry, _) =
-			Self::get_delegator_ledger_update_entry(query_id).ok_or(Error::<T>::QueryNotExist)?;
+			DelegatorLedgerXcmUpdateQueue::<T>::get(query_id).ok_or(Error::<T>::QueryNotExist)?;
 		let currency_id = match entry {
 			LedgerUpdateEntry::Substrate(substrate_entry) => Some(substrate_entry.currency_id),
 			LedgerUpdateEntry::ParachainStaking(moonbeam_entry) => Some(moonbeam_entry.currency_id),
@@ -292,7 +293,7 @@ impl<T: Config> Pallet<T> {
 	) -> Result<(), Error<T>> {
 		// See if the query exists. If it exists, call corresponding chain storage update
 		// function.
-		let (entry, _) = Self::get_validators_by_delegator_update_entry(query_id)
+		let (entry, _) = ValidatorsByDelegatorXcmUpdateQueue::<T>::get(query_id)
 			.ok_or(Error::<T>::QueryNotExist)?;
 		let currency_id = match entry {
 			ValidatorsByDelegatorUpdateEntry::Substrate(substrate_entry) =>

@@ -123,7 +123,6 @@ pub mod pallet {
 	}
 
 	#[pallet::storage]
-	#[pallet::getter(fn configs)]
 	pub type Infos<T: Config> =
 		StorageMap<_, Twox64Concat, CurrencyIdOf<T>, Info<BalanceOf<T>, BlockNumberFor<T>>>;
 

@@ -885,7 +885,7 @@ fn add_validator_and_remove_validator_works() {
 		valis.push(validator_0_location);
 
 		let bounded_valis = BoundedVec::try_from(valis).unwrap();
-		assert_eq!(Slp::get_validators(BNC), Some(bounded_valis));
+		assert_eq!(Validators::<Runtime>::get(BNC), Some(bounded_valis));
 
 		assert_ok!(Slp::remove_validator(
 			RuntimeOrigin::signed(ALICE),
@@ -894,7 +894,7 @@ fn add_validator_and_remove_validator_works() {
 		));
 
 		let empty_bounded_vec = BoundedVec::default();
-		assert_eq!(Slp::get_validators(BNC), Some(empty_bounded_vec));
+		assert_eq!(Validators::<Runtime>::get(BNC), Some(empty_bounded_vec));
 	});
 }
 

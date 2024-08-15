@@ -109,7 +109,6 @@ pub mod pallet {
 	}
 
 	#[pallet::storage]
-	#[pallet::getter(fn distribution_infos)]
 	pub type DistributionInfos<T: Config> =
 		StorageMap<_, Twox64Concat, DistributionId, Info<AccountIdOf<T>>>;
 
@@ -122,18 +121,16 @@ pub mod pallet {
 	}
 
 	#[pallet::storage]
-	#[pallet::getter(fn distribution_next_id)]
 	pub type DistributionNextId<T: Config> = StorageValue<_, DistributionId, ValueQuery>;
 
 	#[pallet::storage]
-	#[pallet::getter(fn auto_era)]
 	pub type AutoEra<T: Config> =
 		StorageValue<_, (BlockNumberFor<T>, BlockNumberFor<T>), ValueQuery>;
 
 	#[pallet::hooks]
 	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
 		fn on_idle(bn: BlockNumberFor<T>, _remaining_weight: Weight) -> Weight {
-			let (era_length, next_era) = Self::auto_era();
+			let (era_length, next_era) = AutoEra::<T>::get();
 			if bn.eq(&next_era) {
 				for (distribution_id, info) in DistributionInfos::<T>::iter() {
 					if info.if_auto {
@@ -181,7 +178,7 @@ pub mod pallet {
 				.collect();
 			ensure!(total_proportion.is_one(), Error::<T>::NotSupportProportion);
 
-			let distribution_id = Self::distribution_next_id();
+			let distribution_id = DistributionNextId::<T>::get();
 			let receiving_address =
 				T::FeeSharePalletId::get().into_sub_account_truncating(distribution_id);
 			let info = Info {
@@ -211,7 +208,7 @@ pub mod pallet {
 		) -> DispatchResult {
 			T::ControlOrigin::ensure_origin(origin)?;
 
-			let mut info = Self::distribution_infos(distribution_id)
+			let mut info = DistributionInfos::<T>::get(distribution_id)
 				.ok_or(Error::<T>::DistributionNotExist)?;
 			if let Some(tokens_proportion) = tokens_proportion {
 				let mut total_proportion = Perbill::from_percent(0);
@@ -264,7 +261,7 @@ pub mod pallet {
 		) -> DispatchResult {
 			T::ControlOrigin::ensure_origin(origin)?;
 
-			if let Some(info) = Self::distribution_infos(distribution_id) {
+			if let Some(info) = DistributionInfos::<T>::get(distribution_id) {
 				Self::execute_distribute_inner(&info)?;
 			}
 
@@ -280,7 +277,7 @@ pub mod pallet {
 		) -> DispatchResult {
 			T::ControlOrigin::ensure_origin(origin)?;
 
-			if let Some(info) = Self::distribution_infos(distribution_id) {
+			if let Some(info) = DistributionInfos::<T>::get(distribution_id) {
 				Self::execute_distribute_inner(&info)?;
 				DistributionInfos::<T>::remove(distribution_id);
 			}

@@ -19,8 +19,8 @@ use crate::{
 	pallet::{Error, Event},
 	primitives::{FilecoinLedger, Ledger},
 	AccountIdOf, BalanceOf, BoundedVec, Config, DelegatorLatestTuneRecord, DelegatorLedgers,
-	LedgerUpdateEntry, MinimumsAndMaximums, Pallet, TimeUnit, Validators, ValidatorsByDelegator,
-	ValidatorsByDelegatorUpdateEntry,
+	HostingFees, LedgerUpdateEntry, MinimumsAndMaximums, Pallet, TimeUnit, Validators,
+	ValidatorsByDelegator, ValidatorsByDelegatorUpdateEntry,
 };
 use bifrost_primitives::{CurrencyId, StakingAgent, VtokenMintingOperator};
 use core::marker::PhantomData;
@@ -446,7 +446,7 @@ impl<T: Config>
 		// issue the increased interest amount to the entrance account
 		// Get charged fee value
 		let (fee_permill, _beneficiary) =
-			Pallet::<T>::get_hosting_fee(currency_id).ok_or(Error::<T>::InvalidHostingFee)?;
+			HostingFees::<T>::get(currency_id).ok_or(Error::<T>::InvalidHostingFee)?;
 		let fee_to_charge = fee_permill.mul_floor(token_amount);
 		let amount_to_increase =
 			token_amount.checked_sub(&fee_to_charge).ok_or(Error::<T>::UnderFlow)?;

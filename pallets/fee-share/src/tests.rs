@@ -75,10 +75,10 @@ fn edit_delete_distribution() {
 		assert_ok!(FeeShare::execute_distribute(RuntimeOrigin::signed(ALICE), 0));
 		assert_eq!(Tokens::free_balance(KSM, &keeper), 0);
 
-		if let Some(infos) = FeeShare::distribution_infos(0) {
+		if let Some(infos) = DistributionInfos::<Runtime>::get(0) {
 			assert_eq!(infos.token_type, vec![KSM])
 		}
 		assert_ok!(FeeShare::delete_distribution(RuntimeOrigin::signed(ALICE), 0));
-		assert_eq!(FeeShare::distribution_infos(0), None);
+		assert_eq!(DistributionInfos::<Runtime>::get(0), None);
 	});
 }

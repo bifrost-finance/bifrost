@@ -50,11 +50,11 @@ fn interest_rate_model_works() {
 
 		let total_cash = million_unit(200) - million_unit(100);
 		let total_supply =
-			LendMarket::calc_collateral_amount(million_unit(200), LendMarket::exchange_rate(DOT))
+			LendMarket::calc_collateral_amount(million_unit(200), ExchangeRate::<Test>::get(DOT))
 				.unwrap();
-		assert_eq!(LendMarket::total_supply(DOT), total_supply);
+		assert_eq!(TotalSupply::<Test>::get(DOT), total_supply);
 
-		let borrow_snapshot = LendMarket::account_borrows(DOT, ALICE);
+		let borrow_snapshot = AccountBorrows::<Test>::get(DOT, ALICE);
 		assert_eq!(borrow_snapshot.principal, million_unit(100));
 		assert_eq!(borrow_snapshot.borrow_index, Rate::one());
 
@@ -74,7 +74,7 @@ fn interest_rate_model_works() {
 			assert_ok!(LendMarket::accrue_interest(DOT));
 			// utilizationRatio = totalBorrows / (totalCash + totalBorrows)
 			let util_ratio = Ratio::from_rational(total_borrows, total_cash + total_borrows);
-			assert_eq!(LendMarket::utilization_ratio(DOT), util_ratio);
+			assert_eq!(UtilizationRatio::<Test>::get(DOT), util_ratio);
 
 			let borrow_rate =
 				(jump_rate - base_rate) * util_ratio.into() / jump_utilization.into() + base_rate;
@@ -84,17 +84,17 @@ fn interest_rate_model_works() {
 				.checked_div(SECONDS_PER_YEAR.into())
 				.unwrap();
 			total_borrows = interest_accumulated + total_borrows;
-			assert_eq!(LendMarket::total_borrows(DOT), total_borrows);
+			assert_eq!(TotalBorrows::<Test>::get(DOT), total_borrows);
 			total_reserves = Markets::<Test>::get(&DOT)
 				.unwrap()
 				.reserve_factor
 				.mul_floor(interest_accumulated) +
 				total_reserves;
-			assert_eq!(LendMarket::total_reserves(DOT), total_reserves);
+			assert_eq!(TotalReserves::<Test>::get(DOT), total_reserves);
 
 			// exchangeRate = (totalCash + totalBorrows - totalReserves) / totalSupply
 			assert_eq!(
-				LendMarket::exchange_rate(DOT).into_inner(),
+				ExchangeRate::<Test>::get(DOT).into_inner(),
 				(total_cash + total_borrows - total_reserves) * rate_decimal / total_supply
 			);
 			let numerator = borrow_index
@@ -103,18 +103,18 @@ fn interest_rate_model_works() {
 				.checked_div(&Rate::saturating_from_integer(SECONDS_PER_YEAR))
 				.unwrap();
 			borrow_index = numerator + borrow_index;
-			assert_eq!(LendMarket::borrow_index(DOT), borrow_index);
+			assert_eq!(BorrowIndex::<Test>::get(DOT), borrow_index);
 		}
 		assert_eq!(total_borrows, 100000063926960646826);
 		assert_eq!(total_reserves, 9589044097001);
 		assert_eq!(borrow_index, Rate::from_inner(1000000639269606444));
-		assert_eq!(LendMarket::exchange_rate(DOT), Rate::from_inner(20000005433791654));
+		assert_eq!(ExchangeRate::<Test>::get(DOT), Rate::from_inner(20000005433791654));
 
 		// Calculate borrow accrued interest
 		let borrow_principal = (borrow_index / borrow_snapshot.borrow_index)
 			.saturating_mul_int(borrow_snapshot.principal);
 		let supply_interest =
-			LendMarket::exchange_rate(DOT).saturating_mul_int(total_supply) - million_unit(200);
+			ExchangeRate::<Test>::get(DOT).saturating_mul_int(total_supply) - million_unit(200);
 		assert_eq!(supply_interest, 54337916540000);
 		assert_eq!(borrow_principal, 100000063926960644400);
 		assert_eq!(total_borrows / 10000, borrow_principal / 10000);
@@ -143,16 +143,16 @@ fn last_accrued_interest_time_should_be_update_correctly() {
 			BNC,
 			vec![DOT, BNC, KSM, DOT_U, PHA]
 		));
-		assert_eq!(LendMarket::borrow_index(DOT), Rate::one());
-		assert_eq!(LendMarket::last_accrued_interest_time(DOT), 0);
+		assert_eq!(BorrowIndex::<Test>::get(DOT), Rate::one());
+		assert_eq!(LastAccruedInterestTime::<Test>::get(DOT), 0);
 		assert_ok!(LendMarket::mint(RuntimeOrigin::signed(ALICE), DOT, unit(200)));
-		assert_eq!(LendMarket::last_accrued_interest_time(DOT), 6);
+		assert_eq!(LastAccruedInterestTime::<Test>::get(DOT), 6);
 		assert_ok!(LendMarket::collateral_asset(RuntimeOrigin::signed(ALICE), DOT, true));
 		assert_ok!(LendMarket::borrow(RuntimeOrigin::signed(ALICE), DOT, unit(100)));
-		assert_eq!(LendMarket::borrow_index(DOT), Rate::one());
+		assert_eq!(BorrowIndex::<Test>::get(DOT), Rate::one());
 		TimestampPallet::set_timestamp(12000);
 		assert_ok!(LendMarket::mint(RuntimeOrigin::signed(ALICE), DOT, unit(100)));
-		assert_eq!(LendMarket::borrow_index(DOT), Rate::from_inner(1000000013318112633),);
+		assert_eq!(BorrowIndex::<Test>::get(DOT), Rate::from_inner(1000000013318112633),);
 	})
 }
 
@@ -177,10 +177,10 @@ fn accrue_interest_works_after_mint() {
 		assert_ok!(LendMarket::mint(RuntimeOrigin::signed(ALICE), DOT, unit(200)));
 		assert_ok!(LendMarket::collateral_asset(RuntimeOrigin::signed(ALICE), DOT, true));
 		assert_ok!(LendMarket::borrow(RuntimeOrigin::signed(ALICE), DOT, unit(100)));
-		assert_eq!(LendMarket::borrow_index(DOT), Rate::one());
+		assert_eq!(BorrowIndex::<Test>::get(DOT), Rate::one());
 		TimestampPallet::set_timestamp(12000);
 		assert_ok!(LendMarket::mint(RuntimeOrigin::signed(ALICE), DOT, unit(100)));
-		assert_eq!(LendMarket::borrow_index(DOT), Rate::from_inner(1000000013318112633),);
+		assert_eq!(BorrowIndex::<Test>::get(DOT), Rate::from_inner(1000000013318112633),);
 	})
 }
 
@@ -204,10 +204,10 @@ fn accrue_interest_works_after_borrow() {
 		));
 		assert_ok!(LendMarket::mint(RuntimeOrigin::signed(ALICE), DOT, unit(200)));
 		assert_ok!(LendMarket::collateral_asset(RuntimeOrigin::signed(ALICE), DOT, true));
-		assert_eq!(LendMarket::borrow_index(DOT), Rate::one());
+		assert_eq!(BorrowIndex::<Test>::get(DOT), Rate::one());
 		TimestampPallet::set_timestamp(12000);
 		assert_ok!(LendMarket::borrow(RuntimeOrigin::signed(ALICE), DOT, unit(100)));
-		assert_eq!(LendMarket::borrow_index(DOT), Rate::from_inner(1000000003805175038),);
+		assert_eq!(BorrowIndex::<Test>::get(DOT), Rate::from_inner(1000000003805175038),);
 	})
 }
 
@@ -232,13 +232,13 @@ fn accrue_interest_works_after_redeem() {
 		assert_ok!(LendMarket::mint(RuntimeOrigin::signed(ALICE), DOT, unit(200)));
 		assert_ok!(LendMarket::collateral_asset(RuntimeOrigin::signed(ALICE), DOT, true));
 		assert_ok!(LendMarket::borrow(RuntimeOrigin::signed(ALICE), DOT, unit(10)));
-		assert_eq!(LendMarket::borrow_index(DOT), Rate::one());
+		assert_eq!(BorrowIndex::<Test>::get(DOT), Rate::one());
 		TimestampPallet::set_timestamp(12000);
 		assert_ok!(LendMarket::redeem(RuntimeOrigin::signed(ALICE), DOT, unit(10)));
-		assert_eq!(LendMarket::borrow_index(DOT), Rate::from_inner(1000000004756468797),);
+		assert_eq!(BorrowIndex::<Test>::get(DOT), Rate::from_inner(1000000004756468797),);
 		assert_eq!(
-			LendMarket::exchange_rate(DOT)
-				.saturating_mul_int(LendMarket::account_deposits(DOT, BOB).voucher_balance),
+			ExchangeRate::<Test>::get(DOT)
+				.saturating_mul_int(AccountDeposits::<Test>::get(DOT, BOB).voucher_balance),
 			0,
 		);
 		assert_eq!(<Test as Config>::Assets::balance(DOT, &ALICE), 819999999999999);
@@ -267,13 +267,13 @@ fn accrue_interest_works_after_redeem_all() {
 		assert_ok!(LendMarket::mint(RuntimeOrigin::signed(ALICE), DOT, unit(200)));
 		assert_ok!(LendMarket::collateral_asset(RuntimeOrigin::signed(ALICE), DOT, true));
 		assert_ok!(LendMarket::borrow(RuntimeOrigin::signed(ALICE), DOT, unit(10)));
-		assert_eq!(LendMarket::borrow_index(DOT), Rate::one());
+		assert_eq!(BorrowIndex::<Test>::get(DOT), Rate::one());
 		TimestampPallet::set_timestamp(12000);
 		assert_ok!(LendMarket::redeem_all(RuntimeOrigin::signed(BOB), DOT));
-		assert_eq!(LendMarket::borrow_index(DOT), Rate::from_inner(1000000004669977168),);
+		assert_eq!(BorrowIndex::<Test>::get(DOT), Rate::from_inner(1000000004669977168),);
 		assert_eq!(
-			LendMarket::exchange_rate(DOT)
-				.saturating_mul_int(LendMarket::account_deposits(DOT, BOB).voucher_balance),
+			ExchangeRate::<Test>::get(DOT)
+				.saturating_mul_int(AccountDeposits::<Test>::get(DOT, BOB).voucher_balance),
 			0,
 		);
 		assert_eq!(<Test as Config>::Assets::balance(DOT, &BOB), 1000000000003608);
@@ -302,10 +302,10 @@ fn accrue_interest_works_after_repay() {
 		assert_ok!(LendMarket::mint(RuntimeOrigin::signed(ALICE), DOT, unit(200)));
 		assert_ok!(LendMarket::collateral_asset(RuntimeOrigin::signed(ALICE), DOT, true));
 		assert_ok!(LendMarket::borrow(RuntimeOrigin::signed(ALICE), DOT, unit(20)));
-		assert_eq!(LendMarket::borrow_index(DOT), Rate::one());
+		assert_eq!(BorrowIndex::<Test>::get(DOT), Rate::one());
 		TimestampPallet::set_timestamp(12000);
 		assert_ok!(LendMarket::repay_borrow(RuntimeOrigin::signed(ALICE), DOT, unit(10)));
-		assert_eq!(LendMarket::borrow_index(DOT), Rate::from_inner(1000000005707762557),);
+		assert_eq!(BorrowIndex::<Test>::get(DOT), Rate::from_inner(1000000005707762557),);
 	})
 }
 
@@ -331,14 +331,14 @@ fn accrue_interest_works_after_repay_all() {
 		assert_ok!(LendMarket::mint(RuntimeOrigin::signed(ALICE), DOT, unit(200)));
 		assert_ok!(LendMarket::collateral_asset(RuntimeOrigin::signed(ALICE), DOT, true));
 		assert_ok!(LendMarket::borrow(RuntimeOrigin::signed(ALICE), KSM, unit(50)));
-		assert_eq!(LendMarket::borrow_index(KSM), Rate::one());
+		assert_eq!(BorrowIndex::<Test>::get(KSM), Rate::one());
 		TimestampPallet::set_timestamp(12000);
 		assert_ok!(LendMarket::repay_borrow_all(RuntimeOrigin::signed(ALICE), KSM));
-		assert_eq!(LendMarket::borrow_index(KSM), Rate::from_inner(1000000008561643835),);
+		assert_eq!(BorrowIndex::<Test>::get(KSM), Rate::from_inner(1000000008561643835),);
 		assert_eq!(<Test as Config>::Assets::balance(KSM, &ALICE), 999999999571918);
-		let borrow_snapshot = LendMarket::account_borrows(KSM, ALICE);
+		let borrow_snapshot = AccountBorrows::<Test>::get(KSM, ALICE);
 		assert_eq!(borrow_snapshot.principal, 0);
-		assert_eq!(borrow_snapshot.borrow_index, LendMarket::borrow_index(KSM));
+		assert_eq!(borrow_snapshot.borrow_index, BorrowIndex::<Test>::get(KSM));
 	})
 }
 
@@ -367,8 +367,8 @@ fn accrue_interest_works_after_liquidate_borrow() {
 		// Alice borrows 100 KSM and 50 DOT
 		assert_ok!(LendMarket::borrow(RuntimeOrigin::signed(ALICE), KSM, unit(100)));
 		assert_ok!(LendMarket::borrow(RuntimeOrigin::signed(ALICE), DOT, unit(50)));
-		assert_eq!(LendMarket::borrow_index(DOT), Rate::one());
-		assert_eq!(LendMarket::borrow_index(KSM), Rate::one());
+		assert_eq!(BorrowIndex::<Test>::get(DOT), Rate::one());
+		assert_eq!(BorrowIndex::<Test>::get(KSM), Rate::one());
 		TimestampPallet::set_timestamp(12000);
 		// Adjust KSM price to make shortfall
 		MockPriceFeeder::set_price(KSM, 2.into());
@@ -380,8 +380,8 @@ fn accrue_interest_works_after_liquidate_borrow() {
 			unit(50),
 			DOT
 		));
-		assert_eq!(LendMarket::borrow_index(KSM), Rate::from_inner(1000000013318112633),);
-		assert_eq!(LendMarket::borrow_index(DOT), Rate::from_inner(1000000006976141552),);
+		assert_eq!(BorrowIndex::<Test>::get(KSM), Rate::from_inner(1000000013318112633),);
+		assert_eq!(BorrowIndex::<Test>::get(DOT), Rate::from_inner(1000000006976141552),);
 	})
 }
 
@@ -407,13 +407,13 @@ fn different_markets_can_accrue_interest_in_one_block() {
 		assert_ok!(LendMarket::collateral_asset(RuntimeOrigin::signed(ALICE), DOT, true));
 		assert_ok!(LendMarket::mint(RuntimeOrigin::signed(ALICE), KSM, unit(200)));
 		assert_ok!(LendMarket::collateral_asset(RuntimeOrigin::signed(ALICE), KSM, true));
-		assert_eq!(LendMarket::borrow_index(DOT), Rate::one());
-		assert_eq!(LendMarket::borrow_index(KSM), Rate::one());
+		assert_eq!(BorrowIndex::<Test>::get(DOT), Rate::one());
+		assert_eq!(BorrowIndex::<Test>::get(KSM), Rate::one());
 		TimestampPallet::set_timestamp(12000);
 		assert_ok!(LendMarket::borrow(RuntimeOrigin::signed(ALICE), DOT, unit(100)));
 		assert_ok!(LendMarket::borrow(RuntimeOrigin::signed(ALICE), KSM, unit(100)));
-		assert_eq!(LendMarket::borrow_index(DOT), Rate::from_inner(1000000003805175038),);
-		assert_eq!(LendMarket::borrow_index(KSM), Rate::from_inner(1000000003805175038),);
+		assert_eq!(BorrowIndex::<Test>::get(DOT), Rate::from_inner(1000000003805175038),);
+		assert_eq!(BorrowIndex::<Test>::get(KSM), Rate::from_inner(1000000003805175038),);
 	})
 }
 
@@ -439,10 +439,10 @@ fn a_market_can_only_accrue_interest_once_in_a_block() {
 		assert_ok!(LendMarket::collateral_asset(RuntimeOrigin::signed(ALICE), DOT, true));
 		assert_ok!(LendMarket::mint(RuntimeOrigin::signed(BOB), DOT, unit(200)));
 		assert_ok!(LendMarket::collateral_asset(RuntimeOrigin::signed(BOB), DOT, true));
-		assert_eq!(LendMarket::borrow_index(DOT), Rate::one());
+		assert_eq!(BorrowIndex::<Test>::get(DOT), Rate::one());
 		TimestampPallet::set_timestamp(12000);
 		assert_ok!(LendMarket::borrow(RuntimeOrigin::signed(ALICE), DOT, unit(100)));
 		assert_ok!(LendMarket::borrow(RuntimeOrigin::signed(BOB), DOT, unit(100)));
-		assert_eq!(LendMarket::borrow_index(DOT), Rate::from_inner(1000000003805175038),);
+		assert_eq!(BorrowIndex::<Test>::get(DOT), Rate::from_inner(1000000003805175038),);
 	})
 }

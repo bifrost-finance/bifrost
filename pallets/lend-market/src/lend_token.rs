@@ -28,7 +28,7 @@ impl<T: Config> Inspect<T::AccountId> for Pallet<T> {
 	/// The total amount of issuance in the system.
 	fn total_issuance(lend_token_id: Self::AssetId) -> Self::Balance {
 		if let Ok(underlying_id) = Self::underlying_id(lend_token_id) {
-			Self::total_supply(underlying_id)
+			TotalSupply::<T>::get(underlying_id)
 		} else {
 			Balance::default()
 		}
@@ -42,7 +42,7 @@ impl<T: Config> Inspect<T::AccountId> for Pallet<T> {
 	/// Get the lend token balance of `who`.
 	fn balance(lend_token_id: Self::AssetId, who: &T::AccountId) -> Self::Balance {
 		if let Ok(underlying_id) = Self::underlying_id(lend_token_id) {
-			Self::account_deposits(underlying_id, who).voucher_balance
+			AccountDeposits::<T>::get(underlying_id, who).voucher_balance
 		} else {
 			Balance::default()
 		}
@@ -77,7 +77,7 @@ impl<T: Config> Inspect<T::AccountId> for Pallet<T> {
 			return res;
 		}
 
-		if Self::total_supply(underlying_id).checked_add(amount).is_none() {
+		if TotalSupply::<T>::get(underlying_id).checked_add(amount).is_none() {
 			return DepositConsequence::Overflow;
 		}
 
@@ -200,7 +200,7 @@ impl<T: Config> Pallet<T> {
 	) -> Result<BalanceOf<T>, DispatchError> {
 		let underlying_id = Self::underlying_id(lend_token_id)?;
 		let Deposits { is_collateral, voucher_balance } =
-			Self::account_deposits(underlying_id, who);
+			AccountDeposits::<T>::get(underlying_id, who);
 
 		if !is_collateral {
 			return Ok(voucher_balance);
@@ -229,7 +229,7 @@ impl<T: Config> Pallet<T> {
 			.ok_or(ArithmeticError::Underflow)?
 			.into_inner();
 
-		let exchange_rate = Self::exchange_rate(underlying_id);
+		let exchange_rate = ExchangeRate::<T>::get(underlying_id);
 		let amount = Self::calc_collateral_amount(reducible_underlying_amount, exchange_rate)?;
 		Ok(amount)
 	}

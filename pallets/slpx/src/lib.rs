@@ -267,7 +267,6 @@ pub mod pallet {
 
 	/// Contract whitelist
 	#[pallet::storage]
-	#[pallet::getter(fn whitelist_account_ids)]
 	pub type WhitelistAccountId<T: Config> = StorageMap<
 		_,
 		Blake2_128Concat,
@@ -278,28 +277,23 @@ pub mod pallet {
 
 	/// Charge corresponding fees for different CurrencyId
 	#[pallet::storage]
-	#[pallet::getter(fn execution_fee)]
 	pub type ExecutionFee<T: Config> =
 		StorageMap<_, Blake2_128Concat, CurrencyId, BalanceOf<T>, OptionQuery>;
 
 	/// XCM fee for transferring to Moonbeam(BNC)
 	#[pallet::storage]
-	#[pallet::getter(fn transfer_to_fee)]
 	pub type TransferToFee<T: Config> =
 		StorageMap<_, Blake2_128Concat, SupportChain, BalanceOf<T>, OptionQuery>;
 
 	#[pallet::storage]
-	#[pallet::getter(fn xcm_ethereum_call_configuration)]
 	pub type XcmEthereumCallConfiguration<T: Config> =
 		StorageValue<_, EthereumCallConfiguration<BlockNumberFor<T>>>;
 
 	#[pallet::storage]
-	#[pallet::getter(fn currency_id_list)]
 	pub type CurrencyIdList<T: Config> =
 		StorageValue<_, BoundedVec<CurrencyId, ConstU32<10>>, ValueQuery>;
 
 	#[pallet::storage]
-	#[pallet::getter(fn support_xcm_fee_list)]
 	pub type SupportXcmFeeList<T: Config> =
 		StorageValue<_, BoundedVec<CurrencyId, ConstU32<100>>, ValueQuery>;
 
@@ -500,7 +494,7 @@ pub mod pallet {
 				Self::ensure_singer_on_whitelist(origin, evm_caller, &target_chain)?;
 
 			if vtoken_id == VFIL {
-				let fee_amount = Self::transfer_to_fee(SupportChain::Moonbeam)
+				let fee_amount = TransferToFee::<T>::get(SupportChain::Moonbeam)
 					.unwrap_or_else(|| Self::get_default_fee(BNC));
 				T::MultiCurrency::transfer(
 					BNC,
@@ -914,8 +908,8 @@ impl<T: Config> Pallet<T> {
 		evm_caller_account_id: &AccountIdOf<T>,
 	) -> Result<BalanceOf<T>, DispatchError> {
 		let free_balance = T::MultiCurrency::free_balance(currency_id, evm_caller_account_id);
-		let execution_fee =
-			Self::execution_fee(currency_id).unwrap_or_else(|| Self::get_default_fee(currency_id));
+		let execution_fee = ExecutionFee::<T>::get(currency_id)
+			.unwrap_or_else(|| Self::get_default_fee(currency_id));
 
 		T::MultiCurrency::transfer(
 			currency_id,
@@ -993,7 +987,7 @@ impl<T: Config> Pallet<T> {
 				if SupportXcmFeeList::<T>::get().contains(&currency_id) {
 					T::XcmTransfer::transfer(caller, currency_id, amount, dest, Unlimited)?;
 				} else {
-					let fee_amount = Self::transfer_to_fee(SupportChain::Moonbeam)
+					let fee_amount = TransferToFee::<T>::get(SupportChain::Moonbeam)
 						.unwrap_or_else(|| Self::get_default_fee(BNC));
 					T::MultiCurrency::transfer(BNC, evm_contract_account_id, &caller, fee_amount)?;
 					let assets = vec![(currency_id, amount), (BNC, fee_amount)];
@@ -1084,6 +1078,7 @@ impl<T: Config> Pallet<T> {
 // Functions to be called by other pallets.
 impl<T: Config> SlpxOperator<BalanceOf<T>> for Pallet<T> {
 	fn get_moonbeam_transfer_to_fee() -> BalanceOf<T> {
-		Self::transfer_to_fee(SupportChain::Moonbeam).unwrap_or_else(|| Self::get_default_fee(BNC))
+		TransferToFee::<T>::get(SupportChain::Moonbeam)
+			.unwrap_or_else(|| Self::get_default_fee(BNC))
 	}
 }
