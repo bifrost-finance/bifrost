@@ -26,6 +26,7 @@ use crate::{
 };
 use frame_support::pallet_prelude::{DispatchResultWithPostInfo, Weight};
 use parity_scale_codec::{Decode, Encode, FullCodec};
+use sp_core::U256;
 use sp_runtime::{
 	traits::{
 		AccountIdConversion, AtLeast32BitUnsigned, ConstU32, MaybeSerializeDeserialize, Zero,
@@ -554,13 +555,24 @@ impl<CurrencyId, Balance, AccountId> SlpHostingFeeProvider<CurrencyId, Balance, 
 
 /// Provides account's fee payment currency id
 pub trait AccountFeeCurrency<AccountId> {
-	fn get(a: &AccountId) -> CurrencyId;
+	/// Retrieves the currency used to pay the transaction fee.
+	///
+	/// This method returns the `CurrencyId` of the currency that will be used to pay the
+	/// transaction fee for the current transaction. It is useful for determining which currency
+	/// will be deducted to cover the cost of the transaction.
+	fn get_fee_currency(account: &AccountId, fee: U256) -> CurrencyId;
 }
 
 /// Provides account's balance of fee asset currency in a given currency
 pub trait AccountFeeCurrencyBalanceInCurrency<AccountId> {
 	type Output;
-	fn get_balance_in_currency(to_currency: CurrencyId, account: &AccountId) -> Self::Output;
+
+	// This `fee` variable is used to determine the currency for paying transaction fees.
+	fn get_balance_in_currency(
+		to_currency: CurrencyId,
+		account: &AccountId,
+		fee: U256,
+	) -> Self::Output;
 }
 
 pub trait PriceProvider {

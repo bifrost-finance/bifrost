@@ -30,6 +30,8 @@ use cumulus_primitives_core::ParaId;
 use frame_support::{
 	pallet_prelude::*,
 	traits::{
+		fungibles::Inspect,
+		tokens::{Fortitude, Preservation},
 		Currency, ExistenceRequirement, Get, Imbalance, OnUnbalanced, ReservableCurrency,
 		WithdrawReasons,
 	},
@@ -42,6 +44,7 @@ use orml_traits::MultiCurrency;
 use pallet_transaction_payment::OnChargeTransaction;
 use polkadot_parachain_primitives::primitives::Sibling;
 use sp_arithmetic::traits::{CheckedAdd, SaturatedConversion, UniqueSaturatedInto};
+use sp_core::U256;
 use sp_runtime::{
 	traits::{AccountIdConversion, DispatchInfoOf, PostDispatchInfoOf, Saturating, Zero},
 	transaction_validity::TransactionValidityError,
@@ -79,6 +82,8 @@ pub enum TargetChain {
 #[frame_support::pallet]
 pub mod pallet {
 	use super::*;
+	use bifrost_primitives::Balance;
+	use frame_support::traits::fungibles::Inspect;
 
 	#[pallet::config]
 	pub trait Config: frame_system::Config + pallet_transaction_payment::Config {
@@ -87,11 +92,8 @@ pub mod pallet {
 		/// Weight information for the extrinsics in this module.
 		type WeightInfo: WeightInfo;
 		/// Handler for both NativeCurrency and MultiCurrency
-		type MultiCurrency: MultiCurrency<
-			Self::AccountId,
-			CurrencyId = CurrencyId,
-			Balance = PalletBalanceOf<Self>,
-		>;
+		type MultiCurrency: MultiCurrency<Self::AccountId, CurrencyId = CurrencyId, Balance = PalletBalanceOf<Self>>
+			+ Inspect<Self::AccountId, AssetId = CurrencyId, Balance = Balance>;
 		/// The currency type in which fees will be paid.
 		type Currency: Currency<Self::AccountId> + ReservableCurrency<Self::AccountId>;
 		/// Handler for the unbalanced decrease
@@ -650,7 +652,37 @@ where
 
 /// Provides account's fee payment asset or default fee asset ( Native asset )
 impl<T: Config> AccountFeeCurrency<T::AccountId> for Pallet<T> {
-	fn get(who: &T::AccountId) -> CurrencyId {
-		Pallet::<T>::get_user_default_fee_currency(who).unwrap_or_else(|| WETH)
+	fn get_fee_currency(account: &T::AccountId, fee: U256) -> CurrencyId {
+		let fee: u128 = fee.unique_saturated_into();
+		let priority_currency =
+			Pallet::<T>::get_user_default_fee_currency(account).unwrap_or_else(|| WETH);
+		let mut currency_list = Pallet::<T>::get_universal_fee_currency_order_list();
+
+		currency_list.try_insert(0, priority_currency).unwrap();
+
+		let mut hopeless_currency = priority_currency;
+
+		for maybe_currency in currency_list.iter() {
+			let account_balance = T::MultiCurrency::reducible_balance(
+				*maybe_currency,
+				account,
+				Preservation::Preserve,
+				Fortitude::Polite,
+			);
+
+			match account_balance.cmp((&fee).into()) {
+				std::cmp::Ordering::Less => {
+					hopeless_currency = match hopeless_currency.cmp(maybe_currency) {
+						std::cmp::Ordering::Less => *maybe_currency,
+						_ => hopeless_currency,
+					};
+					continue;
+				},
+				std::cmp::Ordering::Equal => return *maybe_currency,
+				std::cmp::Ordering::Greater => return *maybe_currency,
+			};
+		}
+
+		return hopeless_currency;
 	}
 }

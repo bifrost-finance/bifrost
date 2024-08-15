@@ -20,6 +20,7 @@ use frame_support::{
 	pallet_prelude::Get,
 	traits::tokens::{Fortitude, Preservation},
 };
+use sp_core::U256;
 use sp_runtime::{helpers_128bit::multiply_by_rational_with_rounding, traits::Convert, Rounding};
 use sp_std::marker::PhantomData;
 use xcm::latest::Weight;
@@ -68,8 +69,12 @@ where
 {
 	type Output = (Balance, Weight);
 
-	fn get_balance_in_currency(to_currency: CurrencyId, account: &T::AccountId) -> Self::Output {
-		let from_currency = AC::get(account);
+	fn get_balance_in_currency(
+		to_currency: CurrencyId,
+		account: &T::AccountId,
+		fee: U256,
+	) -> Self::Output {
+		let from_currency = AC::get_fee_currency(account, fee);
 		let account_balance =
 			I::reducible_balance(from_currency, account, Preservation::Preserve, Fortitude::Polite);
 		let price_weight = T::DbWeight::get().reads(2); // 1 read to get currency and 1 read to get balance
