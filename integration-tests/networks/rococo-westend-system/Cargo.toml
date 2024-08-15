@@ -1,0 +1,20 @@
+[package]
+name = "rococo-westend-system-emulated-network"
+version = "0.0.0"
+authors = ["Liebi Technologies <bifrost@liebi.com>"]
+edition = "2021"
+
+
+
+[dependencies]
+# Cumulus
+emulated-integration-tests-common = { path = "../../common", default-features = false }
+rococo-emulated-chain = { path = "../../chains/relays/rococo" }
+westend-emulated-chain = { path = "../../chains/relays/westend" }
+asset-hub-rococo-emulated-chain = { path = "../../chains/parachains/assets/asset-hub-rococo" }
+asset-hub-westend-emulated-chain = { path = "../../chains/parachains/assets/asset-hub-westend" }
+bifrost-polkadot-emulated-chain = { path = "../../chains/parachains/bifrosts/bifrost-polkadot" }
+bifrost-kusama-emulated-chain = { path = "../../chains/parachains/bifrosts/bifrost-kusama" }
+bridge-hub-rococo-emulated-chain = { path = "../../chains/parachains/bridges/bridge-hub-rococo" }
+bridge-hub-westend-emulated-chain = { path = "../../chains/parachains/bridges/bridge-hub-westend" }
+penpal-emulated-chain = { path = "../../chains/parachains/testing/penpal" }

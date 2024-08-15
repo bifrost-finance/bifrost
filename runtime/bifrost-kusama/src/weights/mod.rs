@@ -42,3 +42,4 @@ pub mod bifrost_vtoken_voting;
 pub mod orml_oracle;
 pub mod orml_tokens;
 pub mod pallet_xcm;
+pub mod pallet_xcm_bridge_hub_router;

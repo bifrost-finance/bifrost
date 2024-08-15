@@ -76,7 +76,7 @@ sp-genesis-builder = { workspace = true }
 cumulus-pallet-aura-ext = { workspace = true }
 cumulus-pallet-parachain-system = { workspace = true }
 cumulus-pallet-xcm = { workspace = true }
-cumulus-pallet-xcmp-queue = { workspace = true }
+cumulus-pallet-xcmp-queue = { workspace = true, features = ["bridging"] }
 cumulus-primitives-core = { workspace = true }
 cumulus-primitives-timestamp = { workspace = true }
 cumulus-primitives-utility = { workspace = true }
@@ -108,6 +108,15 @@ zenlink-protocol-runtime-api = { workspace = true }
 zenlink-stable-amm = { workspace = true }
 zenlink-stable-amm-runtime-api = { workspace = true }
 zenlink-swap-router = { workspace = true }
+
+# Bridges
+pallet-xcm-bridge-hub-router = { workspace = true }
+assets-common = { workspace = true }
+bp-asset-hub-rococo = { workspace = true }
+bp-asset-hub-westend = { workspace = true }
+bp-bridge-hub-rococo = { workspace = true }
+bp-bridge-hub-westend = { workspace = true }
+
 
 # Nuts Finance
 bifrost-stable-asset = { workspace = true }

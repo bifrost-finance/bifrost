@@ -1,0 +1,44 @@
+[package]
+name = "emulated-integration-tests-common"
+version = "3.0.0"
+authors = ["Liebi Technologies <bifrost@liebi.com>"]
+edition = "2021"
+description = "Common resources for integration testing with xcm-emulator"
+
+
+
+[dependencies]
+codec = { package = "parity-scale-codec", version = "3.6.12", default-features = false }
+paste = "1.0.14"
+
+# Substrate
+sp-consensus-beefy = { workspace = true }
+sc-consensus-grandpa = { workspace = true }
+sp-authority-discovery = { workspace = true }
+sp-runtime = { workspace = true }
+frame-support = { workspace = true }
+sp-core = { workspace = true }
+sp-consensus-babe = { workspace = true }
+pallet-assets = { workspace = true }
+pallet-balances = { workspace = true }
+pallet-message-queue = { workspace = true }
+
+# Polkadot
+polkadot-primitives = { workspace = true }
+polkadot-parachain-primitives = { workspace = true }
+polkadot-runtime-parachains = { workspace = true }
+xcm = { workspace = true }
+pallet-xcm = { workspace = true }
+
+# Cumulus
+parachains-common = { workspace = true }
+cumulus-primitives-core = { workspace = true }
+xcm-emulator = { workspace = true }
+cumulus-pallet-xcmp-queue = { workspace = true }
+cumulus-pallet-parachain-system = { workspace = true }
+asset-test-utils = { workspace = true }
+
+# Bridges
+bp-messages = { workspace = true }
+pallet-bridge-messages = { workspace = true }
+bridge-runtime-common = { workspace = true }

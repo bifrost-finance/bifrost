@@ -1,0 +1,24 @@
+[package]
+name = "asset-hub-westend-emulated-chain"
+version = "0.0.0"
+authors = ["Liebi Technologies <bifrost@liebi.com>"]
+edition = "2021"
+
+
+
+[dependencies]
+
+# Substrate
+sp-core = { workspace = true, default-features = false }
+frame-support = { workspace = true, default-features = false }
+
+# Cumulus
+parachains-common = { workspace = true }
+cumulus-primitives-core = { workspace = true, default-features = false }
+emulated-integration-tests-common = { path = "../../../../common", default-features = false }
+asset-hub-westend-runtime = { workspace = true }
+westend-emulated-chain = { path = "../../../relays/westend" }
+testnet-parachains-constants = { workspace = true, features = ["westend"] }
+
+# Polkadot
+xcm = { workspace = true }

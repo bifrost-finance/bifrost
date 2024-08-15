@@ -1866,6 +1866,7 @@ construct_runtime! {
 		Proxy: pallet_proxy = 52,
 		Multisig: pallet_multisig = 53,
 		Identity: pallet_identity = 54,
+		ToPolkadotXcmRouter: pallet_xcm_bridge_hub_router::<Instance1> = 55,
 
 		// Vesting. Usable initially, but removed once all vesting is finished.
 		Vesting: bifrost_vesting = 60,

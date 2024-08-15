@@ -1,0 +1,16 @@
+[package]
+name = "westend-system-emulated-network"
+version = "0.0.0"
+authors = ["Liebi Technologies <bifrost@liebi.com>"]
+edition = "2021"
+
+
+
+[dependencies]
+# Cumulus
+emulated-integration-tests-common = { path = "../../common", default-features = false }
+westend-emulated-chain = { path = "../../chains/relays/westend", default-features = false }
+asset-hub-westend-emulated-chain = { path = "../../chains/parachains/assets/asset-hub-westend" }
+bifrost-kusama-emulated-chain = { path = "../../chains/parachains/bifrosts/bifrost-kusama" }
+bridge-hub-westend-emulated-chain = { path = "../../chains/parachains/bridges/bridge-hub-westend" }
+penpal-emulated-chain = { path = "../../chains/parachains/testing/penpal" }

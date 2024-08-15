@@ -1,0 +1,25 @@
+[package]
+name = "rococo-emulated-chain"
+version = "0.0.0"
+authors = ["Liebi Technologies <bifrost@liebi.com>"]
+edition = "2021"
+
+
+
+[dependencies]
+
+# Substrate
+sp-core = { workspace = true, default-features = false }
+sp-authority-discovery = { workspace = true, default-features = false }
+sp-consensus-babe = { workspace = true, default-features = false }
+sp-consensus-beefy = { workspace = true }
+sc-consensus-grandpa = { workspace = true }
+
+# Polkadot
+polkadot-primitives = { workspace = true, default-features = false }
+rococo-runtime-constants = { workspace = true, default-features = false }
+rococo-runtime = { workspace = true }
+
+# Cumulus
+parachains-common = { workspace = true }
+emulated-integration-tests-common = { path = "../../../common", default-features = false }

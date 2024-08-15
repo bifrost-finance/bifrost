@@ -1,0 +1,22 @@
+[package]
+name = "penpal-emulated-chain"
+version = "0.0.0"
+authors = ["Liebi Technologies <bifrost@liebi.com>"]
+edition = "2021"
+
+
+
+[dependencies]
+
+# Substrate
+sp-core = { workspace = true, default-features = false }
+frame-support = { workspace = true, default-features = false }
+
+# Polkadot
+xcm = { package = "staging-xcm", workspace = true, default-features = false }
+
+# Cumulus
+parachains-common = { workspace = true }
+cumulus-primitives-core = { workspace = true, default-features = false }
+emulated-integration-tests-common = { path = "../../../../common", default-features = false }
+penpal-runtime = { workspace = true }

@@ -1,0 +1,16 @@
+[package]
+name = "rococo-system-emulated-network"
+version = "0.0.0"
+authors = ["Liebi Technologies <bifrost@liebi.com>"]
+edition = "2021"
+
+
+
+[dependencies]
+# Cumulus
+emulated-integration-tests-common = { path = "../../common", default-features = false }
+rococo-emulated-chain = { path = "../../chains/relays/rococo" }
+asset-hub-rococo-emulated-chain = { path = "../../chains/parachains/assets/asset-hub-rococo" }
+bifrost-polkadot-emulated-chain = { path = "../../chains/parachains/bifrosts/bifrost-polkadot" }
+bridge-hub-rococo-emulated-chain = { path = "../../chains/parachains/bridges/bridge-hub-rococo" }
+penpal-emulated-chain = { path = "../../chains/parachains/testing/penpal" }

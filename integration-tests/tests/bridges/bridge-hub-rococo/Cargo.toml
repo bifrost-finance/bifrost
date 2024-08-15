@@ -1,0 +1,46 @@
+[package]
+name = "bridge-hub-rococo-integration-tests"
+version = "1.0.0"
+authors = ["Liebi Technologies <bifrost@liebi.com>"]
+edition = "2021"
+
+
+
+[dependencies]
+codec = { package = "parity-scale-codec", version = "3.6.12", default-features = false }
+scale-info = { version = "2.11.1", default-features = false, features = ["derive"] }
+hex-literal = "0.4.1"
+
+# Substrate
+sp-core = { workspace = true, default-features = false }
+frame-support = { workspace = true, default-features = false }
+pallet-assets = { workspace = true, default-features = false }
+pallet-asset-conversion = { workspace = true, default-features = false }
+pallet-balances = { workspace = true, default-features = false }
+pallet-message-queue = { workspace = true }
+sp-runtime = { workspace = true, default-features = false }
+
+# Polkadot
+xcm = { workspace = true }
+pallet-xcm = { workspace = true }
+xcm-executor = { workspace = true }
+
+# Bridges
+pallet-bridge-messages = { workspace = true, default-features = false }
+
+# Cumulus
+parachains-common = { workspace = true }
+testnet-parachains-constants = { workspace = true, features = ["rococo"] }
+cumulus-pallet-xcmp-queue = { workspace = true }
+bridge-hub-rococo-runtime = { workspace = true, default-features = false }
+emulated-integration-tests-common = { path = "../../../common", default-features = false }
+rococo-westend-system-emulated-network = { path = "../../../networks/rococo-westend-system" }
+rococo-system-emulated-network = { path = "../../../networks/rococo-system" }
+asset-hub-rococo-runtime = { workspace = true, default-features = false }
+
+# Snowbridge
+snowbridge-core = { workspace = true, default-features = false }
+snowbridge-router-primitives = { workspace = true, default-features = false }
+snowbridge-pallet-system = { workspace = true, default-features = false }
+snowbridge-pallet-outbound-queue = { workspace = true, default-features = false }
+snowbridge-pallet-inbound-queue-fixtures = { workspace = true }

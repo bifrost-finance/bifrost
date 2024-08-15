@@ -39,7 +39,23 @@ members = [
 	"runtime/bifrost-polkadot/src/evm/evm-utility/macro",
 	"runtime/bifrost-polkadot",
 
-	"integration-tests"
+	"integration-tests/chains/parachains/assets/asset-hub-rococo",
+	"integration-tests/chains/parachains/assets/asset-hub-westend",
+	"integration-tests/chains/parachains/bifrosts/bifrost-kusama",
+	"integration-tests/chains/parachains/bifrosts/bifrost-polkadot",
+	"integration-tests/chains/parachains/bridges/bridge-hub-rococo",
+	"integration-tests/chains/parachains/bridges/bridge-hub-westend",
+	"integration-tests/chains/parachains/testing/penpal",
+	"integration-tests/chains/relays/rococo",
+	"integration-tests/chains/relays/westend",
+	"integration-tests/common",
+	"integration-tests/networks/rococo-system",
+	"integration-tests/networks/rococo-westend-system",
+	"integration-tests/networks/westend-system",
+#	"integration-tests/tests/assets/asset-hub-rococo",
+#	"integration-tests/tests/assets/asset-hub-westend",
+	"integration-tests/tests/bridges/bridge-hub-rococo",
+	"integration-tests/tests/bridges/bridge-hub-westend",
 ]
 resolver = "2"
 
@@ -253,6 +269,14 @@ xcm                                        = { git = "https://github.com/parityt
 xcm-builder                                = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.13.0", package = "staging-xcm-builder", default-features = false }
 xcm-executor                               = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.13.0", package = "staging-xcm-executor", default-features = false }
 
+# Bridges
+pallet-xcm-bridge-hub-router = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.13.0", default-features = false }
+assets-common = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.13.0", default-features = false }
+bp-asset-hub-rococo = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.13.0", default-features = false }
+bp-asset-hub-westend = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.13.0", default-features = false }
+bp-bridge-hub-rococo = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.13.0", default-features = false }
+bp-bridge-hub-westend = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.13.0", default-features = false }
+
 # polkadot-sdk (client)
 cumulus-client-cli                            = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.13.0" }
 cumulus-client-consensus-aura                 = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.13.0" }
@@ -305,6 +329,32 @@ try-runtime-cli                               = { git = "https://github.com/pari
 xcm-emulator                                  = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.13.0" }
 xcm-simulator                                 = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.13.0" }
 
+#integration-tests
+asset-hub-rococo-runtime = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.13.0" }
+asset-hub-westend-runtime = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.13.0" }
+testnet-parachains-constants = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.13.0" }
+asset-test-utils = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.13.0" }
+bp-messages = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.13.0" }
+bridge-runtime-common = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.13.0" }
+pallet-bridge-messages = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.13.0" }
+sp-consensus-beefy = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.13.0" }
+rococo-runtime = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.13.0" }
+westend-runtime = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.13.0" }
+rococo-runtime-constants = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.13.0" }
+westend-runtime-constants = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.13.0" }
+xcm-fee-payment-runtime-api = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.13.0" }
+bridge-hub-common = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.13.0", default-features = false }
+bridge-hub-rococo-runtime = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.13.0" }
+bridge-hub-westend-runtime = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.13.0" }
+penpal-runtime = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.13.0" }
+snowbridge-core = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.13.0" }
+snowbridge-router-primitives = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.13.0" }
+snowbridge-pallet-system = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.13.0" }
+snowbridge-pallet-outbound-queue = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.13.0" }
+snowbridge-pallet-inbound-queue-fixtures = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.13.0" }
+pallet-asset-conversion = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.13.0" }
+
+
 # Other
 async-trait           = { version = "0.1.76" }
 bstringify            = { version = "0.1.2" }
@@ -330,7 +380,7 @@ proc-macro2           = { version = "1.0.40" }
 quote                 = { version = "1.0.20" }
 scale-info            = { version = "2.11.3", default-features = false }
 serde                 = { version = "1.0.203", default-features = false }
-serde_json            = { version = "1.0.122", default-features = false }
+serde_json            = { version = "1.0.120", default-features = false }
 sha3                  = { version = "0.10.6", default-features = false }
 similar-asserts       = { version = "1.1.0" }
 smallvec              = { version = "1.13.1" }
