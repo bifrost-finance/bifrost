@@ -29,14 +29,14 @@ mod tests;
 mod benchmarking;
 
 pub mod migration;
-pub mod traits;
 pub mod weights;
 pub use weights::WeightInfo;
 
 use bifrost_asset_registry::AssetMetadata;
+pub use bifrost_primitives::vtoken_minting::*;
 use bifrost_primitives::{
 	CurrencyId, CurrencyIdConversion, CurrencyIdExt, CurrencyIdMapping, CurrencyIdRegister,
-	RedeemType, SlpOperator, SlpxOperator, TimeUnit, VTokenMintRedeemProvider,
+	RedeemTo, RedeemType, SlpOperator, SlpxOperator, TimeUnit, VTokenMintRedeemProvider,
 	VTokenSupplyProvider, VtokenMintingInterface, VtokenMintingOperator,
 };
 use bifrost_ve_minting::traits::VeMintingInterface;
@@ -57,7 +57,6 @@ use orml_traits::{MultiCurrency, MultiLockableCurrency};
 pub use pallet::*;
 use sp_core::U256;
 use sp_std::{vec, vec::Vec};
-pub use traits::*;
 use xcm::v3::MultiLocation;
 
 pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
