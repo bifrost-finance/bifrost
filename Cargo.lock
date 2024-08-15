@@ -1394,6 +1394,7 @@ dependencies = [
 name = "bifrost-parachain-staking"
 version = "3.0.1"
 dependencies = [
+ "bifrost-primitives",
  "frame-benchmarking",
  "frame-support",
  "frame-system",
@@ -1572,6 +1573,7 @@ dependencies = [
  "bstringify",
  "frame-support",
  "orml-oracle",
+ "orml-traits",
  "parity-scale-codec",
  "scale-info",
  "serde",
