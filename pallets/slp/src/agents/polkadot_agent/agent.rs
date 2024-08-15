@@ -24,14 +24,13 @@ use crate::{
 		SubstrateLedgerUpdateOperation, SubstrateValidatorsByDelegatorUpdateEntry, UnlockChunk,
 		ValidatorsByDelegatorUpdateEntry,
 	},
-	traits::{QueryResponseManager, StakingAgent},
 	AccountIdOf, BalanceOf, BoundedVec, Config, DelegatorLedgerXcmUpdateQueue, DelegatorLedgers,
 	DelegatorsMultilocation2Index, LedgerUpdateEntry, MinimumsAndMaximums, Pallet, TimeUnit,
 	ValidatorsByDelegator, ValidatorsByDelegatorXcmUpdateQueue,
 };
 use bifrost_primitives::{
-	currency::KSM, CurrencyId, VtokenMintingOperator, XcmDestWeightAndFeeHandler, XcmOperationType,
-	DOT,
+	currency::KSM, CurrencyId, QueryResponseManager, StakingAgent, VtokenMintingOperator,
+	XcmDestWeightAndFeeHandler, XcmOperationType, DOT,
 };
 use core::marker::PhantomData;
 use frame_support::{ensure, traits::Get};

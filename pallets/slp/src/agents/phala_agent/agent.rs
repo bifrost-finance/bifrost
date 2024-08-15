@@ -23,12 +23,13 @@ use crate::{
 	primitives::{
 		Ledger, PhalaLedger, QueryId, SubstrateLedgerUpdateEntry, SubstrateLedgerUpdateOperation,
 	},
-	traits::{QueryResponseManager, StakingAgent},
 	AccountIdOf, BalanceOf, Config, CurrencyId, DelegatorLedgerXcmUpdateQueue, DelegatorLedgers,
 	DelegatorsMultilocation2Index, Hash, LedgerUpdateEntry, MinimumsAndMaximums, Pallet, TimeUnit,
 	Validators, ValidatorsByDelegatorUpdateEntry,
 };
-use bifrost_primitives::{TokenSymbol, VtokenMintingOperator, XcmOperationType};
+use bifrost_primitives::{
+	QueryResponseManager, StakingAgent, TokenSymbol, VtokenMintingOperator, XcmOperationType,
+};
 use core::marker::PhantomData;
 use frame_support::{ensure, traits::Get};
 use frame_system::pallet_prelude::BlockNumberFor;
