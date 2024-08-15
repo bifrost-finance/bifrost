@@ -176,24 +176,24 @@ fn full_workflow_works_as_expected() {
 		// Bob DOT collateral: incentive = 110-(110/1.1*0.03)=107
 		assert_eq!(<Test as Config>::Assets::balance(DOT_U, &ALICE), unit(800),);
 		assert_eq!(
-			LendMarket::exchange_rate(DOT_U)
-				.saturating_mul_int(LendMarket::account_deposits(DOT_U, ALICE).voucher_balance),
+			ExchangeRate::<Test>::get(DOT_U)
+				.saturating_mul_int(AccountDeposits::<Test>::get(DOT_U, ALICE).voucher_balance),
 			unit(90),
 		);
 		assert_eq!(<Test as Config>::Assets::balance(KSM, &ALICE), unit(1100),);
-		assert_eq!(LendMarket::account_borrows(KSM, ALICE).principal, unit(50));
+		assert_eq!(AccountBorrows::<Test>::get(KSM, ALICE).principal, unit(50));
 		assert_eq!(<Test as Config>::Assets::balance(KSM, &BOB), unit(750));
 		assert_eq!(
-			LendMarket::exchange_rate(DOT_U)
-				.saturating_mul_int(LendMarket::account_deposits(DOT_U, BOB).voucher_balance),
+			ExchangeRate::<Test>::get(DOT_U)
+				.saturating_mul_int(AccountDeposits::<Test>::get(DOT_U, BOB).voucher_balance),
 			unit(107),
 		);
 		// 3 dollar reserved in our incentive reward account
 		let incentive_reward_account = LendMarket::incentive_reward_account_id().unwrap();
 		println!("incentive reserve account:{:?}", incentive_reward_account.clone());
 		assert_eq!(
-			LendMarket::exchange_rate(DOT_U).saturating_mul_int(
-				LendMarket::account_deposits(DOT_U, incentive_reward_account.clone())
+			ExchangeRate::<Test>::get(DOT_U).saturating_mul_int(
+				AccountDeposits::<Test>::get(DOT_U, incentive_reward_account.clone())
 					.voucher_balance
 			),
 			unit(3),
@@ -208,8 +208,8 @@ fn full_workflow_works_as_expected() {
 		));
 		// still 1 dollar left in reserve account
 		assert_eq!(
-			LendMarket::exchange_rate(DOT_U).saturating_mul_int(
-				LendMarket::account_deposits(DOT_U, incentive_reward_account).voucher_balance
+			ExchangeRate::<Test>::get(DOT_U).saturating_mul_int(
+				AccountDeposits::<Test>::get(DOT_U, incentive_reward_account).voucher_balance
 			),
 			unit(1),
 		);
