@@ -33,6 +33,7 @@ pub mod traits;
 pub mod weights;
 
 use bifrost_primitives::{Balance, CurrencyId, PoolId};
+pub use bifrost_primitives::{Point, UserMarkupInfo};
 use frame_support::{
 	pallet_prelude::*,
 	sp_runtime::{
@@ -49,9 +50,7 @@ pub use incentive::*;
 use orml_traits::{LockIdentifier, MultiCurrency, MultiLockableCurrency};
 use sp_core::{U256, U512};
 use sp_std::{borrow::ToOwned, cmp::Ordering, collections::btree_map::BTreeMap, vec, vec::Vec};
-pub use traits::{
-	LockedToken, MarkupCoefficientInfo, MarkupInfo, UserMarkupInfo, VeMintingInterface,
-};
+pub use traits::{LockedToken, MarkupCoefficientInfo, MarkupInfo, VeMintingInterface};
 pub use weights::WeightInfo;
 
 type BalanceOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<AccountIdOf<T>>>::Balance;
@@ -76,14 +75,6 @@ pub struct VeConfig<Balance, BlockNumber> {
 pub struct LockedBalance<Balance, BlockNumber> {
 	amount: Balance,
 	end: BlockNumber,
-}
-
-#[derive(Clone, Copy, Encode, Decode, PartialEq, Eq, RuntimeDebug, TypeInfo, Default)]
-pub struct Point<Balance, BlockNumber> {
-	bias: i128,  // i128
-	slope: i128, // dweight / dt
-	block: BlockNumber,
-	amount: Balance,
 }
 
 #[frame_support::pallet]
