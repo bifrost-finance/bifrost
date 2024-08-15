@@ -22,7 +22,7 @@ use bifrost_primitives::{
 	currency::WETH_TOKEN_ID, AccountId, CurrencyId, CurrencyIdMapping, TokenSymbol, DOT_TOKEN_ID,
 	GLMR_TOKEN_ID,
 };
-pub use bifrost_xcm_interface::traits::{parachains, XcmBaseWeight};
+pub use bifrost_primitives::{parachains, XcmBaseWeight};
 use cumulus_primitives_core::AggregateMessageOrigin;
 pub use cumulus_primitives_core::ParaId;
 use frame_support::{

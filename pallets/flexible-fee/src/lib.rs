@@ -22,9 +22,10 @@ pub use crate::pallet::*;
 use bifrost_primitives::{
 	currency::WETH,
 	traits::{FeeGetter, XcmDestWeightAndFeeHandler},
+	xcm_interface::parachains,
 	AccountFeeCurrency, CurrencyId, ExtraFeeName, TryConvertFrom, XcmOperationType, BNC,
 };
-use bifrost_xcm_interface::{polkadot::RelaychainCall, traits::parachains, PolkadotXcmCall};
+use bifrost_xcm_interface::{polkadot::RelaychainCall, PolkadotXcmCall};
 use core::convert::Into;
 use cumulus_primitives_core::ParaId;
 use frame_support::{

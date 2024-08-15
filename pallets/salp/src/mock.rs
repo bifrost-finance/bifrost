@@ -23,10 +23,9 @@
 use crate::*;
 use bifrost_asset_registry::AssetIdMaps;
 use bifrost_primitives::{
-	Amount, Balance, CurrencyId, CurrencyId::*, DoNothingExecuteXcm, MessageId, ParaId,
-	SlpOperator, SlpxOperator, TokenSymbol, TokenSymbol::*, VKSM,
+	xcm_interface::XcmHelper, Amount, Balance, CurrencyId, CurrencyId::*, DoNothingExecuteXcm,
+	MessageId, ParaId, SlpOperator, SlpxOperator, TokenSymbol, TokenSymbol::*, VKSM,
 };
-use bifrost_xcm_interface::traits::XcmHelper;
 use cumulus_primitives_core::ParaId as Pid;
 use frame_support::{
 	construct_runtime, derive_impl, ord_parameter_types, parameter_types,

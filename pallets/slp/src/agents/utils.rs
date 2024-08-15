@@ -21,8 +21,7 @@ use crate::{
 	ValidatorsByDelegatorUpdateEntry, ValidatorsByDelegatorXcmUpdateQueue, ASTR, DOT, GLMR, H160,
 	KSM, MANTA, MOVR, PHA,
 };
-use bifrost_primitives::CurrencyId;
-use bifrost_xcm_interface::traits::parachains;
+use bifrost_primitives::{parachains, CurrencyId};
 use frame_support::ensure;
 use parity_scale_codec::Encode;
 use sp_core::Get;

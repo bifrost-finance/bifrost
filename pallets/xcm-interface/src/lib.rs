@@ -20,14 +20,13 @@
 #![allow(unused_imports)]
 
 pub mod calls;
-pub mod traits;
 use bifrost_asset_registry::AssetMetadata;
+pub use bifrost_primitives::xcm_interface::{ChainId, MessageId, Nonce, SalpHelper};
 use bifrost_primitives::{traits::XcmDestWeightAndFeeHandler, CurrencyIdMapping, XcmOperationType};
 pub use calls::*;
 use orml_traits::MultiCurrency;
 pub use pallet::*;
 use sp_runtime::traits::UniqueSaturatedInto;
-pub use traits::{ChainId, MessageId, Nonce, SalpHelper};
 
 macro_rules! use_relay {
     ({ $( $code:tt )* }) => {
@@ -68,7 +67,7 @@ pub mod pallet {
 	};
 
 	use super::*;
-	use crate::traits::*;
+	use bifrost_primitives::xcm_interface::*;
 
 	#[pallet::config]
 	pub trait Config: frame_system::Config + pallet_xcm::Config {
@@ -418,7 +417,7 @@ pub mod pallet {
 		}
 
 		pub(crate) fn build_ump_transact(
-			query_id: QueryId,
+			query_id: bifrost_primitives::xcm_interface::QueryId,
 			call: DoubleEncoded<()>,
 			weight: Weight,
 			fee: BalanceOf<T>,
