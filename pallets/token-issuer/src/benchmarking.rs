@@ -67,14 +67,14 @@ benchmarks! {
 		let origin = T::ControlOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?;
 		let caller: T::AccountId = whitelisted_caller();
 		let currency_id = CurrencyId::Token(TokenSymbol::KSM);
-		let add_call = Call::<T>::add_to_issue_whitelist { currency_id: currency_id.clone(), account: caller.clone() };
+		let add_call = Call::<T>::add_to_issue_whitelist { currency_id: currency_id, account: caller.clone() };
 		add_call.dispatch_bypass_filter(origin.clone())?;
 
-		let original_balance = T::MultiCurrency::free_balance(currency_id.clone(), &caller);
+		let original_balance = T::MultiCurrency::free_balance(currency_id, &caller);
 		let token_amount = BalanceOf::<T>::unique_saturated_from(1000u32 as u128);
-	}: _(RawOrigin::Signed(caller.clone()), caller.clone(), currency_id.clone(), token_amount)
+	}: _(RawOrigin::Signed(caller.clone()), caller.clone(), currency_id, token_amount)
 	verify {
-		assert_eq!(T::MultiCurrency::free_balance(currency_id.clone(), &caller), token_amount + original_balance);
+		assert_eq!(T::MultiCurrency::free_balance(currency_id, &caller), token_amount + original_balance);
 	}
 
 	transfer {
@@ -83,18 +83,18 @@ benchmarks! {
 		let currency_id = CurrencyId::Token(TokenSymbol::KSM);
 
 		// add caller to the transfer whitelist
-		let add_transfer_call = Call::<T>::add_to_transfer_whitelist { currency_id: currency_id.clone(), account: caller.clone() };
+		let add_transfer_call = Call::<T>::add_to_transfer_whitelist { currency_id: currency_id, account: caller.clone() };
 		add_transfer_call.dispatch_bypass_filter(origin.clone())?;
 
 		// transfer some ksm from caller account to receiver account
 		let receiver: T::AccountId = account("bechmarking_account_1", 0, 0);
 		let transfer_token_amount = BalanceOf::<T>::unique_saturated_from(800u32 as u128);
-		let caller_original_balance = T::MultiCurrency::free_balance(currency_id.clone(), &caller);
-		let receiver_original_balance = T::MultiCurrency::free_balance(currency_id.clone(), &receiver);
-	}: _(RawOrigin::Signed(caller.clone()), receiver.clone(), currency_id.clone(), transfer_token_amount)
+		let caller_original_balance = T::MultiCurrency::free_balance(currency_id, &caller);
+		let receiver_original_balance = T::MultiCurrency::free_balance(currency_id, &receiver);
+	}: _(RawOrigin::Signed(caller.clone()), receiver.clone(), currency_id, transfer_token_amount)
 	verify {
-		assert_eq!(T::MultiCurrency::free_balance(currency_id.clone(), &caller), caller_original_balance - transfer_token_amount);
-		assert_eq!(T::MultiCurrency::free_balance(currency_id.clone(), &receiver), transfer_token_amount+ receiver_original_balance);
+		assert_eq!(T::MultiCurrency::free_balance(currency_id, &caller), caller_original_balance - transfer_token_amount);
+		assert_eq!(T::MultiCurrency::free_balance(currency_id, &receiver), transfer_token_amount+ receiver_original_balance);
 	}
 }
 

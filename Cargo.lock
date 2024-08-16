@@ -927,25 +927,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "bifrost-call-switchgear"
-version = "0.8.0"
-dependencies = [
- "bifrost-primitives",
- "frame-benchmarking",
- "frame-support",
- "frame-system",
- "orml-tokens",
- "orml-traits",
- "pallet-balances",
- "parity-scale-codec",
- "scale-info",
- "sp-core",
- "sp-io",
- "sp-runtime",
- "sp-std 14.0.0 (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.13.0)",
-]
-
-[[package]]
 name = "bifrost-channel-commission"
 version = "0.8.0"
 dependencies = [
@@ -1237,7 +1218,6 @@ dependencies = [
  "pallet-conviction-voting",
  "pallet-message-queue",
  "pallet-referenda",
- "pallet-staking",
  "pallet-xcm",
  "parachains-common",
  "parity-scale-codec",
@@ -1342,6 +1322,7 @@ dependencies = [
  "pallet-referenda",
  "pallet-scheduler",
  "pallet-session",
+ "pallet-staking",
  "pallet-timestamp",
  "pallet-tips",
  "pallet-transaction-payment",
@@ -1518,6 +1499,7 @@ dependencies = [
  "pallet-referenda",
  "pallet-scheduler",
  "pallet-session",
+ "pallet-staking",
  "pallet-timestamp",
  "pallet-tips",
  "pallet-traits",
@@ -14221,12 +14203,11 @@ dependencies = [
 
 [[package]]
 name = "serde_json"
-version = "1.0.122"
+version = "1.0.120"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "784b6203951c57ff748476b126ccb5e8e2959a5c19e5c617ab1956be3dbc68da"
+checksum = "4e0d21c9a8cae1235ad58a00c11cb40d4b1e5c784f1ef2c537876ed6ffd8b7c5"
 dependencies = [
  "itoa",
- "memchr",
  "ryu",
  "serde",
 ]
