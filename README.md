@@ -38,14 +38,14 @@ make help
 
 ## Install Rust and required tools
 
-```bash
+```sh
 curl https://sh.rustup.rs -sSf | sh
 make init
 ```
 
 ## Build binary
 
-```bash
+```sh
 make build-all-release
 ```
 
@@ -63,7 +63,7 @@ make clippy
 
 ## Testing
 
-```bash
+```sh
 make test-all
 ```
 
@@ -71,7 +71,7 @@ make test-all
 
 if runtime logic change we may do the benchmarking to regenerate WeightInfo for dispatch calls
 
-```bash
+```sh
 make generate-all-weights
 ```
 
@@ -79,7 +79,7 @@ make generate-all-weights
 
 If modify the storage, should test the data migration before production upgrade.
 
-```bash
+```sh
 # bifrost kusama
 make try-kusama-runtime-upgrade
 
@@ -109,21 +109,21 @@ impl pallet_timestamp::Config for Runtime {
 
 ### Install `polkadot-launch`
 
-```bash
+```sh
 yarn global add polkadot-launch
 cd -
 ```
 
 ### Build polkadot
 
-```bash
+```sh
 # replace version with your target polkadot version
 cargo install --git https://github.com/paritytech/polkadot --tag <version> polkadot --locked
 ```
 
 ### Launch Polkadot and the parachain
 
-```bash
+```sh
 cd -
 polkadot-launch ./scripts/bifrost-launch.json
 ```
