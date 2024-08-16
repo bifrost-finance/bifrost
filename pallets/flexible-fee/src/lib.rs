@@ -652,6 +652,16 @@ where
 
 /// Provides account's fee payment asset or default fee asset ( Native asset )
 impl<T: Config> AccountFeeCurrency<T::AccountId> for Pallet<T> {
+	/// Determines the appropriate currency to be used for paying transaction fees based on a
+	/// prioritized order:
+	/// 1. User's default fee currency (`UserDefaultFeeCurrency`)
+	/// 2. WETH
+	/// 3. Currencies in the `UniversalFeeCurrencyOrderList`
+	///
+	/// The method first checks if the balance of the highest-priority currency is sufficient to
+	/// cover the fee.If the balance is insufficient, it iterates through the list of currencies in
+	/// priority order.If no currency has a sufficient balance, it returns the currency with the
+	/// highest balance.
 	fn get_fee_currency(account: &T::AccountId, fee: U256) -> CurrencyId {
 		let fee: u128 = fee.unique_saturated_into();
 		let priority_currency =
@@ -660,6 +670,7 @@ impl<T: Config> AccountFeeCurrency<T::AccountId> for Pallet<T> {
 
 		currency_list.try_insert(0, priority_currency).unwrap();
 
+		// When all currency balances are insufficient, return the one with the highest balance
 		let mut hopeless_currency = priority_currency;
 
 		for maybe_currency in currency_list.iter() {
@@ -672,6 +683,7 @@ impl<T: Config> AccountFeeCurrency<T::AccountId> for Pallet<T> {
 
 			match account_balance.cmp((&fee).into()) {
 				std::cmp::Ordering::Less => {
+					// Get the currency with the highest balance
 					hopeless_currency = match hopeless_currency.cmp(maybe_currency) {
 						std::cmp::Ordering::Less => *maybe_currency,
 						_ => hopeless_currency,
