@@ -1218,6 +1218,7 @@ dependencies = [
  "pallet-conviction-voting",
  "pallet-message-queue",
  "pallet-referenda",
+ "pallet-staking",
  "pallet-xcm",
  "parachains-common",
  "parity-scale-codec",
