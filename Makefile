@@ -59,7 +59,7 @@ format-check:
 
 .PHONY: clippy # cargo clippy
 clippy: format-check
-	SKIP_WASM_BUILD= cargo clippy --all --all-targets --features=with-all-runtime -- -D warnings
+	cargo clippy --all --all-targets --features "with-all-runtime,runtime-benchmarks,try-runtime" -- -D warnings
 
 .PHONY: benchmarking-staking # benchmarking staking pallet
 benchmarking-staking:

@@ -19,6 +19,7 @@
 // Ensure we're `no_std` when compiling for Wasm.
 
 #![cfg(feature = "runtime-benchmarks")]
+#![allow(deprecated)]
 
 use bifrost_primitives::{CurrencyId, TokenSymbol};
 use frame_benchmarking::v1::{account, benchmarks, whitelisted_caller, BenchmarkError};
