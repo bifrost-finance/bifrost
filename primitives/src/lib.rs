@@ -26,7 +26,7 @@ use sp_core::{Decode, Encode, RuntimeDebug, H160};
 use sp_runtime::{
 	generic,
 	traits::{BlakeTwo256, IdentifyAccount, Verify},
-	FixedU128, MultiSignature, OpaqueExtrinsic, Permill,
+	DispatchResult, FixedU128, MultiSignature, OpaqueExtrinsic, Permill,
 };
 use xcm::v4::{prelude::*, Asset, Location};
 use xcm_executor::traits::{AssetTransferError, TransferType, XcmAssetTransfers};
@@ -34,7 +34,9 @@ use xcm_executor::traits::{AssetTransferError, TransferType, XcmAssetTransfers};
 pub mod currency;
 mod salp;
 pub mod traits;
+pub use frame_support::{dispatch::Parameter, storage::types::StorageMap};
 pub use salp::*;
+use sp_std::{boxed::Box, vec::Vec};
 
 #[cfg(test)]
 mod tests;
@@ -154,6 +156,16 @@ pub const SECONDS_PER_YEAR: Timestamp = 365 * 24 * 60 * 60;
 pub type DerivativeIndex = u16;
 
 pub type TimeStampedPrice = orml_oracle::TimestampedValue<Price, Moment>;
+
+pub type PoolTokenIndex = u32;
+
+pub type StableAssetPoolId = u32;
+
+pub type ChainId = u32;
+
+pub type RoundIndex = u32;
+
+pub type QueryId = u64;
 
 #[derive(
 	Encode, Decode, Eq, PartialEq, Copy, Clone, RuntimeDebug, PartialOrd, Ord, scale_info::TypeInfo,
@@ -346,4 +358,28 @@ impl Default for ExtraFeeInfo {
 			extra_fee_currency: CurrencyId::Native(TokenSymbol::BNC),
 		}
 	}
+}
+
+#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, scale_info::TypeInfo)]
+pub enum RedeemTo<AccountId> {
+	/// Native chain.
+	Native(AccountId),
+	/// Astar chain.
+	Astar(AccountId),
+	/// Moonbeam chain.
+	Moonbeam(H160),
+	/// Hydradx chain.
+	Hydradx(AccountId),
+	/// Interlay chain.
+	Interlay(AccountId),
+	/// Manta chain.
+	Manta(AccountId),
+}
+
+#[derive(Clone, Copy, Encode, Decode, PartialEq, Eq, RuntimeDebug, TypeInfo, Default)]
+pub struct Point<Balance, BlockNumber> {
+	pub bias: i128,  // i128
+	pub slope: i128, // dweight / dt
+	pub block: BlockNumber,
+	pub amount: Balance,
 }

@@ -3,7 +3,6 @@
 use bifrost_primitives::{CurrencyId, PriceDetail};
 use num_bigint::{BigUint, ToBigUint};
 
-pub mod evm;
 pub mod lend_market;
 
 pub use lend_market::*;

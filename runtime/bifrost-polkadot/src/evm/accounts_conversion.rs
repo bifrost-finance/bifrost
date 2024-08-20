@@ -20,11 +20,11 @@ use crate::{
 	evm::{ConsensusEngineId, FindAuthor},
 	AccountId, Aura, EVMAccounts, Runtime,
 };
+use bifrost_primitives::InspectEvmAccounts;
 use core::marker::PhantomData;
 use frame_support::traits::IsType;
 use hex_literal::hex;
 use pallet_evm::AddressMapping;
-use pallet_traits::evm::InspectEvmAccounts;
 use parity_scale_codec::{Decode, Encode};
 use sp_core::{crypto::ByteArray, H160};
 use sp_runtime::traits::AccountIdConversion;

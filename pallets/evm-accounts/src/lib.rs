@@ -53,11 +53,11 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
+use bifrost_primitives::evm::InspectEvmAccounts;
 use frame_support::{
 	ensure,
 	pallet_prelude::{DispatchResult, Get},
 };
-use pallet_traits::evm::InspectEvmAccounts;
 use sp_core::{
 	crypto::{AccountId32, ByteArray},
 	H160, U256,
