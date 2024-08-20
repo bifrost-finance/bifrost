@@ -30,9 +30,7 @@ mod benchmarking;
 
 pub mod weights;
 
-use bifrost_primitives::{
-	currency::BNC, CurrencyId, CurrencyIdConversion, CurrencyIdRegister, TryConvertFrom,
-};
+use bifrost_primitives::{currency::BNC, CurrencyId, CurrencyIdRegister, TryConvertFrom};
 use bifrost_ve_minting::VeMintingInterface;
 use cumulus_primitives_core::ParaId;
 use frame_support::{
@@ -78,13 +76,8 @@ pub mod pallet {
 
 		type DexOperator: ExportZenlink<Self::AccountId, AssetId>;
 
-		type CurrencyIdConversion: CurrencyIdConversion<CurrencyId>;
-
 		#[pallet::constant]
 		type TreasuryAccount: Get<Self::AccountId>;
-
-		#[pallet::constant]
-		type RelayChainToken: Get<CurrencyId>;
 
 		#[pallet::constant]
 		type BuyBackAccount: Get<PalletId>;
@@ -107,33 +100,56 @@ pub mod pallet {
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
-		Charged { who: AccountIdOf<T>, asset_id: CurrencyIdOf<T>, value: BalanceOf<T> },
-		ConfigSet { asset_id: CurrencyIdOf<T>, info: Info<BalanceOf<T>, BlockNumberFor<T>> },
-		Removed { asset_id: CurrencyIdOf<T> },
-		BuyBackFailed { asset_id: CurrencyIdOf<T>, block_number: BlockNumberFor<T> },
-		BuyBackSuccess { asset_id: CurrencyIdOf<T>, block_number: BlockNumberFor<T> },
-		AddLiquidityFailed { asset_id: CurrencyIdOf<T>, block_number: BlockNumberFor<T> },
-		AddLiquiditySuccess { asset_id: CurrencyIdOf<T>, block_number: BlockNumberFor<T> },
+		/// A successful call of the `Charge` extrinsic will create this event.
+		Charged { who: AccountIdOf<T>, currency_id: CurrencyIdOf<T>, value: BalanceOf<T> },
+		/// A successful call of the `SetVtoken` extrinsic will create this event.
+		ConfigSet { currency_id: CurrencyIdOf<T>, info: Info<BalanceOf<T>, BlockNumberFor<T>> },
+		/// A successful call of the `RemoveVtoken` extrinsic will create this event.
+		Removed { currency_id: CurrencyIdOf<T> },
+		/// A failed call of the `BuyBack` extrinsic will create this event.
+		BuyBackFailed { currency_id: CurrencyIdOf<T>, block_number: BlockNumberFor<T> },
+		/// A successful call of the `BuyBack` extrinsic will create this event.
+		BuyBackSuccess { currency_id: CurrencyIdOf<T>, block_number: BlockNumberFor<T> },
+		/// A failed call of the `AddLiquidity` extrinsic will create this event.
+		AddLiquidityFailed { currency_id: CurrencyIdOf<T>, block_number: BlockNumberFor<T> },
+		/// A successful call of the `AddLiquidity` extrinsic will create this event.
+		AddLiquiditySuccess { currency_id: CurrencyIdOf<T>, block_number: BlockNumberFor<T> },
 	}
 
 	#[pallet::error]
 	pub enum Error<T> {
-		ArgumentsError,
+		/// Insufficient balance.
 		NotEnoughBalance,
+		/// Currency does not exist.
+		CurrencyIdNotExists,
+		/// Currency is not supported.
+		CurrencyIdError,
+		/// Duration can't be zero.
+		ZeroDuration,
+		/// Field min_swap_value can't be zero.
+		ZeroMinSwapValue,
 	}
 
 	#[pallet::storage]
 	pub type Infos<T: Config> =
 		StorageMap<_, Twox64Concat, CurrencyIdOf<T>, Info<BalanceOf<T>, BlockNumberFor<T>>>;
 
+	/// Information on buybacks and add liquidity
 	#[derive(Clone, Encode, Decode, PartialEq, Eq, RuntimeDebug, TypeInfo)]
 	pub struct Info<BalanceOf, BlockNumberFor> {
-		value: BalanceOf,
+		/// The minimum value of the token to be swapped.
+		min_swap_value: BalanceOf,
+		/// Whether to automatically add liquidity and buy back.
 		if_auto: bool,
+		/// The proportion of the token to be added to the liquidity pool.
 		proportion: Permill,
+		/// The duration of the buyback.
 		buyback_duration: BlockNumberFor,
+		/// The last time the buyback was executed.
 		last_buyback: BlockNumberFor,
+		/// The duration of adding liquidity.
 		add_liquidity_duration: BlockNumberFor,
+		/// The last time liquidity was added.
 		last_add_liquidity: BlockNumberFor,
 	}
 
@@ -142,49 +158,50 @@ pub mod pallet {
 		fn on_idle(n: BlockNumberFor<T>, _remaining_weight: Weight) -> Weight {
 			let buyback_address = T::BuyBackAccount::get().into_account_truncating();
 			let liquidity_address = T::LiquidityAccount::get().into_account_truncating();
-			for (asset_id, mut info) in Infos::<T>::iter() {
+			for (currency_id, mut info) in Infos::<T>::iter() {
 				if !info.if_auto {
 					continue;
 				}
 
-				if info.last_add_liquidity == BlockNumberFor::<T>::from(0u32) ||
+				if info.last_add_liquidity == Zero::zero() ||
 					info.last_add_liquidity + info.add_liquidity_duration == n
 				{
-					if let Some(e) = Self::add_liquidity(&liquidity_address, asset_id, &info).err()
+					if let Some(e) =
+						Self::add_liquidity(&liquidity_address, currency_id, &info).err()
 					{
 						log::error!(
-							target: "runtime::add_liquidity",
+							target: "buy-back::add_liquidity",
 							"Received invalid justification for {:?}",
 							e,
 						);
 						Self::deposit_event(Event::AddLiquidityFailed {
-							asset_id,
+							currency_id,
 							block_number: n,
 						});
 					} else {
 						Self::deposit_event(Event::AddLiquiditySuccess {
-							asset_id,
+							currency_id,
 							block_number: n,
 						});
 					}
 					info.last_add_liquidity = n;
-					Infos::<T>::insert(asset_id, info.clone());
+					Infos::<T>::insert(currency_id, info.clone());
 				}
-				if info.last_buyback == BlockNumberFor::<T>::from(0u32) ||
+				if info.last_buyback == Zero::zero() ||
 					info.last_buyback + info.buyback_duration == n
 				{
-					if let Some(e) = Self::buy_back(&buyback_address, asset_id, &info).err() {
+					if let Some(e) = Self::buy_back(&buyback_address, currency_id, &info).err() {
 						log::error!(
-							target: "runtime::buy_back",
+							target: "buy-back::buy_back",
 							"Received invalid justification for {:?}",
 							e,
 						);
-						Self::deposit_event(Event::BuyBackFailed { asset_id, block_number: n });
+						Self::deposit_event(Event::BuyBackFailed { currency_id, block_number: n });
 					} else {
-						Self::deposit_event(Event::BuyBackSuccess { asset_id, block_number: n });
+						Self::deposit_event(Event::BuyBackSuccess { currency_id, block_number: n });
 					}
 					info.last_buyback = n;
-					Infos::<T>::insert(asset_id, info);
+					Infos::<T>::insert(currency_id, info);
 				}
 			}
 			T::WeightInfo::on_idle()
@@ -193,12 +210,13 @@ pub mod pallet {
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
+		/// Configuration for setting up buybacks and adding liquidity.
 		#[pallet::call_index(0)]
 		#[pallet::weight(T::WeightInfo::set_vtoken())]
 		pub fn set_vtoken(
 			origin: OriginFor<T>,
-			asset_id: CurrencyIdOf<T>,
-			value: BalanceOf<T>,
+			currency_id: CurrencyIdOf<T>,
+			min_swap_value: BalanceOf<T>,
 			proportion: Permill,
 			buyback_duration: BlockNumberFor<T>,
 			add_liquidity_duration: BlockNumberFor<T>,
@@ -206,64 +224,60 @@ pub mod pallet {
 		) -> DispatchResult {
 			T::ControlOrigin::ensure_origin(origin)?;
 
-			match asset_id {
-				CurrencyId::Token(token_symbol) =>
-					if !T::CurrencyIdRegister::check_vtoken_registered(token_symbol) {
-						return Err(Error::<T>::ArgumentsError.into());
-					},
-				CurrencyId::Token2(token_id) => {
-					if !T::CurrencyIdRegister::check_vtoken2_registered(token_id) {
-						return Err(Error::<T>::ArgumentsError.into());
-					}
-				},
-				_ => (),
-			};
+			Self::check_currency_id(currency_id)?;
+			ensure!(min_swap_value > Zero::zero(), Error::<T>::ZeroMinSwapValue);
+			ensure!(buyback_duration > Zero::zero(), Error::<T>::ZeroDuration);
+			ensure!(add_liquidity_duration > Zero::zero(), Error::<T>::ZeroDuration);
 
 			let info = Info {
-				value,
+				min_swap_value,
 				if_auto,
 				proportion,
 				buyback_duration,
-				last_buyback: BlockNumberFor::<T>::from(0u32),
+				last_buyback: Zero::zero(),
 				add_liquidity_duration,
-				last_add_liquidity: BlockNumberFor::<T>::from(0u32),
+				last_add_liquidity: Zero::zero(),
 			};
-			Infos::<T>::insert(asset_id, info.clone());
+			Infos::<T>::insert(currency_id, info.clone());
 
-			Self::deposit_event(Event::ConfigSet { asset_id, info });
+			Self::deposit_event(Event::ConfigSet { currency_id, info });
 
 			Ok(())
 		}
 
+		/// Charge the buyback account.
 		#[pallet::call_index(1)]
 		#[pallet::weight(T::WeightInfo::charge())]
 		pub fn charge(
 			origin: OriginFor<T>,
-			asset_id: CurrencyIdOf<T>,
+			currency_id: CurrencyIdOf<T>,
 			value: BalanceOf<T>,
 		) -> DispatchResult {
 			let exchanger = ensure_signed(origin)?;
 
+			Self::check_currency_id(currency_id)?;
 			T::MultiCurrency::transfer(
-				asset_id,
+				currency_id,
 				&exchanger,
 				&T::BuyBackAccount::get().into_account_truncating(),
 				value,
 			)?;
 
-			Self::deposit_event(Event::Charged { who: exchanger, asset_id, value });
+			Self::deposit_event(Event::Charged { who: exchanger, currency_id, value });
 
 			Ok(())
 		}
 
+		/// Remove the configuration of the buyback.
 		#[pallet::call_index(2)]
 		#[pallet::weight(T::WeightInfo::remove_vtoken())]
-		pub fn remove_vtoken(origin: OriginFor<T>, asset_id: CurrencyIdOf<T>) -> DispatchResult {
+		pub fn remove_vtoken(origin: OriginFor<T>, currency_id: CurrencyIdOf<T>) -> DispatchResult {
 			T::ControlOrigin::ensure_origin(origin)?;
 
-			Infos::<T>::remove(asset_id);
+			ensure!(Infos::<T>::contains_key(currency_id), Error::<T>::CurrencyIdNotExists);
+			Infos::<T>::remove(currency_id);
 
-			Self::deposit_event(Event::Removed { asset_id });
+			Self::deposit_event(Event::Removed { currency_id });
 
 			Ok(())
 		}
@@ -286,21 +300,27 @@ pub mod pallet {
 			let balance = T::MultiCurrency::free_balance(currency_id, &buyback_address);
 			ensure!(balance > Zero::zero(), Error::<T>::NotEnoughBalance);
 
+			let amount_out_min = 0;
 			T::DexOperator::inner_swap_exact_assets_for_assets(
 				buyback_address,
-				balance.min(info.value).saturated_into(),
-				0,
+				balance.min(info.min_swap_value).saturated_into(),
+				amount_out_min,
 				&path,
 				&buyback_address,
 			)?;
 
 			let bnc_balance = T::MultiCurrency::free_balance(BNC, &buyback_address);
-			T::VeMinting::notify_reward(0, &Some(buyback_address.clone()), vec![(BNC, bnc_balance)])
+			let pool_id = 0;
+			T::VeMinting::notify_reward(
+				pool_id,
+				&Some(buyback_address.clone()),
+				vec![(BNC, bnc_balance)],
+			)
 		}
 
 		#[transactional]
 		fn add_liquidity(
-			buyback_address: &AccountIdOf<T>,
+			liquidity_address: &AccountIdOf<T>,
 			currency_id: CurrencyId,
 			info: &Info<BalanceOf<T>, BlockNumberFor<T>>,
 		) -> DispatchResult {
@@ -311,29 +331,48 @@ pub mod pallet {
 				AssetId::try_convert_from(BNC, T::ParachainId::get().into())
 					.map_err(|_| DispatchError::Other("Conversion Error."))?;
 			let path = vec![asset_id, bnc_asset_id];
-			let balance = T::MultiCurrency::free_balance(currency_id, &buyback_address);
+			let balance = T::MultiCurrency::free_balance(currency_id, &liquidity_address);
 			let token_balance = info.proportion * balance;
 			ensure!(token_balance > Zero::zero(), Error::<T>::NotEnoughBalance);
 
+			let amount_out_min = 0;
 			T::DexOperator::inner_swap_exact_assets_for_assets(
-				buyback_address,
+				liquidity_address,
 				token_balance.saturated_into(),
-				0,
+				amount_out_min,
 				&path,
-				&buyback_address,
+				&liquidity_address,
 			)?;
-			let remaining_balance = T::MultiCurrency::free_balance(currency_id, &buyback_address);
-			let bnc_balance = T::MultiCurrency::free_balance(BNC, &buyback_address);
+			let remaining_balance = T::MultiCurrency::free_balance(currency_id, &liquidity_address);
+			let bnc_balance = T::MultiCurrency::free_balance(BNC, &liquidity_address);
 
+			let amount_0_min = 0;
+			let amount_1_min = 0;
 			T::DexOperator::inner_add_liquidity(
-				buyback_address,
+				liquidity_address,
 				asset_id,
 				bnc_asset_id,
 				remaining_balance.saturated_into(),
 				bnc_balance.saturated_into(),
-				0,
-				0,
+				amount_0_min,
+				amount_1_min,
 			)
+		}
+
+		pub fn check_currency_id(currency_id: CurrencyId) -> Result<(), DispatchError> {
+			match currency_id {
+				CurrencyId::VToken(token_symbol) =>
+					if !T::CurrencyIdRegister::check_vtoken_registered(token_symbol) {
+						return Err(Error::<T>::CurrencyIdNotExists.into());
+					},
+				CurrencyId::VToken2(token_id) => {
+					if !T::CurrencyIdRegister::check_vtoken2_registered(token_id) {
+						return Err(Error::<T>::CurrencyIdNotExists.into());
+					}
+				},
+				_ => return Err(Error::<T>::CurrencyIdError.into()),
+			};
+			Ok(())
 		}
 	}
 }

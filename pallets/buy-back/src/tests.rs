@@ -21,23 +21,72 @@
 #![cfg(test)]
 
 use crate::{mock::*, *};
-use frame_support::assert_ok;
+use frame_support::{assert_noop, assert_ok};
 use sp_arithmetic::per_things::Permill;
 
+const PARAID: u32 = 2001;
+const VALUE: u128 = 1000;
+const BUYBACK_DURATION: u64 = 1000;
+const LIQUID_DURATION: u64 = 1000;
+const LIQUID_PROPORTION: Permill = Permill::from_percent(2);
+
 #[test]
-fn buy_back_should_work() {
+fn set_vtoken_should_not_work() {
 	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
-		let para_id = 2001u32;
-		let zenlink_pair_account_id = init_zenlink(para_id);
+		assert_noop!(
+			BuyBack::set_vtoken(
+				RuntimeOrigin::signed(ALICE),
+				KSM,
+				VALUE,
+				LIQUID_PROPORTION,
+				BUYBACK_DURATION,
+				LIQUID_DURATION,
+				true,
+			),
+			Error::<Runtime>::CurrencyIdError
+		);
+
+		assert_noop!(
+			BuyBack::set_vtoken(
+				RuntimeOrigin::signed(ALICE),
+				VKSM,
+				VALUE,
+				LIQUID_PROPORTION,
+				0,
+				LIQUID_DURATION,
+				true,
+			),
+			Error::<Runtime>::ZeroDuration
+		);
+
+		assert_noop!(
+			BuyBack::set_vtoken(
+				RuntimeOrigin::signed(ALICE),
+				VKSM,
+				0,
+				LIQUID_PROPORTION,
+				BUYBACK_DURATION,
+				LIQUID_DURATION,
+				true,
+			),
+			Error::<Runtime>::ZeroMinSwapValue
+		);
+	});
+}
+
+#[test]
+fn buy_back_no_burn_should_work() {
+	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
+		let zenlink_pair_account_id = init_zenlink(PARAID);
 
 		assert_ok!(BuyBack::set_vtoken(
 			RuntimeOrigin::signed(ALICE),
 			VKSM,
-			1000u128,
-			Permill::from_percent(2),
-			1000,
-			1000,
-			true
+			VALUE,
+			LIQUID_PROPORTION,
+			BUYBACK_DURATION,
+			LIQUID_DURATION,
+			true,
 		));
 		let buyback_account = <Runtime as Config>::BuyBackAccount::get().into_account_truncating();
 		let incentive_account = IncentivePalletId::get().into_account_truncating();
@@ -60,19 +109,18 @@ fn buy_back_should_work() {
 }
 
 #[test]
-fn on_idle_should_work() {
+fn on_idle_no_burn_should_work() {
 	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
-		let para_id = 2001u32;
-		let zenlink_pair_account_id = init_zenlink(para_id);
+		let zenlink_pair_account_id = init_zenlink(PARAID);
 
 		assert_ok!(BuyBack::set_vtoken(
 			RuntimeOrigin::signed(ALICE),
 			VKSM,
 			1_000_000u128,
-			Permill::from_percent(2),
-			1000,
-			1000,
-			true
+			LIQUID_PROPORTION,
+			BUYBACK_DURATION,
+			LIQUID_DURATION,
+			true,
 		));
 		let buyback_account = <Runtime as Config>::BuyBackAccount::get().into_account_truncating();
 		let incentive_account = IncentivePalletId::get().into_account_truncating();
@@ -96,9 +144,9 @@ fn on_idle_should_work() {
 	});
 }
 
-fn init_zenlink(para_id: u32) -> AccountIdOf<Runtime> {
-	let asset_0_currency_id: AssetId = AssetId::try_convert_from(BNC, para_id).unwrap();
-	let asset_1_currency_id: AssetId = AssetId::try_convert_from(VKSM, para_id).unwrap();
+fn init_zenlink(_para_id: u32) -> AccountIdOf<Runtime> {
+	let asset_0_currency_id: AssetId = AssetId::try_convert_from(BNC, PARAID).unwrap();
+	let asset_1_currency_id: AssetId = AssetId::try_convert_from(VKSM, PARAID).unwrap();
 	// let path = vec![asset_0_currency_id, asset_1_currency_id];
 	assert_ok!(ZenlinkProtocol::create_pair(
 		RuntimeOrigin::root(),
