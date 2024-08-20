@@ -151,6 +151,7 @@ pub mod pallet {
 		add_liquidity_duration: BlockNumberFor,
 		/// The last time liquidity was added.
 		last_add_liquidity: BlockNumberFor,
+		destruction_ratio: Option<Permill>,
 	}
 
 	#[pallet::hooks]
@@ -221,6 +222,7 @@ pub mod pallet {
 			buyback_duration: BlockNumberFor<T>,
 			add_liquidity_duration: BlockNumberFor<T>,
 			if_auto: bool,
+			destruction_ratio: Option<Permill>,
 		) -> DispatchResult {
 			T::ControlOrigin::ensure_origin(origin)?;
 
@@ -237,6 +239,7 @@ pub mod pallet {
 				last_buyback: Zero::zero(),
 				add_liquidity_duration,
 				last_add_liquidity: Zero::zero(),
+				destruction_ratio,
 			};
 			Infos::<T>::insert(currency_id, info.clone());
 
@@ -309,6 +312,11 @@ pub mod pallet {
 				&buyback_address,
 			)?;
 
+			if let Some(ratio) = info.destruction_ratio {
+				let bnc_balance_before_burn = T::MultiCurrency::free_balance(BNC, &buyback_address);
+				let destruction_amount = ratio * bnc_balance_before_burn;
+				T::MultiCurrency::withdraw(BNC, &buyback_address, destruction_amount)?;
+			}
 			let bnc_balance = T::MultiCurrency::free_balance(BNC, &buyback_address);
 			let pool_id = 0;
 			T::VeMinting::notify_reward(
