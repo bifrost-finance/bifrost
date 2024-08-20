@@ -30,9 +30,7 @@ mod benchmarking;
 
 pub mod weights;
 
-use bifrost_primitives::{
-	currency::BNC, CurrencyId, CurrencyIdRegister, TryConvertFrom,
-};
+use bifrost_primitives::{currency::BNC, CurrencyId, CurrencyIdRegister, TryConvertFrom};
 use bifrost_ve_minting::VeMintingInterface;
 use cumulus_primitives_core::ParaId;
 use frame_support::{
@@ -157,10 +155,11 @@ pub mod pallet {
 					continue;
 				}
 
-				if info.last_add_liquidity == Zero::zero()
-					|| info.last_add_liquidity + info.add_liquidity_duration == n
+				if info.last_add_liquidity == Zero::zero() ||
+					info.last_add_liquidity + info.add_liquidity_duration == n
 				{
-					if let Some(e) = Self::add_liquidity(&liquidity_address, currency_id, &info).err()
+					if let Some(e) =
+						Self::add_liquidity(&liquidity_address, currency_id, &info).err()
 					{
 						log::error!(
 							target: "buy-back::add_liquidity",
@@ -180,8 +179,8 @@ pub mod pallet {
 					info.last_add_liquidity = n;
 					Infos::<T>::insert(currency_id, info.clone());
 				}
-				if info.last_buyback == Zero::zero()
-					|| info.last_buyback + info.buyback_duration == n
+				if info.last_buyback == Zero::zero() ||
+					info.last_buyback + info.buyback_duration == n
 				{
 					if let Some(e) = Self::buy_back(&buyback_address, currency_id, &info).err() {
 						log::error!(
@@ -219,10 +218,7 @@ pub mod pallet {
 			Self::check_currency_id(currency_id)?;
 			ensure!(min_swap_value > Zero::zero(), Error::<T>::ZeroMinSwapValue);
 			ensure!(buyback_duration > Zero::zero(), Error::<T>::ZeroDuration);
-			ensure!(
-				add_liquidity_duration > Zero::zero(),
-				Error::<T>::ZeroDuration
-			);
+			ensure!(add_liquidity_duration > Zero::zero(), Error::<T>::ZeroDuration);
 
 			let info = Info {
 				min_swap_value,
@@ -345,11 +341,10 @@ pub mod pallet {
 
 		pub fn check_currency_id(currency_id: CurrencyId) -> Result<(), DispatchError> {
 			match currency_id {
-				CurrencyId::VToken(token_symbol) => {
+				CurrencyId::VToken(token_symbol) =>
 					if !T::CurrencyIdRegister::check_vtoken_registered(token_symbol) {
 						return Err(Error::<T>::CurrencyIdNotExists.into());
-					}
-				},
+					},
 				CurrencyId::VToken2(token_id) => {
 					if !T::CurrencyIdRegister::check_vtoken2_registered(token_id) {
 						return Err(Error::<T>::CurrencyIdNotExists.into());

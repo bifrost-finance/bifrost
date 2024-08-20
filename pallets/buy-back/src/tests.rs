@@ -27,11 +27,11 @@ use bifrost_runtime_common::milli;
 use frame_support::{assert_noop, assert_ok};
 use sp_arithmetic::per_things::Permill;
 
-const PARAID : u32 = 2001;
-const VALUE : u128 = 1000;
-const BUYBACK_DURATION : u64 = 1000;
-const LIQUID_DURATION : u64 = 1000;
-const LIQUID_PROPORTION : Permill = Permill::from_percent(2);
+const PARAID: u32 = 2001;
+const VALUE: u128 = 1000;
+const BUYBACK_DURATION: u64 = 1000;
+const LIQUID_DURATION: u64 = 1000;
+const LIQUID_PROPORTION: Permill = Permill::from_percent(2);
 
 #[test]
 fn set_vtoken_should_not_work() {
