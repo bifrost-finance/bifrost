@@ -21,7 +21,7 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use parity_scale_codec::MaxEncodedLen;
-use scale_info::{prelude::collections::BTreeMap, TypeInfo};
+use scale_info::TypeInfo;
 use sp_core::{Decode, Encode, RuntimeDebug, H160};
 use sp_runtime::{
 	generic,
@@ -34,8 +34,6 @@ use xcm_executor::traits::{AssetTransferError, TransferType, XcmAssetTransfers};
 pub mod currency;
 mod salp;
 pub mod traits;
-use core::ops::{Add, Mul};
-use frame_support::pallet_prelude::DispatchError;
 pub use frame_support::{dispatch::Parameter, storage::types::StorageMap};
 pub use salp::*;
 use sp_std::{boxed::Box, vec::Vec};
