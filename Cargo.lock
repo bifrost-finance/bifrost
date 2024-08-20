@@ -898,6 +898,7 @@ dependencies = [
  "bifrost-asset-registry",
  "bifrost-currencies",
  "bifrost-primitives",
+ "bifrost-runtime-common",
  "bifrost-slp",
  "bifrost-ve-minting",
  "bifrost-vtoken-minting",

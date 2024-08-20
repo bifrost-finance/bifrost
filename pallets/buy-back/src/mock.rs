@@ -164,7 +164,6 @@ parameter_types! {
 
 ord_parameter_types! {
 	pub const One: AccountId = ALICE;
-	// pub const RelayChainTokenSymbolKSM: TokenSymbol = TokenSymbol::KSM;
 	pub const RelayCurrencyId: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
 }
 
@@ -174,9 +173,7 @@ impl bifrost_buy_back::Config for Runtime {
 	type ControlOrigin = EnsureSignedBy<One, AccountId>;
 	type WeightInfo = ();
 	type DexOperator = ZenlinkProtocol;
-	type CurrencyIdConversion = AssetIdMaps<Runtime>;
 	type TreasuryAccount = TreasuryAccount;
-	type RelayChainToken = RelayCurrencyId;
 	type BuyBackAccount = BuyBackAccount;
 	type LiquidityAccount = LiquidityAccount;
 	type ParachainId = ParaInfo;
