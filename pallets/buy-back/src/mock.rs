@@ -551,6 +551,15 @@ impl ExtBuilder {
 		.assimilate_storage(&mut t)
 		.unwrap();
 
+		bifrost_asset_registry::GenesisConfig::<Runtime> {
+			currency: vec![(VKSM, 10_000_000, None), (VDOT, 10_000_000, None)],
+			vcurrency: vec![],
+			vsbond: vec![],
+			phantom: Default::default(),
+		}
+		.assimilate_storage(&mut t)
+		.unwrap();
+
 		t.into()
 	}
 }

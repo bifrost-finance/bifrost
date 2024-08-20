@@ -21,9 +21,6 @@
 #![cfg(test)]
 
 use crate::{mock::*, *};
-use bifrost_asset_registry::AssetMetadata;
-use bifrost_primitives::TokenInfo;
-use bifrost_runtime_common::milli;
 use frame_support::{assert_noop, assert_ok};
 use sp_arithmetic::per_things::Permill;
 
@@ -36,7 +33,6 @@ const LIQUID_PROPORTION: Permill = Permill::from_percent(2);
 #[test]
 fn set_vtoken_should_not_work() {
 	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
-		asset_registry();
 		assert_noop!(
 			BuyBack::set_vtoken(
 				RuntimeOrigin::signed(ALICE),
@@ -81,7 +77,6 @@ fn set_vtoken_should_not_work() {
 #[test]
 fn buy_back_no_burn_should_work() {
 	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
-		asset_registry();
 		let zenlink_pair_account_id = init_zenlink(PARAID);
 
 		assert_ok!(BuyBack::set_vtoken(
@@ -116,7 +111,6 @@ fn buy_back_no_burn_should_work() {
 #[test]
 fn on_idle_no_burn_should_work() {
 	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
-		asset_registry();
 		let zenlink_pair_account_id = init_zenlink(PARAID);
 
 		assert_ok!(BuyBack::set_vtoken(
@@ -173,21 +167,4 @@ fn init_zenlink(_para_id: u32) -> AccountIdOf<Runtime> {
 		deadline
 	));
 	ZenlinkProtocol::pair_account_id(asset_0_currency_id, asset_1_currency_id)
-}
-
-fn asset_registry() {
-	let items = vec![(VKSM, 10 * milli::<Runtime>(VKSM))];
-	for (currency_id, metadata) in items.iter().map(|(currency_id, minimal_balance)| {
-		(
-			currency_id,
-			AssetMetadata {
-				name: currency_id.name().map(|s| s.as_bytes().to_vec()).unwrap_or_default(),
-				symbol: currency_id.symbol().map(|s| s.as_bytes().to_vec()).unwrap_or_default(),
-				decimals: currency_id.decimals().unwrap_or_default(),
-				minimal_balance: *minimal_balance,
-			},
-		)
-	}) {
-		AssetRegistry::do_register_metadata(*currency_id, &metadata).expect("Token register");
-	}
 }

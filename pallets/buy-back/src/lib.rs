@@ -134,14 +134,22 @@ pub mod pallet {
 	pub type Infos<T: Config> =
 		StorageMap<_, Twox64Concat, CurrencyIdOf<T>, Info<BalanceOf<T>, BlockNumberFor<T>>>;
 
+	/// Information on buybacks and add liquidity
 	#[derive(Clone, Encode, Decode, PartialEq, Eq, RuntimeDebug, TypeInfo)]
 	pub struct Info<BalanceOf, BlockNumberFor> {
+		/// The minimum value of the token to be swapped.
 		min_swap_value: BalanceOf,
+		/// Whether to automatically add liquidity and buy back.
 		if_auto: bool,
+		/// The proportion of the token to be added to the liquidity pool.
 		proportion: Permill,
+		/// The duration of the buyback.
 		buyback_duration: BlockNumberFor,
+		/// The last time the buyback was executed.
 		last_buyback: BlockNumberFor,
+		/// The duration of adding liquidity.
 		add_liquidity_duration: BlockNumberFor,
+		/// The last time liquidity was added.
 		last_add_liquidity: BlockNumberFor,
 	}
 
@@ -202,6 +210,7 @@ pub mod pallet {
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
+		/// Configuration for setting up buybacks and adding liquidity.
 		#[pallet::call_index(0)]
 		#[pallet::weight(T::WeightInfo::set_vtoken())]
 		pub fn set_vtoken(
@@ -236,6 +245,7 @@ pub mod pallet {
 			Ok(())
 		}
 
+		/// Charge the buyback account.
 		#[pallet::call_index(1)]
 		#[pallet::weight(T::WeightInfo::charge())]
 		pub fn charge(
@@ -258,6 +268,7 @@ pub mod pallet {
 			Ok(())
 		}
 
+		/// Remove the configuration of the buyback.
 		#[pallet::call_index(2)]
 		#[pallet::weight(T::WeightInfo::remove_vtoken())]
 		pub fn remove_vtoken(origin: OriginFor<T>, currency_id: CurrencyIdOf<T>) -> DispatchResult {
@@ -289,16 +300,22 @@ pub mod pallet {
 			let balance = T::MultiCurrency::free_balance(currency_id, &buyback_address);
 			ensure!(balance > Zero::zero(), Error::<T>::NotEnoughBalance);
 
+			let amount_out_min = 0;
 			T::DexOperator::inner_swap_exact_assets_for_assets(
 				buyback_address,
 				balance.min(info.min_swap_value).saturated_into(),
-				0,
+				amount_out_min,
 				&path,
 				&buyback_address,
 			)?;
 
 			let bnc_balance = T::MultiCurrency::free_balance(BNC, &buyback_address);
-			T::VeMinting::notify_reward(0, &Some(buyback_address.clone()), vec![(BNC, bnc_balance)])
+			let pool_id = 0;
+			T::VeMinting::notify_reward(
+				pool_id,
+				&Some(buyback_address.clone()),
+				vec![(BNC, bnc_balance)],
+			)
 		}
 
 		#[transactional]
@@ -318,24 +335,27 @@ pub mod pallet {
 			let token_balance = info.proportion * balance;
 			ensure!(token_balance > Zero::zero(), Error::<T>::NotEnoughBalance);
 
+			let amount_out_min = 0;
 			T::DexOperator::inner_swap_exact_assets_for_assets(
 				liquidity_address,
 				token_balance.saturated_into(),
-				0,
+				amount_out_min,
 				&path,
 				&liquidity_address,
 			)?;
 			let remaining_balance = T::MultiCurrency::free_balance(currency_id, &liquidity_address);
 			let bnc_balance = T::MultiCurrency::free_balance(BNC, &liquidity_address);
 
+			let amount_0_min = 0;
+			let amount_1_min = 0;
 			T::DexOperator::inner_add_liquidity(
 				liquidity_address,
 				asset_id,
 				bnc_asset_id,
 				remaining_balance.saturated_into(),
 				bnc_balance.saturated_into(),
-				0,
-				0,
+				amount_0_min,
+				amount_1_min,
 			)
 		}
 
