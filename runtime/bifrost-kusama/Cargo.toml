@@ -46,6 +46,7 @@ pallet-proxy = { workspace = true }
 pallet-ranked-collective = { workspace = true }
 pallet-referenda = { workspace = true }
 pallet-scheduler = { workspace = true }
+pallet-staking = { workspace = true }
 pallet-session = { workspace = true }
 pallet-timestamp = { workspace = true }
 pallet-tips = { workspace = true }
@@ -289,6 +290,7 @@ runtime-benchmarks = [
 	"pallet-indices/runtime-benchmarks",
 	"pallet-ranked-collective/runtime-benchmarks",
 	"pallet-referenda/runtime-benchmarks",
+	"pallet-staking/runtime-benchmarks",
 	"pallet-scheduler/runtime-benchmarks",
 	"pallet-timestamp/runtime-benchmarks",
 	"pallet-treasury/runtime-benchmarks",

@@ -20,6 +20,7 @@
 
 use crate::{mocks::mock_kusama::*, *};
 use bifrost_primitives::currency::{KSM, VKSM};
+use bifrost_vtoken_minting::{OngoingTimeUnit, TokenPool};
 use frame_support::{assert_ok, PalletId};
 use orml_traits::MultiCurrency;
 use sp_runtime::traits::AccountIdConversion;
@@ -140,7 +141,7 @@ fn decrease_token_pool_works() {
 		assert_ok!(Slp::decrease_token_pool(RuntimeOrigin::signed(ALICE), KSM, 10));
 
 		// Check the value after decreasing
-		assert_eq!(VtokenMinting::token_pool(KSM), 90);
+		assert_eq!(TokenPool::<Runtime>::get(KSM), 90);
 	});
 }
 
@@ -166,7 +167,7 @@ fn update_ongoing_time_unit_works() {
 		));
 
 		// Check the value after updating.
-		assert_eq!(VtokenMinting::ongoing_time_unit(KSM), Some(TimeUnit::Era(9)));
+		assert_eq!(OngoingTimeUnit::<Runtime>::get(KSM), Some(TimeUnit::Era(9)));
 	});
 }
 

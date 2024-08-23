@@ -56,10 +56,10 @@ impl<T: Config> Pallet<T> {
 	/// Check if the current block number is within the end time of the reward pool
 	pub fn last_time_reward_applicable(pool_id: PoolId) -> BlockNumberFor<T> {
 		let current_block_number: BlockNumberFor<T> = frame_system::Pallet::<T>::block_number();
-		if current_block_number < Self::incentive_configs(pool_id).period_finish {
+		if current_block_number < IncentiveConfigs::<T>::get(pool_id).period_finish {
 			current_block_number
 		} else {
-			Self::incentive_configs(pool_id).period_finish
+			IncentiveConfigs::<T>::get(pool_id).period_finish
 		}
 	}
 
@@ -67,7 +67,7 @@ impl<T: Config> Pallet<T> {
 	pub fn reward_per_token(
 		pool_id: PoolId,
 	) -> Result<BTreeMap<CurrencyIdOf<T>, BalanceOf<T>>, DispatchError> {
-		let mut conf = Self::incentive_configs(pool_id);
+		let mut conf = IncentiveConfigs::<T>::get(pool_id);
 		let current_block_number: BlockNumberFor<T> = frame_system::Pallet::<T>::block_number();
 		let total_supply = Self::total_supply(current_block_number)?;
 		if total_supply == BalanceOf::<T>::zero() {
@@ -108,7 +108,7 @@ impl<T: Config> Pallet<T> {
 	) -> Result<BTreeMap<CurrencyIdOf<T>, BalanceOf<T>>, DispatchError> {
 		let reward_per_token = Self::reward_per_token(pool_id)?;
 		let vetoken_balance = Self::balance_of_current_block(addr)?;
-		let mut rewards = if let Some(rewards) = Self::rewards(addr) {
+		let mut rewards = if let Some(rewards) = Rewards::<T>::get(addr) {
 			rewards
 		} else {
 			BTreeMap::<CurrencyIdOf<T>, BalanceOf<T>>::default()
@@ -118,7 +118,7 @@ impl<T: Config> Pallet<T> {
 				.checked_mul(U256::from(
 					reward
 						.saturating_sub(
-							*Self::user_reward_per_token_paid(addr)
+							*UserRewardPerTokenPaid::<T>::get(addr)
 								.get(currency)
 								.unwrap_or(&BalanceOf::<T>::zero()),
 						)
@@ -211,7 +211,7 @@ impl<T: Config> Pallet<T> {
 		if Self::balance_of_current_block(addr)? == BalanceOf::<T>::zero() {
 			return Ok(());
 		} // Excit earlier if balance of token is zero
-		if let Some(rewards) = Self::rewards(addr) {
+		if let Some(rewards) = Rewards::<T>::get(addr) {
 			rewards.iter().try_for_each(|(currency, &reward)| -> DispatchResult {
 				T::MultiCurrency::transfer(
 					*currency,
@@ -242,7 +242,7 @@ impl<T: Config> Pallet<T> {
 			None => return Err(Error::<T>::NoController.into()),
 		};
 		Self::update_reward(pool_id, None, None)?;
-		let mut conf = Self::incentive_configs(pool_id);
+		let mut conf = IncentiveConfigs::<T>::get(pool_id);
 		let current_block_number: BlockNumberFor<T> = frame_system::Pallet::<T>::block_number();
 
 		if current_block_number >= conf.period_finish {

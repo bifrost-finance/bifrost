@@ -41,6 +41,7 @@ sp-io = { workspace = true }
 xcm-builder = { workspace = true }
 xcm-executor = { workspace = true }
 env_logger = { workspace = true }
+bifrost-runtime-common = { workspace = true }
 
 [features]
 default = ["std"]
@@ -58,6 +59,7 @@ std = [
 	"bifrost-slp/std",
 	"bifrost-asset-registry/std",
 	"orml-xtokens/std",
+	"bifrost-runtime-common/std",
 ]
 
 runtime-benchmarks = [
