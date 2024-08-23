@@ -95,7 +95,8 @@ where
 		}
 		let account_id = T::AddressMapping::into_account_id(*who);
 
-		let fee_currency = AC::get_fee_currency(&account_id, fee);
+		let fee_currency =
+			AC::get_fee_currency(&account_id, fee).map_err(|_| Error::<T>::BalanceLow)?;
 
 		let Some((converted, price)) =
 			C::convert((EC::get(), fee_currency, fee.unique_saturated_into()))

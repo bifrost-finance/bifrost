@@ -69,7 +69,11 @@ where
 		// If `max_fee_per_gas` is provided (i.e., it has a value), it is used as the fee.
 		// Otherwise, the `gas_limit` is converted to `U256` and used as the fee.
 		let fee = max_fee_per_gas.unwrap_or_else(|| U256::from(gas_limit));
-		let (balance, b_weight) = B::get_balance_in_currency(evm_currency, &account_id, fee);
+		let (balance, b_weight) = B::get_balance_in_currency(evm_currency, &account_id, fee)
+			.map_err(|_| RunnerError {
+				error: R::Error::from(TransactionValidationError::BalanceTooLow),
+				weight,
+			})?;
 
 		let (source_account, inner_weight) = (
 			Account {

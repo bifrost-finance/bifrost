@@ -555,28 +555,54 @@ impl<CurrencyId, Balance, AccountId> SlpHostingFeeProvider<CurrencyId, Balance, 
 
 /// Provides account's fee payment currency id
 pub trait AccountFeeCurrency<AccountId> {
+	type Error;
 	/// Retrieves the currency used to pay the transaction fee.
 	///
 	/// This method returns the `CurrencyId` of the currency that will be used to pay the
 	/// transaction fee for the current transaction. It is useful for determining which currency
 	/// will be deducted to cover the cost of the transaction.
-	fn get_fee_currency(account: &AccountId, fee: U256) -> CurrencyId;
+	fn get_fee_currency(account: &AccountId, fee: U256) -> Result<CurrencyId, Self::Error>;
 }
 
 /// Provides account's balance of fee asset currency in a given currency
 pub trait AccountFeeCurrencyBalanceInCurrency<AccountId> {
 	type Output;
+	type Error;
 
 	// This `fee` variable is used to determine the currency for paying transaction fees.
 	fn get_balance_in_currency(
 		to_currency: CurrencyId,
 		account: &AccountId,
 		fee: U256,
-	) -> Self::Output;
+	) -> Result<Self::Output, Self::Error>;
 }
 
 pub trait PriceProvider {
 	type Price;
 
 	fn get_price(asset_a: CurrencyId, asset_b: CurrencyId) -> Option<Self::Price>;
+}
+
+/// A trait for comparing the balance of a specific currency for a given account.
+pub trait BalanceCmp<AccountId> {
+	type Error;
+	/// Compares the balance of the specified currency for the given account with
+	/// an input amount, considering the precision of both the currency and the amount.
+	///
+	/// # Parameters
+	/// - `account`: The account ID whose balance is to be compared.
+	/// - `currency`: The currency ID whose balance is to be compared.
+	/// - `amount`: The amount to compare against.
+	/// - `amount_precision`: The precision of the input amount.
+	///
+	/// # Returns
+	/// - `Ok(std::cmp::Ordering)`: The result of the comparison, indicating whether the balance is
+	///   less than, equal to, or greater than the input amount.
+	/// - `Err(Self::Error)`: An error if the comparison fails.
+	fn cmp_with_precision(
+		account: &AccountId,
+		currency: &CurrencyId,
+		amount: u128,
+		amount_precision: u32,
+	) -> Result<std::cmp::Ordering, Self::Error>;
 }
