@@ -33,7 +33,7 @@ use sp_runtime::{
 	},
 	BoundedVec, DispatchError, DispatchResult, TokenError, TypeId,
 };
-use sp_std::{fmt::Debug, vec::Vec};
+use sp_std::{cmp::Ordering, fmt::Debug, vec::Vec};
 
 pub trait TokenInfo {
 	fn name(&self) -> Option<&str>;
@@ -604,5 +604,5 @@ pub trait BalanceCmp<AccountId> {
 		currency: &CurrencyId,
 		amount: u128,
 		amount_precision: u32,
-	) -> Result<std::cmp::Ordering, Self::Error>;
+	) -> Result<Ordering, Self::Error>;
 }

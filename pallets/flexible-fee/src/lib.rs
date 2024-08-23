@@ -51,7 +51,7 @@ use sp_runtime::{
 	transaction_validity::TransactionValidityError,
 	BoundedVec,
 };
-use sp_std::{boxed::Box, vec, vec::Vec};
+use sp_std::{boxed::Box, cmp::Ordering, vec, vec::Vec};
 pub use weights::WeightInfo;
 use xcm::{prelude::Unlimited, v4::prelude::*};
 use zenlink_protocol::{AssetBalance, AssetId, ExportZenlink};
@@ -692,16 +692,16 @@ impl<T: Config> AccountFeeCurrency<T::AccountId> for Pallet<T> {
 			let comp_res = Self::cmp_with_precision(account, maybe_currency, fee, 18)?;
 
 			match comp_res {
-				std::cmp::Ordering::Less => {
+				Ordering::Less => {
 					// Get the currency with the highest balance
 					hopeless_currency = match hopeless_currency.cmp(maybe_currency) {
-						std::cmp::Ordering::Less => *maybe_currency,
+						Ordering::Less => *maybe_currency,
 						_ => hopeless_currency,
 					};
 					continue;
 				},
-				std::cmp::Ordering::Equal => return Ok(*maybe_currency),
-				std::cmp::Ordering::Greater => return Ok(*maybe_currency),
+				Ordering::Equal => return Ok(*maybe_currency),
+				Ordering::Greater => return Ok(*maybe_currency),
 			};
 		}
 
@@ -732,7 +732,7 @@ impl<T: Config> BalanceCmp<T::AccountId> for Pallet<T> {
 		currency: &CurrencyId,
 		amount: u128,
 		amount_precision: u32,
-	) -> Result<std::cmp::Ordering, Error<T>> {
+	) -> Result<Ordering, Error<T>> {
 		// Get the reducible balance for the specified account and currency.
 		let mut balance = T::MultiCurrency::reducible_balance(
 			*currency,
