@@ -65,15 +65,11 @@ where
 		let account_id = T::AddressMapping::into_account_id(source);
 		let account_nonce = frame_system::Pallet::<T>::account_nonce(&account_id);
 
-		// This `fee` variable is used to determine the currency for paying transaction fees.
-		// If `max_fee_per_gas` is provided (i.e., it has a value), it is used as the fee.
-		// Otherwise, the `gas_limit` is converted to `U256` and used as the fee.
-		let fee = max_fee_per_gas.unwrap_or_else(|| U256::from(gas_limit));
-		let (balance, b_weight) = B::get_balance_in_currency(evm_currency, &account_id, fee)
+		let (balance, b_weight) = B::get_balance_in_currency(evm_currency, &account_id, base_fee)
 			.map_err(|_| RunnerError {
-				error: R::Error::from(TransactionValidationError::BalanceTooLow),
-				weight,
-			})?;
+			error: R::Error::from(TransactionValidationError::BalanceTooLow),
+			weight,
+		})?;
 
 		let (source_account, inner_weight) = (
 			Account {
