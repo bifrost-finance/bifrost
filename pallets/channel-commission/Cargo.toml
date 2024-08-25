@@ -16,6 +16,7 @@ bifrost-primitives = { workspace = true }
 orml-traits = { workspace = true }
 log = { workspace = true }
 sp-core = { workspace = true }
+sp-io = { workspace = true }
 
 [dev-dependencies]
 orml-tokens = { workspace = true }
@@ -35,6 +36,7 @@ std = [
 	"frame-system/std",
 	"frame-benchmarking?/std",
 	"orml-traits/std",
+	"sp-io/std",
 ]
 
 runtime-benchmarks = [

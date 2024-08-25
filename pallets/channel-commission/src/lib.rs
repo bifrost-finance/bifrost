@@ -29,6 +29,7 @@ use frame_support::{pallet_prelude::*, PalletId};
 use frame_system::pallet_prelude::*;
 use orml_traits::MultiCurrency;
 use sp_core::U256;
+use sp_io::MultiRemovalResults;
 use sp_runtime::{
 	traits::{AccountIdConversion, CheckedAdd, UniqueSaturatedFrom, UniqueSaturatedInto, Zero},
 	PerThing, Percent, Permill, Rounding, SaturatedConversion, Saturating,
@@ -94,6 +95,15 @@ pub mod pallet {
 		InvalidCommissionRate,
 		CommissionTokenAlreadySet,
 		InvalidVtoken,
+		/// Error indicating that no changes were made during a modification operation.
+		NoChangesMade,
+		/// Indicates that a conversion operation failed, typically when trying to convert
+		/// between different numeric types (e.g., from a larger to a smaller type) and
+		/// the conversion resulted in a loss of information or an overflow.
+		ConversionFailed,
+		/// Represents an error that occurs when a division operation encounters a divisor of zero.
+		/// This is a critical error, as division by zero is undefined and cannot be performed.
+		DivisionByZero,
 	}
 
 	#[pallet::event]
@@ -360,18 +370,22 @@ pub mod pallet {
 			Channels::<T>::remove(channel_id);
 
 			// remove the channel from ChannelCommissionTokenRates storage
-			let _ = ChannelCommissionTokenRates::<T>::clear_prefix(
+			check_removed_all(ChannelCommissionTokenRates::<T>::clear_prefix(
 				channel_id,
 				REMOVE_TOKEN_LIMIT,
 				None,
-			);
+			));
 
 			// remove the channel from ChannelVtokenShares storage
-			let _ = ChannelVtokenShares::<T>::clear_prefix(channel_id, REMOVE_TOKEN_LIMIT, None);
+			let res = ChannelVtokenShares::<T>::clear_prefix(channel_id, REMOVE_TOKEN_LIMIT, None);
+			debug_assert!(res.maybe_cursor.is_none());
 
 			// remove the channel from PeriodChannelVtokenMint storage
-			let _ =
-				PeriodChannelVtokenMint::<T>::clear_prefix(channel_id, REMOVE_TOKEN_LIMIT, None);
+			check_removed_all(PeriodChannelVtokenMint::<T>::clear_prefix(
+				channel_id,
+				REMOVE_TOKEN_LIMIT,
+				None,
+			));
 
 			Self::deposit_event(Event::ChannelRemoved { channel_id });
 
@@ -387,17 +401,13 @@ pub mod pallet {
 		) -> DispatchResult {
 			T::ControlOrigin::ensure_origin(origin)?;
 
-			// if the receive account is not changed, do nothing
-			let channel_op = Channels::<T>::get(channel_id);
-
-			let old_receive_account = if let Some(channel_info) = channel_op {
-				channel_info.0
-			} else {
-				Err(Error::<T>::ChannelNotExist)?
-			};
+			// If the channel exists, get the receive account; otherwise, return an error.
+			let old_receive_account = Channels::<T>::get(channel_id)
+				.map(|channel_info| channel_info.0)
+				.ok_or(Error::<T>::ChannelNotExist)?;
 
 			if old_receive_account == receive_account {
-				return Ok(());
+				return Err(Error::<T>::NoChangesMade.into());
 			}
 
 			// update the channel receive account
@@ -460,10 +470,8 @@ pub mod pallet {
 
 			if let Some(commission_token) = commission_token_op {
 				// if old commission token is the same as the new one, do nothing
-				if let Some(old_commission_token) = CommissionTokens::<T>::get(vtoken) {
-					if old_commission_token == commission_token {
-						return Ok(());
-					}
+				if CommissionTokens::<T>::get(vtoken) == Some(commission_token) {
+					return Err(Error::<T>::NoChangesMade.into());
 				}
 
 				// set the commission token
@@ -479,33 +487,33 @@ pub mod pallet {
 					commission_token: Some(commission_token),
 				});
 			} else {
-				// remove the commission token
-				let _ = CommissionTokens::<T>::remove(vtoken);
+				// remove the commission token、
+				CommissionTokens::<T>::remove(vtoken);
 
 				// remove the vtoken from VtokenIssuanceSnapshots
-				let _ = VtokenIssuanceSnapshots::<T>::remove(vtoken);
+				VtokenIssuanceSnapshots::<T>::remove(vtoken);
 
 				// remove the vtoken from PeriodVtokenTotalMint storage
-				let _ = PeriodVtokenTotalMint::<T>::remove(vtoken);
+				PeriodVtokenTotalMint::<T>::remove(vtoken);
 
 				// remove the vtoken from PeriodVtokenTotalRedeem storage
-				let _ = PeriodVtokenTotalRedeem::<T>::remove(vtoken);
+				PeriodVtokenTotalRedeem::<T>::remove(vtoken);
 
 				// for all channel_ids
 				Channels::<T>::iter_keys().for_each(|channel_id| {
 					// remove the vtoken from ChannelCommissionTokenRates storage
-					let _ = ChannelCommissionTokenRates::<T>::remove(channel_id, vtoken);
+					ChannelCommissionTokenRates::<T>::remove(channel_id, vtoken);
 					// remove the vtoken from ChannelVtokenShares storage
-					let _ = ChannelVtokenShares::<T>::remove(channel_id, vtoken);
+					ChannelVtokenShares::<T>::remove(channel_id, vtoken);
 					// remove the vtoken from PeriodChannelVtokenMint storage
-					let _ = PeriodChannelVtokenMint::<T>::remove(channel_id, vtoken);
+					PeriodChannelVtokenMint::<T>::remove(channel_id, vtoken);
 				});
 
 				// remove the vtoken from PeriodTotalCommissions storage
-				let _ = PeriodTotalCommissions::<T>::remove(vtoken);
+				PeriodTotalCommissions::<T>::remove(vtoken);
 
 				// remove the vtoken from PeriodClearedCommissions storage
-				let _ = PeriodClearedCommissions::<T>::remove(vtoken);
+				PeriodClearedCommissions::<T>::remove(vtoken);
 
 				// only ChannelClaimableCommissions not removed. Channel can still claim the
 				// previous commission
@@ -562,11 +570,7 @@ pub mod pallet {
 				// if the sum of all shares is greater than 1, throw an error
 				let total_shares_op = total_shares.checked_add(&share);
 
-				if let Some(total_shares_new) = total_shares_op {
-					total_shares = total_shares_new
-				} else {
-					Err(Error::<T>::InvalidCommissionRate)?
-				};
+				total_shares = total_shares_op.ok_or_else(|| Error::<T>::InvalidCommissionRate)?;
 			}
 
 			// update the channel vtoken share
@@ -763,6 +767,7 @@ impl<T: Config> Pallet<T> {
 						Zero::zero()
 					} else {
 						Self::calculate_mul_div_result(channel_mint, net_mint, total_mint)
+							.unwrap_or(Zero::zero())
 					};
 
 					let numerator =
@@ -807,34 +812,39 @@ impl<T: Config> Pallet<T> {
 
 			// transfer the bifrost commission amount from CommissionPalletId account to the bifrost
 			// commission receiver account
-			let _ = T::MultiCurrency::transfer(
+			if let Err(_) = T::MultiCurrency::transfer(
 				commission_token,
 				&Self::account_id(),
 				&T::BifrostCommissionReceiver::get(),
 				bifrost_commission,
-			);
+			) {
+				log::warn!(
+					"Failed to transfer bifrost commission for token: {:?}",
+					commission_token
+				);
+			}
 		});
 
 		// clear PeriodClearedCommissions
-		let _ = PeriodClearedCommissions::<T>::clear(REMOVE_TOKEN_LIMIT, None);
+		check_removed_all(PeriodClearedCommissions::<T>::clear(REMOVE_TOKEN_LIMIT, None));
 	}
 
 	pub(crate) fn calculate_mul_div_result(
 		multiplier_1: BalanceOf<T>,
 		multiplier_2: BalanceOf<T>,
 		divider: BalanceOf<T>,
-	) -> BalanceOf<T> {
+	) -> Result<BalanceOf<T>, Error<T>> {
 		if divider.is_zero() {
-			return Zero::zero();
+			return Ok(Zero::zero());
 		}
 
 		let result: u128 = U256::from(multiplier_1.saturated_into::<u128>())
 			.saturating_mul(multiplier_2.saturated_into::<u128>().into())
 			.checked_div(divider.saturated_into::<u128>().into())
-			.map(|x| u128::try_from(x).unwrap_or(Zero::zero()))
-			.unwrap_or(Zero::zero());
+			.map(|x| u128::try_from(x).map_err(|_| Error::ConversionFailed))
+			.ok_or(Error::DivisionByZero)??;
 
-		BalanceOf::<T>::unique_saturated_from(result)
+		Ok(BalanceOf::<T>::unique_saturated_from(result))
 	}
 
 	pub(crate) fn account_id() -> AccountIdOf<T> {
@@ -845,15 +855,15 @@ impl<T: Config> Pallet<T> {
 		// get channel receive account
 		let channel_op = Channels::<T>::get(channel_id);
 
-		let receiver_account = if let Some(channel_info) = channel_op {
-			channel_info.0
-		} else {
-			Err(Error::<T>::ChannelNotExist)?
-		};
+		let receiver_account = channel_op
+			.map(|channel_info| channel_info.0)
+			.ok_or(Error::<T>::ChannelNotExist)?;
 
 		// transfer all the claimable commission amount to the channel receive account
+		let mut tokens_to_remove = Vec::new();
 		for (commission_token, amount) in ChannelClaimableCommissions::<T>::iter_prefix(channel_id)
 		{
+			// Transfer the claimable commission amount to the channel receive account
 			T::MultiCurrency::transfer(
 				commission_token,
 				&Self::account_id(),
@@ -862,9 +872,12 @@ impl<T: Config> Pallet<T> {
 			)
 			.map_err(|_| Error::<T>::TransferError)?;
 
-			// remove the commission amount from ChannelClaimableCommissions storage
+			// Collect the token for removal after iteration
+			tokens_to_remove.push((commission_token, amount));
+		}
+		// Remove the collected tokens from ChannelClaimableCommissions storage
+		for (commission_token, amount) in tokens_to_remove {
 			ChannelClaimableCommissions::<T>::remove(channel_id, commission_token);
-
 			Self::deposit_event(Event::CommissionClaimed { channel_id, commission_token, amount });
 		}
 
@@ -882,22 +895,26 @@ impl<T: Config> VTokenMintRedeemProvider<CurrencyId, BalanceOf<T>> for Pallet<T>
 			return Ok(());
 		}
 
-		// first add to PeriodVtokenTotalMint
-		let mut total_mint = PeriodVtokenTotalMint::<T>::get(vtoken);
-		let sum_up_amount = total_mint.1.checked_add(&amount).ok_or(Error::<T>::Overflow)?;
+		// Retrieve and update total mint for the given vtoken in a single step.
+		PeriodVtokenTotalMint::<T>::mutate(vtoken, |total_mint| -> Result<(), Error<T>> {
+			// Safely add the new amount to the existing total.
+			total_mint.1 = total_mint.1.checked_add(&amount).ok_or(Error::<T>::Overflow)?;
+			Ok(())
+		})?;
 
-		total_mint.1 = sum_up_amount;
-		PeriodVtokenTotalMint::<T>::insert(vtoken, total_mint);
-
-		// only non-bifrost minting needs to record the channel minting amount
+		// Only non-Bifrost minting needs to record the channel minting amount.
 		if let Some(channel_id) = channel_id {
-			// then add to PeriodChannelVtokenMint
-			let mut channel_vtoken_mint = PeriodChannelVtokenMint::<T>::get(channel_id, vtoken);
-			let sum_up_amount =
-				channel_vtoken_mint.1.checked_add(&amount).ok_or(Error::<T>::Overflow)?;
+			PeriodChannelVtokenMint::<T>::mutate(
+				channel_id,
+				vtoken,
+				|channel_vtoken_mint| -> Result<(), Error<T>> {
+					let sum_up_amount =
+						channel_vtoken_mint.1.checked_add(&amount).ok_or(Error::<T>::Overflow)?;
 
-			channel_vtoken_mint.1 = sum_up_amount;
-			PeriodChannelVtokenMint::<T>::insert(channel_id, vtoken, channel_vtoken_mint);
+					channel_vtoken_mint.1 = sum_up_amount;
+					Ok(())
+				},
+			)?;
 		}
 
 		Ok(())
@@ -908,12 +925,11 @@ impl<T: Config> VTokenMintRedeemProvider<CurrencyId, BalanceOf<T>> for Pallet<T>
 			return Ok(());
 		}
 
-		// first add to PeriodVtokenTotalRedeem
-		let mut total_redeem = PeriodVtokenTotalRedeem::<T>::get(vtoken);
-		let sum_up_amount = total_redeem.1.checked_add(&amount).ok_or(Error::<T>::Overflow)?;
-
-		total_redeem.1 = sum_up_amount;
-		PeriodVtokenTotalRedeem::<T>::insert(vtoken, total_redeem);
+		// First, add to PeriodVtokenTotalRedeem.
+		PeriodVtokenTotalRedeem::<T>::mutate(vtoken, |total_redeem| -> Result<(), Error<T>> {
+			total_redeem.1 = total_redeem.1.checked_add(&amount).ok_or(Error::<T>::Overflow)?;
+			Ok(())
+		})?;
 
 		Ok(())
 	}
@@ -932,18 +948,24 @@ impl<T: Config> SlpHostingFeeProvider<CurrencyId, BalanceOf<T>, AccountIdOf<T>> 
 		// get the commission token of the staking token
 		let vtoken = staking_token.to_vtoken().map_err(|_| Error::<T>::ConversionError)?;
 
-		// if the vtoken is not configured for commission, just don't record the hosting fee
+		// If the vtoken is configured for commission, record the hosting fee
 		if let Some(commission_token) = CommissionTokens::<T>::get(vtoken) {
-			// add to PeriodTotalCommissions
-			let mut total_commission = PeriodTotalCommissions::<T>::get(commission_token);
+			PeriodTotalCommissions::<T>::mutate(
+				commission_token,
+				|total_commission| -> Result<(), Error<T>> {
+					let sum_up_amount =
+						total_commission.1.checked_add(&amount).ok_or(Error::<T>::Overflow)?;
 
-			let sum_up_amount =
-				total_commission.1.checked_add(&amount).ok_or(Error::<T>::Overflow)?;
-
-			total_commission.1 = sum_up_amount;
-			PeriodTotalCommissions::<T>::insert(commission_token, total_commission);
+					total_commission.1 = sum_up_amount;
+					Ok(())
+				},
+			)?;
 		}
 
 		Ok(())
 	}
+}
+
+fn check_removed_all(res: MultiRemovalResults) {
+	assert!(res.maybe_cursor.is_none());
 }
