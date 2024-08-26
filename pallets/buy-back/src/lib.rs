@@ -220,7 +220,6 @@ pub mod pallet {
 							(n - info.last_buyback)
 								.saturated_into::<u32>()
 								.saturating_sub(1) =>
-					{
 						if let Some(swap_out_min) = SwapOutMin::<T>::get(currency_id) {
 							if let Some(e) =
 								Self::buy_back(&buyback_address, currency_id, &info, swap_out_min)
@@ -244,8 +243,7 @@ pub mod pallet {
 							info.last_buyback = n;
 							Infos::<T>::insert(currency_id, info);
 							SwapOutMin::<T>::remove(currency_id);
-						}
-					},
+						},
 					_ => (),
 				}
 			}
