@@ -591,67 +591,70 @@ impl<T: Config> Pallet<T> {
 	pub(crate) fn set_clearing_environment() {
 		//  Move the vtoken issuance amount from ongoing period to the previous period and clear the
 		// ongoing period issuance amount
-		VtokenIssuanceSnapshots::<T>::iter().for_each(|(vtoken, issuance)| {
-			let mut issuance = issuance;
-			issuance.0 = issuance.1;
+		let snapshots: Vec<CurrencyId> = VtokenIssuanceSnapshots::<T>::iter_keys().collect();
+		for vtoken in snapshots {
+			VtokenIssuanceSnapshots::<T>::mutate(vtoken, |issuance| {
+				issuance.0 = issuance.1;
 
-			// get the vtoken new issuance amount from Tokens module issuance storage
-			let new_issuance = T::MultiCurrency::total_issuance(vtoken);
+				// get the vtoken new issuance amount from Tokens module issuance storage
+				let new_issuance = T::MultiCurrency::total_issuance(vtoken);
 
-			issuance.1 = new_issuance;
-			VtokenIssuanceSnapshots::<T>::insert(vtoken, issuance);
+				issuance.1 = new_issuance;
 
-			Self::deposit_event(Event::VtokenIssuanceSnapshotUpdated {
-				vtoken,
-				old_issuance: issuance.0,
-				new_issuance,
+				Self::deposit_event(Event::VtokenIssuanceSnapshotUpdated {
+					vtoken,
+					old_issuance: issuance.0,
+					new_issuance,
+				});
 			});
-		});
+		}
 
 		// Move the total minted amount of the period from ongoing period to the previous period and
 		// clear the ongoing period minted amount
-		PeriodVtokenTotalMint::<T>::iter().for_each(|(vtoken, total_mint)| {
-			let info = total_mint;
+		let snapshots: Vec<CurrencyId> = PeriodVtokenTotalMint::<T>::iter_keys().collect();
+		for vtoken in snapshots {
+			PeriodVtokenTotalMint::<T>::mutate(vtoken, |total_mint| {
+				let info = *total_mint;
 
-			let mut total_mint = total_mint;
-			total_mint.0 = total_mint.1;
-			total_mint.1 = Zero::zero();
-			PeriodVtokenTotalMint::<T>::insert(vtoken, total_mint);
+				total_mint.0 = total_mint.1;
+				total_mint.1 = Zero::zero();
 
-			Self::deposit_event(Event::PeriodVtokenTotalMintUpdated {
-				vtoken,
-				old_total_mint: info.0,
-				new_total_mint: info.1,
+				Self::deposit_event(Event::PeriodVtokenTotalMintUpdated {
+					vtoken,
+					old_total_mint: info.0,
+					new_total_mint: info.1,
+				});
 			});
-		});
+		}
 
 		// Move the total redeemed amount of the period from ongoing period to the previous period
 		// and clear the ongoing period redeemed amount
-		PeriodVtokenTotalRedeem::<T>::iter().for_each(|(vtoken, total_redeem)| {
-			let info = total_redeem;
+		let snapshots: Vec<CurrencyId> = PeriodVtokenTotalRedeem::<T>::iter_keys().collect();
+		for vtoken in snapshots {
+			PeriodVtokenTotalRedeem::<T>::mutate(vtoken, |total_redeem| {
+				let info = *total_redeem;
 
-			let mut total_redeem = total_redeem;
-			total_redeem.0 = total_redeem.1;
-			total_redeem.1 = Zero::zero();
-			PeriodVtokenTotalRedeem::<T>::insert(vtoken, total_redeem);
+				total_redeem.0 = total_redeem.1;
+				total_redeem.1 = Zero::zero();
 
-			Self::deposit_event(Event::PeriodVtokenTotalRedeemUpdated {
-				vtoken,
-				old_total_redeem: info.0,
-				new_total_redeem: info.1,
+				Self::deposit_event(Event::PeriodVtokenTotalRedeemUpdated {
+					vtoken,
+					old_total_redeem: info.0,
+					new_total_redeem: info.1,
+				});
 			});
-		});
+		}
 
 		// Move the channel minted amount of the period from ongoing period to the previous period
 		// and clear the ongoing period minted amount
-		PeriodChannelVtokenMint::<T>::iter().for_each(
-			|(channel_id, vtoken, channel_vtoken_mint)| {
-				let info = channel_vtoken_mint;
+		let snapshots: Vec<(ChannelId, CurrencyId)> =
+			PeriodChannelVtokenMint::<T>::iter_keys().collect();
+		for (channel_id, vtoken) in snapshots {
+			PeriodChannelVtokenMint::<T>::mutate(channel_id, vtoken, |channel_vtoken_mint| {
+				let info = *channel_vtoken_mint;
 
-				let mut channel_vtoken_mint = channel_vtoken_mint;
 				channel_vtoken_mint.0 = channel_vtoken_mint.1;
 				channel_vtoken_mint.1 = Zero::zero();
-				PeriodChannelVtokenMint::<T>::insert(channel_id, vtoken, channel_vtoken_mint);
 
 				Self::deposit_event(Event::PeriodChannelVtokenMintUpdated {
 					channel_id,
@@ -659,25 +662,26 @@ impl<T: Config> Pallet<T> {
 					old_mint_amount: info.0,
 					new_mint_amount: info.1,
 				});
-			},
-		);
+			});
+		}
 
 		// Move the total commission amount of the period from ongoing period to the previous period
 		// and clear the ongoing period commission amount
-		PeriodTotalCommissions::<T>::iter().for_each(|(commission_token, total_commission)| {
-			let info = total_commission;
+		let snapshots: Vec<CurrencyId> = PeriodTotalCommissions::<T>::iter_keys().collect();
+		for commission_token in snapshots {
+			PeriodTotalCommissions::<T>::mutate(commission_token, |total_commission| {
+				let info = *total_commission;
 
-			let mut total_commission = total_commission;
-			total_commission.0 = total_commission.1;
-			total_commission.1 = Zero::zero();
-			PeriodTotalCommissions::<T>::insert(commission_token, total_commission);
+				total_commission.0 = total_commission.1;
+				total_commission.1 = Zero::zero();
 
-			Self::deposit_event(Event::PeriodTotalCommissionsUpdated {
-				commission_token,
-				old_amount: info.0,
-				new_amount: info.1,
+				Self::deposit_event(Event::PeriodTotalCommissionsUpdated {
+					commission_token,
+					old_amount: info.0,
+					new_amount: info.1,
+				});
 			});
-		});
+		}
 	}
 
 	pub(crate) fn clear_channel_commissions(channel_id: ChannelId) {
@@ -774,20 +778,25 @@ impl<T: Config> Pallet<T> {
 						channel_old_share.mul_floor(old_vtoken_issuance) + channel_period_net_mint;
 					let denominator = new_vtoken_issuance;
 
-					let channel_new_share: Permill = if denominator.is_zero() {
-						Zero::zero()
-					} else {
-						Permill::from_rational_with_rounding(numerator, denominator, Rounding::Down)
+					ChannelVtokenShares::<T>::mutate(channel_id, vtoken, |share| {
+						let channel_new_share: Permill = if denominator.is_zero() {
+							Zero::zero()
+						} else {
+							Permill::from_rational_with_rounding(
+								numerator,
+								denominator,
+								Rounding::Down,
+							)
 							.unwrap_or_default()
-					};
+						};
 
-					// update the share to ChannelVtokenShares storage
-					ChannelVtokenShares::<T>::insert(channel_id, vtoken, channel_new_share);
+						*share = channel_new_share;
 
-					Self::deposit_event(Event::ChannelVtokenSharesUpdated {
-						channel_id,
-						vtoken,
-						share: channel_new_share,
+						Self::deposit_event(Event::ChannelVtokenSharesUpdated {
+							channel_id,
+							vtoken,
+							share: channel_new_share,
+						});
 					});
 				}
 			},
@@ -863,7 +872,6 @@ impl<T: Config> Pallet<T> {
 		let mut tokens_to_remove = Vec::new();
 		for (commission_token, amount) in ChannelClaimableCommissions::<T>::iter_prefix(channel_id)
 		{
-			// Transfer the claimable commission amount to the channel receive account
 			T::MultiCurrency::transfer(
 				commission_token,
 				&Self::account_id(),
