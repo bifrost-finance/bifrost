@@ -83,6 +83,7 @@ pub mod pallet {
 		type NameLengthLimit: Get<u32>;
 	}
 
+	/// Enumerating errors that may occur within the pallet
 	#[pallet::error]
 	pub enum Error<T> {
 		Overflow,
@@ -96,6 +97,7 @@ pub mod pallet {
 		InvalidVtoken,
 	}
 
+	/// Defining events that can be emitted by the pallet
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(crate) fn deposit_event)]
 	pub enum Event<T: Config> {
@@ -346,6 +348,7 @@ pub mod pallet {
 			Ok(())
 		}
 
+		/// Removing the channel with a specific channel_id
 		#[pallet::call_index(1)]
 		#[pallet::weight(T::WeightInfo::remove_channel())]
 		pub fn remove_channel(origin: OriginFor<T>, channel_id: ChannelId) -> DispatchResult {
@@ -378,6 +381,7 @@ pub mod pallet {
 			Ok(())
 		}
 
+		/// Updating the receiving account for a specific channel
 		#[pallet::call_index(2)]
 		#[pallet::weight(T::WeightInfo::update_channel_receive_account())]
 		pub fn update_channel_receive_account(
@@ -415,6 +419,7 @@ pub mod pallet {
 			Ok(())
 		}
 
+		/// Updating the commission rate for a specified channel_id and a specified vToken
 		#[pallet::call_index(3)]
 		#[pallet::weight(T::WeightInfo::set_channel_commission_token())]
 		pub fn set_channel_commission_token(
@@ -448,6 +453,7 @@ pub mod pallet {
 			Ok(())
 		}
 
+		/// Realizing the configuration and removal of a commission token
 		#[pallet::call_index(4)]
 		#[pallet::weight(T::WeightInfo::set_commission_tokens())]
 		pub fn set_commission_tokens(
@@ -516,6 +522,7 @@ pub mod pallet {
 			Ok(())
 		}
 
+		/// Allowing a user to claim the commissions of a specific channel
 		#[pallet::call_index(5)]
 		#[pallet::weight(T::WeightInfo::claim_commissions())]
 		pub fn claim_commissions(origin: OriginFor<T>, channel_id: ChannelId) -> DispatchResult {
@@ -525,6 +532,7 @@ pub mod pallet {
 			Ok(())
 		}
 
+		/// Setting and updating the share for a specific channel_id and vtoken
 		#[pallet::call_index(6)]
 		#[pallet::weight(T::WeightInfo::set_channel_vtoken_shares(Channels::<T>::iter().count() as u32))]
 		pub fn set_channel_vtoken_shares(

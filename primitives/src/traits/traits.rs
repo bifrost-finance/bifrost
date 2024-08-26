@@ -81,11 +81,11 @@ pub trait MultiCurrencyExt<AccountId> {
 }
 
 pub trait BancorHandler<Balance> {
-	fn add_token(currency_id: super::CurrencyId, amount: Balance) -> DispatchResult;
+	fn add_token(currency_id: CurrencyId, amount: Balance) -> DispatchResult;
 }
 
 impl<Balance> BancorHandler<Balance> for () {
-	fn add_token(_currency_id: super::CurrencyId, _amount: Balance) -> DispatchResult {
+	fn add_token(_currency_id: CurrencyId, _amount: Balance) -> DispatchResult {
 		DispatchResult::from(DispatchError::Token(TokenError::FundsUnavailable))
 	}
 }

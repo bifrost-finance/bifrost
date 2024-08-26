@@ -33,6 +33,7 @@ pub mod traits;
 pub mod weights;
 
 use bifrost_primitives::{Balance, CurrencyId, PoolId};
+pub use bifrost_primitives::{IncentiveConfig, Point};
 use frame_support::{
 	pallet_prelude::*,
 	sp_runtime::{
@@ -76,14 +77,6 @@ pub struct VeConfig<Balance, BlockNumber> {
 pub struct LockedBalance<Balance, BlockNumber> {
 	amount: Balance,
 	end: BlockNumber,
-}
-
-#[derive(Clone, Copy, Encode, Decode, PartialEq, Eq, RuntimeDebug, TypeInfo, Default)]
-pub struct Point<Balance, BlockNumber> {
-	bias: i128,  // i128
-	slope: i128, // dweight / dt
-	block: BlockNumber,
-	amount: Balance,
 }
 
 #[frame_support::pallet]

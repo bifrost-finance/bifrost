@@ -20,6 +20,9 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
+// use std::collections::BTreeMap;
+use sp_std::{collections::btree_map::BTreeMap, vec::Vec};
+
 use parity_scale_codec::MaxEncodedLen;
 use scale_info::TypeInfo;
 use sp_core::{Decode, Encode, RuntimeDebug, H160};
@@ -344,6 +347,45 @@ impl Default for ExtraFeeInfo {
 		Self {
 			extra_fee_name: ExtraFeeName::NoExtraFee,
 			extra_fee_currency: CurrencyId::Native(TokenSymbol::BNC),
+		}
+	}
+}
+
+#[derive(Clone, Copy, Encode, Decode, PartialEq, Eq, RuntimeDebug, TypeInfo, Default)]
+pub struct Point<Balance, BlockNumber> {
+	pub bias: i128,  // i128
+	pub slope: i128, // dweight / dt
+	pub block: BlockNumber,
+	pub amount: Balance,
+}
+
+#[derive(Clone, Encode, Decode, PartialEq, Eq, RuntimeDebug, TypeInfo)]
+pub struct IncentiveConfig<CurrencyId, Balance, BlockNumber, AccountId> {
+	pub reward_rate: BTreeMap<CurrencyId, Balance>,
+	pub reward_per_token_stored: BTreeMap<CurrencyId, Balance>,
+	pub rewards_duration: BlockNumber,
+	pub period_finish: BlockNumber,
+	pub last_update_time: BlockNumber,
+	pub incentive_controller: Option<AccountId>,
+	pub last_reward: Vec<(CurrencyId, Balance)>,
+}
+
+impl<CurrencyId, Balance, BlockNumber, AccountId> Default
+	for IncentiveConfig<CurrencyId, Balance, BlockNumber, AccountId>
+where
+	CurrencyId: Default,
+	Balance: Default,
+	BlockNumber: Default,
+{
+	fn default() -> Self {
+		IncentiveConfig {
+			reward_rate: Default::default(),
+			reward_per_token_stored: Default::default(),
+			rewards_duration: Default::default(),
+			period_finish: Default::default(),
+			last_update_time: Default::default(),
+			incentive_controller: None,
+			last_reward: Default::default(),
 		}
 	}
 }
