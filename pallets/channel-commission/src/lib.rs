@@ -377,8 +377,11 @@ pub mod pallet {
 			));
 
 			// remove the channel from ChannelVtokenShares storage
-			let res = ChannelVtokenShares::<T>::clear_prefix(channel_id, REMOVE_TOKEN_LIMIT, None);
-			debug_assert!(res.maybe_cursor.is_none());
+			check_removed_all(ChannelVtokenShares::<T>::clear_prefix(
+				channel_id,
+				REMOVE_TOKEN_LIMIT,
+				None,
+			));
 
 			// remove the channel from PeriodChannelVtokenMint storage
 			check_removed_all(PeriodChannelVtokenMint::<T>::clear_prefix(
