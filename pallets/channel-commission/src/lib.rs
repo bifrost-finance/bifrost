@@ -471,12 +471,12 @@ pub mod pallet {
 			T::ControlOrigin::ensure_origin(origin)?;
 			ensure!(vtoken.is_vtoken(), Error::<T>::InvalidVtoken);
 
-			if let Some(commission_token) = commission_token_op {
-				// if old commission token is the same as the new one, do nothing
-				if CommissionTokens::<T>::get(vtoken) == Some(commission_token) {
-					return Err(Error::<T>::NoChangesMade.into());
-				}
+			// if old commission token is the same as the new one, do nothing
+			if CommissionTokens::<T>::get(vtoken) == commission_token_op {
+				return Err(Error::<T>::NoChangesMade.into());
+			}
 
+			if let Some(commission_token) = commission_token_op {
 				// set the commission token
 				CommissionTokens::<T>::insert(vtoken, commission_token);
 
