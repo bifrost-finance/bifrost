@@ -57,7 +57,7 @@ benchmarks! {
 	}: _<T::RuntimeOrigin>(origin,VDOT)
 
 
-	on_idle {
+	on_initialize {
 		let origin = T::ControlOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?;
 		assert_ok!(BuyBack::<T>::set_vtoken(
 			T::ControlOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?,
@@ -70,7 +70,7 @@ benchmarks! {
 			Some(Permill::from_percent(2))
 		));
 	}: {
-		BuyBack::<T>::on_idle(BlockNumberFor::<T>::from(0u32),Weight::from_parts(0, u64::MAX));
+		BuyBack::<T>::on_initialize(BlockNumberFor::<T>::from(0u32),Weight::from_parts(0, u64::MAX));
 	}
 
 	impl_benchmark_test_suite!(BuyBack,crate::mock::ExtBuilder::default().build(),crate::mock::Runtime);
