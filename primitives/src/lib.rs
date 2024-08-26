@@ -22,7 +22,7 @@
 
 use parity_scale_codec::MaxEncodedLen;
 use scale_info::TypeInfo;
-use sp_core::{Decode, Encode, RuntimeDebug, H160};
+use sp_core::{ConstU32, Decode, Encode, RuntimeDebug, H160};
 use sp_runtime::{
 	generic,
 	traits::{BlakeTwo256, IdentifyAccount, Verify},
@@ -154,6 +154,16 @@ pub const SECONDS_PER_YEAR: Timestamp = 365 * 24 * 60 * 60;
 pub type DerivativeIndex = u16;
 
 pub type TimeStampedPrice = orml_oracle::TimestampedValue<Price, Moment>;
+
+pub type AstarParachainId = ConstU32<2007>;
+
+pub type MoonbeamParachainId = ConstU32<2023>;
+
+pub type HydradxParachainId = ConstU32<2034>;
+
+pub type MantaParachainId = ConstU32<2104>;
+
+pub type InterlayParachainId = ConstU32<2032>;
 
 #[derive(
 	Encode, Decode, Eq, PartialEq, Copy, Clone, RuntimeDebug, PartialOrd, Ord, scale_info::TypeInfo,
