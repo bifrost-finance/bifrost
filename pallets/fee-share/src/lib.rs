@@ -327,7 +327,7 @@ pub mod pallet {
 		}
 
 		#[pallet::call_index(5)]
-		#[pallet::weight(T::WeightInfo::delete_distribution())]
+		#[pallet::weight(T::WeightInfo::usd_cumulation())]
 		pub fn usd_cumulation(
 			origin: OriginFor<T>,
 			distribution_id: DistributionId,
@@ -367,11 +367,6 @@ pub mod pallet {
 				usd_value = usd_value.checked_add(&value).ok_or(ArithmeticError::Overflow)?;
 				Ok(())
 			})?;
-			log::debug!(
-				target: "fee-share::execute_distribute",
-				"usd_value: {:?}",
-				usd_value.into_inner()
-			);
 			if let Some(mut usd_infos) = DollarStandardInfos::<T>::get(distribution_id) {
 				match usd_infos.cumulative.cmp(&usd_infos.target_value) {
 					Ordering::Equal | Ordering::Greater => (),

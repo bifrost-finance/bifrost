@@ -81,4 +81,20 @@ benchmarks! {
 			true,
 		));
 	}: _(RawOrigin::Root,0)
+	usd_cumulation {
+		let caller: T::AccountId = whitelisted_caller();
+		let tokens_proportion = vec![(caller.clone(), Perbill::from_percent(100))];
+		const KSM: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
+		let token_type = vec![KSM];
+		assert_ok!(FeeShare::<T>::create_distribution(
+			RawOrigin::Root.into(),
+			vec![KSM],
+			tokens_proportion.clone(),
+			true,
+		));
+	}: _(RawOrigin::Root,
+		0,
+		100u128,
+		10u32.into(),
+		caller)
 }
