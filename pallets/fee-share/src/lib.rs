@@ -30,19 +30,22 @@ mod benchmarking;
 
 pub mod weights;
 
-use bifrost_primitives::{CurrencyId, DistributionId};
+use bifrost_primitives::{CurrencyId, DistributionId, Price};
 use frame_support::{
 	pallet_prelude::*,
 	sp_runtime::{
-		traits::{AccountIdConversion, CheckedAdd, Saturating},
-		ArithmeticError, Perbill,
+		traits::{
+			AccountIdConversion, CheckedAdd, CheckedMul, SaturatedConversion, Saturating, Zero,
+		},
+		ArithmeticError, FixedU128, Perbill,
 	},
 	PalletId,
 };
 use frame_system::pallet_prelude::*;
 use orml_traits::MultiCurrency;
 pub use pallet::*;
-use sp_std::{collections::btree_map::BTreeMap, vec::Vec};
+use pallet_traits::PriceFeeder;
+use sp_std::{cmp::Ordering, collections::btree_map::BTreeMap, vec::Vec};
 pub use weights::WeightInfo;
 
 pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
@@ -50,6 +53,8 @@ pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
 pub type CurrencyIdOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<
 	<T as frame_system::Config>::AccountId,
 >>::CurrencyId;
+
+type BalanceOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<AccountIdOf<T>>>::Balance;
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -71,15 +76,20 @@ pub mod pallet {
 
 		#[pallet::constant]
 		type FeeSharePalletId: Get<PalletId>;
+
+		/// The oracle price feeder
+		type PriceFeeder: PriceFeeder;
 	}
 
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
 		Created {
+			distribution_id: DistributionId,
 			info: Info<AccountIdOf<T>>,
 		},
 		Edited {
+			distribution_id: DistributionId,
 			info: Info<AccountIdOf<T>>,
 		},
 		EraLengthSet {
@@ -106,6 +116,10 @@ pub mod pallet {
 		CalculationOverflow,
 		ExistentialDeposit,
 		DistributionNotExist,
+		/// Price oracle not ready
+		PriceOracleNotReady,
+		/// Price is zero
+		PriceIsZero,
 	}
 
 	#[pallet::storage]
@@ -121,6 +135,23 @@ pub mod pallet {
 	}
 
 	#[pallet::storage]
+	pub type DollarStandardInfos<T: Config> = StorageMap<
+		_,
+		Twox64Concat,
+		DistributionId,
+		DollarStandardInfo<BlockNumberFor<T>, AccountIdOf<T>>,
+	>;
+
+	#[derive(Clone, Encode, Decode, PartialEq, Eq, RuntimeDebug, TypeInfo)]
+	pub struct DollarStandardInfo<BlockNumberFor, AccountIdOf> {
+		pub target_value: u128,
+		pub cumulative: u128,
+		pub target_address: AccountIdOf,
+		pub target_block: BlockNumberFor,
+		pub duration: BlockNumberFor,
+	}
+
+	#[pallet::storage]
 	pub type DistributionNextId<T: Config> = StorageValue<_, DistributionId, ValueQuery>;
 
 	#[pallet::storage]
@@ -130,11 +161,20 @@ pub mod pallet {
 	#[pallet::hooks]
 	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
 		fn on_idle(bn: BlockNumberFor<T>, _remaining_weight: Weight) -> Weight {
+			DollarStandardInfos::<T>::iter().for_each(|(distribution_id, mut info)| {
+				if bn == info.target_block {
+					info.target_block = info.target_block.saturating_add(info.duration);
+					info.cumulative = Zero::zero();
+					DollarStandardInfos::<T>::insert(distribution_id, info);
+				}
+			});
 			let (era_length, next_era) = AutoEra::<T>::get();
 			if bn.eq(&next_era) {
 				for (distribution_id, info) in DistributionInfos::<T>::iter() {
 					if info.if_auto {
-						if let Some(e) = Self::execute_distribute_inner(&info).err() {
+						if let Some(e) =
+							Self::execute_distribute_inner(distribution_id, &info).err()
+						{
 							Self::deposit_event(Event::ExecuteFailed {
 								distribution_id,
 								info,
@@ -193,7 +233,7 @@ pub mod pallet {
 				Ok(())
 			})?;
 
-			Self::deposit_event(Event::Created { info });
+			Self::deposit_event(Event::Created { distribution_id, info });
 			Ok(())
 		}
 
@@ -232,7 +272,7 @@ pub mod pallet {
 			}
 			DistributionInfos::<T>::insert(distribution_id, info.clone());
 
-			Self::deposit_event(Event::Edited { info });
+			Self::deposit_event(Event::Edited { distribution_id, info });
 			Ok(())
 		}
 
@@ -262,7 +302,7 @@ pub mod pallet {
 			T::ControlOrigin::ensure_origin(origin)?;
 
 			if let Some(info) = DistributionInfos::<T>::get(distribution_id) {
-				Self::execute_distribute_inner(&info)?;
+				Self::execute_distribute_inner(distribution_id, &info)?;
 			}
 
 			Self::deposit_event(Event::Executed { distribution_id });
@@ -278,17 +318,74 @@ pub mod pallet {
 			T::ControlOrigin::ensure_origin(origin)?;
 
 			if let Some(info) = DistributionInfos::<T>::get(distribution_id) {
-				Self::execute_distribute_inner(&info)?;
+				Self::execute_distribute_inner(distribution_id, &info)?;
 				DistributionInfos::<T>::remove(distribution_id);
 			}
 
 			Self::deposit_event(Event::Deleted { distribution_id });
 			Ok(())
 		}
+
+		#[pallet::call_index(5)]
+		#[pallet::weight(T::WeightInfo::delete_distribution())]
+		pub fn usd_cumulation(
+			origin: OriginFor<T>,
+			distribution_id: DistributionId,
+			target_value: u128,
+			duration: BlockNumberFor<T>,
+			target_address: AccountIdOf<T>,
+		) -> DispatchResult {
+			T::ControlOrigin::ensure_origin(origin)?;
+
+			ensure!(
+				DistributionInfos::<T>::contains_key(distribution_id),
+				Error::<T>::DistributionNotExist
+			);
+
+			let now = frame_system::Pallet::<T>::block_number();
+			let info = DollarStandardInfo {
+				target_value,
+				cumulative: Zero::zero(),
+				target_address,
+				target_block: now + duration,
+				duration,
+			};
+			DollarStandardInfos::<T>::insert(distribution_id, info);
+			Ok(())
+		}
 	}
 
 	impl<T: Config> Pallet<T> {
-		fn execute_distribute_inner(infos: &Info<AccountIdOf<T>>) -> DispatchResult {
+		fn execute_distribute_inner(
+			distribution_id: DistributionId,
+			infos: &Info<AccountIdOf<T>>,
+		) -> DispatchResult {
+			let mut usd_value: FixedU128 = Zero::zero();
+			infos.token_type.iter().try_for_each(|&currency_id| -> DispatchResult {
+				let amount = T::MultiCurrency::free_balance(currency_id, &infos.receiving_address);
+				let value = Self::get_asset_value(currency_id, amount)?;
+				usd_value = usd_value.checked_add(&value).ok_or(ArithmeticError::Overflow)?;
+				Ok(())
+			})?;
+			log::debug!(
+				target: "fee-share::execute_distribute",
+				"usd_value: {:?}",
+				usd_value.into_inner()
+			);
+			if let Some(mut usd_infos) = DollarStandardInfos::<T>::get(distribution_id) {
+				match usd_infos.cumulative.cmp(&usd_infos.target_value) {
+					Ordering::Equal | Ordering::Greater => (),
+					Ordering::Less => {
+						usd_infos.cumulative = usd_infos
+							.cumulative
+							.checked_add(usd_value.into_inner())
+							.ok_or(ArithmeticError::Overflow)?;
+						DollarStandardInfos::<T>::insert(distribution_id, &usd_infos);
+						return Self::transfer_all(infos, usd_infos.target_address);
+					},
+				}
+			}
+
 			infos.token_type.iter().try_for_each(|&currency_id| -> DispatchResult {
 				let ed = T::MultiCurrency::minimum_balance(currency_id);
 				let amount = T::MultiCurrency::free_balance(currency_id, &infos.receiving_address);
@@ -313,6 +410,45 @@ pub mod pallet {
 							withdraw_amount,
 						)
 					},
+				)
+			})
+		}
+
+		pub fn get_price(currency_id: CurrencyIdOf<T>) -> Result<Price, DispatchError> {
+			let (price, _) =
+				T::PriceFeeder::get_price(&currency_id).ok_or(Error::<T>::PriceOracleNotReady)?;
+			if price.is_zero() {
+				return Err(Error::<T>::PriceIsZero.into());
+			}
+			log::trace!(
+				target: "fee-share::get_price", "price: {:?}", price.into_inner()
+			);
+
+			Ok(price)
+		}
+
+		pub fn get_asset_value(
+			currency_id: CurrencyIdOf<T>,
+			amount: BalanceOf<T>,
+		) -> Result<FixedU128, DispatchError> {
+			let value = Self::get_price(currency_id)?
+				.checked_mul(&FixedU128::from_inner(amount.saturated_into()))
+				.ok_or(ArithmeticError::Overflow)?;
+
+			Ok(value)
+		}
+
+		fn transfer_all(
+			infos: &Info<AccountIdOf<T>>,
+			target_address: AccountIdOf<T>,
+		) -> DispatchResult {
+			infos.token_type.iter().try_for_each(|&currency_id| -> DispatchResult {
+				let amount = T::MultiCurrency::free_balance(currency_id, &infos.receiving_address);
+				T::MultiCurrency::transfer(
+					currency_id,
+					&infos.receiving_address,
+					&target_address,
+					amount,
 				)
 			})
 		}

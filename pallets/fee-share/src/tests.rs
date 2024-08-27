@@ -82,3 +82,45 @@ fn edit_delete_distribution() {
 		assert_eq!(DistributionInfos::<Runtime>::get(0), None);
 	});
 }
+
+#[test]
+fn usd_cumulation_should_work() {
+	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
+		let tokens_proportion = vec![(ALICE, Perbill::from_percent(100))];
+
+		assert_ok!(FeeShare::create_distribution(
+			RuntimeOrigin::signed(ALICE),
+			vec![KSM],
+			tokens_proportion,
+			true,
+		));
+
+		let distribution_id = 0;
+		let target_value = 100;
+		let duration = 10;
+		assert_ok!(FeeShare::usd_cumulation(
+			RuntimeOrigin::signed(ALICE),
+			distribution_id,
+			target_value,
+			duration,
+			BOB,
+		));
+
+		let keeper: AccountId =
+			<Runtime as Config>::FeeSharePalletId::get().into_sub_account_truncating(0);
+
+		assert_ok!(FeeShare::set_era_length(RuntimeOrigin::signed(ALICE), 1));
+		assert_eq!(Tokens::free_balance(KSM, &BOB), 100);
+		FeeShare::on_idle(<frame_system::Pallet<Runtime>>::block_number() + 1, Weight::zero());
+		assert_ok!(<Tokens as MultiCurrency<AccountId>>::transfer(KSM, &ALICE, &keeper, 100,));
+		assert_eq!(Tokens::free_balance(KSM, &BOB), 10100);
+		assert_eq!(DollarStandardInfos::<Runtime>::get(0).unwrap().cumulative, 10000);
+		FeeShare::on_idle(<frame_system::Pallet<Runtime>>::block_number() + 2, Weight::zero());
+		assert_eq!(Tokens::free_balance(KSM, &keeper), 0);
+		assert_eq!(Tokens::free_balance(KSM, &BOB), 10100);
+		assert_eq!(DollarStandardInfos::<Runtime>::get(0).unwrap().cumulative, 10000);
+		assert_ok!(<Tokens as MultiCurrency<AccountId>>::transfer(KSM, &ALICE, &keeper, 100,));
+		FeeShare::on_idle(<frame_system::Pallet<Runtime>>::block_number() + 10, Weight::zero());
+		assert_eq!(DollarStandardInfos::<Runtime>::get(0).unwrap().cumulative, 0);
+	});
+}
