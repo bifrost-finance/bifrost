@@ -24,8 +24,8 @@
 use bifrost_asset_registry::AssetIdMaps;
 pub use bifrost_primitives::{currency::*, CurrencyId, SlpxOperator, TokenSymbol};
 use bifrost_primitives::{
-	AstarParachainId, HydradxParachainId, InterlayParachainId, MantaParachainId,
-	MoonbeamParachainId,
+	HydrationParachainId, InterlayParachainId, MantaParachainId, MoonriverParachainId,
+	ShidenParachainId,
 };
 use bifrost_slp::{QueryId, QueryResponseManager};
 pub use cumulus_primitives_core::ParaId;
@@ -310,9 +310,9 @@ impl bifrost_vtoken_minting::Config for Runtime {
 	type WeightInfo = ();
 	type OnRedeemSuccess = ();
 	type XcmTransfer = XTokens;
-	type AstarParachainId = AstarParachainId;
-	type MoonbeamParachainId = MoonbeamParachainId;
-	type HydradxParachainId = HydradxParachainId;
+	type AstarParachainId = ShidenParachainId;
+	type MoonbeamParachainId = HydrationParachainId;
+	type HydradxParachainId = HydrationParachainId;
 	type MantaParachainId = MantaParachainId;
 	type InterlayParachainId = InterlayParachainId;
 	type ChannelCommission = ();
