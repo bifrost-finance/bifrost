@@ -27,10 +27,10 @@ fn eth_address_should_convert_to_truncated_address_when_not_bound() {
 		// Arrange
 		let evm_address = H160::from(hex!["222222ff7Be76052e023Ec1a306fCca8F9659D80"]);
 		let truncated_address = AccountId::from(hex![
-			"45544800222222ff7be76052e023ec1a306fcca8f9659d800000000000000000"
+			"d2efb4a4ab6b9c7dff8d8e1aa76dc53a0aab3a0d93747eb25db1bb7b08a76a09"
 		]);
 
-		assert_eq!(EVMAccounts::truncated_account_id(evm_address), truncated_address);
+		assert_eq!(EVMAccounts::truncated_account_id(evm_address), truncated_address.clone());
 
 		// Act & Assert
 		assert_eq!(EVMAccounts::bound_account_id(evm_address), None);

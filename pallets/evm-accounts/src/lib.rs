@@ -53,6 +53,7 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
+use codec::Encode;
 use frame_support::{
 	ensure,
 	pallet_prelude::{DispatchResult, Get},
@@ -62,6 +63,7 @@ use sp_core::{
 	crypto::{AccountId32, ByteArray},
 	H160, U256,
 };
+use sp_runtime::traits::Hash;
 
 #[cfg(test)]
 mod mock;
@@ -77,6 +79,7 @@ pub use weights::WeightInfo;
 pub type Balance = u128;
 pub type EvmAddress = H160;
 pub type AccountIdLast12Bytes = [u8; 12];
+pub type Hashing = sp_runtime::traits::BlakeTwo256;
 
 pub trait EvmNonceProvider {
 	fn get_nonce(evm_address: H160) -> U256;
