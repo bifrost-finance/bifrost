@@ -288,10 +288,9 @@ where
 
 	/// Get the truncated address from the EVM address.
 	fn truncated_account_id(evm_address: EvmAddress) -> T::AccountId {
-		let mut data: [u8; 32] = [0u8; 32];
-		data[0..4].copy_from_slice(b"ETH\0");
-		data[4..24].copy_from_slice(&evm_address[..]);
-		AccountId32::from(data).into()
+		let payload = (b"AccountId32:", evm_address);
+		let bytes = payload.using_encoded(Hashing::hash).0;
+		AccountId32::new(bytes).into()
 	}
 
 	/// Return the Substrate address bound to the EVM account. If not bound, returns `None`.
