@@ -84,42 +84,45 @@ pub mod pallet {
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
-		Created {
-			distribution_id: DistributionId,
-			info: Info<AccountIdOf<T>>,
-		},
-		Edited {
-			distribution_id: DistributionId,
-			info: Info<AccountIdOf<T>>,
-		},
-		EraLengthSet {
-			era_length: BlockNumberFor<T>,
-			next_era: BlockNumberFor<T>,
-		},
-		Executed {
-			distribution_id: DistributionId,
-		},
-		Deleted {
-			distribution_id: DistributionId,
-		},
+		/// A successful call of the `CreateDistribution` extrinsic will create this event.
+		Created { distribution_id: DistributionId, info: Info<AccountIdOf<T>> },
+		/// A successful call of the `EditDistribution` extrinsic will create this event.
+		Edited { distribution_id: DistributionId, info: Info<AccountIdOf<T>> },
+		/// A successful call of the `SetEraLength` extrinsic will create this event.
+		EraLengthSet { era_length: BlockNumberFor<T>, next_era: BlockNumberFor<T> },
+		/// A successful call of the `ExecuteDistribute` extrinsic will create this event.
+		Executed { distribution_id: DistributionId },
+		/// A successful call of the `DeleteDistribution` extrinsic will create this event.
+		Deleted { distribution_id: DistributionId },
+		/// A failed call of the `ExecuteDistribute` extrinsic will create this event.
 		ExecuteFailed {
 			distribution_id: DistributionId,
 			info: Info<AccountIdOf<T>>,
 			next_era: BlockNumberFor<T>,
 		},
+		/// A successful call of the `SetUSDConfig` extrinsic will create this event.
+		USDConfigSet {
+			distribution_id: DistributionId,
+			info: DollarStandardInfo<BlockNumberFor<T>, AccountIdOf<T>>,
+		},
 	}
 
 	#[pallet::error]
 	pub enum Error<T> {
-		NotEnoughBalance,
+		/// Not support proportion
 		NotSupportProportion,
-		CalculationOverflow,
+		/// Existential deposit
 		ExistentialDeposit,
+		/// Distribution not exist
 		DistributionNotExist,
 		/// Price oracle not ready
 		PriceOracleNotReady,
 		/// Price is zero
 		PriceIsZero,
+		/// Interval is zero
+		IntervalIsZero,
+		/// Value is zero
+		ValueIsZero,
 	}
 
 	#[pallet::storage]
@@ -128,9 +131,13 @@ pub mod pallet {
 
 	#[derive(Clone, Encode, Decode, PartialEq, Eq, RuntimeDebug, TypeInfo)]
 	pub struct Info<AccountIdOf> {
+		/// The receiving address of the distribution
 		pub receiving_address: AccountIdOf,
+		/// The token type of the distribution
 		pub token_type: Vec<CurrencyId>,
+		///	The tokens proportion of the distribution
 		pub tokens_proportion: BTreeMap<AccountIdOf, Perbill>,
+		/// If the distribution is auto
 		pub if_auto: bool,
 	}
 
@@ -144,11 +151,16 @@ pub mod pallet {
 
 	#[derive(Clone, Encode, Decode, PartialEq, Eq, RuntimeDebug, TypeInfo)]
 	pub struct DollarStandardInfo<BlockNumberFor, AccountIdOf> {
+		/// The target value of the USD standard
 		pub target_value: u128,
+		/// The cumulative value of the USD standard
 		pub cumulative: u128,
+		/// The target address of the USD standard
 		pub target_address: AccountIdOf,
+		/// Target block to perform accumulation clear operation
 		pub target_block: BlockNumberFor,
-		pub duration: BlockNumberFor,
+		/// Cumulative clearing operation interval
+		pub interval: BlockNumberFor,
 	}
 
 	#[pallet::storage]
@@ -163,7 +175,7 @@ pub mod pallet {
 		fn on_idle(bn: BlockNumberFor<T>, _remaining_weight: Weight) -> Weight {
 			DollarStandardInfos::<T>::iter().for_each(|(distribution_id, mut info)| {
 				if bn == info.target_block {
-					info.target_block = info.target_block.saturating_add(info.duration);
+					info.target_block = info.target_block.saturating_add(info.interval);
 					info.cumulative = Zero::zero();
 					DollarStandardInfos::<T>::insert(distribution_id, info);
 				}
@@ -182,10 +194,12 @@ pub mod pallet {
 							});
 
 							log::error!(
-								target: "runtime::fee-share",
+								target: "fee-share::execute_distribute",
 								"Received invalid justification for {:?}",
 								e,
 							);
+						} else {
+							Self::deposit_event(Event::Executed { distribution_id });
 						}
 					}
 				}
@@ -326,13 +340,14 @@ pub mod pallet {
 			Ok(())
 		}
 
+		/// USD Standard Accumulation Logic Configuration, can be overridden by the governance
 		#[pallet::call_index(5)]
-		#[pallet::weight(T::WeightInfo::usd_cumulation())]
-		pub fn usd_cumulation(
+		#[pallet::weight(T::WeightInfo::set_usd_config())]
+		pub fn set_usd_config(
 			origin: OriginFor<T>,
 			distribution_id: DistributionId,
 			target_value: u128,
-			duration: BlockNumberFor<T>,
+			interval: BlockNumberFor<T>,
 			target_address: AccountIdOf<T>,
 		) -> DispatchResult {
 			T::ControlOrigin::ensure_origin(origin)?;
@@ -341,16 +356,20 @@ pub mod pallet {
 				DistributionInfos::<T>::contains_key(distribution_id),
 				Error::<T>::DistributionNotExist
 			);
+			ensure!(interval > Zero::zero(), Error::<T>::IntervalIsZero);
+			ensure!(target_value > 0, Error::<T>::ValueIsZero);
 
 			let now = frame_system::Pallet::<T>::block_number();
 			let info = DollarStandardInfo {
 				target_value,
 				cumulative: Zero::zero(),
 				target_address,
-				target_block: now + duration,
-				duration,
+				target_block: now + interval,
+				interval,
 			};
-			DollarStandardInfos::<T>::insert(distribution_id, info);
+			DollarStandardInfos::<T>::insert(distribution_id, info.clone());
+
+			Self::deposit_event(Event::USDConfigSet { distribution_id, info });
 			Ok(())
 		}
 	}
@@ -361,6 +380,7 @@ pub mod pallet {
 			infos: &Info<AccountIdOf<T>>,
 		) -> DispatchResult {
 			let mut usd_value: FixedU128 = Zero::zero();
+			// Calculate the total value based on the US dollar standard
 			infos.token_type.iter().try_for_each(|&currency_id| -> DispatchResult {
 				let amount = T::MultiCurrency::free_balance(currency_id, &infos.receiving_address);
 				let value = Self::get_asset_value(currency_id, amount)?;
@@ -369,7 +389,11 @@ pub mod pallet {
 			})?;
 			if let Some(mut usd_infos) = DollarStandardInfos::<T>::get(distribution_id) {
 				match usd_infos.cumulative.cmp(&usd_infos.target_value) {
+					// If the cumulative value is greater than or equal to the target value, the
+					// distribution is triggered
 					Ordering::Equal | Ordering::Greater => (),
+					// If the cumulative value is less than the target value, the cumulative value
+					// is added, and the distribution is not triggered
 					Ordering::Less => {
 						usd_infos.cumulative = usd_infos
 							.cumulative

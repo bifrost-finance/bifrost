@@ -131,7 +131,7 @@ impl<T: frame_system::Config> bifrost_fee_share::WeightInfo for BifrostWeight<T>
 	/// Proof: `FeeShare::DistributionInfos` (`max_values`: None, `max_size`: None, mode: `Measured`)
 	/// Storage: `FeeShare::DollarStandardInfos` (r:0 w:1)
 	/// Proof: `FeeShare::DollarStandardInfos` (`max_values`: None, `max_size`: None, mode: `Measured`)
-	fn usd_cumulation() -> Weight {
+	fn set_usd_config() -> Weight {
 		// Proof Size summary in bytes:
 		//  Measured:  `94`
 		//  Estimated: `3559`

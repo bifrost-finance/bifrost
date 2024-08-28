@@ -81,7 +81,7 @@ benchmarks! {
 			true,
 		));
 	}: _(RawOrigin::Root,0)
-	usd_cumulation {
+	set_usd_config {
 		let caller: T::AccountId = whitelisted_caller();
 		let tokens_proportion = vec![(caller.clone(), Perbill::from_percent(100))];
 		const KSM: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);

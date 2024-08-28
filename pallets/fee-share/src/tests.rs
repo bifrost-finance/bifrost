@@ -21,7 +21,7 @@
 #![cfg(test)]
 
 use crate::{mock::*, *};
-use frame_support::assert_ok;
+use frame_support::{assert_err, assert_ok};
 use sp_arithmetic::per_things::Perbill;
 
 #[test]
@@ -84,7 +84,7 @@ fn edit_delete_distribution() {
 }
 
 #[test]
-fn usd_cumulation_should_work() {
+fn set_usd_config_should_work() {
 	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
 		let tokens_proportion = vec![(ALICE, Perbill::from_percent(100))];
 
@@ -97,12 +97,12 @@ fn usd_cumulation_should_work() {
 
 		let distribution_id = 0;
 		let target_value = 100;
-		let duration = 10;
-		assert_ok!(FeeShare::usd_cumulation(
+		let interval = 10;
+		assert_ok!(FeeShare::set_usd_config(
 			RuntimeOrigin::signed(ALICE),
 			distribution_id,
 			target_value,
-			duration,
+			interval,
 			BOB,
 		));
 
@@ -122,5 +122,52 @@ fn usd_cumulation_should_work() {
 		assert_ok!(<Tokens as MultiCurrency<AccountId>>::transfer(KSM, &ALICE, &keeper, 100,));
 		FeeShare::on_idle(<frame_system::Pallet<Runtime>>::block_number() + 10, Weight::zero());
 		assert_eq!(DollarStandardInfos::<Runtime>::get(0).unwrap().cumulative, 0);
+	});
+}
+
+#[test]
+fn set_usd_config_should_not_work() {
+	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
+		let tokens_proportion = vec![(ALICE, Perbill::from_percent(100))];
+		let distribution_id = 0;
+		let target_value = 100;
+		let interval = 10;
+
+		assert_err!(
+			FeeShare::set_usd_config(
+				RuntimeOrigin::signed(ALICE),
+				distribution_id,
+				target_value,
+				interval,
+				BOB,
+			),
+			Error::<Runtime>::DistributionNotExist
+		);
+		assert_ok!(FeeShare::create_distribution(
+			RuntimeOrigin::signed(ALICE),
+			vec![KSM],
+			tokens_proportion,
+			true,
+		));
+		assert_err!(
+			FeeShare::set_usd_config(
+				RuntimeOrigin::signed(ALICE),
+				distribution_id,
+				target_value,
+				0,
+				BOB,
+			),
+			Error::<Runtime>::IntervalIsZero
+		);
+		assert_err!(
+			FeeShare::set_usd_config(
+				RuntimeOrigin::signed(ALICE),
+				distribution_id,
+				0,
+				interval,
+				BOB,
+			),
+			Error::<Runtime>::ValueIsZero
+		);
 	});
 }

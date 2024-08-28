@@ -59,7 +59,7 @@ pub trait WeightInfo {
 	fn set_era_length() -> Weight;
 	fn execute_distribute() -> Weight;
 	fn delete_distribution() -> Weight;
-	fn usd_cumulation() -> Weight;
+	fn set_usd_config() -> Weight;
 }
 
 // For backwards compatibility and tests
@@ -141,7 +141,7 @@ impl WeightInfo for () {
 	/// Proof: `FeeShare::DistributionInfos` (`max_values`: None, `max_size`: None, mode: `Measured`)
 	/// Storage: `FeeShare::DollarStandardInfos` (r:0 w:1)
 	/// Proof: `FeeShare::DollarStandardInfos` (`max_values`: None, `max_size`: None, mode: `Measured`)
-	fn usd_cumulation() -> Weight {
+	fn set_usd_config() -> Weight {
 		// Proof Size summary in bytes:
 		//  Measured:  `94`
 		//  Estimated: `3559`
