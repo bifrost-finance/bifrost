@@ -212,6 +212,11 @@ pub mod pallet {
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
+		/// Create a distribution
+		///
+		/// - `token_type`: The token types involved in this distribution
+		/// - `tokens_proportion`: The proportion of the token distribution
+		/// - `if_auto`: Whether the distribution is automatic
 		#[pallet::call_index(0)]
 		#[pallet::weight(T::WeightInfo::create_distribution())]
 		pub fn create_distribution(
@@ -251,6 +256,12 @@ pub mod pallet {
 			Ok(())
 		}
 
+		/// Edit the distribution
+		///
+		/// - `distribution_id`: Distribution ID
+		/// - `token_type`: The token types involved in this distribution
+		/// - `tokens_proportion`: The proportion of the token distribution
+		/// - `if_auto`: Whether the distribution is automatic
 		#[pallet::call_index(1)]
 		#[pallet::weight(T::WeightInfo::edit_distribution())]
 		pub fn edit_distribution(
@@ -290,6 +301,9 @@ pub mod pallet {
 			Ok(())
 		}
 
+		/// Set the era length
+		///
+		/// - `era_length`: The interval between distribution executions
 		#[pallet::call_index(2)]
 		#[pallet::weight(T::WeightInfo::set_era_length())]
 		pub fn set_era_length(
@@ -307,6 +321,9 @@ pub mod pallet {
 			Ok(())
 		}
 
+		/// Execute the distribution
+		///
+		/// - `distribution_id`: Distribution ID
 		#[pallet::call_index(3)]
 		#[pallet::weight(T::WeightInfo::execute_distribute())]
 		pub fn execute_distribute(
@@ -315,14 +332,17 @@ pub mod pallet {
 		) -> DispatchResult {
 			T::ControlOrigin::ensure_origin(origin)?;
 
-			if let Some(info) = DistributionInfos::<T>::get(distribution_id) {
-				Self::execute_distribute_inner(distribution_id, &info)?;
-			}
+			let info = DistributionInfos::<T>::get(distribution_id)
+				.ok_or(Error::<T>::DistributionNotExist)?;
+			Self::execute_distribute_inner(distribution_id, &info)?;
 
 			Self::deposit_event(Event::Executed { distribution_id });
 			Ok(())
 		}
 
+		/// Delete the distribution
+		///
+		/// - `distribution_id`: Distribution ID
 		#[pallet::call_index(4)]
 		#[pallet::weight(T::WeightInfo::delete_distribution())]
 		pub fn delete_distribution(
@@ -331,16 +351,22 @@ pub mod pallet {
 		) -> DispatchResult {
 			T::ControlOrigin::ensure_origin(origin)?;
 
-			if let Some(info) = DistributionInfos::<T>::get(distribution_id) {
-				Self::execute_distribute_inner(distribution_id, &info)?;
-				DistributionInfos::<T>::remove(distribution_id);
-			}
+			let info = DistributionInfos::<T>::get(distribution_id)
+				.ok_or(Error::<T>::DistributionNotExist)?;
+			Self::execute_distribute_inner(distribution_id, &info)?;
+			DistributionInfos::<T>::remove(distribution_id);
 
 			Self::deposit_event(Event::Deleted { distribution_id });
 			Ok(())
 		}
 
 		/// USD Standard Accumulation Logic Configuration, can be overridden by the governance
+		///
+		/// - `distribution_id`: Distribution ID
+		/// - `target_value`: Target's USD based value
+		/// - `interval`: The interval of the cumulative clearing operation
+		/// - `target_address`: When the cumulative dollar value falls below the target_value, the
+		///   funds will be transferred to the target_address
 		#[pallet::call_index(5)]
 		#[pallet::weight(T::WeightInfo::set_usd_config())]
 		pub fn set_usd_config(
