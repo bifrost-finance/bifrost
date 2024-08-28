@@ -694,7 +694,20 @@ impl<T: Config> AccountFeeCurrency<T::AccountId> for Pallet<T> {
 			match comp_res {
 				Ordering::Less => {
 					// Get the currency with the highest balance
-					hopeless_currency = match hopeless_currency.cmp(maybe_currency) {
+					let hopeless_currency_balance = T::MultiCurrency::reducible_balance(
+						hopeless_currency,
+						account,
+						Preservation::Preserve,
+						Fortitude::Polite,
+					);
+					let maybe_currency_balance = T::MultiCurrency::reducible_balance(
+						*maybe_currency,
+						account,
+						Preservation::Preserve,
+						Fortitude::Polite,
+					);
+					hopeless_currency = match hopeless_currency_balance.cmp(&maybe_currency_balance)
+					{
 						Ordering::Less => *maybe_currency,
 						_ => hopeless_currency,
 					};
