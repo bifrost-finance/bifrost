@@ -311,7 +311,7 @@ impl bifrost_vtoken_minting::Config for Runtime {
 	type OnRedeemSuccess = ();
 	type XcmTransfer = XTokens;
 	type AstarParachainId = ShidenParachainId;
-	type MoonbeamParachainId = HydrationParachainId;
+	type MoonbeamParachainId = MoonriverParachainId;
 	type HydradxParachainId = HydrationParachainId;
 	type MantaParachainId = MantaParachainId;
 	type InterlayParachainId = InterlayParachainId;
