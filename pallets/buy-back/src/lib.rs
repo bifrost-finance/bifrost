@@ -379,7 +379,7 @@ pub mod pallet {
 			let path = vec![asset_id, bnc_asset_id];
 			let balance = T::MultiCurrency::free_balance(currency_id, &liquidity_address);
 			let token_balance = info.proportion * balance;
-			ensure!(token_balance > Zero::zero(), DispatchError::Other("Conversion Error."));
+			ensure!(token_balance > Zero::zero(), Error::<T>::NotEnoughBalance);
 
 			let amount_out_min = 0;
 			T::DexOperator::inner_swap_exact_assets_for_assets(
