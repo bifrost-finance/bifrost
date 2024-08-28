@@ -301,8 +301,7 @@ where
 	/// Get the Substrate address from the EVM address.
 	/// Returns the converted address if the address wasn't bind.
 	fn account_id(evm_address: EvmAddress) -> T::AccountId {
-		Self::bound_account_id(evm_address)
-			.unwrap_or_else(|| Self::convert_account_id(evm_address))
+		Self::bound_account_id(evm_address).unwrap_or_else(|| Self::convert_account_id(evm_address))
 	}
 
 	/// Returns `True` if the address is allowed to deploy smart contracts.
