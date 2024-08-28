@@ -30,7 +30,7 @@ fn eth_address_should_convert_to_truncated_address_when_not_bound() {
 			"d2efb4a4ab6b9c7dff8d8e1aa76dc53a0aab3a0d93747eb25db1bb7b08a76a09"
 		]);
 
-		assert_eq!(EVMAccounts::truncated_account_id(evm_address), truncated_address.clone());
+		assert_eq!(EVMAccounts::convert_account_id(evm_address), truncated_address.clone());
 
 		// Act & Assert
 		assert_eq!(EVMAccounts::bound_account_id(evm_address), None);

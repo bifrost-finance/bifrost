@@ -274,20 +274,14 @@ impl<T: Config> InspectEvmAccounts<T::AccountId, EvmAddress> for Pallet<T>
 where
 	T::AccountId: AsRef<[u8; 32]> + frame_support::traits::IsType<AccountId32>,
 {
-	/// Returns `True` if the account is EVM truncated account.
-	fn is_evm_account(account_id: T::AccountId) -> bool {
-		let account_ref = account_id.as_ref();
-		&account_ref[0..4] == b"ETH\0" && account_ref[24..32] == [0u8; 8]
-	}
-
 	/// Get the EVM address from the substrate address.
 	fn evm_address(account_id: &impl AsRef<[u8; 32]>) -> EvmAddress {
 		let acc = account_id.as_ref();
 		EvmAddress::from_slice(&acc[..20])
 	}
 
-	/// Get the truncated address from the EVM address.
-	fn truncated_account_id(evm_address: EvmAddress) -> T::AccountId {
+	/// Get the AccountId from the EVM address.
+	fn convert_account_id(evm_address: EvmAddress) -> T::AccountId {
 		let payload = (b"AccountId32:", evm_address);
 		let bytes = payload.using_encoded(Hashing::hash).0;
 		AccountId32::new(bytes).into()
@@ -305,10 +299,10 @@ where
 	}
 
 	/// Get the Substrate address from the EVM address.
-	/// Returns the truncated version of the address if the address wasn't bind.
+	/// Returns the converted address if the address wasn't bind.
 	fn account_id(evm_address: EvmAddress) -> T::AccountId {
 		Self::bound_account_id(evm_address)
-			.unwrap_or_else(|| Self::truncated_account_id(evm_address))
+			.unwrap_or_else(|| Self::convert_account_id(evm_address))
 	}
 
 	/// Returns `True` if the address is allowed to deploy smart contracts.
