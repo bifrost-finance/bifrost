@@ -139,18 +139,36 @@ impl WeightInfo for () {
 			.saturating_add(RocksDbWeight::get().reads(16_u64))
 			.saturating_add(RocksDbWeight::get().writes(8_u64))
 	}
-	/// Storage: `Slpx::WhitelistAccountId` (r:1 w:0)
-	/// Proof: `Slpx::WhitelistAccountId` (`max_values`: None, `max_size`: Some(338), added: 2813, mode: `MaxEncodedLen`)
-	/// Storage: `Slpx::OrderQueue` (r:1 w:1)
-	/// Proof: `Slpx::OrderQueue` (`max_values`: Some(1), `max_size`: Some(203002), added: 203497, mode: `MaxEncodedLen`)
+	/// Storage: Slpx WhitelistAccountId (r:1 w:0)
+	/// Proof: Slpx WhitelistAccountId (max_values: None, max_size: Some(338), added: 2813, mode: MaxEncodedLen)
+	/// Storage: Tokens Accounts (r:4 w:4)
+	/// Proof: Tokens Accounts (max_values: None, max_size: Some(118), added: 2593, mode: MaxEncodedLen)
+	/// Storage: Slpx ExecutionFee (r:1 w:0)
+	/// Proof: Slpx ExecutionFee (max_values: None, max_size: Some(46), added: 2521, mode: MaxEncodedLen)
+	/// Storage: AssetRegistry CurrencyMetadatas (r:1 w:0)
+	/// Proof Skipped: AssetRegistry CurrencyMetadatas (max_values: None, max_size: None, mode: Measured)
+	/// Storage: System Account (r:3 w:2)
+	/// Proof: System Account (max_values: None, max_size: Some(128), added: 2603, mode: MaxEncodedLen)
+	/// Storage: VtokenMinting MinimumMint (r:1 w:0)
+	/// Proof: VtokenMinting MinimumMint (max_values: None, max_size: Some(38), added: 2513, mode: MaxEncodedLen)
+	/// Storage: VtokenMinting TokenPool (r:1 w:1)
+	/// Proof: VtokenMinting TokenPool (max_values: None, max_size: Some(38), added: 2513, mode: MaxEncodedLen)
+	/// Storage: Tokens TotalIssuance (r:1 w:1)
+	/// Proof: Tokens TotalIssuance (max_values: None, max_size: Some(38), added: 2513, mode: MaxEncodedLen)
+	/// Storage: VtokenMinting Fees (r:1 w:0)
+	/// Proof: VtokenMinting Fees (max_values: Some(1), max_size: Some(8), added: 503, mode: MaxEncodedLen)
+	/// Storage: AssetRegistry CurrencyIdToLocations (r:1 w:0)
+	/// Proof Skipped: AssetRegistry CurrencyIdToLocations (max_values: None, max_size: None, mode: Measured)
+	/// Storage: ParachainInfo ParachainId (r:1 w:0)
+	/// Proof: ParachainInfo ParachainId (max_values: Some(1), max_size: Some(4), added: 499, mode: MaxEncodedLen)
 	fn mint_with_channel_id() -> Weight {
 		// Proof Size summary in bytes:
-		//  Measured:  `81`
-		//  Estimated: `204487`
-		// Minimum execution time: 12_000_000 picoseconds.
-		Weight::from_parts(12_000_000, 204487)
-			.saturating_add(RocksDbWeight::get().reads(2_u64))
-			.saturating_add(RocksDbWeight::get().writes(1_u64))
+		//  Measured:  `2442`
+		//  Estimated: `11362`
+		// Minimum execution time: 357_850_000 picoseconds.
+		Weight::from_parts(367_522_000, 11362)
+			.saturating_add(RocksDbWeight::get().reads(16_u64))
+			.saturating_add(RocksDbWeight::get().writes(8_u64))
 	}
 	/// Storage: Slpx WhitelistAccountId (r:1 w:0)
 	/// Proof: Slpx WhitelistAccountId (max_values: None, max_size: Some(338), added: 2813, mode: MaxEncodedLen)
