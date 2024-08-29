@@ -1595,9 +1595,7 @@ impl bifrost_buy_back::Config for Runtime {
 	type ControlOrigin = EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
 	type WeightInfo = weights::bifrost_buy_back::BifrostWeight<Runtime>;
 	type DexOperator = ZenlinkProtocol;
-	type CurrencyIdConversion = AssetIdMaps<Runtime>;
 	type TreasuryAccount = BifrostTreasuryAccount;
-	type RelayChainToken = RelayCurrencyId;
 	type BuyBackAccount = BuyBackAccount;
 	type LiquidityAccount = LiquidityAccount;
 	type ParachainId = ParachainInfo;

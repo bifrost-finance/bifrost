@@ -15,7 +15,6 @@ members = [
 	"pallets/token-issuer",
 	"pallets/vesting",
 	"pallets/vsbond-auction",
-	"pallets/call-switchgear",
 	"pallets/cross-in-out",
 	"pallets/evm-accounts",
 	"pallets/xcm-interface",
@@ -332,7 +331,7 @@ proc-macro2           = { version = "1.0.40" }
 quote                 = { version = "1.0.20" }
 scale-info            = { version = "2.11.3", default-features = false }
 serde                 = { version = "1.0.205", default-features = false }
-serde_json            = { version = "1.0.122", default-features = false }
+serde_json            = { version = "1.0.120", default-features = false }
 sha3                  = { version = "0.10.6", default-features = false }
 similar-asserts       = { version = "1.1.0" }
 smallvec              = { version = "1.13.1" }
