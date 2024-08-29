@@ -32,6 +32,7 @@ use xcm::v4::{prelude::*, Asset, Location};
 use xcm_executor::traits::{AssetTransferError, TransferType, XcmAssetTransfers};
 
 pub mod currency;
+pub use currency::*;
 mod salp;
 pub mod traits;
 pub use salp::*;
@@ -39,13 +40,7 @@ pub use salp::*;
 #[cfg(test)]
 mod tests;
 
-pub use crate::{
-	currency::{
-		AssetIds, CurrencyId, ForeignAssetId, TokenId, TokenSymbol, ASTR, ASTR_TOKEN_ID, BNC, DOT,
-		DOT_TOKEN_ID, DOT_U, FIL, GLMR, GLMR_TOKEN_ID, KSM, MANTA, VBNC, VDOT, VKSM, VSKSM,
-	},
-	traits::*,
-};
+pub use crate::traits::*;
 
 /// An index to a block.
 pub type BlockNumber = u32;
@@ -180,6 +175,25 @@ pub enum TimeUnit {
 	Kblock(#[codec(compact)] u32),
 	// 1 hour. Should be Unix Timstamp in seconds / 3600
 	Hour(#[codec(compact)] u32),
+}
+
+impl TimeUnit {
+	pub fn add_one(self) -> Self {
+		match self {
+			TimeUnit::Era(a) => TimeUnit::Era(a.saturating_add(1)),
+			TimeUnit::SlashingSpan(a) => TimeUnit::SlashingSpan(a.saturating_add(1)),
+			TimeUnit::Round(a) => TimeUnit::Round(a.saturating_add(1)),
+			TimeUnit::Kblock(a) => TimeUnit::Kblock(a.saturating_add(1)),
+			TimeUnit::Hour(a) => TimeUnit::Hour(a.saturating_add(1)),
+		}
+	}
+
+	pub fn add(self, other_time: Self) -> Option<Self> {
+		match (self, other_time) {
+			(TimeUnit::Era(a), TimeUnit::Era(b)) => Some(TimeUnit::Era(a.saturating_add(b))),
+			_ => None,
+		}
+	}
 }
 
 impl Default for TimeUnit {

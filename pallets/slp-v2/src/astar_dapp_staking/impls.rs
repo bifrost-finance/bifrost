@@ -1,0 +1,204 @@
+// This file is part of Bifrost.
+
+// Copyright (C) Liebi Technologies PTE. LTD.
+// SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
+
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU General Public License for more details.
+
+// You should have received a copy of the GNU General Public License
+// along with this program. If not, see <https://www.gnu.org/licenses/>.
+
+use crate::{
+	astar_dapp_staking::types::{AstarCall, AstarUnlockingRecord, DappStaking},
+	common::types::{
+		Delegator, DelegatorIndex, Ledger, PendingStatus, StakingProtocol, XcmTask,
+		XcmTaskWithParams,
+	},
+	Call, Config, DelegatorByStakingProtocolAndDelegatorIndex,
+	DelegatorIndexByStakingProtocolAndDelegator, Error, Event, LedgerByStakingProtocolAndDelegator,
+	Pallet, PendingStatusByQueryId,
+};
+use bifrost_primitives::VtokenMintingOperator;
+use frame_support::{dispatch::DispatchResultWithPostInfo, ensure};
+use parity_scale_codec::Encode;
+use sp_std::{cmp::Ordering, vec::Vec};
+use xcm::v4::{opaque::Xcm, Location, QueryId};
+
+pub const ASTAR_DAPP_STAKING: StakingProtocol = StakingProtocol::AstarDappStaking;
+
+impl<T: Config> Pallet<T> {
+	pub fn do_dapp_staking(
+		delegator: Delegator<T::AccountId>,
+		task: DappStaking<T::AccountId>,
+	) -> DispatchResultWithPostInfo {
+		let delegator_index = DelegatorIndexByStakingProtocolAndDelegator::<T>::get(
+			ASTAR_DAPP_STAKING,
+			delegator.clone(),
+		)
+		.ok_or(Error::<T>::DelegatorIndexNotFound)?;
+		ensure!(
+			DelegatorByStakingProtocolAndDelegatorIndex::<T>::contains_key(
+				ASTAR_DAPP_STAKING,
+				delegator_index
+			),
+			Error::<T>::DelegatorNotFound
+		);
+		let (call, xcm_task, pending_status) = match task.clone() {
+			DappStaking::Lock(amount) => (
+				AstarCall::<T>::DappStaking(DappStaking::<T::AccountId>::Lock(amount)).encode(),
+				XcmTask::AstarDappStakingLock,
+				Some(PendingStatus::AstarDappStakingLock(delegator.clone(), amount)),
+			),
+			DappStaking::Unlock(amount) => (
+				AstarCall::<T>::DappStaking(DappStaking::<T::AccountId>::Unlock(amount)).encode(),
+				XcmTask::AstarDappStakingUnLock,
+				Some(PendingStatus::AstarDappStakingUnLock(delegator.clone(), amount)),
+			),
+			DappStaking::ClaimUnlocked => (
+				AstarCall::<T>::DappStaking(DappStaking::<T::AccountId>::ClaimUnlocked).encode(),
+				XcmTask::AstarDappStakingClaimUnlocked,
+				Some(PendingStatus::AstarDappStakingClaimUnlocked(delegator.clone())),
+			),
+			DappStaking::Stake(validator, amount) => (
+				AstarCall::<T>::DappStaking(DappStaking::<T::AccountId>::Stake(
+					validator.clone(),
+					amount,
+				))
+				.encode(),
+				XcmTask::AstarDappStakingStake,
+				None,
+			),
+			DappStaking::Unstake(validator, amount) => (
+				AstarCall::<T>::DappStaking(DappStaking::<T::AccountId>::Unstake(
+					validator.clone(),
+					amount,
+				))
+				.encode(),
+				XcmTask::AstarDappStakingUnstake,
+				None,
+			),
+			DappStaking::ClaimStakerRewards => (
+				AstarCall::<T>::DappStaking(DappStaking::<T::AccountId>::ClaimStakerRewards)
+					.encode(),
+				XcmTask::AstarDappStakingClaimStakerRewards,
+				None,
+			),
+			DappStaking::ClaimBonusReward(validator) => (
+				AstarCall::<T>::DappStaking(DappStaking::<T::AccountId>::ClaimBonusReward(
+					validator,
+				))
+				.encode(),
+				XcmTask::AstarDappStakingClaimBonusReward,
+				None,
+			),
+			DappStaking::RelockUnlocking => (
+				AstarCall::<T>::DappStaking(DappStaking::<T::AccountId>::RelockUnlocking).encode(),
+				XcmTask::AstarDappStakingRelockUnlocking,
+				None,
+			),
+		};
+		let (query_id, xcm_message) =
+			Self::get_query_id_and_xcm_message(call, delegator_index, xcm_task, &pending_status)?;
+		if let Some(query_id) = query_id {
+			let pending_status = pending_status.clone().ok_or(Error::<T>::MissingXcmFee)?;
+			PendingStatusByQueryId::<T>::insert(query_id, pending_status.clone());
+		}
+		Self::send_xcm_message(ASTAR_DAPP_STAKING, xcm_message)?;
+		Self::deposit_event(Event::<T>::SendXcmTask {
+			query_id,
+			delegator,
+			xcm_task_with_params: XcmTaskWithParams::AstarDappStaking(task),
+			pending_status,
+			dest_location: ASTAR_DAPP_STAKING.get_dest_location(),
+		});
+		Ok(().into())
+	}
+
+	pub fn get_query_id_and_xcm_message(
+		call: Vec<u8>,
+		delegator_index: DelegatorIndex,
+		xcm_task: XcmTask,
+		pending_status: &Option<PendingStatus<T::AccountId>>,
+	) -> Result<(Option<QueryId>, Xcm), Error<T>> {
+		let call =
+			Self::wrap_utility_as_derivative_call_data(&ASTAR_DAPP_STAKING, delegator_index, call);
+		let mut query_id = None;
+		let xcm_message;
+		if pending_status.is_some() {
+			let notify_call =
+				<T as Config>::RuntimeCall::from(Call::<T>::notify_astar_dapp_staking {
+					query_id: 0,
+					response: Default::default(),
+				});
+			xcm_message = Self::wrap_xcm_message_with_notify(
+				&ASTAR_DAPP_STAKING,
+				xcm_task,
+				call,
+				notify_call,
+				&mut query_id,
+			)?;
+		} else {
+			xcm_message = Self::wrap_xcm_message(&ASTAR_DAPP_STAKING, xcm_task, call)?;
+		};
+		Ok((query_id, xcm_message))
+	}
+
+	pub fn do_notify_astar_dapp_staking(
+		responder: Location,
+		pending_status: PendingStatus<T::AccountId>,
+	) -> Result<(), Error<T>> {
+		let delegator = match pending_status.clone() {
+			PendingStatus::AstarDappStakingLock(delegator, _) => delegator,
+			PendingStatus::AstarDappStakingUnLock(delegator, _) => delegator,
+			PendingStatus::AstarDappStakingClaimUnlocked(delegator) => delegator,
+		};
+		LedgerByStakingProtocolAndDelegator::<T>::mutate(
+			ASTAR_DAPP_STAKING,
+			delegator,
+			|ledger| -> Result<(), Error<T>> {
+				if let Some(Ledger::AstarDappStaking(mut pending_ledger)) = ledger.clone() {
+					match pending_status.clone() {
+						PendingStatus::AstarDappStakingLock(_, amount) => {
+							pending_ledger.add_lock_amount(amount);
+						},
+						PendingStatus::AstarDappStakingUnLock(_, amount) => {
+							pending_ledger.subtract_lock_amount(amount);
+							let currency_id = ASTAR_DAPP_STAKING.get_currency_id();
+							let current_time_unit =
+								T::VtokenMinting::get_ongoing_time_unit(currency_id)
+									.ok_or(Error::<T>::TimeUnitNotExist)?;
+							let unlock_time = current_time_unit
+								.add(ASTAR_DAPP_STAKING.get_unlock_period())
+								.ok_or(Error::<T>::TimeUnitNotExist)?;
+							pending_ledger
+								.unlocking
+								.try_push(AstarUnlockingRecord { amount, unlock_time })
+								.map_err(|_| Error::<T>::DerivativeAccountIdFailed)?;
+						},
+						PendingStatus::AstarDappStakingClaimUnlocked(_) => {
+							let currency_id = ASTAR_DAPP_STAKING.get_currency_id();
+							let current_time_unit =
+								T::VtokenMinting::get_ongoing_time_unit(currency_id)
+									.ok_or(Error::<T>::TimeUnitNotExist)?;
+							pending_ledger.unlocking.retain(|record| {
+								current_time_unit.cmp(&record.unlock_time) != Ordering::Greater
+							});
+						},
+					};
+					*ledger = Some(Ledger::AstarDappStaking(pending_ledger));
+				};
+				Ok(())
+			},
+		)?;
+		Self::deposit_event(Event::<T>::NotifyResponseReceived { responder, pending_status });
+		Ok(())
+	}
+}

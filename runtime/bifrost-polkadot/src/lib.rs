@@ -1605,6 +1605,24 @@ impl bifrost_buy_back::Config for Runtime {
 	type VeMinting = VeMinting;
 }
 
+impl bifrost_slp_v2::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type RuntimeOrigin = RuntimeOrigin;
+	type RuntimeCall = RuntimeCall;
+	type ResponseOrigin = EnsureResponse<Everything>;
+	type WeightInfo = ();
+	type MultiCurrency = Currencies;
+	type ControlOrigin = TechAdminOrCouncil;
+	type XcmTransfer = XTokens;
+	type XcmSender = XcmRouter;
+	type VtokenMinting = VtokenMinting;
+	type CurrencyIdConversion = AssetIdMaps<Runtime>;
+	type RelaychainBlockNumberProvider = RelaychainDataProvider<Runtime>;
+	type QueryTimeout = QueryTimeout;
+	type CommissionPalletId = CommissionPalletId;
+	type ParachainId = ParachainInfo;
+}
+
 // Below is the implementation of tokens manipulation functions other than native token.
 pub struct LocalAssetAdaptor<Local>(PhantomData<Local>);
 
@@ -1796,6 +1814,7 @@ construct_runtime! {
 		ChannelCommission: bifrost_channel_commission = 136,
 		CloudsConvert: bifrost_clouds_convert = 137,
 		BuyBack: bifrost_buy_back = 138,
+		SlpV2: bifrost_slp_v2 = 139,
 	}
 }
 
@@ -1961,6 +1980,7 @@ mod benches {
 	define_benchmarks!(
 		[bifrost_ve_minting, VeMinting]
 		[bifrost_buy_back, BuyBack]
+		[bifrost_slp_v2, SlpV2]
 	);
 }
 

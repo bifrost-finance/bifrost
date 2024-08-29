@@ -20,6 +20,7 @@ members = [
 	"pallets/evm-accounts",
 	"pallets/xcm-interface",
 	"pallets/slp",
+	"pallets/slp-v2",
 	"pallets/vstoken-conversion",
 	"pallets/vtoken-minting",
 	"pallets/vtoken-voting",
@@ -79,6 +80,7 @@ bifrost-salp                           = { path = "pallets/salp", default-featur
 bifrost-salp-rpc-runtime-api           = { path = "pallets/salp/rpc/runtime-api", default-features = false }
 bifrost-service                        = { path = "node/service", default-features = false }
 bifrost-slp                            = { path = "pallets/slp", default-features = false }
+bifrost-slp-v2                         = { path = "pallets/slp-v2", default-features = false }
 bifrost-slpx                           = { path = "pallets/slpx", default-features = false }
 bifrost-stable-asset                   = { path = "pallets/stable-asset", default-features = false }
 bifrost-stable-pool                    = { path = "pallets/stable-pool", default-features = false }
