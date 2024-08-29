@@ -19,6 +19,7 @@ xcm-executor = { workspace = true }
 
 zenlink-protocol = { workspace = true }
 orml-oracle = { workspace = true }
+orml-traits = { workspace = true }
 
 [features]
 default = ["std"]
@@ -36,6 +37,7 @@ std = [
 
 	"zenlink-protocol/std",
 	"orml-oracle/std",
+	"orml-traits/std",
 ]
 
 with-bifrost-runtime = [

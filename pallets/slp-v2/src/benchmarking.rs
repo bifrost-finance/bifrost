@@ -33,7 +33,7 @@ use xcm::v4::MaybeErrorCode;
 
 pub const STAKING_PROTOCOL: StakingProtocol = StakingProtocol::AstarDappStaking;
 
-#[benchmarks(where <T as frame_system::Config>::AccountId: From<sp_runtime::AccountId32> , <<<T as frame_system::Config>::Block as BlockT>::Header as sp_runtime::traits::Header>::Number: From<u64>)]
+#[benchmarks(where <T as frame_system::Config>::AccountId: From<sp_runtime::AccountId32> , <<<T as frame_system::Config>::Block as BlockT>::Header as sp_runtime::traits::Header>::Number: From<u32>)]
 mod benchmarks {
 	use super::*;
 
@@ -98,7 +98,7 @@ mod benchmarks {
 
 	#[benchmark]
 	fn set_update_ongoing_time_unit_interval() -> Result<(), BenchmarkError> {
-		let update_interval = 100u64.into();
+		let update_interval = 100u32.into();
 		let staking_protocol = StakingProtocol::AstarDappStaking;
 		#[extrinsic_call]
 		_(RawOrigin::Root, staking_protocol, update_interval);
@@ -107,7 +107,7 @@ mod benchmarks {
 
 	#[benchmark]
 	fn set_update_token_exchange_rate_limit() -> Result<(), BenchmarkError> {
-		let update_interval = 100u64.into();
+		let update_interval = 100u32.into();
 		let max_update_permill = Permill::from_perthousand(1);
 		let staking_protocol = StakingProtocol::AstarDappStaking;
 		#[extrinsic_call]

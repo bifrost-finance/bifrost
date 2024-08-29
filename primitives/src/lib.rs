@@ -20,14 +20,16 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
+use orml_traits::{xcm_transfer::Transferred, XcmTransfer};
 use parity_scale_codec::MaxEncodedLen;
 use scale_info::TypeInfo;
 use sp_core::{Decode, Encode, RuntimeDebug, H160};
 use sp_runtime::{
 	generic,
 	traits::{BlakeTwo256, IdentifyAccount, Verify},
-	FixedU128, MultiSignature, OpaqueExtrinsic, Permill,
+	DispatchError, FixedU128, MultiSignature, OpaqueExtrinsic, Permill,
 };
+use sp_std::vec::Vec;
 use xcm::v4::{prelude::*, Asset, Location};
 use xcm_executor::traits::{AssetTransferError, TransferType, XcmAssetTransfers};
 
@@ -274,6 +276,74 @@ impl SendXcm for DoNothingRouter {
 	}
 	fn deliver(_: ()) -> Result<XcmHash, SendError> {
 		Ok([0; 32])
+	}
+}
+
+pub struct MockXcmTransfer;
+impl XcmTransfer<AccountId, Balance, CurrencyId> for MockXcmTransfer {
+	fn transfer(
+		who: AccountId,
+		_currency_id: CurrencyId,
+		amount: Balance,
+		dest: Location,
+		_dest_weight_limit: WeightLimit,
+	) -> Result<Transferred<AccountId>, DispatchError> {
+		Ok(Transferred {
+			sender: who,
+			assets: Default::default(),
+			fee: Asset { id: AssetId(Location::here()), fun: Fungible(amount) },
+			dest,
+		})
+	}
+
+	fn transfer_multiasset(
+		_who: AccountId,
+		_asset: Asset,
+		_dest: Location,
+		_dest_weight_limit: WeightLimit,
+	) -> Result<Transferred<AccountId>, DispatchError> {
+		unimplemented!()
+	}
+
+	fn transfer_with_fee(
+		_who: AccountId,
+		_currency_id: CurrencyId,
+		_amount: Balance,
+		_fee: Balance,
+		_dest: Location,
+		_dest_weight_limit: WeightLimit,
+	) -> Result<Transferred<AccountId>, DispatchError> {
+		unimplemented!()
+	}
+
+	fn transfer_multiasset_with_fee(
+		_who: AccountId,
+		_asset: Asset,
+		_fee: Asset,
+		_dest: Location,
+		_dest_weight_limit: WeightLimit,
+	) -> Result<Transferred<AccountId>, DispatchError> {
+		unimplemented!()
+	}
+
+	fn transfer_multicurrencies(
+		_who: AccountId,
+		_currencies: Vec<(CurrencyId, Balance)>,
+		_fee_item: u32,
+		_dest: Location,
+		_dest_weight_limit: WeightLimit,
+	) -> Result<Transferred<AccountId>, DispatchError> {
+		unimplemented!()
+	}
+
+	fn transfer_multiassets(
+		_who: AccountId,
+		_assets: Assets,
+		_fee: Asset,
+		_dest: Location,
+		_dest_weight_limit: WeightLimit,
+	) -> Result<Transferred<AccountId>, DispatchError> {
+		unimplemented!()
 	}
 }
 

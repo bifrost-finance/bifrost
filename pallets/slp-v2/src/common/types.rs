@@ -15,6 +15,7 @@
 
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
+#![allow(unused)]
 
 use crate::{
 	astar_dapp_staking::types::{AstarDappStakingLedger, AstarValidator, DappStaking},
@@ -233,17 +234,16 @@ pub struct XcmFee {
 	pub fee: Balance,
 }
 
-/// Delegator in slp protocol.
+/// Ledger in slp protocol.
 #[derive(Encode, Decode, MaxEncodedLen, Clone, Debug, PartialEq, Eq, TypeInfo)]
 pub enum Ledger {
 	/// DappStaking on Astar.
 	AstarDappStaking(AstarDappStakingLedger),
 }
 
-/// Delegator in slp protocol.
+/// XcmTask in slp protocol.
 #[derive(Encode, Decode, MaxEncodedLen, Clone, Copy, Debug, PartialEq, Eq, TypeInfo)]
 pub enum XcmTask {
-	/// DappStaking on Astar.
 	AstarDappStakingLock,
 	AstarDappStakingUnLock,
 	AstarDappStakingClaimUnlocked,
@@ -260,10 +260,9 @@ pub enum XcmTaskWithParams<AccountId> {
 	AstarDappStaking(DappStaking<AccountId>),
 }
 
-/// Delegator in slp protocol.
+/// PendingStatus in slp protocol.
 #[derive(Encode, Decode, MaxEncodedLen, Clone, Copy, Debug, PartialEq, Eq, TypeInfo)]
 pub enum PendingStatus<AccountId> {
-	/// DappStaking on Astar.
 	AstarDappStakingLock(Delegator<AccountId>, Balance),
 	AstarDappStakingUnLock(Delegator<AccountId>, Balance),
 	AstarDappStakingClaimUnlocked(Delegator<AccountId>),

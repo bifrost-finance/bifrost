@@ -903,20 +903,20 @@ fn update_ongoing_time_unit_update_interval_too_short() {
 			SlpV2Error::<Test>::UpdateOngoingTimeUnitIntervalTooShort
 		);
 
-		RelaychainDataProvider::set_block_number(101);
-		// current relaychain block number 101 > update_interval 100 + last update block number 0 =>
+		RelaychainDataProvider::set_block_number(100);
+		// current relaychain block number 100 = update_interval 100 + last update block number 0 =>
 		// Ok
 		assert_ok!(SlpV2::update_ongoing_time_unit(RuntimeOrigin::root(), staking_protocol));
 
-		RelaychainDataProvider::set_block_number(201);
-		// current relaychain block number 201 < update_interval 100 + last update block number 101
+		RelaychainDataProvider::set_block_number(199);
+		// current relaychain block number 199 < update_interval 100 + last update block number 100
 		// => Error
 		assert_noop!(
 			SlpV2::update_ongoing_time_unit(RuntimeOrigin::root(), staking_protocol),
 			SlpV2Error::<Test>::UpdateOngoingTimeUnitIntervalTooShort
 		);
-		RelaychainDataProvider::set_block_number(202);
-		// current relaychain block number 202 > update_interval 100 + last update block number 101
+		RelaychainDataProvider::set_block_number(200);
+		// current relaychain block number 200 = update_interval 100 + last update block number 100
 		// => Ok
 		assert_ok!(SlpV2::update_ongoing_time_unit(RuntimeOrigin::root(), staking_protocol));
 	});
@@ -1007,8 +1007,8 @@ fn update_token_exchange_rate_should_work() {
 			max_update_permill
 		));
 
-		RelaychainDataProvider::set_block_number(101);
-		// current relaychain block number 101 < update_interval 100 + last update block number 0 =>
+		RelaychainDataProvider::set_block_number(102);
+		// current relaychain block number 102 = update_interval 100 + last update block number 2 =>
 		// Ok
 		assert_ok!(SlpV2::update_token_exchange_rate(
 			RuntimeOrigin::root(),

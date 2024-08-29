@@ -112,6 +112,7 @@ use zenlink_protocol::{
 };
 // xcm config
 pub mod xcm_config;
+use bifrost_primitives::{DoNothingRouter, MockXcmTransfer};
 use orml_traits::{currency::MutationHooks, location::RelativeReserveProvider};
 use pallet_evm::{GasWeightMapping, Runner};
 use pallet_identity::legacy::IdentityInfo;
@@ -1608,11 +1609,17 @@ impl bifrost_slp_v2::Config for Runtime {
 	type RuntimeOrigin = RuntimeOrigin;
 	type RuntimeCall = RuntimeCall;
 	type ResponseOrigin = EnsureResponse<Everything>;
-	type WeightInfo = ();
+	type WeightInfo = weights::bifrost_slp_v2::BifrostWeight<Runtime>;
 	type MultiCurrency = Currencies;
 	type ControlOrigin = TechAdminOrCouncil;
+	#[cfg(not(feature = "runtime-benchmarks"))]
 	type XcmTransfer = XTokens;
+	#[cfg(feature = "runtime-benchmarks")]
+	type XcmTransfer = MockXcmTransfer;
+	#[cfg(not(feature = "runtime-benchmarks"))]
 	type XcmSender = XcmRouter;
+	#[cfg(feature = "runtime-benchmarks")]
+	type XcmSender = DoNothingRouter;
 	type VtokenMinting = VtokenMinting;
 	type CurrencyIdConversion = AssetIdMaps<Runtime>;
 	type RelaychainBlockNumberProvider = RelaychainDataProvider<Runtime>;

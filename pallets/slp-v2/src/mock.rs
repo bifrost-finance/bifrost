@@ -19,7 +19,8 @@
 use crate as slp_v2;
 use bifrost_asset_registry::AssetIdMaps;
 use bifrost_primitives::{
-	Amount, Balance, BlockNumber, CurrencyId, DoNothingRouter, SlpOperator, SlpxOperator, BNC, DOT,
+	Amount, Balance, BlockNumber, CurrencyId, DoNothingRouter, MockXcmTransfer, SlpOperator,
+	SlpxOperator, BNC, DOT,
 };
 use frame_support::{
 	derive_impl,
@@ -31,18 +32,16 @@ use frame_support::{
 use frame_system as system;
 use frame_system::EnsureRoot;
 use hex_literal::hex;
-use orml_traits::{xcm_transfer::Transferred, XcmTransfer};
 use pallet_xcm::EnsureResponse;
 use polkadot_parachain_primitives::primitives::Id as ParaId;
 use sp_core::{crypto::AccountId32, ConstU64};
 use sp_runtime::{
 	traits::{BlockNumberProvider, IdentityLookup},
-	BuildStorage, DispatchError,
+	BuildStorage,
 };
 use xcm::{
-	latest::{Asset, Assets, Location, WeightLimit},
-	prelude::{Fungible, Parachain},
-	v4::{AssetId, InteriorLocation, Weight},
+	prelude::Parachain,
+	v4::{InteriorLocation, Weight},
 };
 use xcm_builder::{FixedWeightBounds, FrameTransactionalProcessor};
 use xcm_executor::XcmExecutor;
@@ -265,74 +264,6 @@ impl bifrost_vtoken_minting::Config for Test {
 	type IncentivePoolAccount = IncentivePoolAccount;
 	type VeMinting = ();
 	type AssetIdMaps = AssetIdMaps<Test>;
-}
-
-pub struct MockXcmTransfer;
-impl XcmTransfer<AccountId, Balance, CurrencyId> for MockXcmTransfer {
-	fn transfer(
-		who: AccountId,
-		_currency_id: CurrencyId,
-		amount: Balance,
-		dest: Location,
-		_dest_weight_limit: WeightLimit,
-	) -> Result<Transferred<AccountId>, DispatchError> {
-		Ok(Transferred {
-			sender: who,
-			assets: Default::default(),
-			fee: Asset { id: AssetId(Location::here()), fun: Fungible(amount) },
-			dest,
-		})
-	}
-
-	fn transfer_multiasset(
-		_who: AccountId,
-		_asset: Asset,
-		_dest: Location,
-		_dest_weight_limit: WeightLimit,
-	) -> Result<Transferred<AccountId>, DispatchError> {
-		unimplemented!()
-	}
-
-	fn transfer_with_fee(
-		_who: AccountId,
-		_currency_id: CurrencyId,
-		_amount: Balance,
-		_fee: Balance,
-		_dest: Location,
-		_dest_weight_limit: WeightLimit,
-	) -> Result<Transferred<AccountId>, DispatchError> {
-		unimplemented!()
-	}
-
-	fn transfer_multiasset_with_fee(
-		_who: AccountId,
-		_asset: Asset,
-		_fee: Asset,
-		_dest: Location,
-		_dest_weight_limit: WeightLimit,
-	) -> Result<Transferred<AccountId>, DispatchError> {
-		unimplemented!()
-	}
-
-	fn transfer_multicurrencies(
-		_who: AccountId,
-		_currencies: Vec<(CurrencyId, Balance)>,
-		_fee_item: u32,
-		_dest: Location,
-		_dest_weight_limit: WeightLimit,
-	) -> Result<Transferred<AccountId>, DispatchError> {
-		unimplemented!()
-	}
-
-	fn transfer_multiassets(
-		_who: AccountId,
-		_assets: Assets,
-		_fee: Asset,
-		_dest: Location,
-		_dest_weight_limit: WeightLimit,
-	) -> Result<Transferred<AccountId>, DispatchError> {
-		unimplemented!()
-	}
 }
 
 parameter_types! {
