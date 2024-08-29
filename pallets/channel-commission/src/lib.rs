@@ -28,9 +28,9 @@ use bifrost_primitives::{
 use frame_support::{pallet_prelude::*, PalletId};
 use frame_system::pallet_prelude::*;
 use orml_traits::MultiCurrency;
-use sp_core::U256;
 use sp_io::MultiRemovalResults;
 use sp_runtime::{
+	helpers_128bit::multiply_by_rational_with_rounding,
 	traits::{AccountIdConversion, CheckedAdd, UniqueSaturatedFrom, UniqueSaturatedInto, Zero},
 	PerThing, Percent, Permill, Rounding, SaturatedConversion, Saturating,
 };
@@ -97,10 +97,6 @@ pub mod pallet {
 		InvalidVtoken,
 		/// Error indicating that no changes were made during a modification operation.
 		NoChangesMade,
-		/// Indicates that a conversion operation failed, typically when trying to convert
-		/// between different numeric types (e.g., from a larger to a smaller type) and
-		/// the conversion resulted in a loss of information or an overflow.
-		ConversionFailed,
 		/// Represents an error that occurs when a division operation encounters a divisor of zero.
 		/// This is a critical error, as division by zero is undefined and cannot be performed.
 		DivisionByZero,
@@ -168,6 +164,20 @@ pub mod pallet {
 		},
 		ChannelClaimableCommissionUpdated {
 			channel_id: ChannelId,
+			commission_token: CurrencyId,
+			amount: BalanceOf<T>,
+		},
+		/// Emitted when a Permill calculation fails.
+		/// This event carries the numerator and denominator that caused the failure.
+		CalculationFailed {
+			numerator: BalanceOf<T>,
+			denominator: BalanceOf<T>,
+		},
+		/// Bifrost commission transfer failed.
+		/// Parameters are the commission token and the amount that failed to transfer.
+		BifrostCommissionTransferFailed {
+			from: AccountIdOf<T>,
+			to: AccountIdOf<T>,
 			commission_token: CurrencyId,
 			amount: BalanceOf<T>,
 		},
@@ -751,59 +761,63 @@ impl<T: Config> Pallet<T> {
 
 	pub(crate) fn update_channel_vtoken_shares(channel_id: ChannelId) {
 		// for a channel_id，update the share of all vtoken
-		ChannelVtokenShares::<T>::iter_prefix(channel_id).for_each(
-			|(vtoken, channel_old_share)| {
-				// get the vtoken issuance amount
-				let (old_vtoken_issuance, new_vtoken_issuance) =
-					VtokenIssuanceSnapshots::<T>::get(vtoken);
+		for (vtoken, channel_old_share) in ChannelVtokenShares::<T>::iter_prefix(channel_id) {
+			// get the vtoken issuance amount
+			let (old_vtoken_issuance, new_vtoken_issuance) =
+				VtokenIssuanceSnapshots::<T>::get(vtoken);
 
-				// get the total minted amount of the period
-				let total_mint = PeriodVtokenTotalMint::<T>::get(vtoken).0;
+			// get the total minted amount of the period
+			let total_mint = PeriodVtokenTotalMint::<T>::get(vtoken).0;
 
-				// get the total redeemed amount of the period
-				let total_redeem = PeriodVtokenTotalRedeem::<T>::get(vtoken).0;
+			// get the total redeemed amount of the period
+			let total_redeem = PeriodVtokenTotalRedeem::<T>::get(vtoken).0;
 
-				// only update the share when total_mint > total_redeem
-				if total_redeem < total_mint {
-					// net_mint = total_mint - total_redeem
-					let net_mint = total_mint.saturating_sub(total_redeem);
-					// channel mint
-					let channel_mint = PeriodChannelVtokenMint::<T>::get(channel_id, vtoken).0;
-					// channel_net_mint： channel_share * net_mint
-					let channel_period_net_mint = if total_mint.is_zero() {
-						Zero::zero()
-					} else {
-						Self::calculate_mul_div_result(channel_mint, net_mint, total_mint)
-							.unwrap_or(Zero::zero())
-					};
+			// only update the share when total_mint > total_redeem
+			if total_redeem < total_mint {
+				// net_mint = total_mint - total_redeem
+				let net_mint = total_mint.saturating_sub(total_redeem);
+				// channel mint
+				let channel_mint = PeriodChannelVtokenMint::<T>::get(channel_id, vtoken).0;
+				// channel_net_mint： channel_share * net_mint
+				let channel_period_net_mint = if total_mint.is_zero() {
+					Zero::zero()
+				} else {
+					Self::calculate_mul_div_result(channel_mint, net_mint, total_mint)
+						.unwrap_or(Zero::zero())
+				};
 
-					let numerator =
-						channel_old_share.mul_floor(old_vtoken_issuance) + channel_period_net_mint;
-					let denominator = new_vtoken_issuance;
+				let numerator =
+					channel_old_share.mul_floor(old_vtoken_issuance) + channel_period_net_mint;
+				let denominator = new_vtoken_issuance;
 
-					ChannelVtokenShares::<T>::mutate(channel_id, vtoken, |share| {
-						let channel_new_share: Permill = if denominator.is_zero() {
-							Zero::zero()
-						} else {
-							Permill::from_rational_with_rounding(
+				ChannelVtokenShares::<T>::mutate(channel_id, vtoken, |share| {
+					let channel_new_share: Permill = match denominator.is_zero() {
+						true => Permill::zero(),
+						false => Permill::from_rational_with_rounding(
+							numerator,
+							denominator,
+							Rounding::Down,
+						).unwrap_or_else(|()| {
+							log::error!("Failed to calculate Permill from numerator: {:?} and denominator: {:?}.",numerator, denominator);
+							// Emit the failure event
+							Self::deposit_event(Event::CalculationFailed {
 								numerator,
 								denominator,
-								Rounding::Down,
-							)
-							.unwrap_or_default()
-						};
+							});
+							Permill::zero() // Return zero as a fallback
+						}),
+					};
 
-						*share = channel_new_share;
+					*share = channel_new_share;
 
-						Self::deposit_event(Event::ChannelVtokenSharesUpdated {
-							channel_id,
-							vtoken,
-							share: channel_new_share,
-						});
+					Self::deposit_event(Event::ChannelVtokenSharesUpdated {
+						channel_id,
+						vtoken,
+						share: channel_new_share,
 					});
-				}
-			},
-		);
+				});
+			}
+		}
 	}
 
 	pub(crate) fn clear_bifrost_commissions() {
@@ -830,10 +844,16 @@ impl<T: Config> Pallet<T> {
 				&T::BifrostCommissionReceiver::get(),
 				bifrost_commission,
 			) {
-				log::warn!(
+				log::error!(
 					"Failed to transfer bifrost commission for token: {:?}",
 					commission_token
 				);
+				Self::deposit_event(Event::BifrostCommissionTransferFailed {
+					from: Self::account_id(),
+					to: T::BifrostCommissionReceiver::get(),
+					commission_token,
+					amount: bifrost_commission,
+				});
 			}
 		});
 
@@ -850,11 +870,13 @@ impl<T: Config> Pallet<T> {
 			return Ok(Zero::zero());
 		}
 
-		let result: u128 = U256::from(multiplier_1.saturated_into::<u128>())
-			.saturating_mul(multiplier_2.saturated_into::<u128>().into())
-			.checked_div(divider.saturated_into::<u128>().into())
-			.map(|x| u128::try_from(x).map_err(|_| Error::ConversionFailed))
-			.ok_or(Error::DivisionByZero)??;
+		let result: u128 = multiply_by_rational_with_rounding(
+			multiplier_1.saturated_into::<u128>(),
+			multiplier_2.saturated_into::<u128>(),
+			divider.saturated_into::<u128>(),
+			Rounding::Down,
+		)
+		.ok_or(Error::DivisionByZero)?;
 
 		Ok(BalanceOf::<T>::unique_saturated_from(result))
 	}
