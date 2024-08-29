@@ -20,12 +20,8 @@
 
 #![cfg(test)]
 
-use bifrost_primitives::TryConvertFrom;
-// use balances::Call as BalancesCall;
-use crate::{
-	mock::*, BlockNumberFor, BoundedVec, Config, DispatchError::BadOrigin, UserDefaultFeeCurrency,
-};
-use bifrost_primitives::{CurrencyId, TokenSymbol};
+use std::cmp::Ordering::{Greater, Less};
+
 use frame_support::{
 	assert_noop, assert_ok,
 	dispatch::{GetDispatchInfo, Pays, PostDispatchInfo},
@@ -37,16 +33,27 @@ use pallet_transaction_payment::OnChargeTransaction;
 use sp_runtime::{testing::TestXt, AccountId32};
 use zenlink_protocol::AssetId;
 
+use bifrost_primitives::{
+	currency::WETH, AccountFeeCurrency, BalanceCmp, CurrencyId, TokenSymbol, TryConvertFrom, BNC,
+	DOT, KSM, VDOT,
+};
+
+// use balances::Call as BalancesCall;
+use crate::{
+	mock::*, BlockNumberFor, BoundedVec, Config, DispatchError::BadOrigin, UserDefaultFeeCurrency,
+};
+
 // some common variables
 pub const CHARLIE: AccountId32 = AccountId32::new([0u8; 32]);
 pub const BOB: AccountId32 = AccountId32::new([1u8; 32]);
 pub const ALICE: AccountId32 = AccountId32::new([2u8; 32]);
 pub const DICK: AccountId32 = AccountId32::new([3u8; 32]);
-pub const CURRENCY_ID_0: CurrencyId = CurrencyId::Native(TokenSymbol::BNC);
+pub const CURRENCY_ID_0: CurrencyId = BNC;
 pub const CURRENCY_ID_1: CurrencyId = CurrencyId::Stable(TokenSymbol::KUSD);
-pub const CURRENCY_ID_2: CurrencyId = CurrencyId::Token(TokenSymbol::DOT);
-pub const CURRENCY_ID_3: CurrencyId = CurrencyId::VToken(TokenSymbol::DOT);
-pub const CURRENCY_ID_4: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
+pub const CURRENCY_ID_2: CurrencyId = DOT;
+pub const CURRENCY_ID_3: CurrencyId = VDOT;
+pub const CURRENCY_ID_4: CurrencyId = KSM;
+pub const CURRENCY_ID_5: CurrencyId = WETH;
 
 fn basic_setup() {
 	// Deposit some money in Alice, Bob and Charlie's accounts.
@@ -549,5 +556,250 @@ fn get_currency_asset_id_should_work() {
 		let asset_id = FlexibleFee::get_currency_asset_id(CURRENCY_ID_4).unwrap();
 		let ksm_asset_id = AssetId { chain_id: 2001, asset_type: 2, asset_index: 516 };
 		assert_eq!(asset_id, ksm_asset_id);
+	});
+}
+
+#[test]
+fn get_fee_currency_should_work_with_default_currency() {
+	new_test_ext().execute_with(|| {
+		let origin_signed_alice = RuntimeOrigin::signed(ALICE);
+		assert_ok!(FlexibleFee::set_user_default_fee_currency(
+			origin_signed_alice.clone(),
+			Some(CURRENCY_ID_0)
+		));
+
+		assert_ok!(Currencies::deposit(CURRENCY_ID_0, &ALICE, 100u128.pow(12))); // BNC
+		assert_ok!(Currencies::deposit(CURRENCY_ID_1, &ALICE, 100u128.pow(18))); // KUSD CurrencyNotSupport
+		assert_ok!(Currencies::deposit(CURRENCY_ID_2, &ALICE, 100u128.pow(10))); // DOT
+		assert_ok!(Currencies::deposit(CURRENCY_ID_3, &ALICE, 100u128.pow(10))); // vDOT
+		assert_ok!(Currencies::deposit(CURRENCY_ID_4, &ALICE, 100u128.pow(12))); // KSM CurrencyNotSupport
+		assert_ok!(Currencies::deposit(CURRENCY_ID_5, &ALICE, 100u128.pow(18))); // ETH
+
+		let currency = <Test as AccountFeeCurrency<AccountId>>::get_fee_currency(
+			&ALICE,
+			10u128.pow(18).into(),
+		)
+		.unwrap();
+		assert_eq!(currency, BNC);
+	});
+}
+
+#[test]
+fn get_fee_currency_should_work_with_default_currency_poor() {
+	new_test_ext().execute_with(|| {
+		let origin_signed_alice = RuntimeOrigin::signed(ALICE);
+		assert_ok!(FlexibleFee::set_user_default_fee_currency(
+			origin_signed_alice.clone(),
+			Some(CURRENCY_ID_0)
+		));
+
+		assert_ok!(Currencies::deposit(CURRENCY_ID_0, &ALICE, 1u128.pow(12))); // BNC
+		assert_ok!(Currencies::deposit(CURRENCY_ID_1, &ALICE, 100u128.pow(18))); // KUSD CurrencyNotSupport
+		assert_ok!(Currencies::deposit(CURRENCY_ID_2, &ALICE, 100u128.pow(10))); // DOT
+		assert_ok!(Currencies::deposit(CURRENCY_ID_3, &ALICE, 100u128.pow(10))); // vDOT
+		assert_ok!(Currencies::deposit(CURRENCY_ID_4, &ALICE, 100u128.pow(12))); // KSM CurrencyNotSupport
+		assert_ok!(Currencies::deposit(CURRENCY_ID_5, &ALICE, 100u128.pow(18))); // ETH
+
+		let currency = <Test as AccountFeeCurrency<AccountId>>::get_fee_currency(
+			&ALICE,
+			10u128.pow(18).into(),
+		)
+		.unwrap();
+		assert_eq!(currency, WETH);
+	});
+}
+
+#[test]
+fn get_fee_currency_should_work_with_weth() {
+	new_test_ext().execute_with(|| {
+		assert_ok!(Currencies::deposit(CURRENCY_ID_0, &ALICE, 100u128.pow(12))); // BNC
+		assert_ok!(Currencies::deposit(CURRENCY_ID_1, &ALICE, 100u128.pow(18))); // KUSD CurrencyNotSupport
+		assert_ok!(Currencies::deposit(CURRENCY_ID_2, &ALICE, 100u128.pow(10))); // DOT
+		assert_ok!(Currencies::deposit(CURRENCY_ID_3, &ALICE, 100u128.pow(10))); // vDOT
+		assert_ok!(Currencies::deposit(CURRENCY_ID_4, &ALICE, 100u128.pow(12))); // KSM CurrencyNotSupport
+		assert_ok!(Currencies::deposit(CURRENCY_ID_5, &ALICE, 100u128.pow(18))); // ETH
+
+		let currency = <Test as AccountFeeCurrency<AccountId>>::get_fee_currency(
+			&ALICE,
+			10u128.pow(18).into(),
+		)
+		.unwrap();
+		assert_eq!(currency, WETH);
+	});
+}
+
+#[test]
+fn get_fee_currency_should_work_with_weth_poor() {
+	new_test_ext().execute_with(|| {
+		assert_ok!(Currencies::deposit(CURRENCY_ID_0, &ALICE, 100u128.pow(12))); // BNC
+		assert_ok!(Currencies::deposit(CURRENCY_ID_1, &ALICE, 100u128.pow(18))); // KUSD CurrencyNotSupport
+		assert_ok!(Currencies::deposit(CURRENCY_ID_2, &ALICE, 100u128.pow(10))); // DOT
+		assert_ok!(Currencies::deposit(CURRENCY_ID_3, &ALICE, 100u128.pow(10))); // vDOT
+		assert_ok!(Currencies::deposit(CURRENCY_ID_4, &ALICE, 100u128.pow(12))); // KSM CurrencyNotSupport
+		assert_ok!(Currencies::deposit(CURRENCY_ID_5, &ALICE, 1u128.pow(18))); // ETH
+
+		let asset_order_list_vec: BoundedVec<
+			CurrencyId,
+			<Test as Config>::MaxFeeCurrencyOrderListLen,
+		> = BoundedVec::try_from(vec![CURRENCY_ID_3, CURRENCY_ID_2, CURRENCY_ID_0]).unwrap();
+
+		assert_ok!(FlexibleFee::set_universal_fee_currency_order_list(
+			RuntimeOrigin::root(),
+			asset_order_list_vec.clone()
+		));
+
+		let currency = <Test as AccountFeeCurrency<AccountId>>::get_fee_currency(
+			&ALICE,
+			10u128.pow(18).into(),
+		)
+		.unwrap();
+		assert_eq!(currency, VDOT);
+	});
+}
+
+#[test]
+fn get_fee_currency_should_work_with_universal_fee_currency() {
+	new_test_ext().execute_with(|| {
+		let origin_signed_alice = RuntimeOrigin::signed(ALICE);
+		assert_ok!(FlexibleFee::set_user_default_fee_currency(
+			origin_signed_alice.clone(),
+			Some(CURRENCY_ID_0)
+		));
+
+		assert_ok!(Currencies::deposit(CURRENCY_ID_0, &ALICE, 1u128.pow(12))); // BNC
+		assert_ok!(Currencies::deposit(CURRENCY_ID_1, &ALICE, 100u128.pow(18))); // KUSD CurrencyNotSupport
+		assert_ok!(Currencies::deposit(CURRENCY_ID_2, &ALICE, 100u128.pow(10))); // DOT
+		assert_ok!(Currencies::deposit(CURRENCY_ID_3, &ALICE, 100u128.pow(10))); // vDOT
+		assert_ok!(Currencies::deposit(CURRENCY_ID_4, &ALICE, 100u128.pow(12))); // KSM CurrencyNotSupport
+		assert_ok!(Currencies::deposit(CURRENCY_ID_5, &ALICE, 1u128.pow(18))); // ETH
+
+		let asset_order_list_vec: BoundedVec<
+			CurrencyId,
+			<Test as Config>::MaxFeeCurrencyOrderListLen,
+		> = BoundedVec::try_from(vec![CURRENCY_ID_3, CURRENCY_ID_2, CURRENCY_ID_0]).unwrap();
+
+		assert_ok!(FlexibleFee::set_universal_fee_currency_order_list(
+			RuntimeOrigin::root(),
+			asset_order_list_vec.clone()
+		));
+
+		let currency = <Test as AccountFeeCurrency<AccountId>>::get_fee_currency(
+			&ALICE,
+			10u128.pow(18).into(),
+		)
+		.unwrap();
+		assert_eq!(currency, VDOT);
+	});
+}
+
+#[test]
+fn get_fee_currency_should_work_with_universal_fee_currency_poor() {
+	new_test_ext().execute_with(|| {
+		assert_ok!(Currencies::deposit(CURRENCY_ID_0, &ALICE, 1u128.pow(12))); // BNC
+		assert_ok!(Currencies::deposit(CURRENCY_ID_1, &ALICE, 100u128.pow(18))); // KUSD CurrencyNotSupport
+		assert_ok!(Currencies::deposit(CURRENCY_ID_2, &ALICE, 100u128.pow(10))); // DOT
+		assert_ok!(Currencies::deposit(CURRENCY_ID_3, &ALICE, 1u128.pow(10))); // vDOT
+		assert_ok!(Currencies::deposit(CURRENCY_ID_4, &ALICE, 100u128.pow(12))); // KSM CurrencyNotSupport
+		assert_ok!(Currencies::deposit(CURRENCY_ID_5, &ALICE, 1u128.pow(18))); // ETH
+
+		let asset_order_list_vec: BoundedVec<
+			CurrencyId,
+			<Test as Config>::MaxFeeCurrencyOrderListLen,
+		> = BoundedVec::try_from(vec![CURRENCY_ID_3, CURRENCY_ID_2, CURRENCY_ID_0]).unwrap();
+
+		assert_ok!(FlexibleFee::set_universal_fee_currency_order_list(
+			RuntimeOrigin::root(),
+			asset_order_list_vec.clone()
+		));
+
+		let currency = <Test as AccountFeeCurrency<AccountId>>::get_fee_currency(
+			&ALICE,
+			10u128.pow(18).into(),
+		)
+		.unwrap();
+		assert_eq!(currency, DOT);
+	});
+}
+
+#[test]
+fn get_fee_currency_should_work_with_all_currency_poor() {
+	new_test_ext().execute_with(|| {
+		let origin_signed_alice = RuntimeOrigin::signed(ALICE);
+		assert_ok!(FlexibleFee::set_user_default_fee_currency(
+			origin_signed_alice.clone(),
+			Some(CURRENCY_ID_0)
+		));
+
+		assert_ok!(Currencies::deposit(CURRENCY_ID_0, &ALICE, 7u128.pow(12))); // BNC
+		assert_ok!(Currencies::deposit(CURRENCY_ID_1, &ALICE, 6u128.pow(18))); // KUSD CurrencyNotSupport
+		assert_ok!(Currencies::deposit(CURRENCY_ID_2, &ALICE, 5u128.pow(10))); // DOT
+		assert_ok!(Currencies::deposit(CURRENCY_ID_3, &ALICE, 4u128.pow(10))); // vDOT
+		assert_ok!(Currencies::deposit(CURRENCY_ID_4, &ALICE, 3u128.pow(12))); // KSM CurrencyNotSupport
+		assert_ok!(Currencies::deposit(CURRENCY_ID_5, &ALICE, 2u128.pow(18))); // ETH
+
+		let asset_order_list_vec: BoundedVec<
+			CurrencyId,
+			<Test as Config>::MaxFeeCurrencyOrderListLen,
+		> = BoundedVec::try_from(vec![CURRENCY_ID_3, CURRENCY_ID_2, CURRENCY_ID_0]).unwrap();
+
+		assert_ok!(FlexibleFee::set_universal_fee_currency_order_list(
+			RuntimeOrigin::root(),
+			asset_order_list_vec.clone()
+		));
+
+		let currency = <Test as AccountFeeCurrency<AccountId>>::get_fee_currency(
+			&ALICE,
+			10u128.pow(18).into(),
+		)
+		.unwrap();
+		assert_eq!(currency, BNC);
+	});
+}
+
+#[test]
+fn cmp_with_precision_should_work_with_weth() {
+	new_test_ext().execute_with(|| {
+		assert_ok!(Currencies::deposit(CURRENCY_ID_5, &ALICE, 10u128.pow(18) - 1)); // ETH
+
+		let ordering = <Test as BalanceCmp<AccountId>>::cmp_with_precision(
+			&ALICE,
+			&WETH,
+			10u128.pow(18),
+			18u32,
+		)
+		.unwrap();
+		assert_eq!(ordering, Less);
+	});
+}
+
+#[test]
+fn cmp_with_precision_should_work_with_dot() {
+	new_test_ext().execute_with(|| {
+		assert_ok!(Currencies::deposit(CURRENCY_ID_2, &ALICE, 10u128.pow(11) + 1)); // DOT
+
+		let ordering = <Test as BalanceCmp<AccountId>>::cmp_with_precision(
+			&ALICE,
+			&DOT,
+			10u128.pow(18),
+			18u32,
+		)
+		.unwrap();
+		assert_eq!(ordering, Greater);
+	});
+}
+
+#[test]
+fn cmp_with_precision_should_work_with_bnc() {
+	new_test_ext().execute_with(|| {
+		assert_ok!(Currencies::deposit(CURRENCY_ID_0, &ALICE, 11u128.pow(12))); // BNC
+
+		let ordering = <Test as BalanceCmp<AccountId>>::cmp_with_precision(
+			&ALICE,
+			&BNC,
+			10u128.pow(18),
+			18u32,
+		)
+		.unwrap();
+		assert_eq!(ordering, Greater);
 	});
 }

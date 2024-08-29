@@ -20,7 +20,10 @@ use frame_support::{
 	pallet_prelude::Get,
 	traits::tokens::{Fortitude, Preservation},
 };
-use sp_runtime::{helpers_128bit::multiply_by_rational_with_rounding, traits::Convert, Rounding};
+use sp_core::U256;
+use sp_runtime::{
+	helpers_128bit::multiply_by_rational_with_rounding, traits::Convert, DispatchError, Rounding,
+};
 use sp_std::marker::PhantomData;
 use xcm::latest::Weight;
 
@@ -67,21 +70,27 @@ where
 	>,
 {
 	type Output = (Balance, Weight);
+	type Error = DispatchError;
 
-	fn get_balance_in_currency(to_currency: CurrencyId, account: &T::AccountId) -> Self::Output {
-		let from_currency = AC::get(account);
+	fn get_balance_in_currency(
+		to_currency: CurrencyId,
+		account: &T::AccountId,
+		fee: U256,
+	) -> Result<Self::Output, DispatchError> {
+		let from_currency = AC::get_fee_currency(account, fee)
+			.map_err(|_| DispatchError::Other("Get Currency Error."))?;
 		let account_balance =
 			I::reducible_balance(from_currency, account, Preservation::Preserve, Fortitude::Polite);
 		let price_weight = T::DbWeight::get().reads(2); // 1 read to get currency and 1 read to get balance
 
 		if from_currency == to_currency {
-			return (account_balance, price_weight);
+			return Ok((account_balance, price_weight));
 		}
 
 		let Some((converted, _)) = C::convert((from_currency, to_currency, account_balance)) else {
-			return (0, price_weight);
+			return Ok((0, price_weight));
 		};
-		(converted, price_weight)
+		Ok((converted, price_weight))
 	}
 }
 
