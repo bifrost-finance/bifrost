@@ -1375,6 +1375,7 @@ impl bifrost_fee_share::Config for Runtime {
 	type ControlOrigin = CoreAdminOrCouncil;
 	type WeightInfo = weights::bifrost_fee_share::BifrostWeight<Runtime>;
 	type FeeSharePalletId = FeeSharePalletId;
+	type PriceFeeder = Prices;
 }
 
 impl bifrost_cross_in_out::Config for Runtime {
