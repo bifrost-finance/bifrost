@@ -34,7 +34,7 @@ use sp_runtime::traits::UniqueSaturatedFrom;
 benchmarks! {
 	set_vtoken {
 		let origin = T::ControlOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?;
-	}: _<T::RuntimeOrigin>(origin,VDOT,1_000_000u32.into(),Permill::from_percent(2),1000u32.into(),1000u32.into(),true,Some(Permill::from_percent(2)))
+	}: _<T::RuntimeOrigin>(origin,VDOT,1_000_000u32.into(),Permill::from_percent(2),1000u32.into(),1000u32.into(),true,Some(Permill::from_percent(2)),Permill::from_percent(2))
 
 	charge {
 		let test_account: T::AccountId = account("seed",1,1);
@@ -52,7 +52,8 @@ benchmarks! {
 			1000u32.into(),
 			1000u32.into(),
 			true,
-			Some(Permill::from_percent(2))
+			Some(Permill::from_percent(2)),
+			Permill::from_percent(2)
 		));
 	}: _<T::RuntimeOrigin>(origin,VDOT)
 
@@ -67,7 +68,8 @@ benchmarks! {
 			1000u32.into(),
 			1000u32.into(),
 			true,
-			Some(Permill::from_percent(2))
+			Some(Permill::from_percent(2)),
+			Permill::from_percent(2)
 		));
 	}: {
 		BuyBack::<T>::on_initialize(BlockNumberFor::<T>::from(0u32));

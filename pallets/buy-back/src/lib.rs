@@ -36,7 +36,7 @@ use cumulus_primitives_core::ParaId;
 use frame_support::{
 	pallet_prelude::*,
 	sp_runtime::{
-		traits::{AccountIdConversion, Zero},
+		traits::{AccountIdConversion, One, Zero},
 		Permill, SaturatedConversion,
 	},
 	transactional, PalletId,
@@ -141,6 +141,9 @@ pub mod pallet {
 	#[pallet::storage]
 	pub type SwapOutMin<T: Config> = StorageMap<_, Twox64Concat, CurrencyIdOf<T>, u128>;
 
+	#[pallet::storage]
+	pub type AddLiquiditySwapOutMin<T: Config> = StorageMap<_, Twox64Concat, CurrencyIdOf<T>, u128>;
+
 	/// Information on buybacks and add liquidity
 	#[derive(Clone, Encode, Decode, PartialEq, Eq, RuntimeDebug, TypeInfo)]
 	pub struct Info<BalanceOf, BlockNumberFor> {
@@ -158,7 +161,10 @@ pub mod pallet {
 		add_liquidity_duration: BlockNumberFor,
 		/// The last time liquidity was added.
 		last_add_liquidity: BlockNumberFor,
+		/// The destruction ratio of BNC.
 		destruction_ratio: Option<Permill>,
+		/// The bais of the token value to be swapped.
+		bais: Permill,
 	}
 
 	#[pallet::hooks]
@@ -171,27 +177,63 @@ pub mod pallet {
 					continue;
 				}
 
-				if info.last_add_liquidity + info.add_liquidity_duration == n {
-					if let Some(e) =
-						Self::add_liquidity(&liquidity_address, currency_id, &info).err()
-					{
-						log::error!(
-							target: "buy-back::add_liquidity",
-							"Received invalid justification for {:?}",
-							e,
-						);
-						Self::deposit_event(Event::AddLiquidityFailed {
+				match info.last_add_liquidity + info.add_liquidity_duration {
+					target_block if target_block - One::one() == n => {
+						if let Some(e) = Self::set_add_liquidity_swap_out_min(
+							&liquidity_address,
 							currency_id,
-							block_number: n,
-						});
-					} else {
-						Self::deposit_event(Event::AddLiquiditySuccess {
-							currency_id,
-							block_number: n,
-						});
-					}
-					info.last_add_liquidity = info.last_add_liquidity + info.add_liquidity_duration;
-					Infos::<T>::insert(currency_id, info.clone());
+							&info,
+						)
+						.err()
+						{
+							log::error!(
+								target: "buy-back::set_add_liquidity_swap_out_min",
+								"Received invalid justification for {:?}",
+								e,
+							);
+							Self::deposit_event(Event::SetSwapOutMinFailed {
+								currency_id,
+								block_number: n,
+							});
+						} else {
+							Self::deposit_event(Event::SetSwapOutMinSuccess {
+								currency_id,
+								block_number: n,
+							});
+						}
+					},
+					target_block if target_block == n => {
+						if let Some(swap_out_min) = AddLiquiditySwapOutMin::<T>::get(currency_id) {
+							if let Some(e) = Self::add_liquidity(
+								&liquidity_address,
+								currency_id,
+								&info,
+								swap_out_min,
+							)
+							.err()
+							{
+								log::error!(
+									target: "buy-back::add_liquidity",
+									"Received invalid justification for {:?}",
+									e,
+								);
+								Self::deposit_event(Event::AddLiquidityFailed {
+									currency_id,
+									block_number: n,
+								});
+							} else {
+								Self::deposit_event(Event::AddLiquiditySuccess {
+									currency_id,
+									block_number: n,
+								});
+							}
+							info.last_add_liquidity =
+								info.last_add_liquidity + info.add_liquidity_duration;
+							Infos::<T>::insert(currency_id, info.clone());
+							AddLiquiditySwapOutMin::<T>::remove(currency_id);
+						}
+					},
+					_ => (),
 				}
 
 				match Self::get_target_block(info.last_buyback, info.buyback_duration) {
@@ -219,7 +261,7 @@ pub mod pallet {
 						if target_block ==
 							(n - info.last_buyback)
 								.saturated_into::<u32>()
-								.saturating_sub(1) =>
+								.saturating_sub(One::one()) =>
 						if let Some(swap_out_min) = SwapOutMin::<T>::get(currency_id) {
 							if let Some(e) =
 								Self::buy_back(&buyback_address, currency_id, &info, swap_out_min)
@@ -265,6 +307,7 @@ pub mod pallet {
 			add_liquidity_duration: BlockNumberFor<T>,
 			if_auto: bool,
 			destruction_ratio: Option<Permill>,
+			bais: Permill,
 		) -> DispatchResult {
 			T::ControlOrigin::ensure_origin(origin)?;
 
@@ -284,6 +327,7 @@ pub mod pallet {
 				add_liquidity_duration,
 				last_add_liquidity: now,
 				destruction_ratio,
+				bais,
 			};
 			Infos::<T>::insert(currency_id, info.clone());
 
@@ -341,11 +385,12 @@ pub mod pallet {
 			let balance = T::MultiCurrency::free_balance(currency_id, &buyback_address);
 			ensure!(balance >= info.min_swap_value, Error::<T>::NotEnoughBalance);
 			let path = Self::get_path(currency_id)?;
+			let amount_out_min = swap_out_min.saturating_sub(info.bais * swap_out_min);
 
 			T::DexOperator::inner_swap_exact_assets_for_assets(
 				buyback_address,
 				info.min_swap_value.saturated_into(),
-				swap_out_min,
+				amount_out_min,
 				&path,
 				&buyback_address,
 			)?;
@@ -369,19 +414,14 @@ pub mod pallet {
 			liquidity_address: &AccountIdOf<T>,
 			currency_id: CurrencyId,
 			info: &Info<BalanceOf<T>, BlockNumberFor<T>>,
+			swap_out_min: u128,
 		) -> DispatchResult {
-			let asset_id: AssetId =
-				AssetId::try_convert_from(currency_id, T::ParachainId::get().into())
-					.map_err(|_| DispatchError::Other("Conversion Error."))?;
-			let bnc_asset_id: AssetId =
-				AssetId::try_convert_from(BNC, T::ParachainId::get().into())
-					.map_err(|_| DispatchError::Other("Conversion Error."))?;
-			let path = vec![asset_id, bnc_asset_id];
+			let path = Self::get_path(currency_id)?;
 			let balance = T::MultiCurrency::free_balance(currency_id, &liquidity_address);
 			let token_balance = info.proportion * balance;
 			ensure!(token_balance > Zero::zero(), Error::<T>::NotEnoughBalance);
+			let amount_out_min = swap_out_min.saturating_sub(info.bais * swap_out_min);
 
-			let amount_out_min = 0;
 			T::DexOperator::inner_swap_exact_assets_for_assets(
 				liquidity_address,
 				token_balance.saturated_into(),
@@ -396,8 +436,8 @@ pub mod pallet {
 			let amount_1_min = 0;
 			T::DexOperator::inner_add_liquidity(
 				liquidity_address,
-				asset_id,
-				bnc_asset_id,
+				path[0],
+				path[path.len() - 1],
 				remaining_balance.saturated_into(),
 				bnc_balance.saturated_into(),
 				amount_0_min,
@@ -451,6 +491,21 @@ pub mod pallet {
 				&path,
 			)?;
 			SwapOutMin::<T>::insert(currency_id, amounts[amounts.len() - 1]);
+			Ok(())
+		}
+
+		pub fn set_add_liquidity_swap_out_min(
+			liquidity_address: &AccountIdOf<T>,
+			currency_id: CurrencyId,
+			info: &Info<BalanceOf<T>, BlockNumberFor<T>>,
+		) -> DispatchResult {
+			let path = Self::get_path(currency_id)?;
+			let balance = T::MultiCurrency::free_balance(currency_id, &liquidity_address);
+			let token_balance = info.proportion * balance;
+			ensure!(token_balance > Zero::zero(), Error::<T>::NotEnoughBalance);
+			let amounts =
+				T::DexOperator::get_amount_out_by_path(token_balance.saturated_into(), &path)?;
+			AddLiquiditySwapOutMin::<T>::insert(currency_id, amounts[amounts.len() - 1]);
 			Ok(())
 		}
 	}
