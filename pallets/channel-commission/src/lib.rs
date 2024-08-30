@@ -100,6 +100,8 @@ pub mod pallet {
 		/// Represents an error that occurs when a division operation encounters a divisor of zero.
 		/// This is a critical error, as division by zero is undefined and cannot be performed.
 		DivisionByZero,
+		/// Error indicating that the removal operation was not completed successfully.
+		RemovalNotComplete,
 	}
 
 	#[pallet::event]
@@ -180,6 +182,12 @@ pub mod pallet {
 			to: AccountIdOf<T>,
 			commission_token: CurrencyId,
 			amount: BalanceOf<T>,
+		},
+		/// Error event indicating that the removal process of clearing was not completed.
+		RemovalNotCompleteError {
+			target_num: u32,
+			limit: u32,
+			executed_num: u32,
 		},
 	}
 
@@ -380,25 +388,25 @@ pub mod pallet {
 			Channels::<T>::remove(channel_id);
 
 			// remove the channel from ChannelCommissionTokenRates storage
-			check_removed_all(ChannelCommissionTokenRates::<T>::clear_prefix(
+			Self::check_removed_all(ChannelCommissionTokenRates::<T>::clear_prefix(
 				channel_id,
 				REMOVE_TOKEN_LIMIT,
 				None,
-			));
+			))?;
 
 			// remove the channel from ChannelVtokenShares storage
-			check_removed_all(ChannelVtokenShares::<T>::clear_prefix(
+			Self::check_removed_all(ChannelVtokenShares::<T>::clear_prefix(
 				channel_id,
 				REMOVE_TOKEN_LIMIT,
 				None,
-			));
+			))?;
 
 			// remove the channel from PeriodChannelVtokenMint storage
-			check_removed_all(PeriodChannelVtokenMint::<T>::clear_prefix(
+			Self::check_removed_all(PeriodChannelVtokenMint::<T>::clear_prefix(
 				channel_id,
 				REMOVE_TOKEN_LIMIT,
 				None,
-			));
+			))?;
 
 			Self::deposit_event(Event::ChannelRemoved { channel_id });
 
@@ -858,7 +866,16 @@ impl<T: Config> Pallet<T> {
 		});
 
 		// clear PeriodClearedCommissions
-		check_removed_all(PeriodClearedCommissions::<T>::clear(REMOVE_TOKEN_LIMIT, None));
+		let res = PeriodClearedCommissions::<T>::clear(REMOVE_TOKEN_LIMIT, None);
+		let executed_num = res.backend;
+		if let Err(_) = Self::check_removed_all(res) {
+			log::error!("The removal process was not complete; cursor is still present.");
+			Self::deposit_event(Event::RemovalNotCompleteError {
+				target_num: PeriodClearedCommissions::<T>::iter().count() as u32,
+				limit: REMOVE_TOKEN_LIMIT,
+				executed_num,
+			});
+		}
 	}
 
 	pub(crate) fn calculate_mul_div_result(
@@ -914,6 +931,11 @@ impl<T: Config> Pallet<T> {
 			Self::deposit_event(Event::CommissionClaimed { channel_id, commission_token, amount });
 		}
 
+		Ok(())
+	}
+
+	fn check_removed_all(res: MultiRemovalResults) -> Result<(), Error<T>> {
+		ensure!(res.maybe_cursor.is_none(), Error::<T>::RemovalNotComplete);
 		Ok(())
 	}
 }
@@ -997,8 +1019,4 @@ impl<T: Config> SlpHostingFeeProvider<CurrencyId, BalanceOf<T>, AccountIdOf<T>> 
 
 		Ok(())
 	}
-}
-
-fn check_removed_all(res: MultiRemovalResults) {
-	assert!(res.maybe_cursor.is_none());
 }
