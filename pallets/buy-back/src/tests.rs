@@ -34,7 +34,7 @@ const LIQUID_PROPORTION: Permill = Permill::from_percent(2);
 fn set_vtoken_should_not_work() {
 	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
 		let destruction_ratio = Some(Permill::from_percent(2));
-		let bais: Permill = Permill::from_percent(10);
+		let bias: Permill = Permill::from_percent(10);
 		assert_noop!(
 			BuyBack::set_vtoken(
 				RuntimeOrigin::signed(ALICE),
@@ -45,7 +45,7 @@ fn set_vtoken_should_not_work() {
 				LIQUID_DURATION,
 				true,
 				destruction_ratio,
-				bais
+				bias
 			),
 			Error::<Runtime>::CurrencyIdError
 		);
@@ -60,7 +60,7 @@ fn set_vtoken_should_not_work() {
 				LIQUID_DURATION,
 				true,
 				destruction_ratio,
-				bais
+				bias
 			),
 			Error::<Runtime>::ZeroDuration
 		);
@@ -75,7 +75,7 @@ fn set_vtoken_should_not_work() {
 				LIQUID_DURATION,
 				true,
 				destruction_ratio,
-				bais
+				bias
 			),
 			Error::<Runtime>::ZeroMinSwapValue
 		);
@@ -87,7 +87,7 @@ fn buy_back_with_burn_should_work() {
 	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
 		let zenlink_pair_account_id = init_zenlink(PARAID);
 		let destruction_ratio = Some(Permill::from_percent(2));
-		let bais: Permill = Permill::from_percent(10);
+		let bias: Permill = Permill::from_percent(10);
 
 		assert_ok!(BuyBack::set_vtoken(
 			RuntimeOrigin::signed(ALICE),
@@ -98,7 +98,7 @@ fn buy_back_with_burn_should_work() {
 			LIQUID_DURATION,
 			true,
 			destruction_ratio,
-			bais
+			bias
 		));
 		let buyback_account = <Runtime as Config>::BuyBackAccount::get().into_account_truncating();
 		let incentive_account = IncentivePalletId::get().into_account_truncating();
@@ -125,7 +125,7 @@ fn buy_back_no_burn_should_work() {
 	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
 		let zenlink_pair_account_id = init_zenlink(PARAID);
 		let destruction_ratio = Some(Permill::from_percent(0));
-		let bais: Permill = Permill::from_percent(10);
+		let bias: Permill = Permill::from_percent(10);
 
 		assert_ok!(BuyBack::set_vtoken(
 			RuntimeOrigin::signed(ALICE),
@@ -136,7 +136,7 @@ fn buy_back_no_burn_should_work() {
 			LIQUID_DURATION,
 			true,
 			destruction_ratio,
-			bais
+			bias
 		));
 		let buyback_account = <Runtime as Config>::BuyBackAccount::get().into_account_truncating();
 		let incentive_account = IncentivePalletId::get().into_account_truncating();
@@ -163,7 +163,7 @@ fn on_initialize_no_burn_should_work() {
 	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
 		let zenlink_pair_account_id = init_zenlink(PARAID);
 		let destruction_ratio = None;
-		let bais: Permill = Permill::from_percent(10);
+		let bias: Permill = Permill::from_percent(10);
 
 		assert_ok!(BuyBack::set_vtoken(
 			RuntimeOrigin::signed(ALICE),
@@ -174,7 +174,7 @@ fn on_initialize_no_burn_should_work() {
 			LIQUID_DURATION,
 			true,
 			destruction_ratio,
-			bais
+			bias
 		));
 		let buyback_account = <Runtime as Config>::BuyBackAccount::get().into_account_truncating();
 		let incentive_account = IncentivePalletId::get().into_account_truncating();
@@ -201,7 +201,7 @@ fn on_initialize_with_burn_should_work() {
 	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
 		let zenlink_pair_account_id = init_zenlink(PARAID);
 		let destruction_ratio = Some(Permill::from_percent(10));
-		let bais: Permill = Permill::from_percent(10);
+		let bias: Permill = Permill::from_percent(10);
 
 		assert_ok!(BuyBack::set_vtoken(
 			RuntimeOrigin::signed(ALICE),
@@ -212,7 +212,7 @@ fn on_initialize_with_burn_should_work() {
 			LIQUID_DURATION,
 			true,
 			destruction_ratio,
-			bais
+			bias
 		));
 		let buyback_account = <Runtime as Config>::BuyBackAccount::get().into_account_truncating();
 		let incentive_account = IncentivePalletId::get().into_account_truncating();
@@ -236,11 +236,11 @@ fn on_initialize_with_burn_should_work() {
 }
 
 #[test]
-fn on_initialize_with_bais_should_work() {
+fn on_initialize_with_bias_should_work() {
 	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
 		let zenlink_pair_account_id = init_zenlink(PARAID);
 		let destruction_ratio = None;
-		let bais: Permill = Permill::from_percent(10);
+		let bias: Permill = Permill::from_percent(10);
 
 		assert_ok!(BuyBack::set_vtoken(
 			RuntimeOrigin::signed(ALICE),
@@ -251,7 +251,7 @@ fn on_initialize_with_bais_should_work() {
 			LIQUID_DURATION,
 			true,
 			destruction_ratio,
-			bais
+			bias
 		));
 		let buyback_account = <Runtime as Config>::BuyBackAccount::get().into_account_truncating();
 		let incentive_account = IncentivePalletId::get().into_account_truncating();
@@ -286,11 +286,11 @@ fn on_initialize_with_bais_should_work() {
 }
 
 #[test]
-fn on_initialize_with_bais_should_not_work() {
+fn on_initialize_with_bias_should_not_work() {
 	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
 		let zenlink_pair_account_id = init_zenlink(PARAID);
 		let destruction_ratio = None;
-		let bais: Permill = Permill::from_percent(5);
+		let bias: Permill = Permill::from_percent(5);
 
 		assert_ok!(BuyBack::set_vtoken(
 			RuntimeOrigin::signed(ALICE),
@@ -301,7 +301,7 @@ fn on_initialize_with_bais_should_not_work() {
 			LIQUID_DURATION,
 			true,
 			destruction_ratio,
-			bais
+			bias
 		));
 		let buyback_account = <Runtime as Config>::BuyBackAccount::get().into_account_truncating();
 		let incentive_account = IncentivePalletId::get().into_account_truncating();

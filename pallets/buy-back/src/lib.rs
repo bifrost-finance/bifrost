@@ -163,8 +163,8 @@ pub mod pallet {
 		last_add_liquidity: BlockNumberFor,
 		/// The destruction ratio of BNC.
 		destruction_ratio: Option<Permill>,
-		/// The bais of the token value to be swapped.
-		bais: Permill,
+		/// The bias of the token value to be swapped.
+		bias: Permill,
 	}
 
 	#[pallet::hooks]
@@ -307,7 +307,7 @@ pub mod pallet {
 			add_liquidity_duration: BlockNumberFor<T>,
 			if_auto: bool,
 			destruction_ratio: Option<Permill>,
-			bais: Permill,
+			bias: Permill,
 		) -> DispatchResult {
 			T::ControlOrigin::ensure_origin(origin)?;
 
@@ -327,7 +327,7 @@ pub mod pallet {
 				add_liquidity_duration,
 				last_add_liquidity: now,
 				destruction_ratio,
-				bais,
+				bias,
 			};
 			Infos::<T>::insert(currency_id, info.clone());
 
@@ -385,7 +385,7 @@ pub mod pallet {
 			let balance = T::MultiCurrency::free_balance(currency_id, &buyback_address);
 			ensure!(balance >= info.min_swap_value, Error::<T>::NotEnoughBalance);
 			let path = Self::get_path(currency_id)?;
-			let amount_out_min = swap_out_min.saturating_sub(info.bais * swap_out_min);
+			let amount_out_min = swap_out_min.saturating_sub(info.bias * swap_out_min);
 
 			T::DexOperator::inner_swap_exact_assets_for_assets(
 				buyback_address,
@@ -420,7 +420,7 @@ pub mod pallet {
 			let balance = T::MultiCurrency::free_balance(currency_id, &liquidity_address);
 			let token_balance = info.proportion * balance;
 			ensure!(token_balance > Zero::zero(), Error::<T>::NotEnoughBalance);
-			let amount_out_min = swap_out_min.saturating_sub(info.bais * swap_out_min);
+			let amount_out_min = swap_out_min.saturating_sub(info.bias * swap_out_min);
 
 			T::DexOperator::inner_swap_exact_assets_for_assets(
 				liquidity_address,
