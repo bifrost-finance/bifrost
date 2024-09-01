@@ -155,19 +155,14 @@ pub type DerivativeIndex = u16;
 
 pub type TimeStampedPrice = orml_oracle::TimestampedValue<Price, Moment>;
 
-/// Shiden,kusama chain of Astar
-pub type ShidenParachainId = ConstU32<2007>;
+pub type AstarParachainId = ConstU32<2006>;
 
-/// Moonriver, kusama chain of Moonbeam
-pub type MoonriverParachainId = ConstU32<2023>;
+pub type MoonbeamParachainId = ConstU32<2024>;
 
-/// Hydration, polkadot chain of Hydration
 pub type HydrationParachainId = ConstU32<2034>;
 
-/// Manta, polkadot chain of Manta
 pub type MantaParachainId = ConstU32<2104>;
 
-/// Interlay, polkadot chain of Interlay
 pub type InterlayParachainId = ConstU32<2032>;
 
 #[derive(

@@ -25,8 +25,9 @@ use crate::{Config, DispatchResult, QueryResponseManager};
 use bifrost_asset_registry::AssetIdMaps;
 use bifrost_primitives::{
 	currency::{BNC, KSM, MANTA},
-	Amount, Balance, CurrencyId, DoNothingExecuteXcm, DoNothingRouter, SlpxOperator, TokenSymbol,
-	XcmDestWeightAndFeeHandler, XcmOperationType,
+	Amount, AstarParachainId, Balance, CurrencyId, DoNothingExecuteXcm, DoNothingRouter,
+	HydrationParachainId, InterlayParachainId, MantaParachainId, MoonbeamParachainId, SlpxOperator,
+	TokenSymbol, XcmDestWeightAndFeeHandler, XcmOperationType,
 };
 pub use cumulus_primitives_core::ParaId;
 use frame_support::{
@@ -267,11 +268,11 @@ impl bifrost_vtoken_minting::Config for Runtime {
 	type WeightInfo = ();
 	type OnRedeemSuccess = ();
 	type XcmTransfer = XTokens;
-	type AstarParachainId = ConstU32<2007>;
-	type MoonbeamParachainId = ConstU32<2023>;
-	type HydradxParachainId = ConstU32<2034>;
-	type MantaParachainId = ConstU32<2104>;
-	type InterlayParachainId = ConstU32<2032>;
+	type AstarParachainId = AstarParachainId;
+	type MoonbeamParachainId = MoonbeamParachainId;
+	type HydradxParachainId = HydrationParachainId;
+	type MantaParachainId = MantaParachainId;
+	type InterlayParachainId = InterlayParachainId;
 	type ChannelCommission = ();
 	type MaxLockRecords = ConstU32<100>;
 	type IncentivePoolAccount = IncentivePoolAccount;

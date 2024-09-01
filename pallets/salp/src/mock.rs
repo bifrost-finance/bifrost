@@ -53,6 +53,10 @@ use zenlink_protocol::{
 };
 
 use crate as salp;
+use bifrost_primitives::{
+	AstarParachainId, HydrationParachainId, InterlayParachainId, MantaParachainId,
+	MoonbeamParachainId,
+};
 
 pub(crate) type AccountId = <<Signature as sp_runtime::traits::Verify>::Signer as sp_runtime::traits::IdentifyAccount>::AccountId;
 pub(crate) type Block = frame_system::mocking::MockBlock<Test>;
@@ -431,12 +435,12 @@ impl bifrost_vtoken_minting::Config for Test {
 	type WeightInfo = ();
 	type OnRedeemSuccess = ();
 	type XcmTransfer = XTokens;
-	type AstarParachainId = ConstU32<2007>;
-	type MoonbeamParachainId = ConstU32<2023>;
+	type AstarParachainId = AstarParachainId;
+	type MoonbeamParachainId = MoonbeamParachainId;
+	type HydradxParachainId = HydrationParachainId;
+	type MantaParachainId = MantaParachainId;
+	type InterlayParachainId = InterlayParachainId;
 	type BifrostSlpx = SlpxInterface;
-	type HydradxParachainId = ConstU32<2034>;
-	type MantaParachainId = ConstU32<2104>;
-	type InterlayParachainId = ConstU32<2032>;
 	type ChannelCommission = ();
 	type MaxLockRecords = ConstU32<100>;
 	type IncentivePoolAccount = IncentivePoolAccount;
