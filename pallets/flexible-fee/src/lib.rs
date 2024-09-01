@@ -20,9 +20,10 @@
 
 pub use crate::pallet::*;
 use bifrost_primitives::{
-	currency::WETH,
+	currency::{VGLMR, VMANTA, WETH},
 	traits::{FeeGetter, XcmDestWeightAndFeeHandler},
-	AccountFeeCurrency, CurrencyId, ExtraFeeName, TryConvertFrom, XcmOperationType, BNC,
+	AccountFeeCurrency, BalanceCmp, CurrencyId, ExtraFeeName, TryConvertFrom, XcmOperationType,
+	BNC, DOT, GLMR, MANTA, VBNC, VDOT,
 };
 use bifrost_xcm_interface::{polkadot::RelaychainCall, traits::parachains, PolkadotXcmCall};
 use core::convert::Into;
@@ -30,6 +31,8 @@ use cumulus_primitives_core::ParaId;
 use frame_support::{
 	pallet_prelude::*,
 	traits::{
+		fungibles::Inspect,
+		tokens::{Fortitude, Preservation},
 		Currency, ExistenceRequirement, Get, Imbalance, OnUnbalanced, ReservableCurrency,
 		WithdrawReasons,
 	},
@@ -42,12 +45,13 @@ use orml_traits::MultiCurrency;
 use pallet_transaction_payment::OnChargeTransaction;
 use polkadot_parachain_primitives::primitives::Sibling;
 use sp_arithmetic::traits::{CheckedAdd, SaturatedConversion, UniqueSaturatedInto};
+use sp_core::U256;
 use sp_runtime::{
 	traits::{AccountIdConversion, DispatchInfoOf, PostDispatchInfoOf, Saturating, Zero},
 	transaction_validity::TransactionValidityError,
 	BoundedVec,
 };
-use sp_std::{boxed::Box, vec, vec::Vec};
+use sp_std::{boxed::Box, cmp::Ordering, vec, vec::Vec};
 pub use weights::WeightInfo;
 use xcm::{prelude::Unlimited, v4::prelude::*};
 use zenlink_protocol::{AssetBalance, AssetId, ExportZenlink};
@@ -79,6 +83,8 @@ pub enum TargetChain {
 #[frame_support::pallet]
 pub mod pallet {
 	use super::*;
+	use bifrost_primitives::Balance;
+	use frame_support::traits::fungibles::Inspect;
 
 	#[pallet::config]
 	pub trait Config: frame_system::Config + pallet_transaction_payment::Config {
@@ -87,11 +93,8 @@ pub mod pallet {
 		/// Weight information for the extrinsics in this module.
 		type WeightInfo: WeightInfo;
 		/// Handler for both NativeCurrency and MultiCurrency
-		type MultiCurrency: MultiCurrency<
-			Self::AccountId,
-			CurrencyId = CurrencyId,
-			Balance = PalletBalanceOf<Self>,
-		>;
+		type MultiCurrency: MultiCurrency<Self::AccountId, CurrencyId = CurrencyId, Balance = PalletBalanceOf<Self>>
+			+ Inspect<Self::AccountId, AssetId = CurrencyId, Balance = Balance>;
 		/// The currency type in which fees will be paid.
 		type Currency: Currency<Self::AccountId> + ReservableCurrency<Self::AccountId>;
 		/// Handler for the unbalanced decrease
@@ -210,6 +213,9 @@ pub mod pallet {
 		DexFailedToGetAmountInByPath,
 		UnweighableMessage,
 		XcmExecutionFailed,
+		/// Maximum number of currencies reached.
+		MaxCurrenciesReached,
+		CurrencyNotSupport,
 	}
 
 	#[pallet::call]
@@ -650,7 +656,124 @@ where
 
 /// Provides account's fee payment asset or default fee asset ( Native asset )
 impl<T: Config> AccountFeeCurrency<T::AccountId> for Pallet<T> {
-	fn get(who: &T::AccountId) -> CurrencyId {
-		Pallet::<T>::get_user_default_fee_currency(who).unwrap_or_else(|| WETH)
+	type Error = Error<T>;
+
+	/// Determines the appropriate currency to be used for paying transaction fees based on a
+	/// prioritized order:
+	/// 1. User's default fee currency (`UserDefaultFeeCurrency`)
+	/// 2. WETH
+	/// 3. Currencies in the `UniversalFeeCurrencyOrderList`
+	///
+	/// The method first checks if the balance of the highest-priority currency is sufficient to
+	/// cover the fee.If the balance is insufficient, it iterates through the list of currencies in
+	/// priority order.If no currency has a sufficient balance, it returns the currency with the
+	/// highest balance.
+	fn get_fee_currency(account: &T::AccountId, fee: U256) -> Result<CurrencyId, Error<T>> {
+		let fee: u128 = fee.unique_saturated_into();
+		let priority_currency = Pallet::<T>::get_user_default_fee_currency(account);
+		let mut currency_list = Pallet::<T>::get_universal_fee_currency_order_list();
+
+		let first_item_index = 0;
+		currency_list
+			.try_insert(first_item_index, WETH)
+			.map_err(|_| Error::<T>::MaxCurrenciesReached)?;
+
+		// When all currency balances are insufficient, return the one with the highest balance
+		let mut hopeless_currency = WETH;
+
+		if let Some(currency) = priority_currency {
+			currency_list
+				.try_insert(first_item_index, currency)
+				.map_err(|_| Error::<T>::MaxCurrenciesReached)?;
+			hopeless_currency = currency;
+		}
+
+		for maybe_currency in currency_list.iter() {
+			let comp_res = Self::cmp_with_precision(account, maybe_currency, fee, 18)?;
+
+			match comp_res {
+				Ordering::Less => {
+					// Get the currency with the highest balance
+					let hopeless_currency_balance = T::MultiCurrency::reducible_balance(
+						hopeless_currency,
+						account,
+						Preservation::Preserve,
+						Fortitude::Polite,
+					);
+					let maybe_currency_balance = T::MultiCurrency::reducible_balance(
+						*maybe_currency,
+						account,
+						Preservation::Preserve,
+						Fortitude::Polite,
+					);
+					hopeless_currency = match hopeless_currency_balance.cmp(&maybe_currency_balance)
+					{
+						Ordering::Less => *maybe_currency,
+						_ => hopeless_currency,
+					};
+					continue;
+				},
+				Ordering::Equal => return Ok(*maybe_currency),
+				Ordering::Greater => return Ok(*maybe_currency),
+			};
+		}
+
+		return Ok(hopeless_currency);
+	}
+}
+
+impl<T: Config> BalanceCmp<T::AccountId> for Pallet<T> {
+	type Error = Error<T>;
+
+	/// Compares the balance of a specific `currency` for a given `account` against an `amount`
+	/// while considering different currency precisions.
+	///
+	/// # Parameters
+	/// - `account`: The account ID whose balance will be checked.
+	/// - `currency`: The currency ID to be compared.
+	/// - `amount`: The amount to compare against the account's balance, with the precision
+	///   specified by `amount_precision`.
+	/// - `amount_precision`: The precision of the `amount` specified. If greater than 18, the
+	///   precision of the `currency` will be adjusted accordingly.
+	///
+	/// # Returns
+	/// - `Ok(std::cmp::Ordering)`: Returns the ordering result (`Less`, `Equal`, `Greater`) based
+	///   on the comparison between the adjusted balance and the adjusted amount.
+	/// - `Err(Error<T>)`: Returns an error if the currency is not supported.
+	fn cmp_with_precision(
+		account: &T::AccountId,
+		currency: &CurrencyId,
+		amount: u128,
+		amount_precision: u32,
+	) -> Result<Ordering, Error<T>> {
+		// Get the reducible balance for the specified account and currency.
+		let mut balance = T::MultiCurrency::reducible_balance(
+			*currency,
+			account,
+			Preservation::Preserve,
+			Fortitude::Polite,
+		);
+
+		// Define the standard precision as 18 decimal places.
+		let standard_precision: u32 = amount_precision.max(18);
+
+		// Adjust the amount to the standard precision.
+		let precision_offset = standard_precision.saturating_sub(amount_precision);
+		let adjust_precision = 10u128.pow(precision_offset);
+		let amount = amount.saturating_mul(adjust_precision);
+
+		// Adjust the balance based on currency type.
+		let balance_precision_offset = match *currency {
+			WETH | GLMR | VGLMR | MANTA | VMANTA => standard_precision.saturating_sub(18),
+			BNC | VBNC => standard_precision.saturating_sub(12),
+			DOT | VDOT => standard_precision.saturating_sub(10),
+			_ => return Err(Error::<T>::CurrencyNotSupport),
+		};
+
+		// Apply precision adjustment to balance.
+		balance = balance.saturating_mul(10u128.pow(balance_precision_offset));
+
+		// Compare the adjusted balance with the input amount.
+		Ok(balance.cmp(&amount))
 	}
 }

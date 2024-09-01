@@ -250,6 +250,7 @@ parameter_types! {
 	pub const VeMintingTokenType: CurrencyId = CurrencyId::VToken(TokenSymbol::BNC);
 	pub VeMintingPalletId: PalletId = PalletId(*b"bf/vemnt");
 	pub IncentivePalletId: PalletId = PalletId(*b"bf/veict");
+	pub const BuyBackAccount: PalletId = PalletId(*b"bf/bybck");
 	pub const Week: BlockNumber = 50400; // a week
 	pub const MaxBlock: BlockNumber = 10512000; // four years
 	pub const Multiplier: Balance = 10_u128.pow(12);
@@ -265,6 +266,7 @@ impl bifrost_ve_minting::Config for Runtime {
 	type TokenType = VeMintingTokenType;
 	type VeMintingPalletId = VeMintingPalletId;
 	type IncentivePalletId = IncentivePalletId;
+	type BuyBackAccount = BuyBackAccount;
 	type WeightInfo = ();
 	type BlockNumberToBalance = ConvertInto;
 	type Week = Week;

@@ -490,6 +490,7 @@ impl bifrost_ve_minting::Config for Runtime {
 	type TokenType = VeMintingTokenType;
 	type VeMintingPalletId = VeMintingPalletId;
 	type IncentivePalletId = IncentivePalletId;
+	type BuyBackAccount = BuyBackAccount;
 	type WeightInfo = ();
 	type BlockNumberToBalance = ConvertInto;
 	type Week = Week;

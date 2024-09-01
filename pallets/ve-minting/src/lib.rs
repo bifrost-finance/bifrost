@@ -114,6 +114,9 @@ pub mod pallet {
 		#[pallet::constant]
 		type IncentivePalletId: Get<PalletId>;
 
+		#[pallet::constant]
+		type BuyBackAccount: Get<PalletId>;
+
 		/// Convert the block number into a balance.
 		type BlockNumberToBalance: Convert<BlockNumberFor<Self>, BalanceOf<Self>>;
 
@@ -1079,7 +1082,7 @@ pub mod pallet {
 					T::MultiCurrency::transfer(
 						T::TokenType::get(),
 						who,
-						&T::VeMintingPalletId::get().into_account_truncating(),
+						&T::BuyBackAccount::get().into_account_truncating(),
 						fast.checked_mul_int(value).ok_or(ArithmeticError::Overflow)?,
 					)?;
 				}
