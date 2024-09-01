@@ -23,11 +23,10 @@
 pub use super::*;
 
 use bifrost_asset_registry::AssetIdMaps;
-use bifrost_primitives::PriceDetail;
 pub use bifrost_primitives::{currency::*, CurrencyId, Moment, SlpxOperator, TokenSymbol};
 use bifrost_primitives::{
 	AstarParachainId, HydrationParachainId, InterlayParachainId, MantaParachainId,
-	MoonbeamParachainId,
+	MoonbeamParachainId, PriceDetail,
 };
 use bifrost_slp::{QueryId, QueryResponseManager};
 pub use cumulus_primitives_core::ParaId;
