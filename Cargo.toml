@@ -33,6 +33,7 @@ members = [
 	"pallets/leverage-staking",
 	"pallets/channel-commission",
 	"pallets/clouds-convert",
+	"pallets/vbnc-convert",
 
 	"runtime/bifrost-kusama",
 	"runtime/bifrost-polkadot/src/evm/evm-utility/macro",
@@ -85,6 +86,7 @@ bifrost-stable-pool-rpc-runtime-api    = { path = "pallets/stable-pool/rpc/runti
 bifrost-system-maker                   = { path = "pallets/system-maker", default-features = false }
 bifrost-system-staking                 = { path = "pallets/system-staking", default-features = false }
 bifrost-token-issuer                   = { path = "pallets/token-issuer", default-features = false }
+bifrost-vbnc-convert                   = { path = "pallets/vbnc-convert", default-features = false }
 bifrost-ve-minting                     = { path = "pallets/ve-minting", default-features = false }
 bifrost-ve-minting-rpc-runtime-api     = { path = "pallets/ve-minting/rpc/runtime-api", default-features = false }
 bifrost-vesting                        = { path = "pallets/vesting", default-features = false }
