@@ -37,7 +37,7 @@ use frame_support::{
 	pallet_prelude::*,
 	sp_runtime::{
 		traits::{AccountIdConversion, One, Zero},
-		Permill, SaturatedConversion,
+		Permill, SaturatedConversion, Saturating,
 	},
 	transactional, PalletId,
 };
@@ -157,6 +157,8 @@ pub mod pallet {
 		buyback_duration: BlockNumberFor,
 		/// The last time the buyback was executed.
 		last_buyback: BlockNumberFor,
+		/// The end block of the last buyback cycle.
+		last_buyback_cycle: BlockNumberFor,
 		/// The duration of adding liquidity.
 		add_liquidity_duration: BlockNumberFor,
 		/// The last time liquidity was added.
@@ -178,7 +180,7 @@ pub mod pallet {
 				}
 
 				match info.last_add_liquidity + info.add_liquidity_duration {
-					target_block if target_block - One::one() == n => {
+					target_block if target_block.saturating_sub(One::one()) == n => {
 						if let Some(e) = Self::set_add_liquidity_swap_out_min(
 							&liquidity_address,
 							currency_id,
@@ -236,9 +238,15 @@ pub mod pallet {
 					_ => (),
 				}
 
+				// If the previous period has not ended, continue with the next currency.
+				if info.last_buyback_cycle >= n {
+					continue;
+				}
 				match Self::get_target_block(info.last_buyback, info.buyback_duration) {
 					target_block
-						if target_block == (n - info.last_buyback).saturated_into::<u32>() =>
+						if target_block ==
+							n.saturating_sub(info.last_buyback_cycle)
+								.saturated_into::<u32>() =>
 					{
 						if let Some(e) = Self::set_swap_out_min(currency_id, &info).err() {
 							log::error!(
@@ -259,7 +267,7 @@ pub mod pallet {
 					},
 					target_block
 						if target_block ==
-							(n - info.last_buyback)
+							n.saturating_sub(info.last_buyback_cycle)
 								.saturated_into::<u32>()
 								.saturating_sub(One::one()) =>
 						if let Some(swap_out_min) = SwapOutMin::<T>::get(currency_id) {
@@ -282,6 +290,8 @@ pub mod pallet {
 									block_number: n,
 								});
 							}
+							info.last_buyback_cycle =
+								info.last_buyback_cycle.saturating_add(info.buyback_duration);
 							info.last_buyback = n;
 							Infos::<T>::insert(currency_id, info);
 							SwapOutMin::<T>::remove(currency_id);
@@ -324,6 +334,7 @@ pub mod pallet {
 				proportion,
 				buyback_duration,
 				last_buyback: now,
+				last_buyback_cycle: now,
 				add_liquidity_duration,
 				last_add_liquidity: now,
 				destruction_ratio,
@@ -466,7 +477,8 @@ pub mod pallet {
 			let hash_bytes = block_hash.as_ref();
 			let hash_value =
 				u32::from_le_bytes([hash_bytes[0], hash_bytes[1], hash_bytes[2], hash_bytes[3]]);
-			let target_block = hash_value % (duration.saturated_into::<u32>() - 1);
+			let target_block =
+				hash_value % (duration.saturating_sub(One::one()).saturated_into::<u32>());
 
 			target_block + 1
 		}
