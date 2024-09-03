@@ -22,20 +22,19 @@
 use crate::{traits::*, *};
 use parity_scale_codec::{Decode, Encode};
 use sp_runtime::{traits::StaticLookup, RuntimeDebug};
-use sp_std::prelude::*;
 
 #[cfg(feature = "kusama")]
-pub use kusama::*;
+pub(in crate::agents::relaychain_agent) use kusama::*;
 
 #[cfg(feature = "polkadot")]
-pub use polkadot::*;
+pub(in crate::agents::relaychain_agent) use polkadot::*;
 
 #[cfg(feature = "kusama")]
-mod kusama {
-	use crate::{agents::*, *};
+pub(in crate::agents::relaychain_agent) mod kusama {
+	use crate::agents::relaychain_agent::call::*;
 
 	#[derive(Encode, Decode, RuntimeDebug)]
-	pub enum RelayCall<T: Config> {
+	pub(in crate::agents::relaychain_agent) enum RelayCall<T: Config> {
 		#[codec(index = 20)]
 		ConvictionVoting(ConvictionVoting<T>),
 		#[codec(index = 24)]
@@ -44,11 +43,11 @@ mod kusama {
 }
 
 #[cfg(feature = "polkadot")]
-mod polkadot {
-	use crate::{agents::*, *};
+pub(in crate::agents::relaychain_agent) mod polkadot {
+	use crate::agents::relaychain_agent::call::*;
 
 	#[derive(Encode, Decode, RuntimeDebug)]
-	pub enum RelayCall<T: Config> {
+	pub(in crate::agents::relaychain_agent) enum RelayCall<T: Config> {
 		#[codec(index = 20)]
 		ConvictionVoting(ConvictionVoting<T>),
 		#[codec(index = 26)]
@@ -57,7 +56,7 @@ mod polkadot {
 }
 
 #[derive(Encode, Decode, RuntimeDebug, Clone)]
-pub enum ConvictionVoting<T: Config> {
+pub(in crate::agents::relaychain_agent) enum ConvictionVoting<T: Config> {
 	#[codec(index = 0)]
 	Vote(#[codec(compact)] PollIndex, AccountVote<BalanceOf<T>>),
 	#[codec(index = 3)]
@@ -77,7 +76,7 @@ impl<T: Config> ConvictionVotingCall<T> for RelayCall<T> {
 }
 
 #[derive(Encode, Decode, RuntimeDebug, Clone)]
-pub enum Utility<Call> {
+pub(in crate::agents::relaychain_agent) enum Utility<Call> {
 	#[codec(index = 1)]
 	AsDerivative(DerivativeIndex, Box<Call>),
 	#[codec(index = 2)]

@@ -19,4 +19,4 @@ pub mod agent;
 mod call;
 
 pub use agent::*;
-pub use call::*;
+pub(in crate::agents::bifrost_agent) use call::*;

@@ -16,29 +16,26 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-use crate::{AccountVote, DispatchResult, PollClass, PollIndex, *};
-use bifrost_primitives::{CurrencyId, DerivativeIndex};
+use crate::{AccountVote, PollClass, PollIndex, *};
+use bifrost_primitives::DerivativeIndex;
 use sp_std::vec::Vec;
 
 /// Abstraction over a voting agent for a certain parachain.
 pub trait VotingAgent<Balance, AccountId, Error> {
-	fn vote(
+	fn location(&self) -> Location;
+	fn vote_call_encode(
 		&self,
-		who: AccountId,
 		new_delegator_votes: Vec<(DerivativeIndex, AccountVote<Balance>)>,
 		poll_index: PollIndex,
-		vtoken: CurrencyId,
-		submitted: bool,
-		maybe_old_vote: Option<(AccountVote<Balance>, Balance)>,
-	) -> DispatchResult;
+		derivative_index: DerivativeIndex,
+	) -> Result<Vec<u8>, Error>;
 
-	fn remove_vote(
+	fn remove_delegator_vote_call_encode(
 		&self,
 		class: PollClass,
 		poll_index: PollIndex,
-		vtoken: CurrencyId,
 		derivative_index: DerivativeIndex,
-	) -> DispatchResult;
+	) -> Vec<u8>;
 }
 
 pub trait ConvictionVotingCall<T: Config> {

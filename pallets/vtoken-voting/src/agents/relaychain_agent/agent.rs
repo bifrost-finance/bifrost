@@ -16,22 +16,13 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-use crate::{pallet, AssetId, Xcm, *};
-use bifrost_primitives::{
-	CurrencyId, DerivativeIndex, XcmDestWeightAndFeeHandler, XcmOperationType,
-};
+use crate::{pallet, *};
+use bifrost_primitives::{CurrencyId, DerivativeIndex};
 use core::marker::PhantomData;
-use cumulus_primitives_core::QueryId;
-use frame_support::{
-	dispatch::{DispatchResult, GetDispatchInfo},
-	ensure,
-	pallet_prelude::*,
-	traits::Get,
-};
-use sp_runtime::traits::Saturating;
-use xcm::v4::{Location, Weight as XcmWeight};
+use frame_support::{ensure, pallet_prelude::*};
+use xcm::v4::Location;
 
-use crate::{agents::*, pallet::Error, traits::*};
+use crate::{agents::relaychain_agent::call::*, pallet::Error, traits::*};
 
 /// VotingAgent implementation for relay chain
 pub struct RelaychainAgent<T> {
@@ -43,96 +34,18 @@ impl<T: pallet::Config> RelaychainAgent<T> {
 		let location = Pallet::<T>::convert_vtoken_to_dest_location(vtoken)?;
 		Ok(Self { location, _marker: PhantomData })
 	}
-
-	pub fn get_location(&self) -> &Location {
-		&self.location
-	}
-
-	fn send_xcm_with_notify(
-		&self,
-		derivative_index: DerivativeIndex,
-		call: RelayCall<T>,
-		notify_call: Call<T>,
-		transact_weight: XcmWeight,
-		extra_fee: BalanceOf<T>,
-		f: impl FnOnce(QueryId) -> (),
-	) -> DispatchResult {
-		let responder = self.get_location().clone();
-		let now = frame_system::Pallet::<T>::block_number();
-		let timeout = now.saturating_add(T::QueryTimeout::get());
-		let notify_runtime_call = <T as Config>::RuntimeCall::from(notify_call);
-		let notify_call_weight = notify_runtime_call.get_dispatch_info().weight;
-		let query_id = pallet_xcm::Pallet::<T>::new_notify_query(
-			responder.clone(),
-			notify_runtime_call,
-			timeout,
-			xcm::v4::Junctions::Here,
-		);
-		f(query_id);
-
-		let xcm_message = self.construct_xcm_message(
-			<RelayCall<T> as UtilityCall<RelayCall<T>>>::as_derivative(derivative_index, call)
-				.encode(),
-			extra_fee,
-			transact_weight,
-			notify_call_weight,
-			query_id,
-		)?;
-
-		xcm::v4::send_xcm::<T::XcmRouter>(responder.into(), xcm_message)
-			.map_err(|_e| Error::<T>::XcmFailure)?;
-
-		Ok(())
-	}
-
-	fn construct_xcm_message(
-		&self,
-		call: Vec<u8>,
-		extra_fee: BalanceOf<T>,
-		transact_weight: XcmWeight,
-		notify_call_weight: XcmWeight,
-		query_id: QueryId,
-	) -> Result<Xcm<()>, Error<T>> {
-		let para_id = T::ParachainId::get().into();
-		let asset = Asset {
-			id: AssetId(Location::here()),
-			fun: Fungible(UniqueSaturatedInto::<u128>::unique_saturated_into(extra_fee)),
-		};
-		let xcm_message = sp_std::vec![
-			WithdrawAsset(asset.clone().into()),
-			BuyExecution { fees: asset, weight_limit: Unlimited },
-			Transact {
-				origin_kind: OriginKind::SovereignAccount,
-				require_weight_at_most: transact_weight,
-				call: call.into(),
-			},
-			ReportTransactStatus(QueryResponseInfo {
-				destination: Location::from(Parachain(para_id)),
-				query_id,
-				max_weight: notify_call_weight,
-			}),
-			RefundSurplus,
-			DepositAsset {
-				assets: All.into(),
-				beneficiary: Location::new(0, [Parachain(para_id)]),
-			},
-		];
-
-		Ok(Xcm(xcm_message))
-	}
 }
 
 impl<T: Config> VotingAgent<BalanceOf<T>, AccountIdOf<T>, Error<T>> for RelaychainAgent<T> {
-	fn vote(
+	fn location(&self) -> Location {
+		self.location.clone()
+	}
+	fn vote_call_encode(
 		&self,
-		who: AccountIdOf<T>,
 		new_delegator_votes: Vec<(DerivativeIndex, AccountVote<BalanceOf<T>>)>,
 		poll_index: PollIndex,
-		vtoken: CurrencyIdOf<T>,
-		submitted: bool,
-		maybe_old_vote: Option<(AccountVote<BalanceOf<T>>, BalanceOf<T>)>,
-	) -> DispatchResult {
-		// send XCM message
+		derivative_index: DerivativeIndex,
+	) -> Result<Vec<u8>, Error<T>> {
 		let vote_calls = new_delegator_votes
 			.iter()
 			.map(|(_derivative_index, vote)| {
@@ -145,63 +58,26 @@ impl<T: Config> VotingAgent<BalanceOf<T>, AccountIdOf<T>, Error<T>> for Relaycha
 			ensure!(false, Error::<T>::NoPermissionYet);
 			<RelayCall<T> as UtilityCall<RelayCall<T>>>::batch_all(vote_calls)
 		};
-		let notify_call = Call::<T>::notify_vote { query_id: 0, response: Default::default() };
-		let (weight, extra_fee) = T::XcmDestWeightAndFee::get_operation_weight_and_fee(
-			CurrencyId::to_token(&vtoken).map_err(|_| Error::<T>::NoData)?,
-			XcmOperationType::Vote,
-		)
-		.ok_or(Error::<T>::NoData)?;
 
-		let derivative_index = new_delegator_votes[0].0;
-		self.send_xcm_with_notify(
-			derivative_index,
-			vote_call,
-			notify_call,
-			weight,
-			extra_fee,
-			|query_id| {
-				if !submitted {
-					PendingReferendumInfo::<T>::insert(query_id, (vtoken, poll_index));
-				}
-				PendingVotingInfo::<T>::insert(
-					query_id,
-					(vtoken, poll_index, derivative_index, who.clone(), maybe_old_vote),
-				)
-			},
-		)?;
-		Ok(())
+		let encode_call =
+			<RelayCall<T> as UtilityCall<RelayCall<T>>>::as_derivative(derivative_index, vote_call)
+				.encode();
+
+		Ok(encode_call)
 	}
 
-	fn remove_vote(
+	fn remove_delegator_vote_call_encode(
 		&self,
 		class: PollClass,
 		poll_index: PollIndex,
-		vtoken: CurrencyId,
 		derivative_index: DerivativeIndex,
-	) -> DispatchResult {
-		let notify_call =
-			Call::<T>::notify_remove_delegator_vote { query_id: 0, response: Default::default() };
+	) -> Vec<u8> {
 		let remove_vote_call =
 			<RelayCall<T> as ConvictionVotingCall<T>>::remove_vote(Some(class), poll_index);
-		let (weight, extra_fee) = T::XcmDestWeightAndFee::get_operation_weight_and_fee(
-			CurrencyId::to_token(&vtoken).map_err(|_| Error::<T>::NoData)?,
-			XcmOperationType::RemoveVote,
-		)
-		.ok_or(Error::<T>::NoData)?;
-		self.send_xcm_with_notify(
+		<RelayCall<T> as UtilityCall<RelayCall<T>>>::as_derivative(
 			derivative_index,
 			remove_vote_call,
-			notify_call,
-			weight,
-			extra_fee,
-			|query_id| {
-				PendingRemoveDelegatorVote::<T>::insert(
-					query_id,
-					(vtoken, poll_index, derivative_index),
-				);
-			},
-		)?;
-
-		Ok(())
+		)
+		.encode()
 	}
 }

@@ -43,7 +43,7 @@ use crate::{
 use bifrost_primitives::{
 	currency::{BNC, DOT, KSM, VBNC, VDOT, VKSM},
 	traits::{DerivativeAccountHandler, VTokenSupplyProvider, XcmDestWeightAndFeeHandler},
-	CurrencyId, DerivativeIndex,
+	CurrencyId, DerivativeIndex, XcmOperationType,
 };
 use cumulus_primitives_core::{ParaId, QueryId, Response};
 use frame_support::{
@@ -61,9 +61,9 @@ use sp_runtime::{
 	},
 	ArithmeticError, Perbill,
 };
-use sp_std::prelude::*;
+use sp_std::{boxed::Box, vec::Vec};
 pub use weights::WeightInfo;
-use xcm::v4::{prelude::*, Location};
+use xcm::v4::{prelude::*, Location, Weight as XcmWeight};
 
 const CONVICTION_VOTING_ID: LockIdentifier = *b"vtvoting";
 
@@ -488,14 +488,36 @@ pub mod pallet {
 				Ok(())
 			})?;
 
+			let notify_call = Call::<T>::notify_vote { query_id: 0, response: Default::default() };
+			let (weight, extra_fee) = T::XcmDestWeightAndFee::get_operation_weight_and_fee(
+				CurrencyId::to_token(&vtoken).map_err(|_| Error::<T>::NoData)?,
+				XcmOperationType::Vote,
+			)
+			.ok_or(Error::<T>::NoData)?;
+
+			let derivative_index = new_delegator_votes[0].0;
+
 			let voting_agent = Self::get_voting_agent(&vtoken)?;
-			voting_agent.vote(
-				who.clone(),
+			let encode_call = voting_agent.vote_call_encode(
 				new_delegator_votes.clone(),
 				poll_index,
-				vtoken,
-				submitted,
-				maybe_old_vote,
+				derivative_index,
+			)?;
+			Self::send_xcm_with_notify(
+				voting_agent.location(),
+				encode_call,
+				notify_call,
+				weight,
+				extra_fee,
+				|query_id| {
+					if !submitted {
+						PendingReferendumInfo::<T>::insert(query_id, (vtoken, poll_index));
+					}
+					PendingVotingInfo::<T>::insert(
+						query_id,
+						(vtoken, poll_index, derivative_index, who.clone(), maybe_old_vote),
+					)
+				},
 			)?;
 
 			Self::deposit_event(Event::<T>::Voted {
@@ -548,8 +570,34 @@ pub mod pallet {
 			ensure!(DelegatorVotes::<T>::get(vtoken, poll_index).len() > 0, Error::<T>::NoData);
 			Self::ensure_referendum_expired(vtoken, poll_index)?;
 
+			let notify_call = Call::<T>::notify_remove_delegator_vote {
+				query_id: 0,
+				response: Default::default(),
+			};
+
 			let voting_agent = Self::get_voting_agent(&vtoken)?;
-			voting_agent.remove_vote(class, poll_index, vtoken, derivative_index)?;
+			let encode_call =
+				voting_agent.remove_delegator_vote_call_encode(class, poll_index, derivative_index);
+
+			let (weight, extra_fee) = T::XcmDestWeightAndFee::get_operation_weight_and_fee(
+				CurrencyId::to_token(&vtoken).map_err(|_| Error::<T>::NoData)?,
+				XcmOperationType::RemoveVote,
+			)
+			.ok_or(Error::<T>::NoData)?;
+
+			Self::send_xcm_with_notify(
+				voting_agent.location(),
+				encode_call,
+				notify_call,
+				weight,
+				extra_fee,
+				|query_id| {
+					PendingRemoveDelegatorVote::<T>::insert(
+						query_id,
+						(vtoken, poll_index, derivative_index),
+					);
+				},
+			)?;
 
 			Self::deposit_event(Event::<T>::DelegatorVoteRemoved { who, vtoken, derivative_index });
 
@@ -961,6 +1009,75 @@ pub mod pallet {
 			} else {
 				T::MultiCurrency::set_lock(CONVICTION_VOTING_ID, vtoken, who, amount)
 			}
+		}
+
+		fn send_xcm_with_notify(
+			responder_location: Location,
+			encode_call: Vec<u8>,
+			notify_call: Call<T>,
+			transact_weight: XcmWeight,
+			extra_fee: BalanceOf<T>,
+			f: impl FnOnce(QueryId) -> (),
+		) -> DispatchResult {
+			let now = frame_system::Pallet::<T>::block_number();
+			let timeout = now.saturating_add(T::QueryTimeout::get());
+			let notify_runtime_call = <T as Config>::RuntimeCall::from(notify_call);
+			let notify_call_weight = notify_runtime_call.get_dispatch_info().weight;
+			let query_id = pallet_xcm::Pallet::<T>::new_notify_query(
+				responder_location,
+				notify_runtime_call,
+				timeout,
+				xcm::v4::Junctions::Here,
+			);
+			f(query_id);
+
+			let xcm_message = Self::construct_xcm_message(
+				encode_call,
+				extra_fee,
+				transact_weight,
+				notify_call_weight,
+				query_id,
+			)?;
+
+			xcm::v4::send_xcm::<T::XcmRouter>(Parent.into(), xcm_message)
+				.map_err(|_e| Error::<T>::XcmFailure)?;
+
+			Ok(())
+		}
+
+		fn construct_xcm_message(
+			call: Vec<u8>,
+			extra_fee: BalanceOf<T>,
+			transact_weight: XcmWeight,
+			notify_call_weight: XcmWeight,
+			query_id: QueryId,
+		) -> Result<Xcm<()>, Error<T>> {
+			let para_id = T::ParachainId::get().into();
+			let asset = Asset {
+				id: AssetId(Location::here()),
+				fun: Fungible(UniqueSaturatedInto::<u128>::unique_saturated_into(extra_fee)),
+			};
+			let xcm_message = sp_std::vec![
+				WithdrawAsset(asset.clone().into()),
+				BuyExecution { fees: asset, weight_limit: Unlimited },
+				Transact {
+					origin_kind: OriginKind::SovereignAccount,
+					require_weight_at_most: transact_weight,
+					call: call.into(),
+				},
+				ReportTransactStatus(QueryResponseInfo {
+					destination: Location::from(Parachain(para_id)),
+					query_id,
+					max_weight: notify_call_weight,
+				}),
+				RefundSurplus,
+				DepositAsset {
+					assets: All.into(),
+					beneficiary: Location::new(0, [Parachain(para_id)]),
+				},
+			];
+
+			Ok(Xcm(xcm_message))
 		}
 
 		fn ensure_vtoken(vtoken: &CurrencyIdOf<T>) -> Result<(), DispatchError> {
