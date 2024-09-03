@@ -465,28 +465,23 @@ pub mod pallet {
 	}
 
 	#[pallet::storage]
-	#[pallet::getter(fn collator_commission)]
 	/// Commission percent taken off of rewards for all collators
 	pub(crate) type CollatorCommission<T: Config> = StorageValue<_, Perbill, ValueQuery>;
 
 	#[pallet::storage]
-	#[pallet::getter(fn total_selected)]
 	/// The total candidates selected every round
 	pub(crate) type TotalSelected<T: Config> = StorageValue<_, u32, ValueQuery>;
 
 	#[pallet::storage]
-	#[pallet::getter(fn parachain_bond_info)]
 	/// Parachain bond config info { account, percent_of_inflation }
 	pub(crate) type ParachainBondInfo<T: Config> =
 		StorageValue<_, ParachainBondConfig<AccountIdOf<T>, BalanceOf<T>>, ValueQuery>;
 
 	#[pallet::storage]
-	#[pallet::getter(fn round)]
 	/// Current round index and next round scheduled transition
 	pub type Round<T: Config> = StorageValue<_, RoundInfo<BlockNumberFor<T>>, ValueQuery>;
 
 	#[pallet::storage]
-	#[pallet::getter(fn delegator_state)]
 	/// Get delegator state associated with an account if account is delegating else None
 	pub(crate) type DelegatorState<T: Config> = StorageMap<
 		_,
@@ -497,7 +492,6 @@ pub mod pallet {
 	>;
 
 	#[pallet::storage]
-	#[pallet::getter(fn candidate_info)]
 	/// Get collator candidate info associated with an account if account is candidate else None
 	pub(crate) type CandidateInfo<T: Config> =
 		StorageMap<_, Twox64Concat, AccountIdOf<T>, CandidateMetadata<BalanceOf<T>>, OptionQuery>;
@@ -514,7 +508,6 @@ pub mod pallet {
 
 	/// Stores outstanding delegation requests per collator.
 	#[pallet::storage]
-	#[pallet::getter(fn delegation_scheduled_requests)]
 	pub(crate) type DelegationScheduledRequests<T: Config> = StorageMap<
 		_,
 		Blake2_128Concat,
@@ -524,7 +517,6 @@ pub mod pallet {
 	>;
 
 	#[pallet::storage]
-	#[pallet::getter(fn top_delegations)]
 	/// Top delegations for collator candidate
 	pub(crate) type TopDelegations<T: Config> = StorageMap<
 		_,
@@ -535,7 +527,6 @@ pub mod pallet {
 	>;
 
 	#[pallet::storage]
-	#[pallet::getter(fn bottom_delegations)]
 	/// Bottom delegations for collator candidate
 	pub(crate) type BottomDelegations<T: Config> = StorageMap<
 		_,
@@ -546,23 +537,19 @@ pub mod pallet {
 	>;
 
 	#[pallet::storage]
-	#[pallet::getter(fn selected_candidates)]
 	/// The collator candidates selected for the current round
-	type SelectedCandidates<T: Config> = StorageValue<_, Vec<AccountIdOf<T>>, ValueQuery>;
+	pub type SelectedCandidates<T: Config> = StorageValue<_, Vec<AccountIdOf<T>>, ValueQuery>;
 
 	#[pallet::storage]
-	#[pallet::getter(fn total)]
 	/// Total capital locked by this staking pallet
 	pub(crate) type Total<T: Config> = StorageValue<_, BalanceOf<T>, ValueQuery>;
 
 	#[pallet::storage]
-	#[pallet::getter(fn candidate_pool)]
 	/// The pool of collator candidates, each with their total backing stake
 	pub(crate) type CandidatePool<T: Config> =
 		StorageValue<_, OrderedSet<Bond<AccountIdOf<T>, BalanceOf<T>>>, ValueQuery>;
 
 	#[pallet::storage]
-	#[pallet::getter(fn at_stake)]
 	/// Snapshot of collator delegation stake at the start of the round
 	pub type AtStake<T: Config> = StorageDoubleMap<
 		_,
@@ -575,28 +562,23 @@ pub mod pallet {
 	>;
 
 	#[pallet::storage]
-	#[pallet::getter(fn delayed_payouts)]
 	/// Delayed payouts
 	pub type DelayedPayouts<T: Config> =
 		StorageMap<_, Twox64Concat, RoundIndex, DelayedPayout<BalanceOf<T>>, OptionQuery>;
 
 	#[pallet::storage]
-	#[pallet::getter(fn staked)]
 	/// Total counted stake for selected candidates in the round
 	pub type Staked<T: Config> = StorageMap<_, Twox64Concat, RoundIndex, BalanceOf<T>, ValueQuery>;
 
 	#[pallet::storage]
-	#[pallet::getter(fn inflation_config)]
 	/// Inflation configuration
 	pub type InflationConfig<T: Config> = StorageValue<_, InflationInfo<BalanceOf<T>>, ValueQuery>;
 
 	#[pallet::storage]
-	#[pallet::getter(fn points)]
 	/// Total points awarded to collators for block production in the round
 	pub type Points<T: Config> = StorageMap<_, Twox64Concat, RoundIndex, RewardPoint, ValueQuery>;
 
 	#[pallet::storage]
-	#[pallet::getter(fn awarded_pts)]
 	/// Points for each collator per round
 	pub type AwardedPts<T: Config> = StorageDoubleMap<
 		_,
@@ -1865,7 +1847,7 @@ pub mod pallet {
 
 	impl<T: Config> Get<Vec<AccountIdOf<T>>> for Pallet<T> {
 		fn get() -> Vec<AccountIdOf<T>> {
-			Self::selected_candidates()
+			SelectedCandidates::<T>::get()
 		}
 	}
 
@@ -1893,7 +1875,7 @@ pub mod pallet {
 				<frame_system::Pallet<T>>::block_number(),
 			);
 
-			let collators = Pallet::<T>::selected_candidates().to_vec();
+			let collators = SelectedCandidates::<T>::get().to_vec();
 			if collators.is_empty() {
 				// we never want to pass an empty set of collators. This would brick the chain.
 				log::error!("💥 keeping old session because of empty collator set!");

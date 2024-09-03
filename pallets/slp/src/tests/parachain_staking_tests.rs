@@ -25,7 +25,7 @@ use crate::{
 	},
 	BNC, *,
 };
-use bifrost_parachain_staking::RoundInfo;
+use bifrost_parachain_staking::{Round, RoundInfo};
 use bifrost_primitives::VBNC;
 use frame_support::{assert_noop, assert_ok, PalletId};
 use parity_scale_codec::alloc::collections::BTreeMap;
@@ -279,7 +279,7 @@ fn parachain_staking_bond_to_liquidize_works() {
 			TimeUnit::Round(48)
 		));
 		bifrost_parachain_staking::Round::<Runtime>::set(RoundInfo::new(10000000, 0, 1));
-		assert_eq!(ParachainStaking::round(), RoundInfo::new(10000000, 0, 1));
+		assert_eq!(Round::<Runtime>::get(), RoundInfo::new(10000000, 0, 1));
 		assert_ok!(VtokenMinting::update_ongoing_time_unit(BNC, TimeUnit::Round(1000)));
 
 		// let delegation_scheduled_requests = ParachainStaking::delegation_scheduled_requests(BOB);
