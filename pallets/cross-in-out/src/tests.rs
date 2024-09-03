@@ -119,11 +119,11 @@ fn cross_in_and_cross_out_should_work() {
 #[test]
 fn add_to_and_remove_from_issue_whitelist_should_work() {
 	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
-		assert_eq!(CrossInOut::get_issue_whitelist(KSM), None);
+		assert_eq!(IssueWhiteList::<Runtime>::get(KSM), None);
 
 		assert_ok!(CrossInOut::add_to_issue_whitelist(RuntimeOrigin::signed(ALICE), KSM, ALICE));
 		let bounded_vector = BoundedVec::try_from(vec![ALICE]).unwrap();
-		assert_eq!(CrossInOut::get_issue_whitelist(KSM), Some(bounded_vector));
+		assert_eq!(IssueWhiteList::<Runtime>::get(KSM), Some(bounded_vector));
 
 		assert_noop!(
 			CrossInOut::remove_from_issue_whitelist(RuntimeOrigin::signed(ALICE), KSM, BOB),
@@ -136,17 +136,17 @@ fn add_to_and_remove_from_issue_whitelist_should_work() {
 			ALICE
 		));
 		let empty_vec = BoundedVec::default();
-		assert_eq!(CrossInOut::get_issue_whitelist(KSM), Some(empty_vec));
+		assert_eq!(IssueWhiteList::<Runtime>::get(KSM), Some(empty_vec));
 	});
 }
 
 #[test]
 fn add_to_and_remove_from_register_whitelist_should_work() {
 	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
-		assert_eq!(CrossInOut::get_register_whitelist(KSM), None);
+		assert_eq!(RegisterWhiteList::<Runtime>::get(KSM), None);
 
 		assert_ok!(CrossInOut::add_to_register_whitelist(RuntimeOrigin::signed(ALICE), KSM, ALICE));
-		assert_eq!(CrossInOut::get_register_whitelist(KSM), Some(vec![ALICE]));
+		assert_eq!(RegisterWhiteList::<Runtime>::get(KSM), Some(vec![ALICE]));
 
 		assert_noop!(
 			CrossInOut::remove_from_register_whitelist(RuntimeOrigin::signed(ALICE), KSM, BOB),
@@ -158,7 +158,7 @@ fn add_to_and_remove_from_register_whitelist_should_work() {
 			KSM,
 			ALICE
 		));
-		assert_eq!(CrossInOut::get_register_whitelist(KSM), Some(vec![]));
+		assert_eq!(RegisterWhiteList::<Runtime>::get(KSM), Some(vec![]));
 	});
 }
 

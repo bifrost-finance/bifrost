@@ -24,8 +24,9 @@ use sp_runtime::{Perbill, Percent};
 use sp_std::{collections::btree_map::BTreeMap, vec, vec::Vec};
 
 use crate::{
-	AccountIdOf, BalanceOf, Call, CandidateBondLessRequest, Config, DelegationAction, Pallet,
-	Range, ScheduledRequest,
+	AccountIdOf, BalanceOf, Call, CandidateBondLessRequest, CandidateInfo, CollatorCommission,
+	Config, DelegationAction, DelegationScheduledRequests, DelegatorState, InflationConfig, Pallet,
+	ParachainBondInfo, Range, Round, ScheduledRequest, TotalSelected,
 };
 
 /// Minimum collator candidate stake
@@ -92,9 +93,9 @@ fn create_funded_collator<T: Config>(
 /// Run to end block and author
 fn roll_to_and_author<T: Config>(round_delay: u32, author: AccountIdOf<T>) {
 	let total_rounds = round_delay + 1u32;
-	let round_length: BlockNumberFor<T> = Pallet::<T>::round().length.into();
+	let round_length: BlockNumberFor<T> = Round::<T>::get().length.into();
 	let mut now = <frame_system::Pallet<T>>::block_number() + 1u32.into();
-	let end = Pallet::<T>::round().first + (round_length * total_rounds.into());
+	let end = Round::<T>::get().first + (round_length * total_rounds.into());
 	while now < end {
 		Pallet::<T>::note_author(author.clone());
 		<frame_system::Pallet<T>>::on_finalize(<frame_system::Pallet<T>>::block_number());
@@ -119,7 +120,7 @@ benchmarks! {
 		};
 	}: _(RawOrigin::Root, stake_range)
 	verify {
-		assert_eq!(Pallet::<T>::inflation_config().expect, stake_range);
+		assert_eq!(InflationConfig::<T>::get().expect, stake_range);
 	}
 
 	set_inflation {
@@ -131,20 +132,20 @@ benchmarks! {
 
 	}: _(RawOrigin::Root, inflation_range)
 	verify {
-		assert_eq!(Pallet::<T>::inflation_config().annual, inflation_range);
+		assert_eq!(InflationConfig::<T>::get().annual, inflation_range);
 	}
 
 	set_parachain_bond_account {
 		let parachain_bond_account: AccountIdOf<T> = account("TEST", 0u32, USER_SEED);
 	}: _(RawOrigin::Root, parachain_bond_account.clone())
 	verify {
-		assert_eq!(Pallet::<T>::parachain_bond_info().account, parachain_bond_account);
+		assert_eq!(ParachainBondInfo::<T>::get().account, parachain_bond_account);
 	}
 
 	set_parachain_bond_reserve_percent {
 	}: _(RawOrigin::Root, Percent::from_percent(33))
 	verify {
-		assert_eq!(Pallet::<T>::parachain_bond_info().percent, Percent::from_percent(33));
+		assert_eq!(ParachainBondInfo::<T>::get().percent, Percent::from_percent(33));
 	}
 
 	// ROOT DISPATCHABLES
@@ -153,17 +154,17 @@ benchmarks! {
 		Pallet::<T>::set_blocks_per_round(RawOrigin::Root.into(), 100u32)?;
 	}: _(RawOrigin::Root, 100u32)
 	verify {
-		assert_eq!(Pallet::<T>::total_selected(), 100u32);
+		assert_eq!(TotalSelected::<T>::get(), 100u32);
 	}
 
 	set_collator_commission {}: _(RawOrigin::Root, Perbill::from_percent(33))
 	verify {
-		assert_eq!(Pallet::<T>::collator_commission(), Perbill::from_percent(33));
+		assert_eq!(CollatorCommission::<T>::get(), Perbill::from_percent(33));
 	}
 
 	set_blocks_per_round {}: _(RawOrigin::Root, 1200u32)
 	verify {
-		assert_eq!(Pallet::<T>::round().length, 1200u32);
+		assert_eq!(Round::<T>::get().length, 1200u32);
 	}
 
 	// USER DISPATCHABLES
@@ -216,7 +217,7 @@ benchmarks! {
 		candidate_count += 1u32;
 	}: _(RawOrigin::Signed(caller.clone()), candidate_count)
 	verify {
-		assert!(Pallet::<T>::candidate_info(&caller).unwrap().is_leaving());
+		assert!(CandidateInfo::<T>::get(&caller).unwrap().is_leaving());
 	}
 
 	execute_leave_candidates {
@@ -271,8 +272,8 @@ benchmarks! {
 		roll_to_and_author::<T>(2, candidate.clone());
 	}: _(RawOrigin::Signed(candidate.clone()), candidate.clone(), col_del_count)
 	verify {
-		assert!(Pallet::<T>::candidate_info(&candidate).is_none());
-		assert!(Pallet::<T>::candidate_info(&second_candidate).is_some());
+		assert!(CandidateInfo::<T>::get(&candidate).is_none());
+		assert!(CandidateInfo::<T>::get(&second_candidate).is_some());
 		for delegator in delegators {
 			assert!(Pallet::<T>::is_delegator(&delegator));
 		}
@@ -308,7 +309,7 @@ benchmarks! {
 		candidate_count -= 1u32;
 	}: _(RawOrigin::Signed(caller.clone()), candidate_count)
 	verify {
-		assert!(Pallet::<T>::candidate_info(&caller).unwrap().is_active());
+		assert!(CandidateInfo::<T>::get(&caller).unwrap().is_active());
 	}
 
 	go_offline {
@@ -321,7 +322,7 @@ benchmarks! {
 		)?;
 	}: _(RawOrigin::Signed(caller.clone()))
 	verify {
-		assert!(!Pallet::<T>::candidate_info(&caller).unwrap().is_active());
+		assert!(!CandidateInfo::<T>::get(&caller).unwrap().is_active());
 	}
 
 	go_online {
@@ -335,7 +336,7 @@ benchmarks! {
 		Pallet::<T>::go_offline(RawOrigin::Signed(caller.clone()).into())?;
 	}: _(RawOrigin::Signed(caller.clone()))
 	verify {
-		assert!(Pallet::<T>::candidate_info(&caller).unwrap().is_active());
+		assert!(CandidateInfo::<T>::get(&caller).unwrap().is_active());
 	}
 
 	candidate_bond_more {
@@ -364,7 +365,7 @@ benchmarks! {
 		)?;
 	}: _(RawOrigin::Signed(caller.clone()), min_candidate_stk)
 	verify {
-		let state = Pallet::<T>::candidate_info(&caller).expect("request bonded less so exists");
+		let state = CandidateInfo::<T>::get(&caller).expect("request bonded less so exists");
 		assert_eq!(
 			state.request,
 			Some(CandidateBondLessRequest {
@@ -416,7 +417,7 @@ benchmarks! {
 		)?;
 	} verify {
 		assert!(
-			Pallet::<T>::candidate_info(&caller).unwrap().request.is_none()
+			CandidateInfo::<T>::get(&caller).unwrap().request.is_none()
 		);
 	}
 
@@ -500,7 +501,7 @@ benchmarks! {
 	}: _(RawOrigin::Signed(caller.clone()))
 	verify {
 		assert!(
-			Pallet::<T>::delegation_scheduled_requests(&collator)
+			DelegationScheduledRequests::<T>::get(&collator)
 				.iter()
 				.any(|r| r.delegator == caller && matches!(r.action, DelegationAction::Revoke(_)))
 		);
@@ -550,7 +551,7 @@ benchmarks! {
 		roll_to_and_author::<T>(2, author);
 	}: _(RawOrigin::Signed(caller.clone()), caller.clone(), delegation_count)
 	verify {
-		assert!(Pallet::<T>::delegator_state(&caller).is_none());
+		assert!(DelegatorState::<T>::get(&caller).is_none());
 	}
 
 	cancel_leave_delegators {
@@ -573,7 +574,7 @@ benchmarks! {
 		Pallet::<T>::schedule_leave_delegators(RawOrigin::Signed(caller.clone()).into())?;
 	}: _(RawOrigin::Signed(caller.clone()))
 	verify {
-		assert!(Pallet::<T>::delegator_state(&caller).unwrap().is_active());
+		assert!(DelegatorState::<T>::get(&caller).unwrap().is_active());
 	}
 
 	schedule_revoke_delegation {
@@ -596,7 +597,7 @@ benchmarks! {
 	}: _(RawOrigin::Signed(caller.clone()), collator.clone())
 	verify {
 		assert_eq!(
-			Pallet::<T>::delegation_scheduled_requests(&collator),
+			DelegationScheduledRequests::<T>::get(&collator),
 			vec![ScheduledRequest {
 				delegator: caller,
 				when_executable: 3,
@@ -647,10 +648,10 @@ benchmarks! {
 		let bond_less = <<T as Config>::MinDelegatorStk as Get<BalanceOf<T>>>::get();
 	}: _(RawOrigin::Signed(caller.clone()), collator.clone(), bond_less)
 	verify {
-		let state = Pallet::<T>::delegator_state(&caller)
+		let state = DelegatorState::<T>::get(&caller)
 			.expect("just request bonded less so exists");
 		assert_eq!(
-			Pallet::<T>::delegation_scheduled_requests(&collator),
+			DelegationScheduledRequests::<T>::get(&collator),
 			vec![ScheduledRequest {
 				delegator: caller,
 				when_executable: 3,
@@ -755,7 +756,7 @@ benchmarks! {
 		)?;
 	} verify {
 		assert!(
-			!Pallet::<T>::delegation_scheduled_requests(&collator)
+			!DelegationScheduledRequests::<T>::get(&collator)
 			.iter()
 			.any(|x| &x.delegator == &caller)
 		);
@@ -791,7 +792,7 @@ benchmarks! {
 		)?;
 	} verify {
 		assert!(
-			!Pallet::<T>::delegation_scheduled_requests(&collator)
+			!DelegationScheduledRequests::<T>::get(&collator)
 				.iter()
 				.any(|x| x.delegator == caller)
 		);
@@ -908,12 +909,12 @@ benchmarks! {
 			<<T as Config>::Currency as Currency<AccountIdOf<T>>>::Balance
 		)> = delegators.iter().map(|x| (x.clone(), T::Currency::free_balance(x))).collect();
 		// PREPARE RUN_TO_BLOCK LOOP
-		let before_running_round_index = Pallet::<T>::round().current;
-		let round_length: BlockNumberFor<T> = Pallet::<T>::round().length.into();
+		let before_running_round_index = Round::<T>::get().current;
+		let round_length: BlockNumberFor<T> = Round::<T>::get().length.into();
 		let reward_delay = <<T as Config>::RewardPaymentDelay as Get<u32>>::get() + 2u32;
 		let mut now = <frame_system::Pallet<T>>::block_number() + 1u32.into();
 		let mut counter = 0usize;
-		let end = Pallet::<T>::round().first + (round_length * reward_delay.into());
+		let end = Round::<T>::get().first + (round_length * reward_delay.into());
 		// SET collators as authors for blocks from now - end
 		while now < end {
 			let author = collators[counter % collators.len()].clone();
@@ -944,7 +945,7 @@ benchmarks! {
 			assert!(T::Currency::free_balance(&col) > initial);
 		}
 		// Round transitions
-		assert_eq!(Pallet::<T>::round().current, before_running_round_index + reward_delay);
+		assert_eq!(Round::<T>::get().current, before_running_round_index + reward_delay);
 	}
 
 	pay_one_collator_reward {
@@ -957,7 +958,7 @@ benchmarks! {
 			AwardedPts,
 		};
 
-		let before_running_round_index = Pallet::<T>::round().current;
+		let before_running_round_index = Round::<T>::get().current;
 		let initial_stake_amount = min_candidate_stk::<T>() * 1_000_000u32.into();
 
 		let mut total_staked = 0u32.into();
@@ -1019,7 +1020,7 @@ benchmarks! {
 	}: {
 		let round_for_payout = 5;
 		// TODO: this is an extra read right here (we should whitelist it?)
-		let payout_info = Pallet::<T>::delayed_payouts(round_for_payout).expect("payout expected");
+		let payout_info = DelayedPayouts::<T>::get(round_for_payout).expect("payout expected");
 		let result = Pallet::<T>::pay_one_collator_reward(round_for_payout, payout_info);
 		assert!(result.0.is_some()); // TODO: how to keep this in scope so it can be done in verify block?
 	}
