@@ -144,24 +144,20 @@ pub mod pallet {
 
 	/// To store currencies that support indirect cross-in and cross-out.
 	#[pallet::storage]
-	#[pallet::getter(fn get_cross_currency_registry)]
 	pub type CrossCurrencyRegistry<T> = StorageMap<_, Blake2_128Concat, CurrencyId, ()>;
 
 	/// Accounts in the whitelist can issue the corresponding Currency.
 	#[pallet::storage]
-	#[pallet::getter(fn get_issue_whitelist)]
 	pub type IssueWhiteList<T: Config> =
 		StorageMap<_, Blake2_128Concat, CurrencyId, BoundedVec<AccountIdOf<T>, T::MaxLengthLimit>>;
 
 	/// Accounts in the whitelist can register the mapping between a multilocation and an accountId.
 	#[pallet::storage]
-	#[pallet::getter(fn get_register_whitelist)]
 	pub type RegisterWhiteList<T> =
 		StorageMap<_, Blake2_128Concat, CurrencyId, Vec<AccountIdOf<T>>>;
 
 	/// Mapping a Bifrost account to a multilocation of a outer chain
 	#[pallet::storage]
-	#[pallet::getter(fn account_to_outer_multilocation)]
 	pub type AccountToOuterMultilocation<T> = StorageDoubleMap<
 		_,
 		Blake2_128Concat,
@@ -174,7 +170,6 @@ pub mod pallet {
 
 	/// Mapping a multilocation of a outer chain to a Bifrost account
 	#[pallet::storage]
-	#[pallet::getter(fn outer_multilocation_to_account)]
 	pub type OuterMultilocationToAccount<T> = StorageDoubleMap<
 		_,
 		Blake2_128Concat,
@@ -187,7 +182,6 @@ pub mod pallet {
 
 	/// minimum crossin and crossout amount【crossinMinimum, crossoutMinimum】
 	#[pallet::storage]
-	#[pallet::getter(fn get_crossing_minimum_amount)]
 	pub type CrossingMinimumAmount<T> =
 		StorageMap<_, Blake2_128Concat, CurrencyId, (BalanceOf<T>, BalanceOf<T>)>;
 
@@ -217,12 +211,12 @@ pub mod pallet {
 				Error::<T>::CurrencyNotSupportCrossInAndOut
 			);
 
-			let crossing_minimum_amount = Self::get_crossing_minimum_amount(currency_id)
+			let crossing_minimum_amount = CrossingMinimumAmount::<T>::get(currency_id)
 				.ok_or(Error::<T>::NoCrossingMinimumSet)?;
 			ensure!(amount >= crossing_minimum_amount.0, Error::<T>::AmountLowerThanMinimum);
 
 			let issue_whitelist =
-				Self::get_issue_whitelist(currency_id).ok_or(Error::<T>::NotAllowed)?;
+				IssueWhiteList::<T>::get(currency_id).ok_or(Error::<T>::NotAllowed)?;
 			ensure!(issue_whitelist.contains(&issuer), Error::<T>::NotAllowed);
 
 			let entrance_account_mutlilcaition = Box::new(MultiLocation {
@@ -237,7 +231,7 @@ pub mod pallet {
 			let dest = if entrance_account_mutlilcaition == location {
 				T::EntrancePalletId::get().into_account_truncating()
 			} else {
-				Self::outer_multilocation_to_account(currency_id, location.clone())
+				OuterMultilocationToAccount::<T>::get(currency_id, location.clone())
 					.ok_or(Error::<T>::NoAccountIdMapping)?
 			};
 
@@ -268,7 +262,7 @@ pub mod pallet {
 				Error::<T>::CurrencyNotSupportCrossInAndOut
 			);
 
-			let crossing_minimum_amount = Self::get_crossing_minimum_amount(currency_id)
+			let crossing_minimum_amount = CrossingMinimumAmount::<T>::get(currency_id)
 				.ok_or(Error::<T>::NoCrossingMinimumSet)?;
 			ensure!(amount >= crossing_minimum_amount.1, Error::<T>::AmountLowerThanMinimum);
 
@@ -296,7 +290,7 @@ pub mod pallet {
 			let registerer = ensure_signed(origin)?;
 
 			let register_whitelist =
-				Self::get_register_whitelist(currency_id).ok_or(Error::<T>::NotAllowed)?;
+				RegisterWhiteList::<T>::get(currency_id).ok_or(Error::<T>::NotAllowed)?;
 			ensure!(register_whitelist.contains(&registerer), Error::<T>::NotAllowed);
 
 			ensure!(
@@ -346,7 +340,7 @@ pub mod pallet {
 			);
 
 			let original_location =
-				Self::account_to_outer_multilocation(currency_id, account.clone())
+				AccountToOuterMultilocation::<T>::get(currency_id, account.clone())
 					.ok_or(Error::<T>::NotExist)?;
 			ensure!(original_location != *foreign_location.clone(), Error::<T>::AlreadyExist);
 
@@ -413,7 +407,7 @@ pub mod pallet {
 		) -> DispatchResult {
 			T::ControlOrigin::ensure_origin(origin)?;
 
-			let rs = Self::get_issue_whitelist(currency_id);
+			let rs = IssueWhiteList::<T>::get(currency_id);
 			let mut issue_whitelist;
 			if let Some(bounded_vec) = rs {
 				issue_whitelist = bounded_vec.to_vec();
@@ -471,7 +465,7 @@ pub mod pallet {
 			T::ControlOrigin::ensure_origin(origin)?;
 
 			let empty_vec: Vec<AccountIdOf<T>> = Vec::new();
-			if Self::get_register_whitelist(currency_id) == None {
+			if RegisterWhiteList::<T>::get(currency_id) == None {
 				RegisterWhiteList::<T>::insert(currency_id, empty_vec);
 			}
 
