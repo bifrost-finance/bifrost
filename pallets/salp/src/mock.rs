@@ -54,7 +54,7 @@ use zenlink_protocol::{
 
 use crate as salp;
 use bifrost_primitives::{
-	AstarParachainId, HydrationParachainId, InterlayParachainId, MantaParachainId,
+	AstarParachainId, HydradxParachainId, InterlayParachainId, MantaParachainId,
 	MoonbeamParachainId,
 };
 
@@ -437,7 +437,7 @@ impl bifrost_vtoken_minting::Config for Test {
 	type XcmTransfer = XTokens;
 	type AstarParachainId = AstarParachainId;
 	type MoonbeamParachainId = MoonbeamParachainId;
-	type HydradxParachainId = HydrationParachainId;
+	type HydradxParachainId = HydradxParachainId;
 	type MantaParachainId = MantaParachainId;
 	type InterlayParachainId = InterlayParachainId;
 	type BifrostSlpx = SlpxInterface;

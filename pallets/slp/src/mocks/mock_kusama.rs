@@ -26,7 +26,7 @@ use bifrost_asset_registry::AssetIdMaps;
 use bifrost_primitives::{
 	currency::{BNC, KSM, MANTA},
 	Amount, AstarParachainId, Balance, CurrencyId, DoNothingExecuteXcm, DoNothingRouter,
-	HydrationParachainId, InterlayParachainId, MantaParachainId, MoonbeamParachainId, SlpxOperator,
+	HydradxParachainId, InterlayParachainId, MantaParachainId, MoonbeamParachainId, SlpxOperator,
 	TokenSymbol, XcmDestWeightAndFeeHandler, XcmOperationType,
 };
 pub use cumulus_primitives_core::ParaId;
@@ -270,7 +270,7 @@ impl bifrost_vtoken_minting::Config for Runtime {
 	type XcmTransfer = XTokens;
 	type AstarParachainId = AstarParachainId;
 	type MoonbeamParachainId = MoonbeamParachainId;
-	type HydradxParachainId = HydrationParachainId;
+	type HydradxParachainId = HydradxParachainId;
 	type MantaParachainId = MantaParachainId;
 	type InterlayParachainId = InterlayParachainId;
 	type ChannelCommission = ();

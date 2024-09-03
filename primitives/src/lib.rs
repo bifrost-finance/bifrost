@@ -157,9 +157,9 @@ pub type TimeStampedPrice = orml_oracle::TimestampedValue<Price, Moment>;
 
 pub type AstarParachainId = ConstU32<2006>;
 
-pub type MoonbeamParachainId = ConstU32<2024>;
+pub type MoonbeamParachainId = ConstU32<2004>;
 
-pub type HydrationParachainId = ConstU32<2034>;
+pub type HydradxParachainId = ConstU32<2034>;
 
 pub type MantaParachainId = ConstU32<2104>;
 

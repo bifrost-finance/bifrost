@@ -24,7 +24,7 @@
 use bifrost_asset_registry::AssetIdMaps;
 use bifrost_primitives::{
 	currency::{BNC, DOT, FIL, KSM, MOVR, VBNC, VFIL, VKSM, VMOVR},
-	AstarParachainId, CurrencyId, CurrencyIdMapping, HydrationParachainId, InterlayParachainId,
+	AstarParachainId, CurrencyId, CurrencyIdMapping, HydradxParachainId, InterlayParachainId,
 	MantaParachainId, MoonbeamParachainId, SlpxOperator, TokenSymbol,
 };
 use bifrost_runtime_common::{micro, milli};
@@ -232,7 +232,7 @@ impl vtoken_minting::Config for Runtime {
 	type XcmTransfer = XTokens;
 	type AstarParachainId = AstarParachainId;
 	type MoonbeamParachainId = MoonbeamParachainId;
-	type HydradxParachainId = HydrationParachainId;
+	type HydradxParachainId = HydradxParachainId;
 	type MantaParachainId = MantaParachainId;
 	type InterlayParachainId = InterlayParachainId;
 	type ChannelCommission = ();

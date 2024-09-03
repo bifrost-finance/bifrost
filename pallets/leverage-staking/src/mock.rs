@@ -23,7 +23,7 @@ pub use bifrost_primitives::{
 	currency::*, Balance, CurrencyId, CurrencyIdMapping, SlpOperator, SlpxOperator, TokenSymbol, *,
 };
 use bifrost_primitives::{
-	AstarParachainId, HydrationParachainId, InterlayParachainId, MantaParachainId,
+	AstarParachainId, HydradxParachainId, InterlayParachainId, MantaParachainId,
 	MoonbeamParachainId,
 };
 use bifrost_runtime_common::milli;
@@ -317,7 +317,7 @@ impl bifrost_vtoken_minting::Config for Test {
 	type XcmTransfer = XTokens;
 	type AstarParachainId = AstarParachainId;
 	type MoonbeamParachainId = MoonbeamParachainId;
-	type HydradxParachainId = HydrationParachainId;
+	type HydradxParachainId = HydradxParachainId;
 	type MantaParachainId = MantaParachainId;
 	type InterlayParachainId = InterlayParachainId;
 	type BifrostSlpx = SlpxInterface;

@@ -20,7 +20,7 @@
 use crate as slpx;
 use bifrost_asset_registry::AssetIdMaps;
 use bifrost_primitives::{
-	AstarParachainId, HydrationParachainId, InterlayParachainId, MantaParachainId,
+	AstarParachainId, HydradxParachainId, InterlayParachainId, MantaParachainId,
 	MoonbeamParachainId,
 };
 pub use bifrost_primitives::{
@@ -202,7 +202,7 @@ impl bifrost_vtoken_minting::Config for Test {
 	type XcmTransfer = XTokens;
 	type AstarParachainId = AstarParachainId;
 	type MoonbeamParachainId = MoonbeamParachainId;
-	type HydradxParachainId = HydrationParachainId;
+	type HydradxParachainId = HydradxParachainId;
 	type MantaParachainId = MantaParachainId;
 	type InterlayParachainId = InterlayParachainId;
 	type ChannelCommission = ();
