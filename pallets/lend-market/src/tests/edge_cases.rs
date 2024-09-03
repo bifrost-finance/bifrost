@@ -37,7 +37,7 @@ fn repay_borrow_all_no_underflow() {
 		// FIXME since total_borrows is too small and we accrue internal on it every 100 seconds
 		// accrue_interest fails every time
 		// as you can see the current borrow balance is not equal to total_borrows anymore
-		assert_eq!(LendMarket::total_borrows(KSM), 10000000);
+		assert_eq!(TotalBorrows::<Test>::get(KSM), 10000000);
 
 		// Alice repay all borrow balance. total_borrows = total_borrows.saturating_sub(10000005) =
 		// 0.
@@ -46,14 +46,14 @@ fn repay_borrow_all_no_underflow() {
 		assert_eq!(<Test as Config>::Assets::balance(KSM, &ALICE), unit(800) - 5);
 
 		assert_eq!(
-			LendMarket::exchange_rate(DOT)
-				.saturating_mul_int(LendMarket::account_deposits(KSM, ALICE).voucher_balance),
+			ExchangeRate::<Test>::get(DOT)
+				.saturating_mul_int(AccountDeposits::<Test>::get(KSM, ALICE).voucher_balance),
 			unit(200)
 		);
 
-		let borrow_snapshot = LendMarket::account_borrows(KSM, ALICE);
+		let borrow_snapshot = AccountBorrows::<Test>::get(KSM, ALICE);
 		assert_eq!(borrow_snapshot.principal, 0);
-		assert_eq!(borrow_snapshot.borrow_index, LendMarket::borrow_index(KSM));
+		assert_eq!(borrow_snapshot.borrow_index, BorrowIndex::<Test>::get(KSM));
 	})
 }
 
@@ -77,7 +77,7 @@ fn redeem_all_should_be_accurate() {
 
 		// let exchange_rate greater than 0.02
 		accrue_interest_per_block(KSM, 6, 2);
-		assert_eq!(LendMarket::exchange_rate(KSM), Rate::from_inner(20000000036387000));
+		assert_eq!(ExchangeRate::<Test>::get(KSM), Rate::from_inner(20000000036387000));
 
 		assert_ok!(LendMarket::repay_borrow_all(RuntimeOrigin::signed(ALICE), KSM));
 		// It failed with InsufficientLiquidity before #839
@@ -110,7 +110,7 @@ fn prevent_the_exchange_rate_attack() {
 			100000000000001
 		);
 		assert_eq!(
-			LendMarket::total_supply(DOT),
+			TotalSupply::<Test>::get(DOT),
 			1 * 50, // 1 / 0.02
 		);
 		TimestampPallet::set_timestamp(12000);

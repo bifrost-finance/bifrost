@@ -27,7 +27,7 @@ use bifrost_primitives::*;
 use frame_support::{dispatch::DispatchClass, pallet_prelude::*, transactional};
 use frame_system::pallet_prelude::*;
 use log;
-use orml_traits::{DataFeeder, DataProvider, DataProviderExtended};
+use orml_oracle::{DataFeeder, DataProvider, DataProviderExtended};
 pub use pallet::*;
 use pallet_traits::*;
 use sp_runtime::{traits::CheckedDiv, FixedU128};
@@ -97,15 +97,33 @@ pub mod pallet {
 
 	/// Mapping from currency id to it's emergency price
 	#[pallet::storage]
-	#[pallet::getter(fn emergency_price)]
 	pub type EmergencyPrice<T: Config> =
 		StorageMap<_, Twox64Concat, CurrencyId, Price, OptionQuery>;
 
 	/// Mapping from foreign vault token to our's vault token
 	#[pallet::storage]
-	#[pallet::getter(fn foreign_to_native_asset)]
 	pub type ForeignToNativeAsset<T: Config> =
 		StorageMap<_, Twox64Concat, CurrencyId, CurrencyId, OptionQuery>;
+
+	#[pallet::genesis_config]
+	#[derive(frame_support::DefaultNoBound)]
+	pub struct GenesisConfig<T: Config> {
+		pub emergency_price: Vec<(CurrencyId, Price)>,
+		pub foreign_to_native_asset: Vec<(CurrencyId, CurrencyId)>,
+		pub phantom: PhantomData<T>,
+	}
+
+	#[pallet::genesis_build]
+	impl<T: Config> BuildGenesisConfig for GenesisConfig<T> {
+		fn build(&self) {
+			for (asset_id, price) in self.emergency_price.iter() {
+				EmergencyPrice::<T>::insert(asset_id, price);
+			}
+			for (foreign_asset_id, native) in self.foreign_to_native_asset.iter() {
+				ForeignToNativeAsset::<T>::insert(foreign_asset_id, native);
+			}
+		}
+	}
 
 	#[pallet::pallet]
 	#[pallet::without_storage_info]
@@ -161,7 +179,7 @@ pub mod pallet {
 impl<T: Config> Pallet<T> {
 	// get emergency price, the timestamp is zero
 	fn get_emergency_price(asset_id: &CurrencyId) -> Option<PriceDetail> {
-		Self::emergency_price(asset_id).and_then(|p| {
+		EmergencyPrice::<T>::get(asset_id).and_then(|p| {
 			let mantissa = Self::get_asset_mantissa(asset_id)?;
 			log::trace!(
 				target: "prices::get_emergency_price",
@@ -217,6 +235,16 @@ impl<T: Config> PriceFeeder for Pallet<T> {
 				.or_else(|| T::Source::get(asset_id))
 				.and_then(|price| Self::normalize_detail_price(price, mantissa))
 		})
+	}
+
+	fn get_normal_price(asset_id: &CurrencyId) -> Option<u128> {
+		let decimals = Self::get_asset_mantissa(asset_id)?;
+		EmergencyPrice::<T>::get(asset_id)
+			.and_then(|p| Some(p.into_inner().saturating_div(decimals)))
+			.or_else(|| {
+				T::Source::get(&asset_id)
+					.and_then(|price| Some(price.value.into_inner().saturating_div(decimals)))
+			})
 	}
 }
 

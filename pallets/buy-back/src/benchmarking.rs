@@ -21,7 +21,7 @@
 #![cfg(feature = "runtime-benchmarks")]
 
 use crate::{BalanceOf, Call, Config, Pallet, Pallet as BuyBack, *};
-use bifrost_primitives::{CurrencyId, TokenSymbol, DOT};
+use bifrost_primitives::VDOT;
 use frame_benchmarking::v1::{account, benchmarks, BenchmarkError};
 use frame_support::{
 	assert_ok,
@@ -34,41 +34,45 @@ use sp_runtime::traits::UniqueSaturatedFrom;
 benchmarks! {
 	set_vtoken {
 		let origin = T::ControlOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?;
-	}: _<T::RuntimeOrigin>(origin,CurrencyId::VToken(TokenSymbol::KSM),1_000_000u32.into(),Permill::from_percent(2),1000u32.into(),1000u32.into(),true)
+	}: _<T::RuntimeOrigin>(origin,VDOT,1_000_000u32.into(),Permill::from_percent(2),1000u32.into(),1000u32.into(),true,Some(Permill::from_percent(2)),Permill::from_percent(2))
 
 	charge {
 		let test_account: T::AccountId = account("seed",1,1);
 
-		T::MultiCurrency::deposit(DOT, &test_account, BalanceOf::<T>::unique_saturated_from(1_000_000_000_000_000u128))?;
-	}: _(RawOrigin::Signed(test_account),DOT,BalanceOf::<T>::unique_saturated_from(9_000_000_000_000u128))
+		T::MultiCurrency::deposit(VDOT, &test_account, BalanceOf::<T>::unique_saturated_from(1_000_000_000_000_000u128))?;
+	}: _(RawOrigin::Signed(test_account),VDOT,BalanceOf::<T>::unique_saturated_from(9_000_000_000_000u128))
 
 	remove_vtoken {
 		let origin = T::ControlOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?;
 		assert_ok!(BuyBack::<T>::set_vtoken(
 			T::ControlOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?,
-			CurrencyId::VToken(TokenSymbol::KSM),
+			VDOT,
 			1_000_000u32.into(),
 			Permill::from_percent(2),
 			1000u32.into(),
 			1000u32.into(),
-			true
+			true,
+			Some(Permill::from_percent(2)),
+			Permill::from_percent(2)
 		));
-	}: _<T::RuntimeOrigin>(origin,CurrencyId::Token(TokenSymbol::KSM))
+	}: _<T::RuntimeOrigin>(origin,VDOT)
 
 
-	on_idle {
+	on_initialize {
 		let origin = T::ControlOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?;
 		assert_ok!(BuyBack::<T>::set_vtoken(
 			T::ControlOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?,
-			CurrencyId::VToken(TokenSymbol::KSM),
+			VDOT,
 			1_000_000u32.into(),
 			Permill::from_percent(2),
 			1000u32.into(),
 			1000u32.into(),
-			true
+			true,
+			Some(Permill::from_percent(2)),
+			Permill::from_percent(2)
 		));
 	}: {
-		BuyBack::<T>::on_idle(BlockNumberFor::<T>::from(0u32),Weight::from_parts(0, u64::MAX));
+		BuyBack::<T>::on_initialize(BlockNumberFor::<T>::from(0u32));
 	}
 
 	impl_benchmark_test_suite!(BuyBack,crate::mock::ExtBuilder::default().build(),crate::mock::Runtime);

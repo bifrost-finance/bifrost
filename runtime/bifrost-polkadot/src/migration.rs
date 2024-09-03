@@ -295,3 +295,126 @@ pub mod slpx_migrates_whitelist {
 		}
 	}
 }
+
+pub mod opengov {
+	use super::*;
+	use pallet_ranked_collective::{Config, IdToIndex, IndexToId};
+	use sp_core::crypto::Ss58Codec;
+
+	pub struct RankedCollectiveV1<T, I = ()>(PhantomData<(T, I)>);
+	impl<T: Config<I>, I: 'static> OnRuntimeUpgrade for RankedCollectiveV1<T, I>
+	where
+		AccountId:
+			Ss58Codec + parity_scale_codec::EncodeLike<<T as frame_system::Config>::AccountId>,
+	{
+		fn on_runtime_upgrade() -> Weight {
+			let remove_member =
+				AccountId::from_ss58check("cYPu6g4apwndq26ryA4gFjW7us5LdcpCnzgkeFyxdgu5aop")
+					.unwrap();
+			let demote_member1 =
+				AccountId::from_ss58check("fXznm8JzrUuyEijnyy8M2tfdFQeot2bUrERe3ZK9FwTaZZw")
+					.unwrap();
+			let demote_member2 =
+				AccountId::from_ss58check("fAGgdvAYwqCwpt3Wda1mzpACnNyESbfgfgvm1RLSudBsUEu")
+					.unwrap();
+			IdToIndex::<T, I>::remove(5, demote_member1.clone());
+			IdToIndex::<T, I>::remove(5, demote_member2.clone());
+			IdToIndex::<T, I>::remove(6, demote_member1.clone());
+			IdToIndex::<T, I>::remove(6, demote_member2.clone());
+			IdToIndex::<T, I>::remove(0, remove_member.clone());
+			IdToIndex::<T, I>::remove(1, remove_member.clone());
+			IdToIndex::<T, I>::remove(2, remove_member.clone());
+			IdToIndex::<T, I>::remove(3, remove_member.clone());
+			IdToIndex::<T, I>::remove(4, remove_member.clone());
+			IdToIndex::<T, I>::remove(5, remove_member.clone());
+			IdToIndex::<T, I>::remove(6, remove_member.clone());
+
+			IndexToId::<T, I>::remove(2, 14);
+			IndexToId::<T, I>::remove(3, 10);
+			IndexToId::<T, I>::remove(4, 7);
+
+			IndexToId::<T, I>::remove(5, 2);
+			IndexToId::<T, I>::remove(5, 3);
+			IndexToId::<T, I>::remove(5, 4);
+			IndexToId::<T, I>::remove(6, 2);
+			IndexToId::<T, I>::remove(6, 3);
+			IndexToId::<T, I>::remove(6, 4);
+			Weight::from(<Runtime as frame_system::Config>::DbWeight::get().writes(20u64))
+		}
+
+		#[cfg(feature = "try-runtime")]
+		fn post_upgrade(_state: Vec<u8>) -> Result<(), TryRuntimeError> {
+			let rank6_member =
+				AccountId::from_ss58check("hJmectFjn7CCEQL1tKDxvboA1i9hcfTyUrLuW3xjDqRgxmm")
+					.unwrap();
+			let remove_member =
+				AccountId::from_ss58check("cYPu6g4apwndq26ryA4gFjW7us5LdcpCnzgkeFyxdgu5aop")
+					.unwrap();
+			let demote_member1 =
+				AccountId::from_ss58check("fXznm8JzrUuyEijnyy8M2tfdFQeot2bUrERe3ZK9FwTaZZw")
+					.unwrap();
+			let demote_member2 =
+				AccountId::from_ss58check("fAGgdvAYwqCwpt3Wda1mzpACnNyESbfgfgvm1RLSudBsUEu")
+					.unwrap();
+			assert_eq!(IdToIndex::<T, I>::get(5, rank6_member.clone()), Some(0));
+			assert_eq!(IdToIndex::<T, I>::get(6, rank6_member.clone()), Some(0));
+			assert_eq!(IndexToId::<T, I>::get(5, 2), None);
+			assert_eq!(IndexToId::<T, I>::get(5, 3), None);
+			assert_eq!(IndexToId::<T, I>::get(5, 4), None);
+			assert_eq!(IndexToId::<T, I>::get(6, 2), None);
+			assert_eq!(IndexToId::<T, I>::get(6, 3), None);
+			assert_eq!(IndexToId::<T, I>::get(6, 4), None);
+
+			assert_eq!(IndexToId::<T, I>::get(4, 7), None);
+			assert_eq!(IndexToId::<T, I>::get(4, 8), None);
+			assert_eq!(IndexToId::<T, I>::get(3, 10), None);
+			assert_eq!(IndexToId::<T, I>::get(3, 11), None);
+			assert_eq!(IndexToId::<T, I>::get(2, 14), None);
+			assert_eq!(IndexToId::<T, I>::get(1, 19), None);
+			assert_eq!(IndexToId::<T, I>::get(0, 19), None);
+
+			let deserialize_to_account_id32 = |account_id: T::AccountId| -> AccountId {
+				let encoded = account_id.encode();
+				AccountId::decode(&mut &encoded[..]).expect("Failed to decode AccountId")
+			};
+			assert_eq!(
+				IndexToId::<T, I>::get(5, 0).map(deserialize_to_account_id32),
+				Some(rank6_member)
+			);
+			assert_eq!(IdToIndex::<T, I>::get(5, demote_member1.clone()), None);
+			assert_eq!(IdToIndex::<T, I>::get(6, demote_member1.clone()), None);
+			assert_eq!(IdToIndex::<T, I>::get(5, demote_member2.clone()), None);
+			assert_eq!(IdToIndex::<T, I>::get(6, demote_member2.clone()), None);
+
+			assert_eq!(IdToIndex::<T, I>::get(0, remove_member.clone()), None);
+			assert_eq!(IdToIndex::<T, I>::get(1, remove_member.clone()), None);
+			assert_eq!(IdToIndex::<T, I>::get(2, remove_member.clone()), None);
+			assert_eq!(IdToIndex::<T, I>::get(3, remove_member.clone()), None);
+			assert_eq!(IdToIndex::<T, I>::get(4, remove_member.clone()), None);
+			assert_eq!(IdToIndex::<T, I>::get(5, remove_member.clone()), None);
+			assert_eq!(IdToIndex::<T, I>::get(6, remove_member.clone()), None);
+
+			Ok(())
+		}
+	}
+}
+
+pub mod genesis_evm_storage {
+	use crate::{Runtime, Weight};
+	use frame_support::traits::OnRuntimeUpgrade;
+	use pallet_dynamic_fee::MinGasPrice;
+	use pallet_evm_chain_id::ChainId;
+	use primitive_types::U256;
+
+	pub struct GenesisEVMStorage;
+
+	impl OnRuntimeUpgrade for GenesisEVMStorage {
+		fn on_runtime_upgrade() -> Weight {
+			let evm_id: u64 = 996u64;
+			let min_gas_fee: U256 = U256::from(560174200u64);
+			ChainId::<Runtime>::put(evm_id);
+			MinGasPrice::<Runtime>::put(min_gas_fee);
+			<Runtime as frame_system::Config>::DbWeight::get().reads_writes(0, 2)
+		}
+	}
+}

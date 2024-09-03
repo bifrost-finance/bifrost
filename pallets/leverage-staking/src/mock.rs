@@ -421,6 +421,10 @@ impl PriceFeeder for MockPriceFeeder {
 	fn get_price(asset_id: &CurrencyId) -> Option<PriceDetail> {
 		Self::PRICES.with(|prices| *prices.borrow().get(&CurrencyIdWrap(*asset_id)).unwrap())
 	}
+
+	fn get_normal_price(_asset_id: &CurrencyId) -> Option<u128> {
+		todo!()
+	}
 }
 
 parameter_types! {

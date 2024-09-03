@@ -113,7 +113,7 @@ mod benchmarks {
 
 		assert_ok!(Salp::<T>::fund_fail(RawOrigin::Root.into(), fund_index));
 		assert_ok!(Salp::<T>::withdraw(RawOrigin::Root.into(), fund_index));
-		let fund = Salp::<T>::funds(fund_index).unwrap();
+		let fund = Funds::<T>::get(fund_index).unwrap();
 		let (_, status) = Salp::<T>::contribution(fund.trie_index, &caller);
 		assert_eq!(status, ContributionStatus::Idle);
 
@@ -187,12 +187,12 @@ mod benchmarks {
 		));
 		assert_ok!(Salp::<T>::fund_retire(RawOrigin::Root.into(), fund_index));
 		assert_ok!(Salp::<T>::withdraw(RawOrigin::Root.into(), fund_index));
-		assert_eq!(Salp::<T>::redeem_pool(), T::MinContribution::get());
+		assert_eq!(RedeemPool::<T>::get(), T::MinContribution::get());
 
 		#[extrinsic_call]
 		_(RawOrigin::Signed(caller.clone()), fund_index, contribution);
 
-		assert_eq!(Salp::<T>::redeem_pool(), 0_u32.saturated_into());
+		assert_eq!(RedeemPool::<T>::get(), 0_u32.saturated_into());
 	}
 
 	#[benchmark]
@@ -547,7 +547,7 @@ mod benchmarks {
 		));
 		assert_ok!(Salp::<T>::fund_retire(RawOrigin::Root.into(), fund_index));
 		assert_ok!(Salp::<T>::withdraw(RawOrigin::Root.into(), fund_index));
-		assert_eq!(Salp::<T>::redeem_pool(), T::MinContribution::get());
+		assert_eq!(RedeemPool::<T>::get(), T::MinContribution::get());
 
 		#[extrinsic_call]
 		_(RawOrigin::Signed(caller.clone()), fund_index);

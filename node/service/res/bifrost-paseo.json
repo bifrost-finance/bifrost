@@ -42,6 +42,7 @@
   },
   "relayChain": "paseo",
   "paraId": 2030,
+  "evmSince": 71078,
   "codeSubstitutes": {},
   "genesis": {
     "raw": {

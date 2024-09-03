@@ -26,6 +26,7 @@
   },
   "relayChain": "polkadot",
   "paraId": 2030,
+  "evmSince": 5331574,
   "codeSubstitutes": {},
   "genesis": {
     "raw": {

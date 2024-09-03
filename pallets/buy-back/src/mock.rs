@@ -164,7 +164,6 @@ parameter_types! {
 
 ord_parameter_types! {
 	pub const One: AccountId = ALICE;
-	// pub const RelayChainTokenSymbolKSM: TokenSymbol = TokenSymbol::KSM;
 	pub const RelayCurrencyId: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
 }
 
@@ -174,9 +173,7 @@ impl bifrost_buy_back::Config for Runtime {
 	type ControlOrigin = EnsureSignedBy<One, AccountId>;
 	type WeightInfo = ();
 	type DexOperator = ZenlinkProtocol;
-	type CurrencyIdConversion = AssetIdMaps<Runtime>;
 	type TreasuryAccount = TreasuryAccount;
-	type RelayChainToken = RelayCurrencyId;
 	type BuyBackAccount = BuyBackAccount;
 	type LiquidityAccount = LiquidityAccount;
 	type ParachainId = ParaInfo;
@@ -489,6 +486,7 @@ impl bifrost_ve_minting::Config for Runtime {
 	type TokenType = VeMintingTokenType;
 	type VeMintingPalletId = VeMintingPalletId;
 	type IncentivePalletId = IncentivePalletId;
+	type BuyBackAccount = BuyBackAccount;
 	type WeightInfo = ();
 	type BlockNumberToBalance = ConvertInto;
 	type Week = Week;
@@ -550,6 +548,15 @@ impl ExtBuilder {
 				.into_iter()
 				.filter(|(_, currency_id, _)| *currency_id != BNC)
 				.collect::<Vec<_>>(),
+		}
+		.assimilate_storage(&mut t)
+		.unwrap();
+
+		bifrost_asset_registry::GenesisConfig::<Runtime> {
+			currency: vec![(VKSM, 10_000_000, None), (VDOT, 10_000_000, None)],
+			vcurrency: vec![],
+			vsbond: vec![],
+			phantom: Default::default(),
 		}
 		.assimilate_storage(&mut t)
 		.unwrap();

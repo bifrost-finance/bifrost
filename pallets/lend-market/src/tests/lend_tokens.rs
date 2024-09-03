@@ -55,8 +55,8 @@ fn trait_inspect_methods_works() {
 		assert_ok!(LendMarket::borrow(RuntimeOrigin::signed(DAVE), BNC, unit(25)));
 
 		assert_eq!(
-			LendMarket::exchange_rate(BNC)
-				.saturating_mul_int(LendMarket::account_deposits(BNC, DAVE).voucher_balance),
+			ExchangeRate::<Test>::get(BNC)
+				.saturating_mul_int(AccountDeposits::<Test>::get(BNC, DAVE).voucher_balance),
 			unit(100)
 		);
 
@@ -156,15 +156,15 @@ fn transfer_lend_token_works() {
 		// DAVE BNC collateral: deposit = 100
 		// BNC: cash - deposit = 1000 - 100 = 900
 		assert_eq!(
-			LendMarket::exchange_rate(BNC)
-				.saturating_mul_int(LendMarket::account_deposits(BNC, DAVE).voucher_balance),
+			ExchangeRate::<Test>::get(BNC)
+				.saturating_mul_int(AccountDeposits::<Test>::get(BNC, DAVE).voucher_balance),
 			unit(100)
 		);
 
 		// ALICE BNC collateral: deposit = 0
 		assert_eq!(
-			LendMarket::exchange_rate(BNC)
-				.saturating_mul_int(LendMarket::account_deposits(BNC, ALICE).voucher_balance),
+			ExchangeRate::<Test>::get(BNC)
+				.saturating_mul_int(AccountDeposits::<Test>::get(BNC, ALICE).voucher_balance),
 			unit(0)
 		);
 
@@ -173,8 +173,8 @@ fn transfer_lend_token_works() {
 
 		// DAVE BNC collateral: deposit = 50
 		assert_eq!(
-			LendMarket::exchange_rate(BNC)
-				.saturating_mul_int(LendMarket::account_deposits(BNC, DAVE).voucher_balance),
+			ExchangeRate::<Test>::get(BNC)
+				.saturating_mul_int(AccountDeposits::<Test>::get(BNC, DAVE).voucher_balance),
 			unit(50)
 		);
 		// DAVE Redeem 51 BNC should cause InsufficientDeposit
@@ -185,8 +185,8 @@ fn transfer_lend_token_works() {
 
 		// ALICE BNC collateral: deposit = 50
 		assert_eq!(
-			LendMarket::exchange_rate(BNC)
-				.saturating_mul_int(LendMarket::account_deposits(BNC, ALICE).voucher_balance),
+			ExchangeRate::<Test>::get(BNC)
+				.saturating_mul_int(AccountDeposits::<Test>::get(BNC, ALICE).voucher_balance),
 			unit(50)
 		);
 		// ALICE Redeem 50 BNC should be succeeded
@@ -227,8 +227,8 @@ fn transfer_lend_tokens_under_collateral_works() {
 		// DAVE Borrow BNC = 0 + 50 - 40 = 10
 		// DAVE liquidity BNC = 80 * 0.5 - 10 = 30
 		assert_eq!(
-			LendMarket::exchange_rate(BNC)
-				.saturating_mul_int(LendMarket::account_deposits(BNC, DAVE).voucher_balance),
+			ExchangeRate::<Test>::get(BNC)
+				.saturating_mul_int(AccountDeposits::<Test>::get(BNC, DAVE).voucher_balance),
 			unit(80)
 		);
 		// DAVE Borrow 31 BNC should cause InsufficientLiquidity
@@ -240,8 +240,8 @@ fn transfer_lend_tokens_under_collateral_works() {
 
 		// Assert ALICE Supply BNC 20
 		assert_eq!(
-			LendMarket::exchange_rate(BNC)
-				.saturating_mul_int(LendMarket::account_deposits(BNC, ALICE).voucher_balance),
+			ExchangeRate::<Test>::get(BNC)
+				.saturating_mul_int(AccountDeposits::<Test>::get(BNC, ALICE).voucher_balance),
 			unit(20)
 		);
 		// ALICE Redeem 20 BNC should be succeeded

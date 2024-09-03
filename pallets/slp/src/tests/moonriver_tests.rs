@@ -1641,7 +1641,7 @@ fn add_validator_and_remove_validator_works() {
 
 		let bounded_valis = BoundedVec::try_from(valis).unwrap();
 
-		assert_eq!(Slp::get_validators(MOVR), Some(bounded_valis));
+		assert_eq!(Validators::<Runtime>::get(MOVR), Some(bounded_valis));
 
 		assert_ok!(Slp::remove_validator(
 			RuntimeOrigin::signed(ALICE),
@@ -1650,7 +1650,7 @@ fn add_validator_and_remove_validator_works() {
 		));
 
 		let empty_bounded_vec = BoundedVec::default();
-		assert_eq!(Slp::get_validators(MOVR), Some(empty_bounded_vec));
+		assert_eq!(Validators::<Runtime>::get(MOVR), Some(empty_bounded_vec));
 	});
 }
 
@@ -1673,7 +1673,7 @@ fn reset_validators_should_work() {
 
 		assert_ok!(Slp::reset_validators(RuntimeOrigin::signed(ALICE), MOVR, validator_list_input));
 
-		assert_eq!(Slp::get_validators(MOVR), Some(validator_list_output));
+		assert_eq!(Validators::<Runtime>::get(MOVR), Some(validator_list_output));
 	});
 }
 
@@ -1709,9 +1709,9 @@ fn set_validator_boost_list_should_work() {
 
 		let bounded_validator_list_output_1 =
 			BoundedVec::try_from(validator_list_output_1).unwrap();
-		assert_eq!(Slp::get_validator_boost_list(MOVR), Some(bounded_validator_list_output_1));
+		assert_eq!(ValidatorBoostList::<Runtime>::get(MOVR), Some(bounded_validator_list_output_1));
 		let bounded_validator_0 = BoundedVec::try_from(vec![VALIDATOR_0_LOCATION]).unwrap();
-		assert_eq!(Slp::get_validators(MOVR), Some(bounded_validator_0));
+		assert_eq!(Validators::<Runtime>::get(MOVR), Some(bounded_validator_0));
 
 		System::set_block_number(400);
 
@@ -1723,10 +1723,10 @@ fn set_validator_boost_list_should_work() {
 
 		let bounded_validator_list_output_2 =
 			BoundedVec::try_from(validator_list_output_2).unwrap();
-		assert_eq!(Slp::get_validator_boost_list(MOVR), Some(bounded_validator_list_output_2));
+		assert_eq!(ValidatorBoostList::<Runtime>::get(MOVR), Some(bounded_validator_list_output_2));
 		let bounded_validator_0_1 =
 			BoundedVec::try_from(vec![VALIDATOR_0_LOCATION, VALIDATOR_1_LOCATION]).unwrap();
-		assert_eq!(Slp::get_validators(MOVR), Some(bounded_validator_0_1),);
+		assert_eq!(Validators::<Runtime>::get(MOVR), Some(bounded_validator_0_1),);
 	});
 }
 
@@ -1754,10 +1754,10 @@ fn add_to_validator_boost_list_should_work() {
 			Box::new(VALIDATOR_0_LOCATION)
 		));
 
-		assert_eq!(Slp::get_validator_boost_list(MOVR), Some(validator_list_output_1));
+		assert_eq!(ValidatorBoostList::<Runtime>::get(MOVR), Some(validator_list_output_1));
 
 		let bounded_validator_0 = BoundedVec::try_from(vec![VALIDATOR_0_LOCATION]).unwrap();
-		assert_eq!(Slp::get_validators(MOVR), Some(bounded_validator_0.clone()));
+		assert_eq!(Validators::<Runtime>::get(MOVR), Some(bounded_validator_0.clone()));
 
 		System::set_block_number(400);
 
@@ -1767,9 +1767,9 @@ fn add_to_validator_boost_list_should_work() {
 			Box::new(VALIDATOR_0_LOCATION)
 		));
 
-		assert_eq!(Slp::get_validators(MOVR), Some(bounded_validator_0));
+		assert_eq!(Validators::<Runtime>::get(MOVR), Some(bounded_validator_0));
 
-		assert_eq!(Slp::get_validator_boost_list(MOVR), Some(validator_list_output_2));
+		assert_eq!(ValidatorBoostList::<Runtime>::get(MOVR), Some(validator_list_output_2));
 
 		assert_ok!(Slp::add_to_validator_boost_list(
 			RuntimeOrigin::signed(ALICE),
@@ -1777,10 +1777,10 @@ fn add_to_validator_boost_list_should_work() {
 			Box::new(VALIDATOR_1_LOCATION)
 		));
 
-		assert_eq!(Slp::get_validator_boost_list(MOVR), Some(validator_list_output_3));
+		assert_eq!(ValidatorBoostList::<Runtime>::get(MOVR), Some(validator_list_output_3));
 		let bounded_validator_0_1 =
 			BoundedVec::try_from(vec![VALIDATOR_0_LOCATION, VALIDATOR_1_LOCATION]).unwrap();
-		assert_eq!(Slp::get_validators(MOVR), Some(bounded_validator_0_1),);
+		assert_eq!(Validators::<Runtime>::get(MOVR), Some(bounded_validator_0_1),);
 	});
 }
 
@@ -1798,7 +1798,7 @@ fn remove_from_validator_boost_list_should_work() {
 			Box::new(VALIDATOR_0_LOCATION)
 		));
 
-		assert_eq!(Slp::get_validator_boost_list(MOVR), Some(validator_list_output.clone()));
+		assert_eq!(ValidatorBoostList::<Runtime>::get(MOVR), Some(validator_list_output.clone()));
 
 		assert_ok!(Slp::remove_from_validator_boot_list(
 			RuntimeOrigin::signed(ALICE),
@@ -1806,7 +1806,7 @@ fn remove_from_validator_boost_list_should_work() {
 			Box::new(VALIDATOR_1_LOCATION)
 		));
 
-		assert_eq!(Slp::get_validator_boost_list(MOVR), Some(validator_list_output));
+		assert_eq!(ValidatorBoostList::<Runtime>::get(MOVR), Some(validator_list_output));
 
 		assert_ok!(Slp::remove_from_validator_boot_list(
 			RuntimeOrigin::signed(ALICE),
@@ -1814,6 +1814,6 @@ fn remove_from_validator_boost_list_should_work() {
 			Box::new(VALIDATOR_0_LOCATION)
 		));
 
-		assert_eq!(Slp::get_validator_boost_list(MOVR), None);
+		assert_eq!(ValidatorBoostList::<Runtime>::get(MOVR), None);
 	});
 }

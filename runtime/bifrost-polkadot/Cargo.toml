@@ -46,6 +46,7 @@ pallet-proxy = { workspace = true }
 pallet-ranked-collective = { workspace = true }
 pallet-referenda = { workspace = true }
 pallet-scheduler = { workspace = true }
+pallet-staking = { workspace = true }
 pallet-session = { workspace = true }
 pallet-timestamp = { workspace = true }
 pallet-tips = { workspace = true }
@@ -108,6 +109,31 @@ zenlink-protocol-runtime-api = { workspace = true }
 
 # Nuts Finance
 bifrost-stable-asset = { workspace = true }
+
+# Frontier
+num_enum = { workspace = true }
+primitive-types = { workspace = true }
+ethabi = { workspace = true }
+module-evm-utility-macro = { workspace = true }
+evm = { workspace = true, features = ["with-codec"] }
+fp-account = { workspace = true, features = ["serde"] }
+fp-evm = { workspace = true, features = ["serde"] }
+fp-rpc = { workspace = true }
+fp-self-contained = { workspace = true, features = ["serde"] }
+pallet-base-fee = { workspace = true }
+pallet-dynamic-fee = { workspace = true }
+pallet-ethereum = { workspace = true }
+pallet-evm = { workspace = true }
+pallet-evm-chain-id = { workspace = true }
+pallet-evm-precompile-dispatch = { workspace = true }
+pallet-evm-precompile-modexp = { workspace = true }
+pallet-evm-precompile-sha3fips = { workspace = true }
+pallet-evm-precompile-simple = { workspace = true }
+pallet-evm-precompile-bn128 = { workspace = true }
+pallet-evm-precompile-blake2 = { workspace = true }
+pallet-evm-accounts = { workspace = true }
+pallet-evm-accounts-rpc-runtime-api = { workspace = true }
+pallet-traits = { workspace = true }
 
 # Bifrost
 bifrost-asset-registry = { workspace = true }
@@ -257,6 +283,25 @@ std = [
 	"leverage-staking/std",
 	"bifrost-xcm-interface/std",
 	"bifrost-channel-commission/std",
+	# Frontier
+	"fp-account/std",
+	"fp-evm/std",
+	"fp-rpc/std",
+	"fp-account/std",
+	"fp-self-contained/std",
+	"pallet-base-fee/std",
+	"pallet-dynamic-fee/std",
+	"pallet-ethereum/std",
+	"pallet-evm/std",
+	"pallet-evm-chain-id/std",
+	"pallet-evm-precompile-dispatch/std",
+	"pallet-evm-precompile-modexp/std",
+	"pallet-evm-precompile-sha3fips/std",
+	"pallet-evm-precompile-simple/std",
+	"pallet-evm-precompile-bn128/std",
+	"pallet-evm-precompile-blake2/std",
+	"pallet-evm-accounts/std",
+	"pallet-evm-accounts-rpc-runtime-api/std",
 	"bifrost-clouds-convert/std",
 	"bifrost-vtoken-minting-rpc-runtime-api/std",
 
@@ -277,10 +322,12 @@ runtime-benchmarks = [
 	"pallet-balances/runtime-benchmarks",
 	"pallet-bounties/runtime-benchmarks",
 	"pallet-indices/runtime-benchmarks",
+	"pallet-staking/runtime-benchmarks",
 	"pallet-scheduler/runtime-benchmarks",
 	"pallet-timestamp/runtime-benchmarks",
 	"pallet-treasury/runtime-benchmarks",
 	"pallet-utility/runtime-benchmarks",
+	"pallet-ethereum/runtime-benchmarks",
 	"bifrost-vesting/runtime-benchmarks",
 	"pallet-xcm/runtime-benchmarks",
 	"sp-runtime/runtime-benchmarks",
@@ -369,6 +416,12 @@ try-runtime = [
 	"pallet-whitelist/try-runtime",
 	"parachain-info/try-runtime",
 	"zenlink-protocol/try-runtime",
+	"fp-self-contained/try-runtime",
+	"pallet-ethereum/try-runtime",
+	"pallet-evm-accounts/try-runtime",
+	"pallet-evm/try-runtime",
+	"pallet-evm-chain-id/try-runtime",
+	"pallet-dynamic-fee/try-runtime",
 ]
 
 # Enable the metadata hash generation in the wasm builder.

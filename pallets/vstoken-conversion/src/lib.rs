@@ -141,17 +141,14 @@ pub mod pallet {
 	}
 
 	#[pallet::storage]
-	#[pallet::getter(fn relaychain_lease)]
 	pub type RelaychainLease<T: Config> = StorageValue<_, u32, ValueQuery>;
 
 	#[pallet::storage]
-	#[pallet::getter(fn exchange_rate)]
 	pub type ExchangeRate<T: Config> =
 		StorageMap<_, Twox64Concat, i32, VstokenConversionExchangeRate, ValueQuery>;
 
 	/// exchange fee
 	#[pallet::storage]
-	#[pallet::getter(fn exchange_fee)]
 	pub type ExchangeFee<T: Config> =
 		StorageValue<_, VstokenConversionExchangeFee<BalanceOf<T>>, ValueQuery>;
 

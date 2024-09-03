@@ -64,7 +64,7 @@ pub type CurrencyIdOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<
 
 const VE_LOCK_ID: LockIdentifier = *b"vebnclck";
 const MARKUP_LOCK_ID: LockIdentifier = *b"vebncmkp";
-
+const VE_MINTING_SYSTEM_POOL_ID: PoolId = 0;
 #[derive(Clone, Encode, Decode, PartialEq, Eq, RuntimeDebug, TypeInfo, Default)]
 pub struct VeConfig<Balance, BlockNumber> {
 	amount: Balance,
@@ -113,6 +113,9 @@ pub mod pallet {
 
 		#[pallet::constant]
 		type IncentivePalletId: Get<PalletId>;
+
+		#[pallet::constant]
+		type BuyBackAccount: Get<PalletId>;
 
 		/// Convert the block number into a balance.
 		type BlockNumberToBalance: Convert<BlockNumberFor<Self>, BalanceOf<Self>>;
@@ -188,6 +191,9 @@ pub mod pallet {
 		PartiallyRefreshed {
 			asset_id: CurrencyIdOf<T>,
 		},
+		NotifyRewardFailed {
+			rewards: Vec<(CurrencyIdOf<T>, BalanceOf<T>)>,
+		},
 	}
 
 	#[pallet::error]
@@ -204,20 +210,16 @@ pub mod pallet {
 	}
 
 	#[pallet::storage]
-	#[pallet::getter(fn supply)]
 	pub type Supply<T: Config> = StorageValue<_, BalanceOf<T>, ValueQuery>;
 
 	#[pallet::storage]
-	#[pallet::getter(fn ve_configs)]
 	pub type VeConfigs<T: Config> =
 		StorageValue<_, VeConfig<BalanceOf<T>, BlockNumberFor<T>>, ValueQuery>;
 
 	#[pallet::storage]
-	#[pallet::getter(fn epoch)]
 	pub type Epoch<T: Config> = StorageValue<_, U256, ValueQuery>;
 
 	#[pallet::storage]
-	#[pallet::getter(fn locked)]
 	pub type Locked<T: Config> = StorageMap<
 		_,
 		Blake2_128Concat,
@@ -227,18 +229,15 @@ pub mod pallet {
 	>;
 
 	#[pallet::storage]
-	#[pallet::getter(fn user_locked)]
 	pub type UserLocked<T: Config> =
 		StorageMap<_, Blake2_128Concat, AccountIdOf<T>, BalanceOf<T>, ValueQuery>;
 
 	// Each week has a Point struct stored in PointHistory.
 	#[pallet::storage]
-	#[pallet::getter(fn point_history)]
 	pub type PointHistory<T: Config> =
 		StorageMap<_, Twox64Concat, U256, Point<BalanceOf<T>, BlockNumberFor<T>>, ValueQuery>;
 
 	#[pallet::storage]
-	#[pallet::getter(fn user_point_history)]
 	pub type UserPointHistory<T: Config> = StorageDoubleMap<
 		_,
 		Blake2_128Concat,
@@ -250,17 +249,14 @@ pub mod pallet {
 	>;
 
 	#[pallet::storage]
-	#[pallet::getter(fn user_point_epoch)]
 	pub type UserPointEpoch<T: Config> = StorageMap<_, Blake2_128Concat, u128, U256, ValueQuery>;
 
 	#[pallet::storage]
-	#[pallet::getter(fn slope_changes)]
 	pub type SlopeChanges<T: Config> =
 		StorageMap<_, Twox64Concat, BlockNumberFor<T>, i128, ValueQuery>;
 
 	// Incentive
 	#[pallet::storage]
-	#[pallet::getter(fn incentive_configs)]
 	pub type IncentiveConfigs<T: Config> = StorageMap<
 		_,
 		Blake2_128Concat,
@@ -270,7 +266,6 @@ pub mod pallet {
 	>;
 
 	#[pallet::storage]
-	#[pallet::getter(fn user_reward_per_token_paid)]
 	pub type UserRewardPerTokenPaid<T: Config> = StorageMap<
 		_,
 		Blake2_128Concat,
@@ -280,17 +275,14 @@ pub mod pallet {
 	>;
 
 	#[pallet::storage]
-	#[pallet::getter(fn rewards)]
 	pub type Rewards<T: Config> =
 		StorageMap<_, Blake2_128Concat, AccountIdOf<T>, BTreeMap<CurrencyIdOf<T>, BalanceOf<T>>>;
 
 	#[pallet::storage]
-	#[pallet::getter(fn user_markup_infos)]
 	pub type UserMarkupInfos<T: Config> =
 		StorageMap<_, Blake2_128Concat, AccountIdOf<T>, UserMarkupInfo>;
 
 	#[pallet::storage]
-	#[pallet::getter(fn locked_tokens)]
 	pub type LockedTokens<T: Config> = StorageDoubleMap<
 		_,
 		Blake2_128Concat,
@@ -301,17 +293,14 @@ pub mod pallet {
 	>;
 
 	#[pallet::storage]
-	#[pallet::getter(fn total_lock)]
 	pub type TotalLock<T: Config> =
 		StorageMap<_, Twox64Concat, CurrencyIdOf<T>, BalanceOf<T>, ValueQuery>;
 
 	#[pallet::storage]
-	#[pallet::getter(fn markup_coefficient)]
 	pub type MarkupCoefficient<T: Config> =
 		StorageMap<_, Twox64Concat, CurrencyIdOf<T>, MarkupCoefficientInfo<BlockNumberFor<T>>>;
 
 	#[pallet::storage]
-	#[pallet::getter(fn position)]
 	pub type Position<T: Config> = StorageValue<_, u128, ValueQuery>;
 
 	#[pallet::storage]
@@ -323,17 +312,30 @@ pub mod pallet {
 		ValueQuery,
 	>;
 
-	// #[pallet::hooks]
-	// impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
-	// 	fn on_initialize(n: BlockNumberFor<T>) -> Weight {
-	// 		let conf = Self::incentive_configs();
-	// 		if n == conf.last_update_time + conf.rewards_duration {
-	// 			Self::notify_reward_amount(&conf.incentive_controller, conf.last_reward.clone())
-	// 				.unwrap_or_default();
-	// 		}
-	// 		T::DbWeight::get().writes(1_u64)
-	// 	}
-	// }
+	#[pallet::hooks]
+	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
+		fn on_initialize(n: BlockNumberFor<T>) -> Weight {
+			let conf = IncentiveConfigs::<T>::get(VE_MINTING_SYSTEM_POOL_ID);
+			if n == conf.period_finish {
+				if let Some(e) = Self::notify_reward_amount(
+					VE_MINTING_SYSTEM_POOL_ID,
+					&conf.incentive_controller,
+					conf.last_reward.clone(),
+				)
+				.err()
+				{
+					log::error!(
+						target: "ve-minting::notify_reward_amount",
+						"Received invalid justification for {:?}",
+						e,
+					);
+					Self::deposit_event(Event::NotifyRewardFailed { rewards: conf.last_reward });
+				}
+			}
+
+			T::DbWeight::get().writes(1_u64)
+		}
+	}
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
@@ -346,7 +348,7 @@ pub mod pallet {
 		) -> DispatchResult {
 			T::ControlOrigin::ensure_origin(origin)?;
 
-			let mut ve_config = Self::ve_configs();
+			let mut ve_config = VeConfigs::<T>::get();
 			if let Some(min_mint) = min_mint {
 				ve_config.min_mint = min_mint;
 			};
@@ -415,15 +417,19 @@ pub mod pallet {
 			rewards: Vec<(CurrencyIdOf<T>, BalanceOf<T>)>,
 		) -> DispatchResult {
 			T::ControlOrigin::ensure_origin(origin)?;
-			Self::set_incentive(0, rewards_duration, Some(incentive_from.clone())); // for pool0
-			Self::notify_reward_amount(0, &Some(incentive_from), rewards) // for pool0
+			Self::set_incentive(
+				VE_MINTING_SYSTEM_POOL_ID,
+				rewards_duration,
+				Some(incentive_from.clone()),
+			);
+			Self::notify_reward_amount(VE_MINTING_SYSTEM_POOL_ID, &Some(incentive_from), rewards)
 		}
 
 		#[pallet::call_index(6)]
 		#[pallet::weight(T::WeightInfo::get_rewards())]
 		pub fn get_rewards(origin: OriginFor<T>) -> DispatchResult {
 			let exchanger = ensure_signed(origin)?;
-			Self::get_rewards_inner(0, &exchanger, None) // for pool0
+			Self::get_rewards_inner(VE_MINTING_SYSTEM_POOL_ID, &exchanger, None)
 		}
 
 		#[pallet::call_index(7)]
@@ -493,7 +499,7 @@ pub mod pallet {
 			let mut u_old = Point::<BalanceOf<T>, BlockNumberFor<T>>::default();
 			let mut u_new = Point::<BalanceOf<T>, BlockNumberFor<T>>::default();
 			let mut new_dslope = 0_i128;
-			let mut g_epoch: U256 = Self::epoch();
+			let mut g_epoch: U256 = Epoch::<T>::get();
 			let current_block_number: BlockNumberFor<T> = frame_system::Pallet::<T>::block_number();
 
 			if old_locked.end > current_block_number && old_locked.amount > BalanceOf::<T>::zero() {
@@ -526,12 +532,12 @@ pub mod pallet {
 					)
 					.ok_or(ArithmeticError::Overflow)?;
 			}
-			let mut old_dslope = Self::slope_changes(old_locked.end);
+			let mut old_dslope = SlopeChanges::<T>::get(old_locked.end);
 			if new_locked.end != Zero::zero() {
 				if new_locked.end == old_locked.end {
 					new_dslope = old_dslope
 				} else {
-					new_dslope = Self::slope_changes(new_locked.end)
+					new_dslope = SlopeChanges::<T>::get(new_locked.end)
 				}
 			}
 
@@ -542,13 +548,13 @@ pub mod pallet {
 				amount: Zero::zero(),
 			};
 			if g_epoch > U256::zero() {
-				last_point = Self::point_history(g_epoch);
+				last_point = PointHistory::<T>::get(g_epoch);
 			} else {
 				// last_point.amount = T::MultiCurrency::free_balance(
 				// 	T::TokenType::get(),
 				// 	&T::VeMintingPalletId::get().into_account_truncating(),
 				// );
-				last_point.amount = Self::supply();
+				last_point.amount = Supply::<T>::get();
 			}
 			let mut last_checkpoint = last_point.block;
 			let mut t_i: BlockNumberFor<T> = last_checkpoint
@@ -562,7 +568,7 @@ pub mod pallet {
 				if t_i > current_block_number {
 					t_i = current_block_number
 				} else {
-					d_slope = Self::slope_changes(t_i)
+					d_slope = SlopeChanges::<T>::get(t_i)
 				}
 				last_point.bias = last_point
 					.bias
@@ -596,7 +602,7 @@ pub mod pallet {
 
 				// Fill for the current block, if applicable
 				if t_i == current_block_number {
-					last_point.amount = Self::supply();
+					last_point.amount = Supply::<T>::get();
 					// last_point.amount = T::MultiCurrency::free_balance(
 					// 	T::TokenType::get(),
 					// 	&T::VeMintingPalletId::get().into_account_truncating(),
@@ -649,12 +655,12 @@ pub mod pallet {
 			}
 
 			// Now handle user history
-			let user_epoch = Self::user_point_epoch(addr)
+			let user_epoch = UserPointEpoch::<T>::get(addr)
 				.checked_add(U256::one())
 				.ok_or(ArithmeticError::Overflow)?;
 			UserPointEpoch::<T>::insert(addr, user_epoch);
 			u_new.block = current_block_number;
-			// u_new.amount = Self::locked(addr).amount;
+			// u_new.amount = Locked::<T>::get(addr).amount;
 			u_new.amount = new_locked.amount;
 			UserPointHistory::<T>::insert(addr, user_epoch, u_new);
 
@@ -670,7 +676,7 @@ pub mod pallet {
 		) -> DispatchResult {
 			let current_block_number: BlockNumberFor<T> = frame_system::Pallet::<T>::block_number();
 			let mut _locked = locked_balance;
-			let supply_before = Self::supply();
+			let supply_before = Supply::<T>::get();
 			Supply::<T>::set(supply_before.checked_add(value).ok_or(ArithmeticError::Overflow)?);
 
 			let old_locked = _locked.clone();
@@ -715,12 +721,12 @@ pub mod pallet {
 			addr: u128,
 		) -> Result<BalanceOf<T>, DispatchError> {
 			let current_block_number: BlockNumberFor<T> = frame_system::Pallet::<T>::block_number();
-			let u_epoch = Self::user_point_epoch(addr);
+			let u_epoch = UserPointEpoch::<T>::get(addr);
 			if u_epoch == U256::zero() {
 				return Ok(Zero::zero());
 			} else {
 				let mut last_point: Point<BalanceOf<T>, BlockNumberFor<T>> =
-					Self::user_point_history(addr, u_epoch);
+					UserPointHistory::<T>::get(addr, u_epoch);
 
 				last_point.bias = last_point
 					.bias
@@ -756,7 +762,7 @@ pub mod pallet {
 
 			// Binary search
 			let mut _min = U256::zero();
-			let mut _max = Self::user_point_epoch(addr);
+			let mut _max = UserPointEpoch::<T>::get(addr);
 			for _i in 0..128 {
 				if _min >= _max {
 					break;
@@ -769,7 +775,7 @@ pub mod pallet {
 				.checked_div(U256::from(2_u128))
 				.ok_or(ArithmeticError::Overflow)?;
 
-				if Self::user_point_history(addr, _mid).block <= block {
+				if UserPointHistory::<T>::get(addr, _mid).block <= block {
 					_min = _mid
 				} else {
 					_max = _mid.checked_sub(U256::one()).ok_or(ArithmeticError::Overflow)?
@@ -777,7 +783,7 @@ pub mod pallet {
 			}
 
 			let mut upoint: Point<BalanceOf<T>, BlockNumberFor<T>> =
-				Self::user_point_history(addr, _min);
+				UserPointHistory::<T>::get(addr, _min);
 			upoint.bias = upoint
 				.bias
 				.checked_sub(
@@ -883,7 +889,7 @@ pub mod pallet {
 			let left: FixedU128 = FixedU128::checked_from_integer(locked_token.amount)
 				.and_then(|x| x.checked_mul(&markup_coefficient.markup_coefficient))
 				.and_then(|x| {
-					x.checked_div(&FixedU128::checked_from_integer(Self::total_lock(asset_id))?)
+					x.checked_div(&FixedU128::checked_from_integer(TotalLock::<T>::get(asset_id))?)
 				})
 				.ok_or(ArithmeticError::Overflow)?;
 
@@ -916,7 +922,7 @@ pub mod pallet {
 			UserPositions::<T>::get(&addr).into_iter().try_for_each(
 				|position| -> DispatchResult {
 					let _locked: LockedBalance<BalanceOf<T>, BlockNumberFor<T>> =
-						Self::locked(position);
+						Locked::<T>::get(position);
 					ensure!(!_locked.amount.is_zero(), Error::<T>::ArgumentsError);
 					Self::markup_calc(
 						&addr,
@@ -961,7 +967,7 @@ pub mod pallet {
 			UserPositions::<T>::get(&addr).into_iter().try_for_each(
 				|position| -> DispatchResult {
 					let _locked: LockedBalance<BalanceOf<T>, BlockNumberFor<T>> =
-						Self::locked(position);
+						Locked::<T>::get(position);
 					ensure!(!_locked.amount.is_zero(), Error::<T>::ArgumentsError); // TODO
 					Self::markup_calc(
 						&addr,
@@ -998,7 +1004,7 @@ pub mod pallet {
 					let left: FixedU128 = FixedU128::checked_from_integer(locked_token.amount)
 						.and_then(|x| x.checked_mul(&markup_coefficient.markup_coefficient))
 						.and_then(|x| {
-							x.checked_div(&FixedU128::checked_from_integer(Self::total_lock(
+							x.checked_div(&FixedU128::checked_from_integer(TotalLock::<T>::get(
 								asset_id,
 							))?)
 						})
@@ -1035,7 +1041,7 @@ pub mod pallet {
 					UserPositions::<T>::get(&addr).into_iter().try_for_each(
 						|position| -> DispatchResult {
 							let _locked: LockedBalance<BalanceOf<T>, BlockNumberFor<T>> =
-								Self::locked(position);
+								Locked::<T>::get(position);
 							ensure!(!_locked.amount.is_zero(), Error::<T>::ArgumentsError); // TODO
 							Self::markup_calc(
 								&addr,
@@ -1080,7 +1086,7 @@ pub mod pallet {
 			_locked.amount = Zero::zero();
 			Locked::<T>::insert(position, _locked.clone());
 
-			let supply_before = Self::supply();
+			let supply_before = Supply::<T>::get();
 			Supply::<T>::set(supply_before.saturating_sub(value));
 
 			// BNC should be transferred before checkpoint
@@ -1096,7 +1102,7 @@ pub mod pallet {
 					T::MultiCurrency::transfer(
 						T::TokenType::get(),
 						who,
-						&T::VeMintingPalletId::get().into_account_truncating(),
+						&T::BuyBackAccount::get().into_account_truncating(),
 						fast.checked_mul_int(value).ok_or(ArithmeticError::Overflow)?,
 					)?;
 				}
@@ -1132,7 +1138,7 @@ pub mod pallet {
 
 		/// This function will check the lock and redeem it regardless of whether it has expired.
 		pub fn redeem_unlock_inner(who: &AccountIdOf<T>, position: u128) -> DispatchResult {
-			let mut _locked = Self::locked(position);
+			let mut _locked = Locked::<T>::get(position);
 			let current_block_number: BlockNumberFor<T> = frame_system::Pallet::<T>::block_number();
 			ensure!(_locked.end > current_block_number, Error::<T>::Expired);
 			let fast = Self::redeem_commission(_locked.end - current_block_number)?;

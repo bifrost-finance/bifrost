@@ -6,6 +6,7 @@ edition = "2021"
 
 [dependencies]
 # Substrate Client
+async-trait = { workspace = true }
 sc-basic-authorship = { workspace = true }
 sc-chain-spec = { workspace = true }
 sc-client-api = { workspace = true }
@@ -68,8 +69,10 @@ cumulus-client-consensus-proposer = { workspace = true }
 cumulus-client-network = { workspace = true }
 cumulus-primitives-core = { workspace = true }
 cumulus-client-service = { workspace = true }
+cumulus-client-parachain-inherent = { workspace = true }
 cumulus-primitives-parachain-inherent = { workspace = true }
 cumulus-relay-chain-interface = { workspace = true }
+cumulus-test-relay-sproof-builder = { workspace = true }
 
 # Polkadot dependencies
 polkadot-cli = { workspace = true }
@@ -80,10 +83,12 @@ xcm = { workspace = true }
 bifrost-parachain-staking = { workspace = true }
 
 # External Crates
+clap = { workspace = true, features = ["derive"] }
 hex-literal = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }
 log = { workspace = true }
+flume = { workspace = true }
 futures = { workspace = true, features = ["compat"] }
 
 # Runtimes
@@ -94,12 +99,26 @@ bifrost-primitives = { workspace = true }
 bifrost-rpc = { workspace = true }
 
 # RPC related dependencies
-jsonrpsee = { workspace = true, features = [ "macros", "server" ] }
+jsonrpsee = { workspace = true, features = ["macros", "server"] }
 
 # zenlink rpc
 zenlink-protocol = { workspace = true }
 zenlink-protocol-runtime-api = { workspace = true }
 zenlink-stable-amm-runtime-api = { workspace = true }
+
+# Frontier
+fc-consensus = { workspace = true }
+fc-db = { workspace = true, features = ["default", "sql"] }
+fc-mapping-sync = { workspace = true, features = ["sql"] }
+fc-rpc = { workspace = true, features = ["txpool"] }
+fc-rpc-core = { workspace = true }
+fc-storage = { workspace = true }
+fp-storage = { workspace = true }
+fp-consensus = { workspace = true }
+fp-account = { workspace = true }
+fp-dynamic-fee = { workspace = true, features = ["default"] }
+fp-evm = { workspace = true, features = ["default"] }
+fp-rpc = { workspace = true, features = ["default"] }
 
 # Bifrost rpc
 bifrost-flexible-fee-rpc-runtime-api = { workspace = true }

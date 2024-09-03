@@ -31,6 +31,7 @@ use cumulus_client_consensus_aura::collators::basic::{
 use cumulus_client_consensus_common::ParachainBlockImport as TParachainBlockImport;
 use cumulus_client_consensus_proposer::Proposer;
 
+use crate::eth::EthConfiguration;
 use bifrost_primitives::Block;
 use cumulus_client_service::{
 	build_network, build_relay_chain_interface, prepare_node_config, start_relay_chain_tasks,
@@ -51,12 +52,13 @@ use sp_keystore::KeystorePtr;
 use substrate_prometheus_endpoint::Registry;
 
 #[cfg(not(feature = "runtime-benchmarks"))]
-type HostFunctions = sp_io::SubstrateHostFunctions;
+type HostFunctions = cumulus_client_service::ParachainHostFunctions;
 
 #[cfg(feature = "runtime-benchmarks")]
-type HostFunctions =
-	(sp_io::SubstrateHostFunctions, frame_benchmarking::benchmarking::HostFunctions);
-
+type HostFunctions = (
+	cumulus_client_service::ParachainHostFunctions,
+	frame_benchmarking::benchmarking::HostFunctions,
+);
 pub type FullBackend = TFullBackend<Block>;
 pub type FullClient = TFullClient<Block, RuntimeApi, WasmExecutor<HostFunctions>>;
 pub type MaybeFullSelectChain = Option<LongestChain<FullBackend, Block>>;
@@ -100,10 +102,11 @@ pub fn new_partial(
 		.build();
 
 	let (client, backend, keystore_container, task_manager) =
-		sc_service::new_full_parts::<Block, RuntimeApi, _>(
+		sc_service::new_full_parts_record_import::<Block, RuntimeApi, _>(
 			config,
 			telemetry.as_ref().map(|(_, telemetry)| telemetry.handle()),
 			executor,
+			true,
 		)?;
 	let client = Arc::new(client);
 
@@ -263,6 +266,7 @@ fn start_consensus(
 async fn start_node_impl<Net>(
 	parachain_config: Configuration,
 	polkadot_config: Configuration,
+	_eth_config: EthConfiguration,
 	collator_options: CollatorOptions,
 	sybil_resistance_level: CollatorSybilResistance,
 	para_id: ParaId,
@@ -432,6 +436,7 @@ where
 pub async fn start_node<Net: NetworkBackend<Block, Hash>>(
 	parachain_config: Configuration,
 	polkadot_config: Configuration,
+	eth_config: EthConfiguration,
 	collator_options: CollatorOptions,
 	para_id: ParaId,
 	hwbench: Option<sc_sysinfo::HwBench>,
@@ -439,6 +444,7 @@ pub async fn start_node<Net: NetworkBackend<Block, Hash>>(
 	start_node_impl::<Net>(
 		parachain_config,
 		polkadot_config,
+		eth_config,
 		collator_options,
 		CollatorSybilResistance::Resistant,
 		para_id,
