@@ -17,8 +17,8 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 use crate::{
-	mock::*, traits::StableAsset as StableAssetInterface, Error, MintResult, RedeemMultiResult,
-	RedeemProportionResult, RedeemSingleResult, StableAssetPoolInfo, SwapResult,
+	mock::*, traits::StableAsset as StableAssetInterface, Error, MintResult, PoolCount, Pools,
+	RedeemMultiResult, RedeemProportionResult, RedeemSingleResult, StableAssetPoolInfo, SwapResult,
 };
 use frame_support::{assert_noop, assert_ok};
 use orml_traits::MultiCurrency;
@@ -60,7 +60,7 @@ fn create_pool() -> (i64, i64, i64, u64) {
 #[test]
 fn create_pool_successful() {
 	new_test_ext().execute_with(|| {
-		assert_eq!(StableAsset::pool_count(), 0);
+		assert_eq!(PoolCount::<Test>::get(), 0);
 		assert_ok!(StableAsset::create_pool(
 			RuntimeOrigin::signed(1),
 			1,
@@ -75,7 +75,7 @@ fn create_pool_successful() {
 			1000000000000000000u128,
 		));
 		assert_eq!(
-			StableAsset::pools(0),
+			Pools::<Test>::get(0),
 			Some(StableAssetPoolInfo {
 				pool_id: 0,
 				pool_asset: 1,
@@ -150,7 +150,7 @@ fn modify_a_successful() {
 
 		assert_ok!(StableAsset::modify_a(RuntimeOrigin::signed(1), 0, 100, 100));
 		assert_eq!(
-			StableAsset::pools(0),
+			Pools::<Test>::get(0),
 			Some(StableAssetPoolInfo {
 				pool_id: 0,
 				pool_asset,
@@ -206,7 +206,7 @@ fn mint_successful_equal_amounts() {
 		let amounts = vec![10000000u128, 10000000u128];
 		assert_ok!(StableAsset::mint(RuntimeOrigin::signed(1), 0, amounts, 0));
 		assert_eq!(
-			StableAsset::pools(0),
+			Pools::<Test>::get(0),
 			Some(StableAssetPoolInfo {
 				pool_id: 0,
 				pool_asset,
@@ -246,7 +246,7 @@ fn mint_successful_different_amounts() {
 		let amounts = vec![10000000u128, 20000000u128];
 		assert_ok!(StableAsset::mint(RuntimeOrigin::signed(1), 0, amounts, 0));
 		assert_eq!(
-			StableAsset::pools(0),
+			Pools::<Test>::get(0),
 			Some(StableAssetPoolInfo {
 				pool_id: 0,
 				pool_asset,
@@ -373,7 +373,7 @@ fn swap_successful() {
 		assert_ok!(StableAsset::mint(RuntimeOrigin::signed(1), 0, amounts, 0));
 		assert_ok!(StableAsset::swap(RuntimeOrigin::signed(1), 0, 0, 1, 5000000u128, 0, 2));
 		assert_eq!(
-			StableAsset::pools(0),
+			Pools::<Test>::get(0),
 			Some(StableAssetPoolInfo {
 				pool_id: 0,
 				pool_asset,
@@ -547,7 +547,7 @@ fn redeem_proportion_successful() {
 			vec![0u128, 0u128]
 		));
 		assert_eq!(
-			StableAsset::pools(0),
+			Pools::<Test>::get(0),
 			Some(StableAssetPoolInfo {
 				pool_id: 0,
 				pool_asset,
@@ -707,7 +707,7 @@ fn redeem_single_successful() {
 			2,
 		));
 		assert_eq!(
-			StableAsset::pools(0),
+			Pools::<Test>::get(0),
 			Some(StableAssetPoolInfo {
 				pool_id: 0,
 				pool_asset,
@@ -874,7 +874,7 @@ fn redeem_multi_successful() {
 			1100000000000000000u128,
 		));
 		assert_eq!(
-			StableAsset::pools(0),
+			Pools::<Test>::get(0),
 			Some(StableAssetPoolInfo {
 				pool_id: 0,
 				pool_asset,
@@ -992,7 +992,7 @@ fn swap_exact_success() {
 		assert_ok!(StableAsset::mint(RuntimeOrigin::signed(1), 0, amounts, 0));
 
 		let amount = 1000345u128;
-		let pool_info = StableAsset::pools(0).unwrap();
+		let pool_info = Pools::<Test>::get(0).unwrap();
 
 		let result = StableAsset::get_swap_amount_exact(&pool_info, 0, 1, amount).unwrap();
 		let result_two = StableAsset::get_swap_amount(&pool_info, 0, 1, result.dx).unwrap();
@@ -1028,7 +1028,7 @@ fn swap_exact_success_different_precision() {
 		assert_ok!(StableAsset::mint(RuntimeOrigin::signed(1), 0, amounts, 0));
 
 		let amount = 1000345u128;
-		let pool_info = StableAsset::pools(0).unwrap();
+		let pool_info = Pools::<Test>::get(0).unwrap();
 
 		let result = StableAsset::get_swap_amount_exact(&pool_info, 0, 1, amount).unwrap();
 		let result_two = StableAsset::get_swap_amount(&pool_info, 0, 1, result.dx).unwrap();
@@ -1049,7 +1049,7 @@ fn modify_fees_successful() {
 			Some(300)
 		));
 		assert_eq!(
-			StableAsset::pools(0),
+			Pools::<Test>::get(0),
 			Some(StableAssetPoolInfo {
 				pool_id: 0,
 				pool_asset,
@@ -1083,7 +1083,7 @@ fn get_mint_amount_same_as_mint() {
 		assert_ok!(StableAsset::mint(RuntimeOrigin::signed(1), 0, amounts.clone(), 0));
 		assert_ok!(<Test as crate::Config>::Assets::deposit(coin0, &swap_id, 100_000_000_000));
 
-		let pool_info = StableAsset::pools(0).unwrap();
+		let pool_info = Pools::<Test>::get(0).unwrap();
 		assert_eq!(pool_info.balances, vec![99999990000000000u128, 199999990000000000u128]);
 		assert_eq!(
 			StableAsset::get_balance_update_amount(&pool_info).unwrap().balances,
@@ -1132,7 +1132,7 @@ fn get_swap_amount_same_as_swap() {
 		assert_ok!(StableAsset::mint(RuntimeOrigin::signed(1), 0, amounts, 0));
 		assert_ok!(<Test as crate::Config>::Assets::deposit(coin0, &swap_id, 100_000_000_000));
 
-		let pool_info = StableAsset::pools(0).unwrap();
+		let pool_info = Pools::<Test>::get(0).unwrap();
 		assert_eq!(pool_info.balances, vec![99999990000000000u128, 199999990000000000u128]);
 		assert_eq!(
 			StableAsset::get_balance_update_amount(&pool_info).unwrap().balances,
@@ -1181,7 +1181,7 @@ fn get_swap_amount_exact_same_as_swap() {
 		assert_ok!(StableAsset::mint(RuntimeOrigin::signed(1), 0, amounts, 0));
 		assert_ok!(<Test as crate::Config>::Assets::deposit(coin0, &swap_id, 100_000_000_000));
 
-		let pool_info = StableAsset::pools(0).unwrap();
+		let pool_info = Pools::<Test>::get(0).unwrap();
 		assert_eq!(pool_info.balances, vec![99999990000000000u128, 199999990000000000u128]);
 		assert_eq!(
 			StableAsset::get_balance_update_amount(&pool_info).unwrap().balances,
@@ -1230,7 +1230,7 @@ fn get_redeem_proportion_amount_same_as_redeem_proportion() {
 		assert_ok!(StableAsset::mint(RuntimeOrigin::signed(1), 0, amounts, 0));
 		assert_ok!(<Test as crate::Config>::Assets::deposit(coin0, &swap_id, 100_000_000_000));
 
-		let pool_info = StableAsset::pools(0).unwrap();
+		let pool_info = Pools::<Test>::get(0).unwrap();
 		assert_eq!(pool_info.balances, vec![99999990000000000u128, 199999990000000000u128]);
 		assert_eq!(
 			StableAsset::get_balance_update_amount(&pool_info).unwrap().balances,
@@ -1285,7 +1285,7 @@ fn get_redeem_single_amount_same_as_redeem_single() {
 		assert_ok!(StableAsset::mint(RuntimeOrigin::signed(1), 0, amounts, 0));
 		assert_ok!(<Test as crate::Config>::Assets::deposit(coin0, &swap_id, 100_000_000_000));
 
-		let pool_info = StableAsset::pools(0).unwrap();
+		let pool_info = Pools::<Test>::get(0).unwrap();
 		assert_eq!(pool_info.balances, vec![99999990000000000u128, 199999990000000000u128]);
 		assert_eq!(
 			StableAsset::get_balance_update_amount(&pool_info).unwrap().balances,
@@ -1342,7 +1342,7 @@ fn get_redeem_multi_amount_same_as_redeem_multi() {
 		assert_ok!(StableAsset::mint(RuntimeOrigin::signed(1), 0, amounts, 0));
 		assert_ok!(<Test as crate::Config>::Assets::deposit(coin0, &swap_id, 100_000_000_000));
 
-		let pool_info = StableAsset::pools(0).unwrap();
+		let pool_info = Pools::<Test>::get(0).unwrap();
 		assert_eq!(pool_info.balances, vec![99999990000000000u128, 199999990000000000u128]);
 		assert_eq!(
 			StableAsset::get_balance_update_amount(&pool_info).unwrap().balances,
