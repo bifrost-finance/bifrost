@@ -187,14 +187,12 @@ pub mod pallet {
 
 	/// Universal fee currency order list for all users
 	#[pallet::storage]
-	#[pallet::getter(fn get_universal_fee_currency_order_list)]
 	pub type UniversalFeeCurrencyOrderList<T: Config> =
 		StorageValue<_, BoundedVec<CurrencyIdOf<T>, T::MaxFeeCurrencyOrderListLen>, ValueQuery>;
 
 	/// User default fee currency, if set, will be used as the first fee currency, and then use the
 	/// universal fee currency order list
 	#[pallet::storage]
-	#[pallet::getter(fn get_user_default_fee_currency)]
 	pub type UserDefaultFeeCurrency<T: Config> =
 		StorageMap<_, Twox64Concat, T::AccountId, CurrencyIdOf<T>, OptionQuery>;
 
@@ -670,8 +668,8 @@ impl<T: Config> AccountFeeCurrency<T::AccountId> for Pallet<T> {
 	/// highest balance.
 	fn get_fee_currency(account: &T::AccountId, fee: U256) -> Result<CurrencyId, Error<T>> {
 		let fee: u128 = fee.unique_saturated_into();
-		let priority_currency = Pallet::<T>::get_user_default_fee_currency(account);
-		let mut currency_list = Pallet::<T>::get_universal_fee_currency_order_list();
+		let priority_currency = UserDefaultFeeCurrency::<T>::get(account);
+		let mut currency_list = UniversalFeeCurrencyOrderList::<T>::get();
 
 		let first_item_index = 0;
 		currency_list
