@@ -112,7 +112,6 @@ use zenlink_protocol::{
 };
 // xcm config
 pub mod xcm_config;
-use bifrost_primitives::{DoNothingRouter, MockXcmTransfer};
 use orml_traits::{currency::MutationHooks, location::RelativeReserveProvider};
 use pallet_evm::{GasWeightMapping, Runner};
 use pallet_identity::legacy::IdentityInfo;
@@ -139,6 +138,9 @@ use governance::{
 	custom_origins, CoreAdminOrCouncil, LiquidStaking, SALPAdmin, Spender, TechAdmin,
 	TechAdminOrCouncil,
 };
+
+#[cfg(feature = "runtime-benchmarks")]
+use bifrost_primitives::{DoNothingRouter, MockXcmTransfer};
 
 /// Opaque types. These are used by the CLI to instantiate machinery that don't need to know
 /// the specifics of the runtime. They can then be made to be agnostic over specific formats
@@ -1626,6 +1628,7 @@ impl bifrost_slp_v2::Config for Runtime {
 	type QueryTimeout = QueryTimeout;
 	type CommissionPalletId = CommissionPalletId;
 	type ParachainId = ParachainInfo;
+	type MaxValidators = ConstU32<256>;
 }
 
 // Below is the implementation of tokens manipulation functions other than native token.

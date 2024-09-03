@@ -18,7 +18,8 @@
 
 use crate::{
 	astar_dapp_staking::types::{
-		AstarDappStakingLedger, AstarUnlockingRecord, AstarValidator, DappStaking,
+		AstarDappStakingLedger, AstarDappStakingPendingStatus, AstarDappStakingXcmTask,
+		AstarUnlockingRecord, AstarValidator, DappStaking,
 	},
 	common::types::{
 		Delegator, Ledger, PendingStatus, StakingProtocol, Validator, XcmFee, XcmTask,
@@ -30,7 +31,7 @@ use crate::{
 	LedgerByStakingProtocolAndDelegator, NextDelegatorIndexByStakingProtocol,
 	OperatorByStakingProtocol, ProtocolFeeRateByStakingProtocol,
 	UpdateOngoingTimeUintIntervalByStakingProtocol, UpdateTokenExchangeRateLimitByStakingProtocol,
-	ValidatorsByStakingProtocol, XcmFeeByXcmTask,
+	ValidatorsByStakingProtocolAndDelegator, XcmFeeByXcmTask,
 };
 use bifrost_primitives::{TimeUnit, VtokenMintingOperator, VASTR};
 use frame_support::{assert_noop, assert_ok, traits::fungibles::Mutate};
@@ -273,19 +274,25 @@ fn remove_delegator_delegator_not_found() {
 #[test]
 fn add_validator_should_work() {
 	new_test_ext().execute_with(|| {
-		let validator = Validator::DappStaking(AstarValidator::Evm(H160::default()));
+		let delegator = Delegator::Substrate(
+			AccountId::from_ss58check("YLF9AnL6V1vQRfuiB832NXNGZYCPAWkKLLkh7cf3KwXhB9o").unwrap(),
+		);
+		let validator = Validator::AstarDappStaking(AstarValidator::Evm(H160::default()));
 
 		assert_ok!(SlpV2::add_validator(
 			RuntimeOrigin::root(),
 			STAKING_PROTOCOL,
+			delegator.clone(),
 			validator.clone()
 		));
 		expect_event(SlpV2Event::AddValidator {
 			staking_protocol: STAKING_PROTOCOL,
+			delegator: delegator.clone(),
 			validator: validator.clone(),
 		});
 		assert_eq!(
-			ValidatorsByStakingProtocol::<Test>::get(STAKING_PROTOCOL).to_vec(),
+			ValidatorsByStakingProtocolAndDelegator::<Test>::get(STAKING_PROTOCOL, delegator)
+				.to_vec(),
 			vec![validator]
 		);
 	});
@@ -294,28 +301,38 @@ fn add_validator_should_work() {
 #[test]
 fn repeat_add_validator_should_work() {
 	new_test_ext().execute_with(|| {
-		let validator1 = Validator::DappStaking(AstarValidator::Evm(H160::default()));
-		let validator2 = Validator::DappStaking(AstarValidator::Wasm(
+		let delegator = Delegator::Substrate(
+			AccountId::from_ss58check("YLF9AnL6V1vQRfuiB832NXNGZYCPAWkKLLkh7cf3KwXhB9o").unwrap(),
+		);
+		let validator1 = Validator::AstarDappStaking(AstarValidator::Evm(H160::default()));
+		let validator2 = Validator::AstarDappStaking(AstarValidator::Wasm(
 			AccountId::from_ss58check("YeKP2BdVpFrXbbqkoVhDFZP9u3nUuop7fpMppQczQXBLhD1").unwrap(),
 		));
 
 		assert_ok!(SlpV2::add_validator(
 			RuntimeOrigin::root(),
 			STAKING_PROTOCOL,
+			delegator.clone(),
 			validator1.clone()
 		));
 		assert_ok!(SlpV2::add_validator(
 			RuntimeOrigin::root(),
 			STAKING_PROTOCOL,
+			delegator.clone(),
 			validator2.clone()
 		));
 
 		expect_event(SlpV2Event::AddValidator {
 			staking_protocol: STAKING_PROTOCOL,
+			delegator: delegator.clone(),
 			validator: validator2.clone(),
 		});
 		assert_eq!(
-			ValidatorsByStakingProtocol::<Test>::get(STAKING_PROTOCOL).to_vec(),
+			ValidatorsByStakingProtocolAndDelegator::<Test>::get(
+				STAKING_PROTOCOL,
+				delegator.clone()
+			)
+			.to_vec(),
 			vec![validator1, validator2]
 		);
 	});
@@ -324,23 +341,36 @@ fn repeat_add_validator_should_work() {
 #[test]
 fn remove_validator_should_work() {
 	new_test_ext().execute_with(|| {
-		let validator = Validator::DappStaking(AstarValidator::Evm(H160::default()));
+		let delegator = Delegator::Substrate(
+			AccountId::from_ss58check("YLF9AnL6V1vQRfuiB832NXNGZYCPAWkKLLkh7cf3KwXhB9o").unwrap(),
+		);
+		let validator = Validator::AstarDappStaking(AstarValidator::Evm(H160::default()));
 
 		assert_ok!(SlpV2::add_validator(
 			RuntimeOrigin::root(),
 			STAKING_PROTOCOL,
+			delegator.clone(),
 			validator.clone()
 		));
 		assert_ok!(SlpV2::remove_validator(
 			RuntimeOrigin::root(),
 			STAKING_PROTOCOL,
+			delegator.clone(),
 			validator.clone()
 		));
 		expect_event(SlpV2Event::RemoveValidator {
 			staking_protocol: STAKING_PROTOCOL,
+			delegator: delegator.clone(),
 			validator: validator.clone(),
 		});
-		assert_eq!(ValidatorsByStakingProtocol::<Test>::get(STAKING_PROTOCOL).to_vec(), vec![]);
+		assert_eq!(
+			ValidatorsByStakingProtocolAndDelegator::<Test>::get(
+				STAKING_PROTOCOL,
+				delegator.clone()
+			)
+			.to_vec(),
+			vec![]
+		);
 	});
 }
 
@@ -352,13 +382,16 @@ fn astar_dapp_staking_lock() {
 		);
 		let task = DappStaking::Lock(100);
 		let xcm_fee = XcmFee { weight: Default::default(), fee: 100 };
-		let pending_status = PendingStatus::AstarDappStakingLock(delegator.clone(), 100);
-		let dest_location = STAKING_PROTOCOL.get_dest_location();
+		let pending_status = PendingStatus::AstarDappStaking(AstarDappStakingPendingStatus::Lock(
+			delegator.clone(),
+			100,
+		));
+		let dest_location = STAKING_PROTOCOL.info().remote_dest_location;
 
 		assert_ok!(SlpV2::add_delegator(RuntimeOrigin::root(), STAKING_PROTOCOL, None));
 		assert_ok!(SlpV2::set_xcm_task_fee(
 			RuntimeOrigin::root(),
-			XcmTask::AstarDappStakingLock,
+			XcmTask::AstarDappStaking(AstarDappStakingXcmTask::Lock),
 			xcm_fee
 		));
 
@@ -403,13 +436,16 @@ fn repeat_astar_dapp_staking_lock() {
 		let xcm_fee = XcmFee { weight: Default::default(), fee: 100 };
 		let query_id_0 = 0;
 		let query_id_1 = 1;
-		let pending_status = PendingStatus::AstarDappStakingLock(delegator.clone(), 200);
-		let dest_location = STAKING_PROTOCOL.get_dest_location();
+		let pending_status = PendingStatus::AstarDappStaking(AstarDappStakingPendingStatus::Lock(
+			delegator.clone(),
+			200,
+		));
+		let dest_location = STAKING_PROTOCOL.info().remote_dest_location;
 
 		assert_ok!(SlpV2::add_delegator(RuntimeOrigin::root(), STAKING_PROTOCOL, None));
 		assert_ok!(SlpV2::set_xcm_task_fee(
 			RuntimeOrigin::root(),
-			XcmTask::AstarDappStakingLock,
+			XcmTask::AstarDappStaking(AstarDappStakingXcmTask::Lock),
 			xcm_fee
 		));
 
@@ -462,12 +498,12 @@ fn astar_dapp_staking_unlock() {
 		assert_ok!(SlpV2::add_delegator(RuntimeOrigin::root(), STAKING_PROTOCOL, None));
 		assert_ok!(SlpV2::set_xcm_task_fee(
 			RuntimeOrigin::root(),
-			XcmTask::AstarDappStakingLock,
+			XcmTask::AstarDappStaking(AstarDappStakingXcmTask::Lock),
 			xcm_fee
 		));
 		assert_ok!(SlpV2::set_xcm_task_fee(
 			RuntimeOrigin::root(),
-			XcmTask::AstarDappStakingUnLock,
+			XcmTask::AstarDappStaking(AstarDappStakingXcmTask::UnLock),
 			xcm_fee
 		));
 
@@ -479,7 +515,11 @@ fn astar_dapp_staking_unlock() {
 		));
 
 		let task = DappStaking::Unlock(50);
-		assert_ok!(SlpV2::update_ongoing_time_unit(RuntimeOrigin::root(), STAKING_PROTOCOL));
+		assert_ok!(SlpV2::update_ongoing_time_unit(
+			RuntimeOrigin::root(),
+			STAKING_PROTOCOL,
+			Some(TimeUnit::Era(1))
+		));
 		assert_ok!(SlpV2::astar_dapp_staking(RuntimeOrigin::root(), delegator.clone(), task));
 		assert_ok!(SlpV2::notify_astar_dapp_staking(
 			XcmOrigin::Response(Parent.into()).into(),
@@ -509,17 +549,24 @@ fn astar_dapp_staking_stake() {
 		let delegator = Delegator::Substrate(
 			AccountId::from_ss58check("YLF9AnL6V1vQRfuiB832NXNGZYCPAWkKLLkh7cf3KwXhB9o").unwrap(),
 		);
+		let validator = Validator::AstarDappStaking(AstarValidator::Evm(H160::default()));
 		let task = DappStaking::Stake(AstarValidator::Evm(H160::default()), 100);
 		let xcm_task_with_params = XcmTaskWithParams::AstarDappStaking(task.clone());
 		let xcm_fee = XcmFee { weight: Default::default(), fee: 100 };
 		let query_id = None;
 		let pending_status = None;
-		let dest_location = STAKING_PROTOCOL.get_dest_location();
+		let dest_location = STAKING_PROTOCOL.info().remote_dest_location;
 
 		assert_ok!(SlpV2::add_delegator(RuntimeOrigin::root(), STAKING_PROTOCOL, None));
+		assert_ok!(SlpV2::add_validator(
+			RuntimeOrigin::root(),
+			STAKING_PROTOCOL,
+			delegator.clone(),
+			validator.clone()
+		));
 		assert_ok!(SlpV2::set_xcm_task_fee(
 			RuntimeOrigin::root(),
-			XcmTask::AstarDappStakingStake,
+			XcmTask::AstarDappStaking(AstarDappStakingXcmTask::Stake),
 			xcm_fee
 		));
 
@@ -540,17 +587,24 @@ fn astar_dapp_staking_unstake() {
 		let delegator = Delegator::Substrate(
 			AccountId::from_ss58check("YLF9AnL6V1vQRfuiB832NXNGZYCPAWkKLLkh7cf3KwXhB9o").unwrap(),
 		);
+		let validator = Validator::AstarDappStaking(AstarValidator::Evm(H160::default()));
 		let task = DappStaking::Unstake(AstarValidator::Evm(H160::default()), 100);
 		let xcm_task_with_params = XcmTaskWithParams::AstarDappStaking(task.clone());
 		let xcm_fee = XcmFee { weight: Default::default(), fee: 100 };
 		let query_id = None;
 		let pending_status = None;
-		let dest_location = STAKING_PROTOCOL.get_dest_location();
+		let dest_location = STAKING_PROTOCOL.info().remote_dest_location;
 
 		assert_ok!(SlpV2::add_delegator(RuntimeOrigin::root(), STAKING_PROTOCOL, None));
+		assert_ok!(SlpV2::add_validator(
+			RuntimeOrigin::root(),
+			STAKING_PROTOCOL,
+			delegator.clone(),
+			validator.clone()
+		));
 		assert_ok!(SlpV2::set_xcm_task_fee(
 			RuntimeOrigin::root(),
-			XcmTask::AstarDappStakingUnstake,
+			XcmTask::AstarDappStaking(AstarDappStakingXcmTask::Unstake),
 			xcm_fee
 		));
 
@@ -747,7 +801,7 @@ fn set_update_token_exchange_rate_limit_invalid_parameter() {
 #[test]
 fn set_xcm_task_fee_should_work() {
 	new_test_ext().execute_with(|| {
-		let xcm_task = XcmTask::AstarDappStakingLock;
+		let xcm_task = XcmTask::AstarDappStaking(AstarDappStakingXcmTask::Lock);
 		let xcm_fee = XcmFee { weight: Default::default(), fee: 100 };
 		assert_ok!(SlpV2::set_xcm_task_fee(RuntimeOrigin::root(), xcm_task, xcm_fee));
 
@@ -759,7 +813,7 @@ fn set_xcm_task_fee_should_work() {
 #[test]
 fn set_xcm_task_fee_invalid_parameter() {
 	new_test_ext().execute_with(|| {
-		let xcm_task = XcmTask::AstarDappStakingLock;
+		let xcm_task = XcmTask::AstarDappStaking(AstarDappStakingXcmTask::Lock);
 		let xcm_fee = XcmFee { weight: Default::default(), fee: 100 };
 		assert_ok!(SlpV2::set_xcm_task_fee(RuntimeOrigin::root(), xcm_task, xcm_fee));
 		assert_noop!(
@@ -869,15 +923,19 @@ fn set_operator_invaild_parameter() {
 fn update_ongoing_time_unit_should_work() {
 	new_test_ext().execute_with(|| {
 		let staking_protocol = StakingProtocol::AstarDappStaking;
-		let currency_id = staking_protocol.get_currency_id();
-		assert_ok!(SlpV2::update_ongoing_time_unit(RuntimeOrigin::root(), staking_protocol));
+		let currency_id = staking_protocol.info().currency_id;
+		assert_ok!(SlpV2::update_ongoing_time_unit(
+			RuntimeOrigin::root(),
+			staking_protocol,
+			Some(TimeUnit::Era(1))
+		));
 		expect_event(SlpV2Event::TimeUnitUpdated { staking_protocol, time_unit: TimeUnit::Era(1) });
 		assert_eq!(VtokenMinting::get_ongoing_time_unit(currency_id), Some(TimeUnit::Era(1)));
 		assert_eq!(LastUpdateOngoingTimeUnitBlockNumber::<Test>::get(staking_protocol), 1);
 
 		RelaychainDataProvider::set_block_number(2);
 
-		assert_ok!(SlpV2::update_ongoing_time_unit(RuntimeOrigin::root(), staking_protocol));
+		assert_ok!(SlpV2::update_ongoing_time_unit(RuntimeOrigin::root(), staking_protocol, None));
 		expect_event(SlpV2Event::TimeUnitUpdated { staking_protocol, time_unit: TimeUnit::Era(2) });
 		assert_eq!(VtokenMinting::get_ongoing_time_unit(currency_id), Some(TimeUnit::Era(2)));
 		assert_eq!(LastUpdateOngoingTimeUnitBlockNumber::<Test>::get(staking_protocol), 2);
@@ -899,26 +957,39 @@ fn update_ongoing_time_unit_update_interval_too_short() {
 		// current relaychain block number 1 < update_interval 100 + last update block number 0 =>
 		// Error
 		assert_noop!(
-			SlpV2::update_ongoing_time_unit(RuntimeOrigin::root(), staking_protocol),
+			SlpV2::update_ongoing_time_unit(
+				RuntimeOrigin::root(),
+				staking_protocol,
+				Some(TimeUnit::Era(1))
+			),
 			SlpV2Error::<Test>::UpdateOngoingTimeUnitIntervalTooShort
 		);
 
 		RelaychainDataProvider::set_block_number(100);
 		// current relaychain block number 100 = update_interval 100 + last update block number 0 =>
 		// Ok
-		assert_ok!(SlpV2::update_ongoing_time_unit(RuntimeOrigin::root(), staking_protocol));
+		assert_noop!(
+			SlpV2::update_ongoing_time_unit(RuntimeOrigin::root(), staking_protocol, None),
+			SlpV2Error::<Test>::TimeUnitNotExist
+		);
+
+		assert_ok!(SlpV2::update_ongoing_time_unit(
+			RuntimeOrigin::root(),
+			staking_protocol,
+			Some(TimeUnit::Era(1))
+		));
 
 		RelaychainDataProvider::set_block_number(199);
 		// current relaychain block number 199 < update_interval 100 + last update block number 100
 		// => Error
 		assert_noop!(
-			SlpV2::update_ongoing_time_unit(RuntimeOrigin::root(), staking_protocol),
+			SlpV2::update_ongoing_time_unit(RuntimeOrigin::root(), staking_protocol, None),
 			SlpV2Error::<Test>::UpdateOngoingTimeUnitIntervalTooShort
 		);
 		RelaychainDataProvider::set_block_number(200);
 		// current relaychain block number 200 = update_interval 100 + last update block number 100
 		// => Ok
-		assert_ok!(SlpV2::update_ongoing_time_unit(RuntimeOrigin::root(), staking_protocol));
+		assert_ok!(SlpV2::update_ongoing_time_unit(RuntimeOrigin::root(), staking_protocol, None));
 	});
 }
 
@@ -926,7 +997,7 @@ fn update_ongoing_time_unit_update_interval_too_short() {
 fn update_token_exchange_rate_should_work() {
 	new_test_ext().execute_with(|| {
 		let staking_protocol = StakingProtocol::AstarDappStaking;
-		let currency_id = staking_protocol.get_currency_id();
+		let currency_id = staking_protocol.info().currency_id;
 		let delegator = Delegator::Substrate(
 			AccountId::from_ss58check("YLF9AnL6V1vQRfuiB832NXNGZYCPAWkKLLkh7cf3KwXhB9o").unwrap(),
 		);
@@ -1047,7 +1118,7 @@ fn update_token_exchange_rate_should_work() {
 fn update_token_exchange_rate_limt_error() {
 	new_test_ext().execute_with(|| {
 		let staking_protocol = StakingProtocol::AstarDappStaking;
-		let currency_id = staking_protocol.get_currency_id();
+		let currency_id = staking_protocol.info().currency_id;
 		let delegator = Delegator::Substrate(
 			AccountId::from_ss58check("YLF9AnL6V1vQRfuiB832NXNGZYCPAWkKLLkh7cf3KwXhB9o").unwrap(),
 		);

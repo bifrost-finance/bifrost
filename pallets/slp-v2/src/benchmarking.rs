@@ -36,6 +36,9 @@ pub const STAKING_PROTOCOL: StakingProtocol = StakingProtocol::AstarDappStaking;
 #[benchmarks(where <T as frame_system::Config>::AccountId: From<sp_runtime::AccountId32> , <<<T as frame_system::Config>::Block as BlockT>::Header as sp_runtime::traits::Header>::Number: From<u32>)]
 mod benchmarks {
 	use super::*;
+	use crate::astar_dapp_staking::types::{
+		AstarDappStakingPendingStatus, AstarDappStakingXcmTask,
+	};
 
 	#[benchmark]
 	fn add_delegator() {
@@ -59,28 +62,39 @@ mod benchmarks {
 
 	#[benchmark]
 	fn add_validator() -> Result<(), BenchmarkError> {
-		let validator = Validator::DappStaking(AstarValidator::Evm(H160::zero()));
+		let delegator = Delegator::Substrate(
+			AccountId::from_ss58check("YLF9AnL6V1vQRfuiB832NXNGZYCPAWkKLLkh7cf3KwXhB9o")
+				.unwrap()
+				.into(),
+		);
+		let validator = Validator::AstarDappStaking(AstarValidator::Evm(H160::zero()));
 		#[extrinsic_call]
-		_(RawOrigin::Root, STAKING_PROTOCOL, validator);
+		_(RawOrigin::Root, STAKING_PROTOCOL, delegator, validator);
 		Ok(())
 	}
 
 	#[benchmark]
 	fn remove_validator() -> Result<(), BenchmarkError> {
-		let validator = Validator::DappStaking(AstarValidator::Evm(H160::zero()));
+		let delegator = Delegator::Substrate(
+			AccountId::from_ss58check("YLF9AnL6V1vQRfuiB832NXNGZYCPAWkKLLkh7cf3KwXhB9o")
+				.unwrap()
+				.into(),
+		);
+		let validator = Validator::AstarDappStaking(AstarValidator::Evm(H160::zero()));
 		assert_ok!(SlpV2::<T>::add_validator(
 			RawOrigin::Root.into(),
 			STAKING_PROTOCOL,
+			delegator.clone(),
 			validator.clone()
 		));
 		#[extrinsic_call]
-		_(RawOrigin::Root, STAKING_PROTOCOL, validator);
+		_(RawOrigin::Root, STAKING_PROTOCOL, delegator, validator);
 		Ok(())
 	}
 
 	#[benchmark]
 	fn set_xcm_task_fee() -> Result<(), BenchmarkError> {
-		let xcm_task = XcmTask::AstarDappStakingLock;
+		let xcm_task = XcmTask::AstarDappStaking(AstarDappStakingXcmTask::Lock);
 		let xcm_fee = XcmFee { weight: Default::default(), fee: 100 };
 		#[extrinsic_call]
 		_(RawOrigin::Root, xcm_task, xcm_fee);
@@ -166,7 +180,7 @@ mod benchmarks {
 				.into(),
 		);
 		assert_ok!(SlpV2::<T>::add_delegator(RawOrigin::Root.into(), staking_protocol, None));
-		let xcm_task = XcmTask::AstarDappStakingTransferBack;
+		let xcm_task = XcmTask::AstarDappStaking(AstarDappStakingXcmTask::TransferBack);
 		let xcm_fee = XcmFee { weight: Default::default(), fee: 100 };
 		assert_ok!(SlpV2::<T>::set_xcm_task_fee(RawOrigin::Root.into(), xcm_task, xcm_fee));
 		#[extrinsic_call]
@@ -178,7 +192,7 @@ mod benchmarks {
 	fn update_ongoing_time_unit() -> Result<(), BenchmarkError> {
 		let staking_protocol = StakingProtocol::AstarDappStaking;
 		#[extrinsic_call]
-		_(RawOrigin::Root, staking_protocol);
+		_(RawOrigin::Root, staking_protocol, Some(TimeUnit::Era(1)));
 		Ok(())
 	}
 
@@ -205,7 +219,7 @@ mod benchmarks {
 				.into(),
 		);
 		assert_ok!(SlpV2::<T>::add_delegator(RawOrigin::Root.into(), staking_protocol, None));
-		let xcm_task = XcmTask::AstarDappStakingLock;
+		let xcm_task = XcmTask::AstarDappStaking(AstarDappStakingXcmTask::Lock);
 		let xcm_fee = XcmFee { weight: Default::default(), fee: 100 };
 		assert_ok!(SlpV2::<T>::set_xcm_task_fee(RawOrigin::Root.into(), xcm_task, xcm_fee));
 		let task = DappStaking::Lock(100);
@@ -223,13 +237,16 @@ mod benchmarks {
 				.into(),
 		);
 		assert_ok!(SlpV2::<T>::add_delegator(RawOrigin::Root.into(), staking_protocol, None));
-		let xcm_task = XcmTask::AstarDappStakingLock;
+		let xcm_task = XcmTask::AstarDappStaking(AstarDappStakingXcmTask::Lock);
 		let xcm_fee = XcmFee { weight: Default::default(), fee: 100 };
 		assert_ok!(SlpV2::<T>::set_xcm_task_fee(RawOrigin::Root.into(), xcm_task, xcm_fee));
 
 		PendingStatusByQueryId::<T>::insert(
 			0,
-			PendingStatus::AstarDappStakingLock(delegator.clone(), 100),
+			PendingStatus::AstarDappStaking(AstarDappStakingPendingStatus::Lock(
+				delegator.clone(),
+				100,
+			)),
 		);
 		#[extrinsic_call]
 		_(RawOrigin::Root, 0, xcm::v4::Response::DispatchResult(MaybeErrorCode::Success));

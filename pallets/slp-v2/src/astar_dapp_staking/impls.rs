@@ -17,14 +17,17 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 use crate::{
-	astar_dapp_staking::types::{AstarCall, AstarUnlockingRecord, DappStaking},
+	astar_dapp_staking::types::{
+		AstarCall, AstarDappStakingPendingStatus, AstarDappStakingXcmTask, AstarUnlockingRecord,
+		AstarValidator, DappStaking,
+	},
 	common::types::{
-		Delegator, DelegatorIndex, Ledger, PendingStatus, StakingProtocol, XcmTask,
+		Delegator, DelegatorIndex, Ledger, PendingStatus, StakingProtocol, Validator, XcmTask,
 		XcmTaskWithParams,
 	},
 	Call, Config, DelegatorByStakingProtocolAndDelegatorIndex,
 	DelegatorIndexByStakingProtocolAndDelegator, Error, Event, LedgerByStakingProtocolAndDelegator,
-	Pallet, PendingStatusByQueryId,
+	Pallet, PendingStatusByQueryId, ValidatorsByStakingProtocolAndDelegator,
 };
 use bifrost_primitives::VtokenMintingOperator;
 use frame_support::{dispatch::DispatchResultWithPostInfo, ensure};
@@ -35,6 +38,20 @@ use xcm::v4::{opaque::Xcm, Location, QueryId};
 pub const ASTAR_DAPP_STAKING: StakingProtocol = StakingProtocol::AstarDappStaking;
 
 impl<T: Config> Pallet<T> {
+	pub fn ensure_validator_exist(
+		delegator: Delegator<T::AccountId>,
+		validator: AstarValidator<T::AccountId>,
+	) -> DispatchResultWithPostInfo {
+		let validators =
+			ValidatorsByStakingProtocolAndDelegator::<T>::get(ASTAR_DAPP_STAKING, delegator);
+		let is_exist = validators.iter().any(|storage_validator| match storage_validator {
+			Validator::AstarDappStaking(astar_validator) => *astar_validator == validator,
+			_ => false,
+		});
+		ensure!(is_exist, Error::<T>::ValidatorNotFound);
+		Ok(().into())
+	}
+
 	pub fn do_dapp_staking(
 		delegator: Delegator<T::AccountId>,
 		task: DappStaking<T::AccountId>,
@@ -54,54 +71,71 @@ impl<T: Config> Pallet<T> {
 		let (call, xcm_task, pending_status) = match task.clone() {
 			DappStaking::Lock(amount) => (
 				AstarCall::<T>::DappStaking(DappStaking::<T::AccountId>::Lock(amount)).encode(),
-				XcmTask::AstarDappStakingLock,
-				Some(PendingStatus::AstarDappStakingLock(delegator.clone(), amount)),
+				XcmTask::AstarDappStaking(AstarDappStakingXcmTask::Lock),
+				Some(PendingStatus::AstarDappStaking(AstarDappStakingPendingStatus::Lock(
+					delegator.clone(),
+					amount,
+				))),
 			),
 			DappStaking::Unlock(amount) => (
 				AstarCall::<T>::DappStaking(DappStaking::<T::AccountId>::Unlock(amount)).encode(),
-				XcmTask::AstarDappStakingUnLock,
-				Some(PendingStatus::AstarDappStakingUnLock(delegator.clone(), amount)),
+				XcmTask::AstarDappStaking(AstarDappStakingXcmTask::UnLock),
+				Some(PendingStatus::AstarDappStaking(AstarDappStakingPendingStatus::UnLock(
+					delegator.clone(),
+					amount,
+				))),
 			),
 			DappStaking::ClaimUnlocked => (
 				AstarCall::<T>::DappStaking(DappStaking::<T::AccountId>::ClaimUnlocked).encode(),
-				XcmTask::AstarDappStakingClaimUnlocked,
-				Some(PendingStatus::AstarDappStakingClaimUnlocked(delegator.clone())),
+				XcmTask::AstarDappStaking(AstarDappStakingXcmTask::ClaimUnlocked),
+				Some(PendingStatus::AstarDappStaking(
+					AstarDappStakingPendingStatus::ClaimUnlocked(delegator.clone()),
+				)),
 			),
-			DappStaking::Stake(validator, amount) => (
-				AstarCall::<T>::DappStaking(DappStaking::<T::AccountId>::Stake(
-					validator.clone(),
-					amount,
-				))
-				.encode(),
-				XcmTask::AstarDappStakingStake,
-				None,
-			),
-			DappStaking::Unstake(validator, amount) => (
-				AstarCall::<T>::DappStaking(DappStaking::<T::AccountId>::Unstake(
-					validator.clone(),
-					amount,
-				))
-				.encode(),
-				XcmTask::AstarDappStakingUnstake,
-				None,
-			),
+			DappStaking::Stake(validator, amount) => {
+				Self::ensure_validator_exist(delegator.clone(), validator.clone())?;
+				(
+					AstarCall::<T>::DappStaking(DappStaking::<T::AccountId>::Stake(
+						validator.clone(),
+						amount,
+					))
+					.encode(),
+					XcmTask::AstarDappStaking(AstarDappStakingXcmTask::Stake),
+					None,
+				)
+			},
+			DappStaking::Unstake(validator, amount) => {
+				Self::ensure_validator_exist(delegator.clone(), validator.clone())?;
+				(
+					AstarCall::<T>::DappStaking(DappStaking::<T::AccountId>::Unstake(
+						validator.clone(),
+						amount,
+					))
+					.encode(),
+					XcmTask::AstarDappStaking(AstarDappStakingXcmTask::Unstake),
+					None,
+				)
+			},
 			DappStaking::ClaimStakerRewards => (
 				AstarCall::<T>::DappStaking(DappStaking::<T::AccountId>::ClaimStakerRewards)
 					.encode(),
-				XcmTask::AstarDappStakingClaimStakerRewards,
+				XcmTask::AstarDappStaking(AstarDappStakingXcmTask::ClaimStakerRewards),
 				None,
 			),
-			DappStaking::ClaimBonusReward(validator) => (
-				AstarCall::<T>::DappStaking(DappStaking::<T::AccountId>::ClaimBonusReward(
-					validator,
-				))
-				.encode(),
-				XcmTask::AstarDappStakingClaimBonusReward,
-				None,
-			),
+			DappStaking::ClaimBonusReward(validator) => {
+				Self::ensure_validator_exist(delegator.clone(), validator.clone())?;
+				(
+					AstarCall::<T>::DappStaking(DappStaking::<T::AccountId>::ClaimBonusReward(
+						validator,
+					))
+					.encode(),
+					XcmTask::AstarDappStaking(AstarDappStakingXcmTask::ClaimBonusReward),
+					None,
+				)
+			},
 			DappStaking::RelockUnlocking => (
 				AstarCall::<T>::DappStaking(DappStaking::<T::AccountId>::RelockUnlocking).encode(),
-				XcmTask::AstarDappStakingRelockUnlocking,
+				XcmTask::AstarDappStaking(AstarDappStakingXcmTask::RelockUnlocking),
 				None,
 			),
 		};
@@ -117,7 +151,7 @@ impl<T: Config> Pallet<T> {
 			delegator,
 			xcm_task_with_params: XcmTaskWithParams::AstarDappStaking(task),
 			pending_status,
-			dest_location: ASTAR_DAPP_STAKING.get_dest_location(),
+			dest_location: ASTAR_DAPP_STAKING.info().remote_dest_location,
 		});
 		Ok(().into())
 	}
@@ -156,9 +190,15 @@ impl<T: Config> Pallet<T> {
 		pending_status: PendingStatus<T::AccountId>,
 	) -> Result<(), Error<T>> {
 		let delegator = match pending_status.clone() {
-			PendingStatus::AstarDappStakingLock(delegator, _) => delegator,
-			PendingStatus::AstarDappStakingUnLock(delegator, _) => delegator,
-			PendingStatus::AstarDappStakingClaimUnlocked(delegator) => delegator,
+			PendingStatus::AstarDappStaking(AstarDappStakingPendingStatus::Lock(delegator, _)) =>
+				delegator,
+			PendingStatus::AstarDappStaking(AstarDappStakingPendingStatus::UnLock(
+				delegator,
+				_,
+			)) => delegator,
+			PendingStatus::AstarDappStaking(AstarDappStakingPendingStatus::ClaimUnlocked(
+				delegator,
+			)) => delegator,
 		};
 		LedgerByStakingProtocolAndDelegator::<T>::mutate(
 			ASTAR_DAPP_STAKING,
@@ -166,25 +206,33 @@ impl<T: Config> Pallet<T> {
 			|ledger| -> Result<(), Error<T>> {
 				if let Some(Ledger::AstarDappStaking(mut pending_ledger)) = ledger.clone() {
 					match pending_status.clone() {
-						PendingStatus::AstarDappStakingLock(_, amount) => {
+						PendingStatus::AstarDappStaking(AstarDappStakingPendingStatus::Lock(
+							_,
+							amount,
+						)) => {
 							pending_ledger.add_lock_amount(amount);
 						},
-						PendingStatus::AstarDappStakingUnLock(_, amount) => {
+						PendingStatus::AstarDappStaking(AstarDappStakingPendingStatus::UnLock(
+							_,
+							amount,
+						)) => {
 							pending_ledger.subtract_lock_amount(amount);
-							let currency_id = ASTAR_DAPP_STAKING.get_currency_id();
+							let currency_id = ASTAR_DAPP_STAKING.info().currency_id;
 							let current_time_unit =
 								T::VtokenMinting::get_ongoing_time_unit(currency_id)
 									.ok_or(Error::<T>::TimeUnitNotExist)?;
 							let unlock_time = current_time_unit
-								.add(ASTAR_DAPP_STAKING.get_unlock_period())
+								.add(ASTAR_DAPP_STAKING.info().unlock_period)
 								.ok_or(Error::<T>::TimeUnitNotExist)?;
 							pending_ledger
 								.unlocking
 								.try_push(AstarUnlockingRecord { amount, unlock_time })
-								.map_err(|_| Error::<T>::DerivativeAccountIdFailed)?;
+								.map_err(|_| Error::<T>::UnlockRecordOverflow)?;
 						},
-						PendingStatus::AstarDappStakingClaimUnlocked(_) => {
-							let currency_id = ASTAR_DAPP_STAKING.get_currency_id();
+						PendingStatus::AstarDappStaking(
+							AstarDappStakingPendingStatus::ClaimUnlocked(_),
+						) => {
+							let currency_id = ASTAR_DAPP_STAKING.info().currency_id;
 							let current_time_unit =
 								T::VtokenMinting::get_ongoing_time_unit(currency_id)
 									.ok_or(Error::<T>::TimeUnitNotExist)?;

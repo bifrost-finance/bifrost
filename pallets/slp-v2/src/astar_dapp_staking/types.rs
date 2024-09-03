@@ -16,7 +16,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-use crate::Config;
+use crate::{common::types::Delegator, Config};
 use bifrost_primitives::{Balance, TimeUnit};
 use frame_support::{
 	pallet_prelude::{Decode, Encode, MaxEncodedLen, TypeInfo},
@@ -90,4 +90,26 @@ impl AstarDappStakingLedger {
 	pub fn subtract_lock_amount(&mut self, amount: Balance) {
 		self.locked.saturating_reduce(amount);
 	}
+}
+
+/// XcmTask in slp protocol.
+#[derive(Encode, Decode, MaxEncodedLen, Clone, Copy, Debug, PartialEq, Eq, TypeInfo)]
+pub enum AstarDappStakingXcmTask {
+	Lock,
+	UnLock,
+	ClaimUnlocked,
+	RelockUnlocking,
+	Stake,
+	Unstake,
+	ClaimStakerRewards,
+	ClaimBonusReward,
+	TransferBack,
+}
+
+/// PendingStatus in slp protocol.
+#[derive(Encode, Decode, MaxEncodedLen, Clone, Copy, Debug, PartialEq, Eq, TypeInfo)]
+pub enum AstarDappStakingPendingStatus<AccountId> {
+	Lock(Delegator<AccountId>, Balance),
+	UnLock(Delegator<AccountId>, Balance),
+	ClaimUnlocked(Delegator<AccountId>),
 }

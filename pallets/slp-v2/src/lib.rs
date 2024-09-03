@@ -18,6 +18,7 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
+#[cfg(feature = "polkadot")]
 use astar_dapp_staking::types::DappStaking;
 use bifrost_primitives::{
 	Balance, CurrencyId, CurrencyIdConversion, TimeUnit, VtokenMintingOperator,
@@ -40,11 +41,11 @@ pub use pallet::*;
 #[cfg(test)]
 mod mock;
 
-#[cfg(test)]
-mod tests;
-
+#[cfg(feature = "polkadot")]
 mod astar_dapp_staking;
 mod common;
+#[cfg(test)]
+mod tests;
 pub mod weights;
 
 #[cfg(feature = "runtime-benchmarks")]
@@ -98,6 +99,9 @@ pub mod pallet {
 		/// Bifrost parachain id.
 		#[pallet::constant]
 		type ParachainId: Get<ParaId>;
+		/// Maximum validators
+		#[pallet::constant]
+		type MaxValidators: Get<u32>;
 	}
 
 	#[pallet::pallet]
@@ -147,17 +151,7 @@ pub mod pallet {
 		StakingProtocol,
 		Blake2_128Concat,
 		Delegator<T::AccountId>,
-		BoundedVec<Validator<T::AccountId>, ConstU32<1000>>,
-		OptionQuery,
-	>;
-
-	/// Validators for different staking protocols.
-	#[pallet::storage]
-	pub type ValidatorsByStakingProtocol<T: Config> = StorageMap<
-		_,
-		Blake2_128Concat,
-		StakingProtocol,
-		BoundedVec<Validator<T::AccountId>, ConstU32<1000>>,
+		BoundedVec<Validator<T::AccountId>, T::MaxValidators>,
 		ValueQuery,
 	>;
 
@@ -228,10 +222,12 @@ pub mod pallet {
 		},
 		AddValidator {
 			staking_protocol: StakingProtocol,
+			delegator: Delegator<T::AccountId>,
 			validator: Validator<T::AccountId>,
 		},
 		RemoveValidator {
 			staking_protocol: StakingProtocol,
+			delegator: Delegator<T::AccountId>,
 			validator: Validator<T::AccountId>,
 		},
 		SetXcmFee {
@@ -288,8 +284,6 @@ pub mod pallet {
 	pub enum Error<T> {
 		/// Delegator index has exceeded the maximum allowed value of 65535.
 		DelegatorIndexOverflow,
-		/// The staking protocol used by the delegator is not supported.
-		UnsupportedStakingProtocolForDelegator,
 		/// The staking protocol is not supported.
 		UnsupportedStakingProtocol,
 		/// The delegator index was not found.
@@ -336,6 +330,8 @@ pub mod pallet {
 		NotAuthorized,
 		/// IncreaseTokenPoolError
 		IncreaseTokenPoolError,
+		/// UnlockRecordOverflow
+		UnlockRecordOverflow,
 	}
 
 	#[pallet::hooks]
@@ -373,17 +369,23 @@ pub mod pallet {
 		pub fn add_validator(
 			origin: OriginFor<T>,
 			staking_protocol: StakingProtocol,
+			delegator: Delegator<T::AccountId>,
 			validator: Validator<T::AccountId>,
 		) -> DispatchResultWithPostInfo {
 			T::ControlOrigin::ensure_origin(origin)?;
-			ValidatorsByStakingProtocol::<T>::mutate(
+			ValidatorsByStakingProtocolAndDelegator::<T>::mutate(
 				staking_protocol,
+				delegator.clone(),
 				|validators| -> DispatchResultWithPostInfo {
 					ensure!(!validators.contains(&validator), Error::<T>::ValidatorAlreadyExists);
 					validators
 						.try_push(validator.clone())
 						.map_err(|_| Error::<T>::ValidatorsTooMuch)?;
-					Self::deposit_event(Event::<T>::AddValidator { staking_protocol, validator });
+					Self::deposit_event(Event::<T>::AddValidator {
+						staking_protocol,
+						delegator,
+						validator,
+					});
 					Ok(().into())
 				},
 			)
@@ -395,16 +397,19 @@ pub mod pallet {
 		pub fn remove_validator(
 			origin: OriginFor<T>,
 			staking_protocol: StakingProtocol,
+			delegator: Delegator<T::AccountId>,
 			validator: Validator<T::AccountId>,
 		) -> DispatchResultWithPostInfo {
 			T::ControlOrigin::ensure_origin(origin)?;
-			ValidatorsByStakingProtocol::<T>::mutate(
+			ValidatorsByStakingProtocolAndDelegator::<T>::mutate(
 				staking_protocol,
+				delegator.clone(),
 				|validators| -> DispatchResultWithPostInfo {
 					ensure!(validators.contains(&validator), Error::<T>::ValidatorNotFound);
 					validators.retain(|v| *v != validator);
 					Self::deposit_event(Event::<T>::RemoveValidator {
 						staking_protocol,
+						delegator,
 						validator,
 					});
 					Ok(().into())
@@ -585,6 +590,7 @@ pub mod pallet {
 		pub fn update_ongoing_time_unit(
 			origin: OriginFor<T>,
 			staking_protocol: StakingProtocol,
+			time_uint_option: Option<TimeUnit>,
 		) -> DispatchResultWithPostInfo {
 			Self::ensure_governance_or_operator(origin, staking_protocol)?;
 			let current_block_number = T::RelaychainBlockNumberProvider::current_block_number();
@@ -597,11 +603,15 @@ pub mod pallet {
 				Error::<T>::UpdateOngoingTimeUnitIntervalTooShort
 			);
 
-			let currency_id = staking_protocol.get_currency_id();
+			let currency_id = staking_protocol.info().currency_id;
 
-			let time_unit = match T::VtokenMinting::get_ongoing_time_unit(currency_id) {
-				Some(time_unit) => time_unit.add_one(),
-				None => staking_protocol.get_default_time_unit(),
+			let time_unit = match time_uint_option {
+				Some(time_unit) => time_unit,
+				None => {
+					let current_time_unit = T::VtokenMinting::get_ongoing_time_unit(currency_id)
+						.ok_or(Error::<T>::TimeUnitNotExist)?;
+					current_time_unit.add_one()
+				},
 			};
 			T::VtokenMinting::update_ongoing_time_unit(currency_id, time_unit.clone())?;
 			LastUpdateOngoingTimeUnitBlockNumber::<T>::insert(
@@ -622,7 +632,7 @@ pub mod pallet {
 			amount: Balance,
 		) -> DispatchResultWithPostInfo {
 			Self::ensure_governance_or_operator(origin, staking_protocol)?;
-			let currency_id = staking_protocol.get_currency_id();
+			let currency_id = staking_protocol.info().currency_id;
 
 			// Check the update token exchange rate limit.
 			let (update_interval, max_update_permill) =
@@ -669,6 +679,7 @@ pub mod pallet {
 				staking_protocol,
 				delegator.clone(),
 				|ledger| match ledger {
+					#[cfg(feature = "polkadot")]
 					Some(Ledger::AstarDappStaking(astar_dapp_staking_ledger)) => {
 						astar_dapp_staking_ledger.add_lock_amount(amount);
 						Ok(())
@@ -692,6 +703,7 @@ pub mod pallet {
 			Ok(().into())
 		}
 
+		#[cfg(feature = "polkadot")]
 		#[pallet::call_index(14)]
 		#[pallet::weight(<T as Config>::WeightInfo::astar_dapp_staking())]
 		pub fn astar_dapp_staking(
@@ -703,6 +715,7 @@ pub mod pallet {
 			Self::do_dapp_staking(delegator, task)
 		}
 
+		#[cfg(feature = "polkadot")]
 		#[pallet::call_index(15)]
 		#[pallet::weight(<T as Config>::WeightInfo::notify_astar_dapp_staking())]
 		pub fn notify_astar_dapp_staking(

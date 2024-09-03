@@ -34,12 +34,10 @@ use frame_support::{
 use frame_system::pallet_prelude::OriginFor;
 use orml_traits::{MultiCurrency, XcmTransfer};
 use parity_scale_codec::{Decode, Encode};
-use polkadot_parachain_primitives::primitives::Sibling;
 use sp_core::blake2_256;
 use sp_runtime::{
-	helpers_128bit::multiply_by_rational_with_rounding,
-	traits::{AccountIdConversion, TrailingZeroInput},
-	DispatchError, Rounding, Saturating,
+	helpers_128bit::multiply_by_rational_with_rounding, traits::TrailingZeroInput, DispatchError,
+	Rounding, Saturating,
 };
 use sp_std::{vec, vec::Vec};
 use xcm::{
@@ -60,12 +58,8 @@ impl<T: Config> Pallet<T> {
 			|index| -> DispatchResultWithPostInfo {
 				delegator_index = *index;
 				*index = index.checked_add(1).ok_or(Error::<T>::DelegatorIndexOverflow)?;
-				let delegator = delegator.unwrap_or(
-					Self::get_delegator_by_staking_protocol_and_delegator_index(
-						staking_protocol,
-						delegator_index,
-					)?,
-				);
+				let delegator =
+					delegator.unwrap_or(staking_protocol.get_delegator::<T>(delegator_index)?);
 				ensure!(
 					!DelegatorByStakingProtocolAndDelegatorIndex::<T>::contains_key(
 						staking_protocol,
@@ -130,7 +124,7 @@ impl<T: Config> Pallet<T> {
 		staking_protocol: StakingProtocol,
 		delegator: Delegator<T::AccountId>,
 	) -> DispatchResultWithPostInfo {
-		let currency_id = staking_protocol.get_currency_id();
+		let currency_id = staking_protocol.info().currency_id;
 		let dest_beneficiary_location = staking_protocol
 			.get_dest_beneficiary_location::<T>(delegator)
 			.ok_or(Error::<T>::UnsupportedStakingProtocol)?;
@@ -165,17 +159,8 @@ impl<T: Config> Pallet<T> {
 			),
 			Error::<T>::DelegatorNotFound
 		);
-		let (transfer_back_call_data, xcm_task) = match staking_protocol {
-			StakingProtocol::AstarDappStaking => (
-				Self::wrap_polkadot_xcm_limited_reserve_transfer_assets_call_data(
-					&staking_protocol,
-					amount,
-				)?,
-				XcmTask::AstarDappStakingTransferBack,
-			),
-			StakingProtocol::PolkadotStaking | StakingProtocol::MoonbeamParachainStaking =>
-				Err(Error::<T>::DerivativeAccountIdFailed)?,
-		};
+		let (transfer_back_call_data, xcm_task) =
+			staking_protocol.get_transfer_back_call_data::<T>(amount)?;
 		let utility_as_derivative_call_data = Self::wrap_utility_as_derivative_call_data(
 			&staking_protocol,
 			delegator_index,
@@ -198,29 +183,13 @@ impl<T: Config> Pallet<T> {
 		Ok(account_id)
 	}
 
-	pub fn get_delegator_by_staking_protocol_and_delegator_index(
-		staking_protocol: StakingProtocol,
-		delegator_index: DelegatorIndex,
-	) -> Result<Delegator<T::AccountId>, Error<T>> {
-		match staking_protocol {
-			StakingProtocol::AstarDappStaking => {
-				let sub_sibling_account = Self::derivative_account_id(
-					Sibling::from(T::ParachainId::get()).into_account_truncating(),
-					delegator_index,
-				)?;
-				Ok(Delegator::Substrate(sub_sibling_account))
-			},
-			_ => Err(Error::<T>::UnsupportedStakingProtocolForDelegator),
-		}
-	}
-
 	/// Wrapping any runtime call with as_derivative.
 	pub fn wrap_utility_as_derivative_call_data(
 		staking_protocol: &StakingProtocol,
 		delegator_index: DelegatorIndex,
 		call: Vec<u8>,
 	) -> Vec<u8> {
-		let utility_pallet_index = staking_protocol.get_utility_pallet_index();
+		let utility_pallet_index = staking_protocol.info().utility_pallet_index;
 		let mut call_data = utility_pallet_index.encode();
 		call_data.extend(AS_DERIVATIVE_CALL_INDEX.encode());
 		// derivative index
@@ -235,8 +204,8 @@ impl<T: Config> Pallet<T> {
 		staking_protocol: &StakingProtocol,
 		amount: Balance,
 	) -> Result<Vec<u8>, Error<T>> {
-		let polkadot_xcm_pallet_index = staking_protocol.get_polkadot_xcm_pallet_index();
-		let bifrost_dest_location = staking_protocol.get_bifrost_dest_location::<T>();
+		let polkadot_xcm_pallet_index = staking_protocol.info().polkadot_xcm_pallet_index;
+		let bifrost_dest_location = staking_protocol.info().bifrost_dest_location;
 		let (entrance_account, _) = T::VtokenMinting::get_entrance_and_exit_accounts();
 		let account_id = entrance_account
 			.encode()
@@ -274,8 +243,8 @@ impl<T: Config> Pallet<T> {
 		xcm_task: XcmTask,
 		call: Vec<u8>,
 	) -> Result<Xcm, Error<T>> {
-		let fee_location = staking_protocol.get_fee_location();
-		let refund_beneficiary = staking_protocol.get_refund_beneficiary::<T>();
+		let fee_location = staking_protocol.info().remote_fee_location;
+		let refund_beneficiary = staking_protocol.info().remote_refund_beneficiary;
 		let fee_detail = XcmFeeByXcmTask::<T>::get(xcm_task).ok_or(Error::<T>::MissingXcmFee)?;
 		let asset = Asset { id: AssetId(fee_location), fun: Fungible(fee_detail.fee) };
 		let assets: Assets = Assets::from(asset.clone());
@@ -304,11 +273,11 @@ impl<T: Config> Pallet<T> {
 		let notify_call_weight = notify_call.get_dispatch_info().weight;
 		let now = frame_system::Pallet::<T>::block_number();
 		let timeout = now.saturating_add(T::QueryTimeout::get());
-		let responder = staking_protocol.get_dest_location();
+		let responder = staking_protocol.info().remote_dest_location;
 		let query_id =
 			pallet_xcm::Pallet::<T>::new_notify_query(responder, notify_call, timeout, Here);
 		*mut_query_id = Some(query_id);
-		let destination = staking_protocol.get_report_transact_status_dest_location::<T>();
+		let destination = staking_protocol.info().bifrost_dest_location;
 		let report_transact_status = ReportTransactStatus(QueryResponseInfo {
 			destination,
 			query_id,
@@ -323,7 +292,7 @@ impl<T: Config> Pallet<T> {
 		staking_protocol: StakingProtocol,
 		xcm_message: Xcm,
 	) -> Result<(), Error<T>> {
-		let dest_location = staking_protocol.get_dest_location();
+		let dest_location = staking_protocol.info().remote_dest_location;
 		let (ticket, _price) =
 			T::XcmSender::validate(&mut Some(dest_location), &mut Some(xcm_message))
 				.map_err(|_| Error::<T>::ErrorValidating)?;

@@ -303,6 +303,7 @@ impl slp_v2::Config for Test {
 	type CurrencyIdConversion = AssetIdMaps<Test>;
 	type CommissionPalletId = CommissionPalletId;
 	type RelaychainBlockNumberProvider = RelaychainDataProvider;
+	type MaxValidators = ConstU32<256>;
 }
 
 // Build genesis storage according to the mock runtime.
