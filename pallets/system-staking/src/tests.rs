@@ -111,9 +111,9 @@ fn round_info_should_correct() {
 			None,
 		));
 		roll_one_block();
-		assert_eq!(SystemStaking::round().unwrap().length, 5);
-		assert_eq!(SystemStaking::round().unwrap().current, 1);
-		assert_eq!(SystemStaking::round().unwrap().first, 1001);
+		assert_eq!(Round::<Runtime>::get().unwrap().length, 5);
+		assert_eq!(Round::<Runtime>::get().unwrap().current, 1);
+		assert_eq!(Round::<Runtime>::get().unwrap().first, 1001);
 	});
 }
 

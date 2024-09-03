@@ -109,18 +109,15 @@ pub mod pallet {
 
 	/// Current Round Information
 	#[pallet::storage]
-	#[pallet::getter(fn round)]
 	pub(crate) type Round<T: Config> = StorageValue<_, RoundInfo<BlockNumberFor<T>>, OptionQuery>;
 
 	/// The tokenInfo for each currency
 	#[pallet::storage]
-	#[pallet::getter(fn token_status)]
 	pub(crate) type TokenStatus<T: Config> =
 		StorageMap<_, Twox64Concat, CurrencyIdOf<T>, TokenInfo<BalanceOf<T>>, OptionQuery>;
 
 	/// All token sets
 	#[pallet::storage]
-	#[pallet::getter(fn token_list)]
 	pub(crate) type TokenList<T: Config> =
 		StorageValue<_, BoundedVec<CurrencyIdOf<T>, T::MaxTokenLen>, ValueQuery>;
 
@@ -233,7 +230,7 @@ pub mod pallet {
 	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
 		fn on_initialize(n: BlockNumberFor<T>) -> Weight {
 			// Get token list
-			let token_list = Self::token_list();
+			let token_list = TokenList::<T>::get();
 
 			//Get round info, if can't find it in the storage, a new one will be created.
 			let mut round = if let Some(round) = <Round<T>>::get() {
@@ -255,7 +252,7 @@ pub mod pallet {
 				// Iterate through the token list
 				for i in token_list.clone().into_iter() {
 					// Query the token info for each token in the token list
-					if let Some(mut token_info) = Self::token_status(i) {
+					if let Some(mut token_info) = TokenStatus::<T>::get(i) {
 						// Check token_info.current_config != token_info.new_config
 						if token_info.check_config_change() {
 							// Update token_info.current_config , set token_info.current_config =
@@ -278,7 +275,7 @@ pub mod pallet {
 			// Iterate through the token list
 			for i in token_list.into_iter() {
 				// Query the token info for each token in the token list
-				if let Some(token_info) = Self::token_status(i) {
+				if let Some(token_info) = TokenStatus::<T>::get(i) {
 					// Current blockNumber -  BlockNumber of Round Start ==
 					// token_info.current_config.exec_delay ===> true
 					if round.check_delay(n, token_info.current_config.exec_delay) {
@@ -370,7 +367,7 @@ pub mod pallet {
 
 			// If it is a new token, add it to the token list
 			if new_token {
-				let mut token_list = Self::token_list();
+				let mut token_list = TokenList::<T>::get();
 				token_list.try_push(token).map_err(|_| Error::<T>::ExceedMaxTokenLen)?;
 				<TokenList<T>>::put(token_list);
 			}
@@ -401,7 +398,7 @@ pub mod pallet {
 			<TokenStatus<T>>::remove(&token);
 
 			// Remove token from token list
-			let mut token_list = Self::token_list();
+			let mut token_list = TokenList::<T>::get();
 			token_list.retain(|&x| x != token);
 			<TokenList<T>>::put(token_list);
 
