@@ -180,7 +180,7 @@ pub mod pallet {
 				}
 
 				match info.last_add_liquidity + info.add_liquidity_duration {
-					target_block if target_block - One::one() == n => {
+					target_block if target_block.saturating_sub(One::one()) == n => {
 						if let Some(e) = Self::set_add_liquidity_swap_out_min(
 							&liquidity_address,
 							currency_id,
@@ -245,7 +245,8 @@ pub mod pallet {
 				match Self::get_target_block(info.last_buyback, info.buyback_duration) {
 					target_block
 						if target_block ==
-							(n - info.last_buyback_cycle).saturated_into::<u32>() =>
+							n.saturating_sub(info.last_buyback_cycle)
+								.saturated_into::<u32>() =>
 					{
 						if let Some(e) = Self::set_swap_out_min(currency_id, &info).err() {
 							log::error!(
@@ -266,7 +267,7 @@ pub mod pallet {
 					},
 					target_block
 						if target_block ==
-							(n - info.last_buyback_cycle)
+							n.saturating_sub(info.last_buyback_cycle)
 								.saturated_into::<u32>()
 								.saturating_sub(One::one()) =>
 						if let Some(swap_out_min) = SwapOutMin::<T>::get(currency_id) {
@@ -476,7 +477,8 @@ pub mod pallet {
 			let hash_bytes = block_hash.as_ref();
 			let hash_value =
 				u32::from_le_bytes([hash_bytes[0], hash_bytes[1], hash_bytes[2], hash_bytes[3]]);
-			let target_block = hash_value % (duration.saturated_into::<u32>() - 1);
+			let target_block =
+				hash_value % (duration.saturating_sub(One::one()).saturated_into::<u32>());
 
 			target_block + 1
 		}
