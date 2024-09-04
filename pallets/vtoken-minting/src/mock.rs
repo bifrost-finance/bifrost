@@ -24,7 +24,8 @@
 use bifrost_asset_registry::AssetIdMaps;
 use bifrost_primitives::{
 	currency::{BNC, DOT, FIL, KSM, MOVR, VBNC, VFIL, VKSM, VMOVR},
-	CurrencyId, CurrencyIdMapping, SlpxOperator, TokenSymbol,
+	AstarParachainId, CurrencyId, CurrencyIdMapping, HydradxParachainId, InterlayParachainId,
+	MantaParachainId, MoonbeamParachainId, SlpxOperator, TokenSymbol,
 };
 use bifrost_runtime_common::{micro, milli};
 use bifrost_slp::{QueryId, QueryResponseManager};
@@ -229,11 +230,11 @@ impl vtoken_minting::Config for Runtime {
 	type WeightInfo = ();
 	type OnRedeemSuccess = ();
 	type XcmTransfer = XTokens;
-	type AstarParachainId = ConstU32<2007>;
-	type MoonbeamParachainId = ConstU32<2023>;
-	type HydradxParachainId = ConstU32<2034>;
-	type MantaParachainId = ConstU32<2104>;
-	type InterlayParachainId = ConstU32<2032>;
+	type AstarParachainId = AstarParachainId;
+	type MoonbeamParachainId = MoonbeamParachainId;
+	type HydradxParachainId = HydradxParachainId;
+	type MantaParachainId = MantaParachainId;
+	type InterlayParachainId = InterlayParachainId;
 	type ChannelCommission = ();
 	type AssetIdMaps = AssetIdMaps<Runtime>;
 }

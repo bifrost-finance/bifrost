@@ -19,6 +19,10 @@
 
 use crate as slpx;
 use bifrost_asset_registry::AssetIdMaps;
+use bifrost_primitives::{
+	AstarParachainId, HydradxParachainId, InterlayParachainId, MantaParachainId,
+	MoonbeamParachainId,
+};
 pub use bifrost_primitives::{
 	CurrencyId, CurrencyIdMapping, DoNothingExecuteXcm, SlpxOperator, TokenSymbol, BNC, KSM,
 };
@@ -196,11 +200,11 @@ impl bifrost_vtoken_minting::Config for Test {
 	type WeightInfo = ();
 	type OnRedeemSuccess = ();
 	type XcmTransfer = XTokens;
-	type AstarParachainId = ConstU32<2007>;
-	type MoonbeamParachainId = ConstU32<2023>;
-	type HydradxParachainId = ConstU32<2034>;
-	type MantaParachainId = ConstU32<2104>;
-	type InterlayParachainId = ConstU32<2032>;
+	type AstarParachainId = AstarParachainId;
+	type MoonbeamParachainId = MoonbeamParachainId;
+	type HydradxParachainId = HydradxParachainId;
+	type MantaParachainId = MantaParachainId;
+	type InterlayParachainId = InterlayParachainId;
 	type ChannelCommission = ();
 	type MaxLockRecords = ConstU32<100>;
 	type IncentivePoolAccount = IncentivePoolAccount;
