@@ -59,6 +59,7 @@ pub trait WeightInfo {
 	fn set_era_length() -> Weight;
 	fn execute_distribute() -> Weight;
 	fn delete_distribution() -> Weight;
+	fn set_usd_config() -> Weight;
 }
 
 // For backwards compatibility and tests
@@ -135,5 +136,19 @@ impl WeightInfo for () {
 		Weight::from_parts(80_687_000, 6176)
 			.saturating_add(RocksDbWeight::get().reads(4_u64))
 			.saturating_add(RocksDbWeight::get().writes(1_u64))
+	}
+	/// Storage: `FeeShare::DistributionInfos` (r:1 w:0)
+	/// Proof: `FeeShare::DistributionInfos` (`max_values`: None, `max_size`: None, mode: `Measured`)
+	/// Storage: `FeeShare::DollarStandardInfos` (r:0 w:1)
+	/// Proof: `FeeShare::DollarStandardInfos` (`max_values`: None, `max_size`: None, mode: `Measured`)
+	fn set_usd_config() -> Weight {
+		// Proof Size summary in bytes:
+		//  Measured:  `94`
+		//  Estimated: `3559`
+		// Minimum execution time: 9_077_000 picoseconds.
+		Weight::from_parts(9_408_000, 0)
+			.saturating_add(Weight::from_parts(0, 3559))
+			.saturating_add(RocksDbWeight::get().reads(1))
+			.saturating_add(RocksDbWeight::get().writes(1))
 	}
 }

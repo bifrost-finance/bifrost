@@ -64,7 +64,7 @@ pub type CurrencyIdOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<
 
 const VE_LOCK_ID: LockIdentifier = *b"vebnclck";
 const MARKUP_LOCK_ID: LockIdentifier = *b"vebncmkp";
-
+const VE_MINTING_SYSTEM_POOL_ID: PoolId = 0;
 #[derive(Clone, Encode, Decode, PartialEq, Eq, RuntimeDebug, TypeInfo, Default)]
 pub struct VeConfig<Balance, BlockNumber> {
 	amount: Balance,
@@ -113,6 +113,9 @@ pub mod pallet {
 
 		#[pallet::constant]
 		type IncentivePalletId: Get<PalletId>;
+
+		#[pallet::constant]
+		type BuyBackAccount: Get<PalletId>;
 
 		/// Convert the block number into a balance.
 		type BlockNumberToBalance: Convert<BlockNumberFor<Self>, BalanceOf<Self>>;
@@ -187,6 +190,9 @@ pub mod pallet {
 		},
 		PartiallyRefreshed {
 			asset_id: CurrencyIdOf<T>,
+		},
+		NotifyRewardFailed {
+			rewards: Vec<(CurrencyIdOf<T>, BalanceOf<T>)>,
 		},
 	}
 
@@ -306,17 +312,30 @@ pub mod pallet {
 		ValueQuery,
 	>;
 
-	// #[pallet::hooks]
-	// impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
-	// 	fn on_initialize(n: BlockNumberFor<T>) -> Weight {
-	// 		let conf = Self::incentive_configs();
-	// 		if n == conf.last_update_time + conf.rewards_duration {
-	// 			Self::notify_reward_amount(&conf.incentive_controller, conf.last_reward.clone())
-	// 				.unwrap_or_default();
-	// 		}
-	// 		T::DbWeight::get().writes(1_u64)
-	// 	}
-	// }
+	#[pallet::hooks]
+	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
+		fn on_initialize(n: BlockNumberFor<T>) -> Weight {
+			let conf = IncentiveConfigs::<T>::get(VE_MINTING_SYSTEM_POOL_ID);
+			if n == conf.period_finish {
+				if let Some(e) = Self::notify_reward_amount(
+					VE_MINTING_SYSTEM_POOL_ID,
+					&conf.incentive_controller,
+					conf.last_reward.clone(),
+				)
+				.err()
+				{
+					log::error!(
+						target: "ve-minting::notify_reward_amount",
+						"Received invalid justification for {:?}",
+						e,
+					);
+					Self::deposit_event(Event::NotifyRewardFailed { rewards: conf.last_reward });
+				}
+			}
+
+			T::DbWeight::get().writes(1_u64)
+		}
+	}
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
@@ -398,15 +417,19 @@ pub mod pallet {
 			rewards: Vec<(CurrencyIdOf<T>, BalanceOf<T>)>,
 		) -> DispatchResult {
 			T::ControlOrigin::ensure_origin(origin)?;
-			Self::set_incentive(0, rewards_duration, Some(incentive_from.clone())); // for pool0
-			Self::notify_reward_amount(0, &Some(incentive_from), rewards) // for pool0
+			Self::set_incentive(
+				VE_MINTING_SYSTEM_POOL_ID,
+				rewards_duration,
+				Some(incentive_from.clone()),
+			);
+			Self::notify_reward_amount(VE_MINTING_SYSTEM_POOL_ID, &Some(incentive_from), rewards)
 		}
 
 		#[pallet::call_index(6)]
 		#[pallet::weight(T::WeightInfo::get_rewards())]
 		pub fn get_rewards(origin: OriginFor<T>) -> DispatchResult {
 			let exchanger = ensure_signed(origin)?;
-			Self::get_rewards_inner(0, &exchanger, None) // for pool0
+			Self::get_rewards_inner(VE_MINTING_SYSTEM_POOL_ID, &exchanger, None)
 		}
 
 		#[pallet::call_index(7)]
@@ -1079,7 +1102,7 @@ pub mod pallet {
 					T::MultiCurrency::transfer(
 						T::TokenType::get(),
 						who,
-						&T::VeMintingPalletId::get().into_account_truncating(),
+						&T::BuyBackAccount::get().into_account_truncating(),
 						fast.checked_mul_int(value).ok_or(ArithmeticError::Overflow)?,
 					)?;
 				}

@@ -523,6 +523,27 @@ impl bifrost_vtoken_voting::Config for Test {
 	type WeightInfo = ();
 }
 
+impl AccountFeeCurrency<AccountId> for Test {
+	type Error = Error<Test>;
+
+	fn get_fee_currency(account: &AccountId32, fee: U256) -> Result<CurrencyId, Self::Error> {
+		Pallet::<Test>::get_fee_currency(account, fee)
+	}
+}
+
+impl BalanceCmp<AccountId> for Test {
+	type Error = Error<Test>;
+
+	fn cmp_with_precision(
+		account: &AccountId,
+		currency: &CurrencyId,
+		amount: u128,
+		amount_precision: u32,
+	) -> Result<Ordering, Self::Error> {
+		Pallet::<Test>::cmp_with_precision(account, currency, amount, amount_precision)
+	}
+}
+
 pub struct DerivativeAccount;
 impl DerivativeAccountHandler<CurrencyId, Balance> for DerivativeAccount {
 	fn check_derivative_index_exists(
