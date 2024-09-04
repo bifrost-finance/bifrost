@@ -401,11 +401,9 @@ pub mod pallet {
 	pub struct Pallet<T>(_);
 
 	#[pallet::storage]
-	#[pallet::getter(fn pool_count)]
 	pub type PoolCount<T: Config> = StorageValue<_, StableAssetPoolId, ValueQuery>;
 
 	#[pallet::storage]
-	#[pallet::getter(fn pools)]
 	pub type Pools<T: Config> = StorageMap<
 		_,
 		Blake2_128Concat,
@@ -420,7 +418,6 @@ pub mod pallet {
 	>;
 
 	#[pallet::storage]
-	#[pallet::getter(fn token_rate_caches)]
 	pub type TokenRateCaches<T: Config> = StorageDoubleMap<
 		_,
 		Twox64Concat,
@@ -431,7 +428,6 @@ pub mod pallet {
 	>;
 
 	#[pallet::storage]
-	#[pallet::getter(fn token_rate_hardcap)]
 	pub type TokenRateHardcap<T: Config> = StorageMap<_, Twox64Concat, T::AssetId, Permill>;
 
 	#[pallet::event]

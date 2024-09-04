@@ -17,7 +17,7 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 use crate::{mock::*, AssetIdOf, AtLeast64BitUnsignedOf, Error};
 use bifrost_primitives::VtokenMintingOperator;
-use bifrost_stable_asset::StableAssetPoolInfo;
+use bifrost_stable_asset::{PoolCount, Pools, StableAssetPoolInfo};
 use frame_support::{assert_noop, assert_ok, BoundedVec};
 use orml_traits::MultiCurrency;
 use sp_runtime::{traits::AccountIdConversion, Permill};
@@ -127,7 +127,7 @@ fn create_pool_successful() {
 	ExtBuilder::default().new_test_ext().build().execute_with(|| {
 		let coin0 = DOT;
 		let coin1 = VDOT;
-		assert_eq!(StableAsset::pool_count(), 0);
+		assert_eq!(PoolCount::<Test>::get(), 0);
 		assert_ok!(StablePool::create_pool(
 			RuntimeOrigin::root(),
 			vec![coin0, coin1],
@@ -141,7 +141,7 @@ fn create_pool_successful() {
 			1000000000000000000u128,
 		));
 		assert_eq!(
-			StableAsset::pools(0),
+			Pools::<Test>::get(0),
 			Some(StableAssetPoolInfo {
 				pool_id: 0,
 				pool_asset: CurrencyId::BLP(0),
@@ -196,7 +196,7 @@ fn mint_successful_equal_amounts() {
 		assert_ok!(StablePool::mint_inner(&3, 0, amounts, 0));
 		// assert_ok!(StableAsset::mint(RuntimeOrigin::signed(3), 0, amounts.clone(), 0));
 		assert_eq!(
-			StableAsset::pools(0),
+			Pools::<Test>::get(0),
 			Some(StableAssetPoolInfo {
 				pool_id: 0,
 				pool_asset,
@@ -246,7 +246,7 @@ fn swap_successful() {
 		assert_ok!(StableAsset::mint(RuntimeOrigin::signed(3), 0, amounts, 0));
 		assert_ok!(StableAsset::swap(RuntimeOrigin::signed(3), 0, 0, 1, 5000000u128, 0, 2));
 		assert_eq!(
-			StableAsset::pools(0),
+			Pools::<Test>::get(0),
 			Some(StableAssetPoolInfo {
 				pool_id: 0,
 				pool_asset,
@@ -339,7 +339,7 @@ fn get_swap_output_amount() {
 			orml_tokens::Error::<Test>::BalanceTooLow
 		);
 		assert_eq!(
-			StableAsset::pools(0),
+			Pools::<Test>::get(0),
 			Some(StableAssetPoolInfo {
 				pool_id: 0,
 				pool_asset,
