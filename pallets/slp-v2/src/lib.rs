@@ -107,8 +107,13 @@ pub mod pallet {
 
 	/// Operator for different staking protocols.
 	#[pallet::storage]
-	pub type ConfigurationByStakingProtocol<T> =
-		StorageMap<_, Blake2_128Concat, StakingProtocol, ProtocolConfiguration, OptionQuery>;
+	pub type ConfigurationByStakingProtocol<T: Config> = StorageMap<
+		_,
+		Blake2_128Concat,
+		StakingProtocol,
+		ProtocolConfiguration<T::AccountId>,
+		OptionQuery,
+	>;
 
 	/// StakingProtocol + DelegatorIndex => Delegator
 	#[pallet::storage]
@@ -185,11 +190,6 @@ pub mod pallet {
 		ValueQuery,
 	>;
 
-	/// Operator for different staking protocols.
-	#[pallet::storage]
-	pub type OperatorByStakingProtocol<T: Config> =
-		StorageMap<_, Blake2_128Concat, StakingProtocol, T::AccountId, OptionQuery>;
-
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
@@ -215,16 +215,12 @@ pub mod pallet {
 		},
 		SetConfiguration {
 			staking_protocol: StakingProtocol,
-			configuration: ProtocolConfiguration,
+			configuration: ProtocolConfiguration<T::AccountId>,
 		},
 		SetLedger {
 			staking_protocol: StakingProtocol,
 			delegator: Delegator<T::AccountId>,
 			ledger: Ledger,
-		},
-		SetOperator {
-			staking_protocol: StakingProtocol,
-			operator: T::AccountId,
 		},
 		SendXcmTask {
 			query_id: Option<QueryId>,
@@ -317,7 +313,7 @@ pub mod pallet {
 		pub fn set_protocol_configuration(
 			origin: OriginFor<T>,
 			staking_protocol: StakingProtocol,
-			configuration: ProtocolConfiguration,
+			configuration: ProtocolConfiguration<T::AccountId>,
 		) -> DispatchResultWithPostInfo {
 			T::ControlOrigin::ensure_origin(origin)?;
 			ConfigurationByStakingProtocol::<T>::mutate(
@@ -449,31 +445,8 @@ pub mod pallet {
 			)
 		}
 
-		/// Set the operator for a specific staking protocol.
-		#[pallet::call_index(6)]
-		#[pallet::weight(<T as Config>::WeightInfo::set_operator())]
-		pub fn set_operator(
-			origin: OriginFor<T>,
-			staking_protocol: StakingProtocol,
-			operator: T::AccountId,
-		) -> DispatchResultWithPostInfo {
-			T::ControlOrigin::ensure_origin(origin)?;
-			OperatorByStakingProtocol::<T>::mutate(
-				staking_protocol,
-				|storage_operator| -> DispatchResultWithPostInfo {
-					ensure!(
-						Some(operator.clone()).ne(storage_operator),
-						Error::<T>::InvalidParameter
-					);
-					*storage_operator = Some(operator.clone());
-					Self::deposit_event(Event::SetOperator { staking_protocol, operator });
-					Ok(().into())
-				},
-			)
-		}
-
 		/// Transfer the staking token to remote chain.
-		#[pallet::call_index(7)]
+		#[pallet::call_index(6)]
 		#[pallet::weight(<T as Config>::WeightInfo::transfer_to())]
 		pub fn transfer_to(
 			origin: OriginFor<T>,
@@ -485,7 +458,7 @@ pub mod pallet {
 		}
 
 		/// Transfer the staking token back from remote chain.
-		#[pallet::call_index(8)]
+		#[pallet::call_index(7)]
 		#[pallet::weight(<T as Config>::WeightInfo::transfer_back())]
 		pub fn transfer_back(
 			origin: OriginFor<T>,
@@ -498,7 +471,7 @@ pub mod pallet {
 		}
 
 		/// Update the ongoing time unit for a specific staking protocol.
-		#[pallet::call_index(9)]
+		#[pallet::call_index(8)]
 		#[pallet::weight(<T as Config>::WeightInfo::update_ongoing_time_unit())]
 		pub fn update_ongoing_time_unit(
 			origin: OriginFor<T>,
@@ -538,7 +511,7 @@ pub mod pallet {
 		}
 
 		/// Update the token exchange rate for a specific staking protocol.
-		#[pallet::call_index(10)]
+		#[pallet::call_index(9)]
 		#[pallet::weight(<T as Config>::WeightInfo::update_token_exchange_rate())]
 		pub fn update_token_exchange_rate(
 			origin: OriginFor<T>,
@@ -625,7 +598,7 @@ pub mod pallet {
 		}
 
 		#[cfg(feature = "polkadot")]
-		#[pallet::call_index(11)]
+		#[pallet::call_index(10)]
 		#[pallet::weight(<T as Config>::WeightInfo::astar_dapp_staking())]
 		pub fn astar_dapp_staking(
 			origin: OriginFor<T>,
@@ -637,7 +610,7 @@ pub mod pallet {
 		}
 
 		#[cfg(feature = "polkadot")]
-		#[pallet::call_index(12)]
+		#[pallet::call_index(11)]
 		#[pallet::weight(<T as Config>::WeightInfo::notify_astar_dapp_staking())]
 		pub fn notify_astar_dapp_staking(
 			origin: OriginFor<T>,

@@ -23,7 +23,7 @@ use crate::{
 	},
 	Config, ConfigurationByStakingProtocol, DelegatorByStakingProtocolAndDelegatorIndex,
 	DelegatorIndexByStakingProtocolAndDelegator, Error, Event, LedgerByStakingProtocolAndDelegator,
-	NextDelegatorIndexByStakingProtocol, OperatorByStakingProtocol, Pallet,
+	NextDelegatorIndexByStakingProtocol, Pallet,
 };
 use bifrost_primitives::{Balance, CurrencyId, VtokenMintingOperator};
 use frame_support::{
@@ -337,11 +337,13 @@ impl<T: Config> Pallet<T> {
 	) -> Result<(), Error<T>> {
 		match origin.clone().into() {
 			Ok(RawOrigin::Signed(signer)) => {
-				ensure!(
-					OperatorByStakingProtocol::<T>::get(staking_protocol) == Some(signer),
-					Error::<T>::NotAuthorized
-				);
-				Ok(())
+				match ConfigurationByStakingProtocol::<T>::get(staking_protocol) {
+					Some(c) => {
+						ensure!(c.operator == signer, Error::<T>::NotAuthorized);
+						Ok(())
+					},
+					None => Err(Error::<T>::NotAuthorized),
+				}
 			},
 			_ => {
 				T::ControlOrigin::ensure_origin(origin).map_err(|_| Error::<T>::NotAuthorized)?;

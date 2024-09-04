@@ -29,7 +29,7 @@ use crate::{
 	DelegatorByStakingProtocolAndDelegatorIndex, DelegatorIndexByStakingProtocolAndDelegator,
 	Error as SlpV2Error, Event as SlpV2Event, LastUpdateOngoingTimeUnitBlockNumber,
 	LedgerByStakingProtocolAndDelegator, NextDelegatorIndexByStakingProtocol,
-	OperatorByStakingProtocol, ValidatorsByStakingProtocolAndDelegator,
+	ValidatorsByStakingProtocolAndDelegator,
 };
 use bifrost_primitives::{TimeUnit, VtokenMintingOperator, VASTR};
 use cumulus_primitives_core::Weight;
@@ -50,10 +50,11 @@ use xcm::{
 
 pub const STAKING_PROTOCOL: StakingProtocol = StakingProtocol::AstarDappStaking;
 
-pub const CONFIGURATION: ProtocolConfiguration = ProtocolConfiguration {
+pub const CONFIGURATION: ProtocolConfiguration<AccountId> = ProtocolConfiguration {
 	xcm_task_fee: XcmFee { weight: Weight::zero(), fee: 100 },
 	protocol_fee_rate: Permill::from_perthousand(100),
 	unlock_period: TimeUnit::Era(9),
+	operator: AccountId::new([0u8; 32]),
 	max_update_token_exchange_rate: Permill::from_perthousand(1),
 	update_time_unit_interval: 100u32,
 	update_exchange_rate_interval: 100u32,
@@ -727,30 +728,6 @@ fn set_ledger_error() {
 				delegator.clone(),
 				ledger.clone()
 			),
-			SlpV2Error::<Test>::InvalidParameter
-		);
-	})
-}
-
-#[test]
-fn set_operator_should_work() {
-	new_test_ext().execute_with(|| {
-		let staking_protocol = StakingProtocol::AstarDappStaking;
-		let operator = AccountId::from([0u8; 32]);
-		assert_ok!(SlpV2::set_operator(RuntimeOrigin::root(), staking_protocol, operator.clone()));
-		expect_event(SlpV2Event::SetOperator { staking_protocol, operator: operator.clone() });
-		assert_eq!(OperatorByStakingProtocol::<Test>::get(staking_protocol), Some(operator));
-	})
-}
-
-#[test]
-fn set_operator_invaild_parameter() {
-	new_test_ext().execute_with(|| {
-		let staking_protocol = StakingProtocol::AstarDappStaking;
-		let operator = AccountId::from([0u8; 32]);
-		assert_ok!(SlpV2::set_operator(RuntimeOrigin::root(), staking_protocol, operator.clone()));
-		assert_noop!(
-			SlpV2::set_operator(RuntimeOrigin::root(), staking_protocol, operator),
 			SlpV2Error::<Test>::InvalidParameter
 		);
 	})

@@ -78,8 +78,8 @@ impl<T: frame_system::Config> bifrost_slp_v2::WeightInfo for BifrostWeight<T> {
         // Proof Size summary in bytes:
         //  Measured:  `341`
         //  Estimated: `3533`
-        // Minimum execution time: 23_000 nanoseconds.
-        Weight::from_parts(23_000_000, 3533)
+        // Minimum execution time: 22_000 nanoseconds.
+        Weight::from_parts(24_000_000, 3533)
             .saturating_add(T::DbWeight::get().reads(8))
             .saturating_add(T::DbWeight::get().writes(6))
     }
@@ -145,7 +145,7 @@ impl<T: frame_system::Config> bifrost_slp_v2::WeightInfo for BifrostWeight<T> {
             .saturating_add(T::DbWeight::get().writes(3))
     }
     // Storage: `SlpV2::ConfigurationByStakingProtocol` (r:1 w:1)
-    // Proof: `SlpV2::ConfigurationByStakingProtocol` (`max_values`: None, `max_size`: Some(70), added: 2545, mode: `MaxEncodedLen`)
+    // Proof: `SlpV2::ConfigurationByStakingProtocol` (`max_values`: None, `max_size`: Some(102), added: 2577, mode: `MaxEncodedLen`)
     // Storage: `System::Number` (r:1 w:0)
     // Proof: `System::Number` (`max_values`: Some(1), `max_size`: Some(4), added: 499, mode: `MaxEncodedLen`)
     // Storage: `System::ExecutionPhase` (r:1 w:0)
@@ -157,9 +157,9 @@ impl<T: frame_system::Config> bifrost_slp_v2::WeightInfo for BifrostWeight<T> {
     fn set_protocol_configuration() -> Weight {
         // Proof Size summary in bytes:
         //  Measured:  `238`
-        //  Estimated: `3535`
+        //  Estimated: `3567`
         // Minimum execution time: 10_000 nanoseconds.
-        Weight::from_parts(11_000_000, 3535)
+        Weight::from_parts(11_000_000, 3567)
             .saturating_add(T::DbWeight::get().reads(5))
             .saturating_add(T::DbWeight::get().writes(3))
     }
@@ -186,32 +186,13 @@ impl<T: frame_system::Config> bifrost_slp_v2::WeightInfo for BifrostWeight<T> {
             .saturating_add(T::DbWeight::get().reads(7))
             .saturating_add(T::DbWeight::get().writes(3))
     }
-    // Storage: `SlpV2::OperatorByStakingProtocol` (r:1 w:1)
-    // Proof: `SlpV2::OperatorByStakingProtocol` (`max_values`: None, `max_size`: Some(49), added: 2524, mode: `MaxEncodedLen`)
-    // Storage: `System::Number` (r:1 w:0)
-    // Proof: `System::Number` (`max_values`: Some(1), `max_size`: Some(4), added: 499, mode: `MaxEncodedLen`)
-    // Storage: `System::ExecutionPhase` (r:1 w:0)
-    // Proof: `System::ExecutionPhase` (`max_values`: Some(1), `max_size`: Some(5), added: 500, mode: `MaxEncodedLen`)
-    // Storage: `System::EventCount` (r:1 w:1)
-    // Proof: `System::EventCount` (`max_values`: Some(1), `max_size`: Some(4), added: 499, mode: `MaxEncodedLen`)
-    // Storage: `System::Events` (r:1 w:1)
-    // Proof: `System::Events` (`max_values`: Some(1), `max_size`: None, mode: `Measured`)
-    fn set_operator() -> Weight {
-        // Proof Size summary in bytes:
-        //  Measured:  `238`
-        //  Estimated: `3514`
-        // Minimum execution time: 10_000 nanoseconds.
-        Weight::from_parts(11_000_000, 3514)
-            .saturating_add(T::DbWeight::get().reads(5))
-            .saturating_add(T::DbWeight::get().writes(3))
-    }
     // Storage: `Tokens::Accounts` (r:1 w:0)
     // Proof: `Tokens::Accounts` (`max_values`: None, `max_size`: Some(118), added: 2593, mode: `MaxEncodedLen`)
     fn transfer_to() -> Weight {
         // Proof Size summary in bytes:
         //  Measured:  `455`
         //  Estimated: `3583`
-        // Minimum execution time: 8_000 nanoseconds.
+        // Minimum execution time: 9_000 nanoseconds.
         Weight::from_parts(9_000_000, 3583)
             .saturating_add(T::DbWeight::get().reads(1))
     }
@@ -220,13 +201,13 @@ impl<T: frame_system::Config> bifrost_slp_v2::WeightInfo for BifrostWeight<T> {
     // Storage: `SlpV2::DelegatorByStakingProtocolAndDelegatorIndex` (r:1 w:0)
     // Proof: `SlpV2::DelegatorByStakingProtocolAndDelegatorIndex` (`max_values`: None, `max_size`: Some(68), added: 2543, mode: `MaxEncodedLen`)
     // Storage: `SlpV2::ConfigurationByStakingProtocol` (r:1 w:0)
-    // Proof: `SlpV2::ConfigurationByStakingProtocol` (`max_values`: None, `max_size`: Some(70), added: 2545, mode: `MaxEncodedLen`)
+    // Proof: `SlpV2::ConfigurationByStakingProtocol` (`max_values`: None, `max_size`: Some(102), added: 2577, mode: `MaxEncodedLen`)
     fn transfer_back() -> Weight {
         // Proof Size summary in bytes:
-        //  Measured:  `538`
-        //  Estimated: `3535`
+        //  Measured:  `571`
+        //  Estimated: `3567`
         // Minimum execution time: 19_000 nanoseconds.
-        Weight::from_parts(20_000_000, 3535)
+        Weight::from_parts(20_000_000, 3567)
             .saturating_add(T::DbWeight::get().reads(3))
     }
     // Storage: `ParachainSystem::ValidationData` (r:1 w:0)
@@ -234,7 +215,7 @@ impl<T: frame_system::Config> bifrost_slp_v2::WeightInfo for BifrostWeight<T> {
     // Storage: `ParachainSystem::LastRelayChainBlockNumber` (r:1 w:0)
     // Proof: `ParachainSystem::LastRelayChainBlockNumber` (`max_values`: Some(1), `max_size`: None, mode: `Measured`)
     // Storage: `SlpV2::ConfigurationByStakingProtocol` (r:1 w:0)
-    // Proof: `SlpV2::ConfigurationByStakingProtocol` (`max_values`: None, `max_size`: Some(70), added: 2545, mode: `MaxEncodedLen`)
+    // Proof: `SlpV2::ConfigurationByStakingProtocol` (`max_values`: None, `max_size`: Some(102), added: 2577, mode: `MaxEncodedLen`)
     // Storage: `SlpV2::LastUpdateOngoingTimeUnitBlockNumber` (r:1 w:1)
     // Proof: `SlpV2::LastUpdateOngoingTimeUnitBlockNumber` (`max_values`: None, `max_size`: Some(21), added: 2496, mode: `MaxEncodedLen`)
     // Storage: `VtokenMinting::OngoingTimeUnit` (r:1 w:1)
@@ -250,14 +231,14 @@ impl<T: frame_system::Config> bifrost_slp_v2::WeightInfo for BifrostWeight<T> {
     fn update_ongoing_time_unit() -> Weight {
         // Proof Size summary in bytes:
         //  Measured:  `560`
-        //  Estimated: `3535`
+        //  Estimated: `3567`
         // Minimum execution time: 19_000 nanoseconds.
-        Weight::from_parts(20_000_000, 3535)
+        Weight::from_parts(19_000_000, 3567)
             .saturating_add(T::DbWeight::get().reads(9))
             .saturating_add(T::DbWeight::get().writes(4))
     }
     // Storage: `SlpV2::ConfigurationByStakingProtocol` (r:1 w:0)
-    // Proof: `SlpV2::ConfigurationByStakingProtocol` (`max_values`: None, `max_size`: Some(70), added: 2545, mode: `MaxEncodedLen`)
+    // Proof: `SlpV2::ConfigurationByStakingProtocol` (`max_values`: None, `max_size`: Some(102), added: 2577, mode: `MaxEncodedLen`)
     // Storage: `ParachainSystem::ValidationData` (r:1 w:0)
     // Proof: `ParachainSystem::ValidationData` (`max_values`: Some(1), `max_size`: None, mode: `Measured`)
     // Storage: `ParachainSystem::LastRelayChainBlockNumber` (r:1 w:0)
@@ -280,7 +261,7 @@ impl<T: frame_system::Config> bifrost_slp_v2::WeightInfo for BifrostWeight<T> {
         // Proof Size summary in bytes:
         //  Measured:  `755`
         //  Estimated: `3717`
-        // Minimum execution time: 26_000 nanoseconds.
+        // Minimum execution time: 25_000 nanoseconds.
         Weight::from_parts(26_000_000, 3717)
             .saturating_add(T::DbWeight::get().reads(10))
             .saturating_add(T::DbWeight::get().writes(5))
@@ -294,7 +275,7 @@ impl<T: frame_system::Config> bifrost_slp_v2::WeightInfo for BifrostWeight<T> {
     // Storage: `PolkadotXcm::QueryCounter` (r:1 w:1)
     // Proof: `PolkadotXcm::QueryCounter` (`max_values`: Some(1), `max_size`: None, mode: `Measured`)
     // Storage: `SlpV2::ConfigurationByStakingProtocol` (r:1 w:0)
-    // Proof: `SlpV2::ConfigurationByStakingProtocol` (`max_values`: None, `max_size`: Some(70), added: 2545, mode: `MaxEncodedLen`)
+    // Proof: `SlpV2::ConfigurationByStakingProtocol` (`max_values`: None, `max_size`: Some(102), added: 2577, mode: `MaxEncodedLen`)
     // Storage: `System::ExecutionPhase` (r:1 w:0)
     // Proof: `System::ExecutionPhase` (`max_values`: Some(1), `max_size`: Some(5), added: 500, mode: `MaxEncodedLen`)
     // Storage: `System::EventCount` (r:1 w:1)
@@ -307,10 +288,10 @@ impl<T: frame_system::Config> bifrost_slp_v2::WeightInfo for BifrostWeight<T> {
     // Proof: `PolkadotXcm::Queries` (`max_values`: None, `max_size`: None, mode: `Measured`)
     fn astar_dapp_staking() -> Weight {
         // Proof Size summary in bytes:
-        //  Measured:  `803`
-        //  Estimated: `3535`
+        //  Measured:  `836`
+        //  Estimated: `3567`
         // Minimum execution time: 30_000 nanoseconds.
-        Weight::from_parts(31_000_000, 3535)
+        Weight::from_parts(31_000_000, 3567)
             .saturating_add(T::DbWeight::get().reads(8))
             .saturating_add(T::DbWeight::get().writes(5))
     }
@@ -331,7 +312,7 @@ impl<T: frame_system::Config> bifrost_slp_v2::WeightInfo for BifrostWeight<T> {
         //  Measured:  `567`
         //  Estimated: `3717`
         // Minimum execution time: 15_000 nanoseconds.
-        Weight::from_parts(17_000_000, 3717)
+        Weight::from_parts(16_000_000, 3717)
             .saturating_add(T::DbWeight::get().reads(6))
             .saturating_add(T::DbWeight::get().writes(3))
     }

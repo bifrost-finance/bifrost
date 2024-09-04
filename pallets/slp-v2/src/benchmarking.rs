@@ -34,14 +34,24 @@ use xcm::v4::MaybeErrorCode;
 
 pub const STAKING_PROTOCOL: StakingProtocol = StakingProtocol::AstarDappStaking;
 
-pub const CONFIGURATION: ProtocolConfiguration = ProtocolConfiguration {
-	xcm_task_fee: XcmFee { weight: Weight::zero(), fee: 100 },
-	protocol_fee_rate: Permill::from_perthousand(100),
-	unlock_period: TimeUnit::Era(9),
-	max_update_token_exchange_rate: Permill::from_perthousand(1),
-	update_time_unit_interval: 100u32,
-	update_exchange_rate_interval: 100u32,
-};
+fn do_set_protocol_configuration<T: Config>()
+where
+	<T as frame_system::Config>::AccountId: From<sp_runtime::AccountId32>,
+{
+	assert_ok!(SlpV2::<T>::set_protocol_configuration(
+		RawOrigin::Root.into(),
+		STAKING_PROTOCOL,
+		ProtocolConfiguration {
+			xcm_task_fee: XcmFee { weight: Weight::zero(), fee: 100 },
+			protocol_fee_rate: Permill::from_perthousand(100),
+			unlock_period: TimeUnit::Era(9),
+			operator: AccountId::from([0u8; 32]).into(),
+			max_update_token_exchange_rate: Permill::from_perthousand(1),
+			update_time_unit_interval: 100u32,
+			update_exchange_rate_interval: 100u32,
+		}
+	));
+}
 
 #[benchmarks(where <T as frame_system::Config>::AccountId: From<sp_runtime::AccountId32>)]
 mod benchmarks {
@@ -102,7 +112,19 @@ mod benchmarks {
 	#[benchmark]
 	fn set_protocol_configuration() -> Result<(), BenchmarkError> {
 		#[extrinsic_call]
-		_(RawOrigin::Root, STAKING_PROTOCOL, CONFIGURATION);
+		_(
+			RawOrigin::Root,
+			STAKING_PROTOCOL,
+			ProtocolConfiguration {
+				xcm_task_fee: XcmFee { weight: Weight::zero(), fee: 100 },
+				protocol_fee_rate: Permill::from_perthousand(100),
+				unlock_period: TimeUnit::Era(9),
+				operator: AccountId::from([0u8; 32]).into(),
+				max_update_token_exchange_rate: Permill::from_perthousand(1),
+				update_time_unit_interval: 100u32,
+				update_exchange_rate_interval: 100u32,
+			},
+		);
 		Ok(())
 	}
 
@@ -121,14 +143,6 @@ mod benchmarks {
 
 		#[extrinsic_call]
 		_(RawOrigin::Root, STAKING_PROTOCOL, delegator, ledger);
-		Ok(())
-	}
-
-	#[benchmark]
-	fn set_operator() -> Result<(), BenchmarkError> {
-		let operator = AccountId::from([0u8; 32]).into();
-		#[extrinsic_call]
-		_(RawOrigin::Root, STAKING_PROTOCOL, operator);
 		Ok(())
 	}
 
@@ -153,11 +167,7 @@ mod benchmarks {
 				.into(),
 		);
 		assert_ok!(SlpV2::<T>::add_delegator(RawOrigin::Root.into(), STAKING_PROTOCOL, None));
-		assert_ok!(SlpV2::<T>::set_protocol_configuration(
-			RawOrigin::Root.into(),
-			STAKING_PROTOCOL,
-			CONFIGURATION
-		));
+		do_set_protocol_configuration::<T>();
 		#[extrinsic_call]
 		_(RawOrigin::Root, STAKING_PROTOCOL, delegator, 1000);
 		Ok(())
@@ -191,11 +201,7 @@ mod benchmarks {
 				.into(),
 		);
 		assert_ok!(SlpV2::<T>::add_delegator(RawOrigin::Root.into(), STAKING_PROTOCOL, None));
-		assert_ok!(SlpV2::<T>::set_protocol_configuration(
-			RawOrigin::Root.into(),
-			STAKING_PROTOCOL,
-			CONFIGURATION
-		));
+		do_set_protocol_configuration::<T>();
 		let task = DappStaking::Lock(100);
 		#[extrinsic_call]
 		_(RawOrigin::Root, delegator, task);
@@ -210,11 +216,7 @@ mod benchmarks {
 				.into(),
 		);
 		assert_ok!(SlpV2::<T>::add_delegator(RawOrigin::Root.into(), STAKING_PROTOCOL, None));
-		assert_ok!(SlpV2::<T>::set_protocol_configuration(
-			RawOrigin::Root.into(),
-			STAKING_PROTOCOL,
-			CONFIGURATION
-		));
+		do_set_protocol_configuration::<T>();
 
 		PendingStatusByQueryId::<T>::insert(
 			0,

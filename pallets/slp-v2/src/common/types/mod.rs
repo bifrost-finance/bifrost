@@ -31,10 +31,11 @@ pub const AS_DERIVATIVE_CALL_INDEX: u8 = 1;
 pub const LIMITED_RESERVE_TRANSFER_ASSETS_CALL_INDEX: u8 = 8;
 
 #[derive(Encode, Decode, MaxEncodedLen, Default, Clone, Debug, PartialEq, Eq, TypeInfo)]
-pub struct ProtocolConfiguration {
+pub struct ProtocolConfiguration<AccountId> {
 	pub xcm_task_fee: XcmFee,
 	pub protocol_fee_rate: Permill,
 	pub unlock_period: TimeUnit,
+	pub operator: AccountId,
 	pub max_update_token_exchange_rate: Permill,
 	pub update_time_unit_interval: BlockNumber,
 	pub update_exchange_rate_interval: BlockNumber,
