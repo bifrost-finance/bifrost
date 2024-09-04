@@ -100,13 +100,11 @@ pub mod pallet {
 
 	/// Accounts in the whitelist can issue the corresponding Currency.
 	#[pallet::storage]
-	#[pallet::getter(fn get_issue_whitelist)]
 	pub type IssueWhiteList<T: Config> =
 		StorageMap<_, Blake2_128Concat, CurrencyId, BoundedVec<AccountIdOf<T>, T::MaxLengthLimit>>;
 
 	/// Accounts in the whitelist can transfer the corresponding Currency.
 	#[pallet::storage]
-	#[pallet::getter(fn get_transfer_whitelist)]
 	pub type TransferWhiteList<T: Config> =
 		StorageMap<_, Blake2_128Concat, CurrencyId, BoundedVec<AccountIdOf<T>, T::MaxLengthLimit>>;
 
@@ -131,7 +129,7 @@ pub mod pallet {
 
 			let issue_whitelist_new: BoundedVec<AccountIdOf<T>, T::MaxLengthLimit>;
 			let mut issue_vec: Vec<AccountIdOf<T>>;
-			match Self::get_issue_whitelist(currency_id) {
+			match IssueWhiteList::<T>::get(currency_id) {
 				None => {
 					issue_vec = vec![account.clone()];
 				},
@@ -189,7 +187,7 @@ pub mod pallet {
 
 			let transfer_whitelist_new: BoundedVec<AccountIdOf<T>, T::MaxLengthLimit>;
 			let mut transfer_vec: Vec<AccountIdOf<T>>;
-			match Self::get_transfer_whitelist(currency_id) {
+			match TransferWhiteList::<T>::get(currency_id) {
 				None => {
 					transfer_vec = vec![account.clone()];
 				},
@@ -253,7 +251,7 @@ pub mod pallet {
 			let issuer = ensure_signed(origin)?;
 
 			let issue_whitelist =
-				Self::get_issue_whitelist(currency_id).ok_or(Error::<T>::NotAllowed)?;
+				IssueWhiteList::<T>::get(currency_id).ok_or(Error::<T>::NotAllowed)?;
 			ensure!(issue_whitelist.contains(&issuer), Error::<T>::NotAllowed);
 
 			T::MultiCurrency::deposit(currency_id, &dest, amount)?;
@@ -277,7 +275,7 @@ pub mod pallet {
 			let transferrer = ensure_signed(origin)?;
 
 			let transfer_whitelist =
-				Self::get_transfer_whitelist(currency_id).ok_or(Error::<T>::NotAllowed)?;
+				TransferWhiteList::<T>::get(currency_id).ok_or(Error::<T>::NotAllowed)?;
 			ensure!(transfer_whitelist.contains(&transferrer), Error::<T>::NotAllowed);
 
 			let balance = T::MultiCurrency::free_balance(currency_id, &transferrer);
