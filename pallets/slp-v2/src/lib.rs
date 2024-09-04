@@ -21,9 +21,9 @@
 #[cfg(feature = "polkadot")]
 use astar_dapp_staking::types::DappStaking;
 use bifrost_primitives::{
-	Balance, CurrencyId, CurrencyIdConversion, TimeUnit, VtokenMintingOperator,
+	Balance, BlockNumber, CurrencyId, CurrencyIdConversion, TimeUnit, VtokenMintingOperator,
 };
-use common::types::{Delegator, DelegatorIndex};
+use common::types::{Delegator, DelegatorIndex, ProtocolConfiguration};
 use frame_support::{
 	dispatch::{DispatchResultWithPostInfo, GetDispatchInfo},
 	pallet_prelude::*,
@@ -32,7 +32,7 @@ use frame_support::{
 use frame_system::pallet_prelude::*;
 use orml_traits::{MultiCurrency, XcmTransfer};
 use polkadot_parachain_primitives::primitives::Id as ParaId;
-use sp_runtime::{traits::AccountIdConversion, Permill};
+use sp_runtime::traits::AccountIdConversion;
 pub use weights::WeightInfo;
 use xcm::v4::{Location, SendXcm};
 
@@ -54,10 +54,8 @@ mod benchmarking;
 #[frame_support::pallet]
 pub mod pallet {
 	use super::*;
-	use crate::common::types::{
-		Ledger, PendingStatus, StakingProtocol, Validator, XcmFee, XcmTask, XcmTaskWithParams,
-	};
-	use sp_runtime::traits::BlockNumberProvider;
+	use crate::common::types::{Ledger, PendingStatus, StakingProtocol, Validator, XcmTask};
+	use sp_runtime::{traits::BlockNumberProvider, Permill};
 	use xcm::latest::{MaybeErrorCode, QueryId, Response};
 
 	#[pallet::config]
@@ -89,7 +87,7 @@ pub mod pallet {
 		/// The currency id conversion.
 		type CurrencyIdConversion: CurrencyIdConversion<CurrencyId>;
 		/// The current block number provider.
-		type RelaychainBlockNumberProvider: BlockNumberProvider<BlockNumber = BlockNumberFor<Self>>;
+		type RelaychainBlockNumberProvider: BlockNumberProvider<BlockNumber = BlockNumber>;
 		/// The query timeout.
 		#[pallet::constant]
 		type QueryTimeout: Get<BlockNumberFor<Self>>;
@@ -106,6 +104,11 @@ pub mod pallet {
 
 	#[pallet::pallet]
 	pub struct Pallet<T>(_);
+
+	/// Operator for different staking protocols.
+	#[pallet::storage]
+	pub type ConfigurationByStakingProtocol<T> =
+		StorageMap<_, Blake2_128Concat, StakingProtocol, ProtocolConfiguration, OptionQuery>;
 
 	/// StakingProtocol + DelegatorIndex => Delegator
 	#[pallet::storage]
@@ -160,30 +163,15 @@ pub mod pallet {
 	pub type NextDelegatorIndexByStakingProtocol<T: Config> =
 		StorageMap<_, Blake2_128Concat, StakingProtocol, DelegatorIndex, ValueQuery>;
 
-	/// XCM fee for different XCM tasks.
-	#[pallet::storage]
-	pub type XcmFeeByXcmTask<T: Config> =
-		StorageMap<_, Blake2_128Concat, XcmTask, XcmFee, OptionQuery>;
-
 	/// Pending status for different query id.
 	#[pallet::storage]
 	pub type PendingStatusByQueryId<T: Config> =
 		StorageMap<_, Blake2_128Concat, QueryId, PendingStatus<T::AccountId>, OptionQuery>;
 
-	/// Update ongoing time unit interval for different staking protocols.
-	#[pallet::storage]
-	pub type UpdateOngoingTimeUintIntervalByStakingProtocol<T> =
-		StorageMap<_, Blake2_128Concat, StakingProtocol, BlockNumberFor<T>, ValueQuery>;
-
 	/// Last update ongoing time unit block number for different staking protocols.
 	#[pallet::storage]
 	pub type LastUpdateOngoingTimeUnitBlockNumber<T> =
-		StorageMap<_, Blake2_128Concat, StakingProtocol, BlockNumberFor<T>, ValueQuery>;
-
-	/// Update token exchange rate limit for different staking protocols.
-	#[pallet::storage]
-	pub type UpdateTokenExchangeRateLimitByStakingProtocol<T> =
-		StorageMap<_, Blake2_128Concat, StakingProtocol, (BlockNumberFor<T>, Permill), ValueQuery>;
+		StorageMap<_, Blake2_128Concat, StakingProtocol, BlockNumber, ValueQuery>;
 
 	/// Last update token exchange rate block number for different staking protocols.
 	#[pallet::storage]
@@ -193,14 +181,9 @@ pub mod pallet {
 		StakingProtocol,
 		Blake2_128Concat,
 		Delegator<T::AccountId>,
-		BlockNumberFor<T>,
+		BlockNumber,
 		ValueQuery,
 	>;
-
-	/// Protocol fee rate for different staking protocols.
-	#[pallet::storage]
-	pub type ProtocolFeeRateByStakingProtocol<T> =
-		StorageMap<_, Blake2_128Concat, StakingProtocol, Permill, ValueQuery>;
 
 	/// Operator for different staking protocols.
 	#[pallet::storage]
@@ -230,22 +213,9 @@ pub mod pallet {
 			delegator: Delegator<T::AccountId>,
 			validator: Validator<T::AccountId>,
 		},
-		SetXcmFee {
-			xcm_task: XcmTask,
-			xcm_fee: XcmFee,
-		},
-		SetProtocolFeeRate {
+		SetConfiguration {
 			staking_protocol: StakingProtocol,
-			fee_rate: Permill,
-		},
-		SetUpdateOngoingTimeUnitInterval {
-			staking_protocol: StakingProtocol,
-			update_interval: BlockNumberFor<T>,
-		},
-		SetUpdateTokenExchangeRateLimit {
-			staking_protocol: StakingProtocol,
-			update_interval: BlockNumberFor<T>,
-			max_update_permill: Permill,
+			configuration: ProtocolConfiguration,
 		},
 		SetLedger {
 			staking_protocol: StakingProtocol,
@@ -259,7 +229,7 @@ pub mod pallet {
 		SendXcmTask {
 			query_id: Option<QueryId>,
 			delegator: Delegator<T::AccountId>,
-			xcm_task_with_params: XcmTaskWithParams<T::AccountId>,
+			task: XcmTask<T::AccountId>,
 			pending_status: Option<PendingStatus<T::AccountId>>,
 			dest_location: Location,
 		},
@@ -288,6 +258,8 @@ pub mod pallet {
 		UnsupportedStakingProtocol,
 		/// The delegator index was not found.
 		DelegatorIndexNotFound,
+		/// The Configuration was not found.
+		ConfigurationNotFound,
 		/// The delegator was not found.
 		DelegatorNotFound,
 		/// The ledger was not found.
@@ -339,8 +311,34 @@ pub mod pallet {
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
-		/// Add a delegator to the staking protocol.
+		/// Set the XCM fee for a specific XCM task.
 		#[pallet::call_index(0)]
+		#[pallet::weight(<T as Config>::WeightInfo::set_protocol_configuration())]
+		pub fn set_protocol_configuration(
+			origin: OriginFor<T>,
+			staking_protocol: StakingProtocol,
+			configuration: ProtocolConfiguration,
+		) -> DispatchResultWithPostInfo {
+			T::ControlOrigin::ensure_origin(origin)?;
+			ConfigurationByStakingProtocol::<T>::mutate(
+				staking_protocol,
+				|storage_configuration| -> DispatchResultWithPostInfo {
+					ensure!(
+						Some(configuration.clone()).ne(storage_configuration),
+						Error::<T>::InvalidParameter
+					);
+					*storage_configuration = Some(configuration.clone());
+					Self::deposit_event(Event::SetConfiguration {
+						staking_protocol,
+						configuration,
+					});
+					Ok(().into())
+				},
+			)
+		}
+
+		/// Add a delegator to the staking protocol.
+		#[pallet::call_index(1)]
 		#[pallet::weight(<T as Config>::WeightInfo::add_delegator())]
 		pub fn add_delegator(
 			origin: OriginFor<T>,
@@ -352,7 +350,7 @@ pub mod pallet {
 		}
 
 		/// Remove a delegator from the staking protocol.
-		#[pallet::call_index(1)]
+		#[pallet::call_index(2)]
 		#[pallet::weight(<T as Config>::WeightInfo::remove_delegator())]
 		pub fn remove_delegator(
 			origin: OriginFor<T>,
@@ -364,7 +362,7 @@ pub mod pallet {
 		}
 
 		/// Add a validator to the staking protocol.
-		#[pallet::call_index(2)]
+		#[pallet::call_index(3)]
 		#[pallet::weight(<T as Config>::WeightInfo::add_validator())]
 		pub fn add_validator(
 			origin: OriginFor<T>,
@@ -392,7 +390,7 @@ pub mod pallet {
 		}
 
 		/// Remove a validator from the staking protocol.
-		#[pallet::call_index(3)]
+		#[pallet::call_index(4)]
 		#[pallet::weight(<T as Config>::WeightInfo::remove_validator())]
 		pub fn remove_validator(
 			origin: OriginFor<T>,
@@ -417,93 +415,8 @@ pub mod pallet {
 			)
 		}
 
-		/// Set the XCM fee for a specific XCM task.
-		#[pallet::call_index(4)]
-		#[pallet::weight(<T as Config>::WeightInfo::set_xcm_task_fee())]
-		pub fn set_xcm_task_fee(
-			origin: OriginFor<T>,
-			xcm_task: XcmTask,
-			xcm_fee: XcmFee,
-		) -> DispatchResultWithPostInfo {
-			T::ControlOrigin::ensure_origin(origin)?;
-			XcmFeeByXcmTask::<T>::mutate(
-				xcm_task,
-				|storage_xcm_fee| -> DispatchResultWithPostInfo {
-					ensure!(Some(xcm_fee).ne(storage_xcm_fee), Error::<T>::InvalidParameter);
-					*storage_xcm_fee = Some(xcm_fee);
-					Self::deposit_event(Event::SetXcmFee { xcm_task, xcm_fee });
-					Ok(().into())
-				},
-			)
-		}
-
-		/// Set the protocol fee rate for a specific staking protocol.
+		/// Set the update token exchange rate limit for a specific staking protocol.
 		#[pallet::call_index(5)]
-		#[pallet::weight(<T as Config>::WeightInfo::set_protocol_fee_rate())]
-		pub fn set_protocol_fee_rate(
-			origin: OriginFor<T>,
-			staking_protocol: StakingProtocol,
-			fee_rate: Permill,
-		) -> DispatchResultWithPostInfo {
-			T::ControlOrigin::ensure_origin(origin)?;
-			ProtocolFeeRateByStakingProtocol::<T>::mutate(
-				staking_protocol,
-				|storage_fee_rate| -> DispatchResultWithPostInfo {
-					ensure!(*storage_fee_rate != fee_rate, Error::<T>::InvalidParameter);
-					*storage_fee_rate = fee_rate;
-					Self::deposit_event(Event::SetProtocolFeeRate { staking_protocol, fee_rate });
-					Ok(().into())
-				},
-			)
-		}
-
-		/// Set the update ongoing time unit interval for a specific staking protocol.
-		#[pallet::call_index(6)]
-		#[pallet::weight(<T as Config>::WeightInfo::set_update_ongoing_time_unit_interval())]
-		pub fn set_update_ongoing_time_unit_interval(
-			origin: OriginFor<T>,
-			staking_protocol: StakingProtocol,
-			update_interval: BlockNumberFor<T>,
-		) -> DispatchResultWithPostInfo {
-			T::ControlOrigin::ensure_origin(origin)?;
-			UpdateOngoingTimeUintIntervalByStakingProtocol::<T>::mutate(
-				staking_protocol,
-				|storage_update_interval| -> DispatchResultWithPostInfo {
-					ensure!(
-						update_interval.ne(storage_update_interval),
-						Error::<T>::InvalidParameter
-					);
-					*storage_update_interval = update_interval;
-					Self::deposit_event(Event::SetUpdateOngoingTimeUnitInterval {
-						staking_protocol,
-						update_interval,
-					});
-					Ok(().into())
-				},
-			)
-		}
-
-		/// Set the update token exchange rate limit for a specific staking protocol.
-		#[pallet::call_index(7)]
-		#[pallet::weight(<T as Config>::WeightInfo::set_update_token_exchange_rate_limit())]
-		pub fn set_update_token_exchange_rate_limit(
-			origin: OriginFor<T>,
-			staking_protocol: StakingProtocol,
-			update_interval: BlockNumberFor<T>,
-			max_update_permill: Permill,
-		) -> DispatchResultWithPostInfo {
-			T::ControlOrigin::ensure_origin(origin)?;
-			UpdateTokenExchangeRateLimitByStakingProtocol::<T>::mutate(staking_protocol, |(storage_update_interval, storage_max_update_permill)| -> DispatchResultWithPostInfo {
-				ensure!(update_interval.ne(storage_update_interval) && max_update_permill.ne(storage_max_update_permill), Error::<T>::InvalidParameter);
-				*storage_update_interval = update_interval;
-				*storage_max_update_permill = max_update_permill;
-				Self::deposit_event(Event::SetUpdateTokenExchangeRateLimit { staking_protocol, update_interval, max_update_permill });
-				Ok(().into())
-			})
-		}
-
-		/// Set the update token exchange rate limit for a specific staking protocol.
-		#[pallet::call_index(8)]
 		#[pallet::weight(<T as Config>::WeightInfo::set_ledger())]
 		pub fn set_ledger(
 			origin: OriginFor<T>,
@@ -537,7 +450,7 @@ pub mod pallet {
 		}
 
 		/// Set the operator for a specific staking protocol.
-		#[pallet::call_index(9)]
+		#[pallet::call_index(6)]
 		#[pallet::weight(<T as Config>::WeightInfo::set_operator())]
 		pub fn set_operator(
 			origin: OriginFor<T>,
@@ -560,7 +473,7 @@ pub mod pallet {
 		}
 
 		/// Transfer the staking token to remote chain.
-		#[pallet::call_index(10)]
+		#[pallet::call_index(7)]
 		#[pallet::weight(<T as Config>::WeightInfo::transfer_to())]
 		pub fn transfer_to(
 			origin: OriginFor<T>,
@@ -572,7 +485,7 @@ pub mod pallet {
 		}
 
 		/// Transfer the staking token back from remote chain.
-		#[pallet::call_index(11)]
+		#[pallet::call_index(8)]
 		#[pallet::weight(<T as Config>::WeightInfo::transfer_back())]
 		pub fn transfer_back(
 			origin: OriginFor<T>,
@@ -585,7 +498,7 @@ pub mod pallet {
 		}
 
 		/// Update the ongoing time unit for a specific staking protocol.
-		#[pallet::call_index(12)]
+		#[pallet::call_index(9)]
 		#[pallet::weight(<T as Config>::WeightInfo::update_ongoing_time_unit())]
 		pub fn update_ongoing_time_unit(
 			origin: OriginFor<T>,
@@ -594,8 +507,10 @@ pub mod pallet {
 		) -> DispatchResultWithPostInfo {
 			Self::ensure_governance_or_operator(origin, staking_protocol)?;
 			let current_block_number = T::RelaychainBlockNumberProvider::current_block_number();
-			let update_interval =
-				UpdateOngoingTimeUintIntervalByStakingProtocol::<T>::get(staking_protocol);
+			let update_interval = match ConfigurationByStakingProtocol::<T>::get(staking_protocol) {
+				Some(configuration) => configuration.update_time_unit_interval,
+				None => 0,
+			};
 			let last_update_block_number =
 				LastUpdateOngoingTimeUnitBlockNumber::<T>::get(staking_protocol);
 			ensure!(
@@ -623,7 +538,7 @@ pub mod pallet {
 		}
 
 		/// Update the token exchange rate for a specific staking protocol.
-		#[pallet::call_index(13)]
+		#[pallet::call_index(10)]
 		#[pallet::weight(<T as Config>::WeightInfo::update_token_exchange_rate())]
 		pub fn update_token_exchange_rate(
 			origin: OriginFor<T>,
@@ -635,8 +550,15 @@ pub mod pallet {
 			let currency_id = staking_protocol.info().currency_id;
 
 			// Check the update token exchange rate limit.
-			let (update_interval, max_update_permill) =
-				UpdateTokenExchangeRateLimitByStakingProtocol::<T>::get(staking_protocol);
+			let (update_interval, max_update_permill, protocol_fee_rate) =
+				match ConfigurationByStakingProtocol::<T>::get(staking_protocol) {
+					Some(configuration) => (
+						configuration.update_exchange_rate_interval,
+						configuration.max_update_token_exchange_rate,
+						configuration.protocol_fee_rate,
+					),
+					None => (0, Permill::zero(), Permill::zero()),
+				};
 			let current_block_number = T::RelaychainBlockNumberProvider::current_block_number();
 			let last_update_block_number = LastUpdateTokenExchangeRateBlockNumber::<T>::get(
 				staking_protocol,
@@ -654,7 +576,6 @@ pub mod pallet {
 			);
 
 			// Charge the protocol fee.
-			let protocol_fee_rate = ProtocolFeeRateByStakingProtocol::<T>::get(staking_protocol);
 			let mut protocol_fee = protocol_fee_rate.mul_floor(amount);
 			let protocol_fee_currency_id = T::CurrencyIdConversion::convert_to_vtoken(currency_id)
 				.map_err(|_| Error::<T>::DerivativeAccountIdFailed)?;
@@ -704,7 +625,7 @@ pub mod pallet {
 		}
 
 		#[cfg(feature = "polkadot")]
-		#[pallet::call_index(14)]
+		#[pallet::call_index(11)]
 		#[pallet::weight(<T as Config>::WeightInfo::astar_dapp_staking())]
 		pub fn astar_dapp_staking(
 			origin: OriginFor<T>,
@@ -716,7 +637,7 @@ pub mod pallet {
 		}
 
 		#[cfg(feature = "polkadot")]
-		#[pallet::call_index(15)]
+		#[pallet::call_index(12)]
 		#[pallet::weight(<T as Config>::WeightInfo::notify_astar_dapp_staking())]
 		pub fn notify_astar_dapp_staking(
 			origin: OriginFor<T>,

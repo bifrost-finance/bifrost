@@ -18,12 +18,12 @@
 
 use crate::{
 	common::types::{
-		Delegator, DelegatorIndex, StakingProtocol, XcmTask, AS_DERIVATIVE_CALL_INDEX,
+		Delegator, DelegatorIndex, StakingProtocol, AS_DERIVATIVE_CALL_INDEX,
 		LIMITED_RESERVE_TRANSFER_ASSETS_CALL_INDEX,
 	},
-	Config, DelegatorByStakingProtocolAndDelegatorIndex,
+	Config, ConfigurationByStakingProtocol, DelegatorByStakingProtocolAndDelegatorIndex,
 	DelegatorIndexByStakingProtocolAndDelegator, Error, Event, LedgerByStakingProtocolAndDelegator,
-	NextDelegatorIndexByStakingProtocol, OperatorByStakingProtocol, Pallet, XcmFeeByXcmTask,
+	NextDelegatorIndexByStakingProtocol, OperatorByStakingProtocol, Pallet,
 };
 use bifrost_primitives::{Balance, CurrencyId, VtokenMintingOperator};
 use frame_support::{
@@ -159,15 +159,19 @@ impl<T: Config> Pallet<T> {
 			),
 			Error::<T>::DelegatorNotFound
 		);
-		let (transfer_back_call_data, xcm_task) =
-			staking_protocol.get_transfer_back_call_data::<T>(amount)?;
+
+		let transfer_back_call_data =
+			Self::wrap_polkadot_xcm_limited_reserve_transfer_assets_call_data(
+				&staking_protocol,
+				amount,
+			)?;
 		let utility_as_derivative_call_data = Self::wrap_utility_as_derivative_call_data(
 			&staking_protocol,
 			delegator_index,
 			transfer_back_call_data,
 		);
 		let xcm_message =
-			Self::wrap_xcm_message(&staking_protocol, xcm_task, utility_as_derivative_call_data)?;
+			Self::wrap_xcm_message(&staking_protocol, utility_as_derivative_call_data)?;
 		Self::send_xcm_message(staking_protocol, xcm_message)?;
 		Ok(().into())
 	}
@@ -240,15 +244,16 @@ impl<T: Config> Pallet<T> {
 	/// withdraw_asset + buy_execution + transact + refund_surplus + deposit_asset
 	pub fn wrap_xcm_message(
 		staking_protocol: &StakingProtocol,
-		xcm_task: XcmTask,
 		call: Vec<u8>,
 	) -> Result<Xcm, Error<T>> {
+		let configuration = ConfigurationByStakingProtocol::<T>::get(staking_protocol)
+			.ok_or(Error::<T>::ConfigurationNotFound)?;
 		let fee_location = staking_protocol.info().remote_fee_location;
 		let refund_beneficiary = staking_protocol.info().remote_refund_beneficiary;
-		let fee_detail = XcmFeeByXcmTask::<T>::get(xcm_task).ok_or(Error::<T>::MissingXcmFee)?;
-		let asset = Asset { id: AssetId(fee_location), fun: Fungible(fee_detail.fee) };
+		let asset =
+			Asset { id: AssetId(fee_location), fun: Fungible(configuration.xcm_task_fee.fee) };
 		let assets: Assets = Assets::from(asset.clone());
-		let require_weight_at_most = fee_detail.weight;
+		let require_weight_at_most = configuration.xcm_task_fee.weight;
 		let call: DoubleEncoded<()> = call.into();
 		let asset_filter: AssetFilter = AssetFilter::Wild(WildAsset::All);
 		Ok(Xcm::builder()
@@ -265,7 +270,6 @@ impl<T: Config> Pallet<T> {
 	/// deposit_asset
 	pub fn wrap_xcm_message_with_notify(
 		staking_protocol: &StakingProtocol,
-		xcm_task: XcmTask,
 		call: Vec<u8>,
 		notify_call: <T as Config>::RuntimeCall,
 		mut_query_id: &mut Option<QueryId>,
@@ -283,7 +287,7 @@ impl<T: Config> Pallet<T> {
 			query_id,
 			max_weight: notify_call_weight,
 		});
-		let mut xcm_message = Self::wrap_xcm_message(&staking_protocol, xcm_task, call)?;
+		let mut xcm_message = Self::wrap_xcm_message(&staking_protocol, call)?;
 		xcm_message.0.insert(3, report_transact_status);
 		Ok(xcm_message)
 	}

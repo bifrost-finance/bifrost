@@ -18,14 +18,12 @@
 
 use crate::{
 	astar_dapp_staking::types::{
-		AstarCall, AstarDappStakingPendingStatus, AstarDappStakingXcmTask, AstarUnlockingRecord,
-		AstarValidator, DappStaking,
+		AstarCall, AstarDappStakingPendingStatus, AstarUnlockingRecord, AstarValidator, DappStaking,
 	},
 	common::types::{
 		Delegator, DelegatorIndex, Ledger, PendingStatus, StakingProtocol, Validator, XcmTask,
-		XcmTaskWithParams,
 	},
-	Call, Config, DelegatorByStakingProtocolAndDelegatorIndex,
+	Call, Config, ConfigurationByStakingProtocol, DelegatorByStakingProtocolAndDelegatorIndex,
 	DelegatorIndexByStakingProtocolAndDelegator, Error, Event, LedgerByStakingProtocolAndDelegator,
 	Pallet, PendingStatusByQueryId, ValidatorsByStakingProtocolAndDelegator,
 };
@@ -68,10 +66,9 @@ impl<T: Config> Pallet<T> {
 			),
 			Error::<T>::DelegatorNotFound
 		);
-		let (call, xcm_task, pending_status) = match task.clone() {
+		let (call, pending_status) = match task.clone() {
 			DappStaking::Lock(amount) => (
 				AstarCall::<T>::DappStaking(DappStaking::<T::AccountId>::Lock(amount)).encode(),
-				XcmTask::AstarDappStaking(AstarDappStakingXcmTask::Lock),
 				Some(PendingStatus::AstarDappStaking(AstarDappStakingPendingStatus::Lock(
 					delegator.clone(),
 					amount,
@@ -79,7 +76,6 @@ impl<T: Config> Pallet<T> {
 			),
 			DappStaking::Unlock(amount) => (
 				AstarCall::<T>::DappStaking(DappStaking::<T::AccountId>::Unlock(amount)).encode(),
-				XcmTask::AstarDappStaking(AstarDappStakingXcmTask::UnLock),
 				Some(PendingStatus::AstarDappStaking(AstarDappStakingPendingStatus::UnLock(
 					delegator.clone(),
 					amount,
@@ -87,7 +83,6 @@ impl<T: Config> Pallet<T> {
 			),
 			DappStaking::ClaimUnlocked => (
 				AstarCall::<T>::DappStaking(DappStaking::<T::AccountId>::ClaimUnlocked).encode(),
-				XcmTask::AstarDappStaking(AstarDappStakingXcmTask::ClaimUnlocked),
 				Some(PendingStatus::AstarDappStaking(
 					AstarDappStakingPendingStatus::ClaimUnlocked(delegator.clone()),
 				)),
@@ -100,7 +95,6 @@ impl<T: Config> Pallet<T> {
 						amount,
 					))
 					.encode(),
-					XcmTask::AstarDappStaking(AstarDappStakingXcmTask::Stake),
 					None,
 				)
 			},
@@ -112,14 +106,12 @@ impl<T: Config> Pallet<T> {
 						amount,
 					))
 					.encode(),
-					XcmTask::AstarDappStaking(AstarDappStakingXcmTask::Unstake),
 					None,
 				)
 			},
 			DappStaking::ClaimStakerRewards => (
 				AstarCall::<T>::DappStaking(DappStaking::<T::AccountId>::ClaimStakerRewards)
 					.encode(),
-				XcmTask::AstarDappStaking(AstarDappStakingXcmTask::ClaimStakerRewards),
 				None,
 			),
 			DappStaking::ClaimBonusReward(validator) => {
@@ -129,18 +121,16 @@ impl<T: Config> Pallet<T> {
 						validator,
 					))
 					.encode(),
-					XcmTask::AstarDappStaking(AstarDappStakingXcmTask::ClaimBonusReward),
 					None,
 				)
 			},
 			DappStaking::RelockUnlocking => (
 				AstarCall::<T>::DappStaking(DappStaking::<T::AccountId>::RelockUnlocking).encode(),
-				XcmTask::AstarDappStaking(AstarDappStakingXcmTask::RelockUnlocking),
 				None,
 			),
 		};
 		let (query_id, xcm_message) =
-			Self::get_query_id_and_xcm_message(call, delegator_index, xcm_task, &pending_status)?;
+			Self::get_query_id_and_xcm_message(call, delegator_index, &pending_status)?;
 		if let Some(query_id) = query_id {
 			let pending_status = pending_status.clone().ok_or(Error::<T>::MissingXcmFee)?;
 			PendingStatusByQueryId::<T>::insert(query_id, pending_status.clone());
@@ -149,7 +139,7 @@ impl<T: Config> Pallet<T> {
 		Self::deposit_event(Event::<T>::SendXcmTask {
 			query_id,
 			delegator,
-			xcm_task_with_params: XcmTaskWithParams::AstarDappStaking(task),
+			task: XcmTask::AstarDappStaking(task),
 			pending_status,
 			dest_location: ASTAR_DAPP_STAKING.info().remote_dest_location,
 		});
@@ -159,7 +149,6 @@ impl<T: Config> Pallet<T> {
 	pub fn get_query_id_and_xcm_message(
 		call: Vec<u8>,
 		delegator_index: DelegatorIndex,
-		xcm_task: XcmTask,
 		pending_status: &Option<PendingStatus<T::AccountId>>,
 	) -> Result<(Option<QueryId>, Xcm), Error<T>> {
 		let call =
@@ -174,13 +163,12 @@ impl<T: Config> Pallet<T> {
 				});
 			xcm_message = Self::wrap_xcm_message_with_notify(
 				&ASTAR_DAPP_STAKING,
-				xcm_task,
 				call,
 				notify_call,
 				&mut query_id,
 			)?;
 		} else {
-			xcm_message = Self::wrap_xcm_message(&ASTAR_DAPP_STAKING, xcm_task, call)?;
+			xcm_message = Self::wrap_xcm_message(&ASTAR_DAPP_STAKING, call)?;
 		};
 		Ok((query_id, xcm_message))
 	}
@@ -221,8 +209,11 @@ impl<T: Config> Pallet<T> {
 							let current_time_unit =
 								T::VtokenMinting::get_ongoing_time_unit(currency_id)
 									.ok_or(Error::<T>::TimeUnitNotExist)?;
+							let configuration =
+								ConfigurationByStakingProtocol::<T>::get(ASTAR_DAPP_STAKING)
+									.ok_or(Error::<T>::ConfigurationNotFound)?;
 							let unlock_time = current_time_unit
-								.add(ASTAR_DAPP_STAKING.info().unlock_period)
+								.add(configuration.unlock_period)
 								.ok_or(Error::<T>::TimeUnitNotExist)?;
 							pending_ledger
 								.unlocking

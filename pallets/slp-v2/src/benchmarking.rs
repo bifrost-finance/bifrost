@@ -19,26 +19,33 @@
 #![cfg(feature = "runtime-benchmarks")]
 use super::*;
 use crate::{
-	astar_dapp_staking::types::{AstarDappStakingLedger, AstarValidator, DappStaking},
-	common::types::{Ledger, PendingStatus, StakingProtocol, Validator, XcmFee, XcmTask},
+	astar_dapp_staking::types::{
+		AstarDappStakingLedger, AstarDappStakingPendingStatus, AstarValidator, DappStaking,
+	},
+	common::types::{Ledger, PendingStatus, StakingProtocol, Validator, XcmFee},
 	Pallet as SlpV2,
 };
-use cumulus_primitives_core::BlockT;
 use frame_benchmarking::v2::*;
 use frame_support::assert_ok;
 use frame_system::RawOrigin;
 use sp_core::{crypto::Ss58Codec, H160};
-use sp_runtime::AccountId32 as AccountId;
+use sp_runtime::{AccountId32 as AccountId, Permill};
 use xcm::v4::MaybeErrorCode;
 
 pub const STAKING_PROTOCOL: StakingProtocol = StakingProtocol::AstarDappStaking;
 
-#[benchmarks(where <T as frame_system::Config>::AccountId: From<sp_runtime::AccountId32> , <<<T as frame_system::Config>::Block as BlockT>::Header as sp_runtime::traits::Header>::Number: From<u32>)]
+pub const CONFIGURATION: ProtocolConfiguration = ProtocolConfiguration {
+	xcm_task_fee: XcmFee { weight: Weight::zero(), fee: 100 },
+	protocol_fee_rate: Permill::from_perthousand(100),
+	unlock_period: TimeUnit::Era(9),
+	max_update_token_exchange_rate: Permill::from_perthousand(1),
+	update_time_unit_interval: 100u32,
+	update_exchange_rate_interval: 100u32,
+};
+
+#[benchmarks(where <T as frame_system::Config>::AccountId: From<sp_runtime::AccountId32>)]
 mod benchmarks {
 	use super::*;
-	use crate::astar_dapp_staking::types::{
-		AstarDappStakingPendingStatus, AstarDappStakingXcmTask,
-	};
 
 	#[benchmark]
 	fn add_delegator() {
@@ -93,45 +100,14 @@ mod benchmarks {
 	}
 
 	#[benchmark]
-	fn set_xcm_task_fee() -> Result<(), BenchmarkError> {
-		let xcm_task = XcmTask::AstarDappStaking(AstarDappStakingXcmTask::Lock);
-		let xcm_fee = XcmFee { weight: Default::default(), fee: 100 };
+	fn set_protocol_configuration() -> Result<(), BenchmarkError> {
 		#[extrinsic_call]
-		_(RawOrigin::Root, xcm_task, xcm_fee);
-		Ok(())
-	}
-
-	#[benchmark]
-	fn set_protocol_fee_rate() -> Result<(), BenchmarkError> {
-		let fee_rate = Permill::from_perthousand(1);
-		let staking_protocol = StakingProtocol::AstarDappStaking;
-		#[extrinsic_call]
-		_(RawOrigin::Root, staking_protocol, fee_rate);
-		Ok(())
-	}
-
-	#[benchmark]
-	fn set_update_ongoing_time_unit_interval() -> Result<(), BenchmarkError> {
-		let update_interval = 100u32.into();
-		let staking_protocol = StakingProtocol::AstarDappStaking;
-		#[extrinsic_call]
-		_(RawOrigin::Root, staking_protocol, update_interval);
-		Ok(())
-	}
-
-	#[benchmark]
-	fn set_update_token_exchange_rate_limit() -> Result<(), BenchmarkError> {
-		let update_interval = 100u32.into();
-		let max_update_permill = Permill::from_perthousand(1);
-		let staking_protocol = StakingProtocol::AstarDappStaking;
-		#[extrinsic_call]
-		_(RawOrigin::Root, staking_protocol, update_interval, max_update_permill);
+		_(RawOrigin::Root, STAKING_PROTOCOL, CONFIGURATION);
 		Ok(())
 	}
 
 	#[benchmark]
 	fn set_ledger() -> Result<(), BenchmarkError> {
-		let staking_protocol = StakingProtocol::AstarDappStaking;
 		let delegator = Delegator::Substrate(
 			AccountId::from_ss58check("YLF9AnL6V1vQRfuiB832NXNGZYCPAWkKLLkh7cf3KwXhB9o")
 				.unwrap()
@@ -141,87 +117,85 @@ mod benchmarks {
 			locked: 100,
 			unlocking: Default::default(),
 		});
-		assert_ok!(SlpV2::<T>::add_delegator(RawOrigin::Root.into(), staking_protocol, None));
+		assert_ok!(SlpV2::<T>::add_delegator(RawOrigin::Root.into(), STAKING_PROTOCOL, None));
 
 		#[extrinsic_call]
-		_(RawOrigin::Root, staking_protocol, delegator, ledger);
+		_(RawOrigin::Root, STAKING_PROTOCOL, delegator, ledger);
 		Ok(())
 	}
 
 	#[benchmark]
 	fn set_operator() -> Result<(), BenchmarkError> {
-		let staking_protocol = StakingProtocol::AstarDappStaking;
 		let operator = AccountId::from([0u8; 32]).into();
 		#[extrinsic_call]
-		_(RawOrigin::Root, staking_protocol, operator);
+		_(RawOrigin::Root, STAKING_PROTOCOL, operator);
 		Ok(())
 	}
 
 	#[benchmark]
 	fn transfer_to() -> Result<(), BenchmarkError> {
-		let staking_protocol = StakingProtocol::AstarDappStaking;
 		let delegator = Delegator::Substrate(
 			AccountId::from_ss58check("YLF9AnL6V1vQRfuiB832NXNGZYCPAWkKLLkh7cf3KwXhB9o")
 				.unwrap()
 				.into(),
 		);
-		assert_ok!(SlpV2::<T>::add_delegator(RawOrigin::Root.into(), staking_protocol, None));
+		assert_ok!(SlpV2::<T>::add_delegator(RawOrigin::Root.into(), STAKING_PROTOCOL, None));
 		#[extrinsic_call]
-		_(RawOrigin::Root, staking_protocol, delegator);
+		_(RawOrigin::Root, STAKING_PROTOCOL, delegator);
 		Ok(())
 	}
 
 	#[benchmark]
 	fn transfer_back() -> Result<(), BenchmarkError> {
-		let staking_protocol = StakingProtocol::AstarDappStaking;
 		let delegator = Delegator::Substrate(
 			AccountId::from_ss58check("YLF9AnL6V1vQRfuiB832NXNGZYCPAWkKLLkh7cf3KwXhB9o")
 				.unwrap()
 				.into(),
 		);
-		assert_ok!(SlpV2::<T>::add_delegator(RawOrigin::Root.into(), staking_protocol, None));
-		let xcm_task = XcmTask::AstarDappStaking(AstarDappStakingXcmTask::TransferBack);
-		let xcm_fee = XcmFee { weight: Default::default(), fee: 100 };
-		assert_ok!(SlpV2::<T>::set_xcm_task_fee(RawOrigin::Root.into(), xcm_task, xcm_fee));
+		assert_ok!(SlpV2::<T>::add_delegator(RawOrigin::Root.into(), STAKING_PROTOCOL, None));
+		assert_ok!(SlpV2::<T>::set_protocol_configuration(
+			RawOrigin::Root.into(),
+			STAKING_PROTOCOL,
+			CONFIGURATION
+		));
 		#[extrinsic_call]
-		_(RawOrigin::Root, staking_protocol, delegator, 1000);
+		_(RawOrigin::Root, STAKING_PROTOCOL, delegator, 1000);
 		Ok(())
 	}
 
 	#[benchmark]
 	fn update_ongoing_time_unit() -> Result<(), BenchmarkError> {
-		let staking_protocol = StakingProtocol::AstarDappStaking;
 		#[extrinsic_call]
-		_(RawOrigin::Root, staking_protocol, Some(TimeUnit::Era(1)));
+		_(RawOrigin::Root, STAKING_PROTOCOL, Some(TimeUnit::Era(1)));
 		Ok(())
 	}
 
 	#[benchmark]
 	fn update_token_exchange_rate() -> Result<(), BenchmarkError> {
-		let staking_protocol = StakingProtocol::AstarDappStaking;
 		let delegator = Delegator::Substrate(
 			AccountId::from_ss58check("YLF9AnL6V1vQRfuiB832NXNGZYCPAWkKLLkh7cf3KwXhB9o")
 				.unwrap()
 				.into(),
 		);
-		assert_ok!(SlpV2::<T>::add_delegator(RawOrigin::Root.into(), staking_protocol, None));
+		assert_ok!(SlpV2::<T>::add_delegator(RawOrigin::Root.into(), STAKING_PROTOCOL, None));
 		#[extrinsic_call]
-		_(RawOrigin::Root, staking_protocol, delegator, 1000);
+		_(RawOrigin::Root, STAKING_PROTOCOL, delegator, 1000);
 		Ok(())
 	}
 
 	#[benchmark]
 	fn astar_dapp_staking() -> Result<(), BenchmarkError> {
-		let staking_protocol = StakingProtocol::AstarDappStaking;
 		let delegator = Delegator::Substrate(
 			AccountId::from_ss58check("YLF9AnL6V1vQRfuiB832NXNGZYCPAWkKLLkh7cf3KwXhB9o")
 				.unwrap()
 				.into(),
 		);
-		assert_ok!(SlpV2::<T>::add_delegator(RawOrigin::Root.into(), staking_protocol, None));
-		let xcm_task = XcmTask::AstarDappStaking(AstarDappStakingXcmTask::Lock);
-		let xcm_fee = XcmFee { weight: Default::default(), fee: 100 };
-		assert_ok!(SlpV2::<T>::set_xcm_task_fee(RawOrigin::Root.into(), xcm_task, xcm_fee));
+		assert_ok!(SlpV2::<T>::add_delegator(RawOrigin::Root.into(), STAKING_PROTOCOL, None));
+		assert_ok!(SlpV2::<T>::set_protocol_configuration(
+			RawOrigin::Root.into(),
+			STAKING_PROTOCOL,
+			CONFIGURATION
+		));
 		let task = DappStaking::Lock(100);
 		#[extrinsic_call]
 		_(RawOrigin::Root, delegator, task);
@@ -230,16 +204,17 @@ mod benchmarks {
 
 	#[benchmark]
 	fn notify_astar_dapp_staking() -> Result<(), BenchmarkError> {
-		let staking_protocol = StakingProtocol::AstarDappStaking;
 		let delegator = Delegator::Substrate(
 			AccountId::from_ss58check("YLF9AnL6V1vQRfuiB832NXNGZYCPAWkKLLkh7cf3KwXhB9o")
 				.unwrap()
 				.into(),
 		);
-		assert_ok!(SlpV2::<T>::add_delegator(RawOrigin::Root.into(), staking_protocol, None));
-		let xcm_task = XcmTask::AstarDappStaking(AstarDappStakingXcmTask::Lock);
-		let xcm_fee = XcmFee { weight: Default::default(), fee: 100 };
-		assert_ok!(SlpV2::<T>::set_xcm_task_fee(RawOrigin::Root.into(), xcm_task, xcm_fee));
+		assert_ok!(SlpV2::<T>::add_delegator(RawOrigin::Root.into(), STAKING_PROTOCOL, None));
+		assert_ok!(SlpV2::<T>::set_protocol_configuration(
+			RawOrigin::Root.into(),
+			STAKING_PROTOCOL,
+			CONFIGURATION
+		));
 
 		PendingStatusByQueryId::<T>::insert(
 			0,

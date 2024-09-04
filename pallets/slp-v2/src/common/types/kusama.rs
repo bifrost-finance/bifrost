@@ -93,15 +93,6 @@ impl StakingProtocol {
 		}
 	}
 
-	pub fn get_transfer_back_call_data<T: Config>(
-		&self,
-		_amount: Balance,
-	) -> Result<(Vec<u8>, XcmTask), Error<T>> {
-		match &self {
-			_ => unreachable!(),
-		}
-	}
-
 	pub fn get_delegator<T: Config>(
 		&self,
 		_delegator_index: DelegatorIndex,
@@ -129,12 +120,8 @@ pub enum Validator<AccountId> {
 #[derive(Encode, Decode, MaxEncodedLen, Clone, Debug, PartialEq, Eq, TypeInfo)]
 pub enum Ledger {}
 
-// XcmTask in slp protocol.
 #[derive(Encode, Decode, MaxEncodedLen, Clone, Copy, Debug, PartialEq, Eq, TypeInfo)]
-pub enum XcmTask {}
-
-#[derive(Encode, Decode, MaxEncodedLen, Clone, Copy, Debug, PartialEq, Eq, TypeInfo)]
-pub enum XcmTaskWithParams<AccountId> {
+pub enum XcmTask<AccountId> {
 	Todo(AccountId),
 }
 

@@ -16,10 +16,11 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-use bifrost_primitives::{Balance, CurrencyId, TimeUnit};
+use bifrost_primitives::{Balance, BlockNumber, CurrencyId, TimeUnit};
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
 use sp_core::H160;
+use sp_runtime::Permill;
 use xcm::v4::{Location, Weight};
 
 /// Sovereign addresses generate subaccounts via DelegatorIndex
@@ -28,6 +29,16 @@ pub type DelegatorIndex = u16;
 pub type PalletIndex = u8;
 pub const AS_DERIVATIVE_CALL_INDEX: u8 = 1;
 pub const LIMITED_RESERVE_TRANSFER_ASSETS_CALL_INDEX: u8 = 8;
+
+#[derive(Encode, Decode, MaxEncodedLen, Default, Clone, Debug, PartialEq, Eq, TypeInfo)]
+pub struct ProtocolConfiguration {
+	pub xcm_task_fee: XcmFee,
+	pub protocol_fee_rate: Permill,
+	pub unlock_period: TimeUnit,
+	pub max_update_token_exchange_rate: Permill,
+	pub update_time_unit_interval: BlockNumber,
+	pub update_exchange_rate_interval: BlockNumber,
+}
 
 #[derive(Encode, Decode, MaxEncodedLen, Default, Clone, Debug, PartialEq, Eq, TypeInfo)]
 pub struct StakingProtocolInfo {

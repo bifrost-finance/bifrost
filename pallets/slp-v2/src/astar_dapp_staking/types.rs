@@ -92,20 +92,6 @@ impl AstarDappStakingLedger {
 	}
 }
 
-/// XcmTask in slp protocol.
-#[derive(Encode, Decode, MaxEncodedLen, Clone, Copy, Debug, PartialEq, Eq, TypeInfo)]
-pub enum AstarDappStakingXcmTask {
-	Lock,
-	UnLock,
-	ClaimUnlocked,
-	RelockUnlocking,
-	Stake,
-	Unstake,
-	ClaimStakerRewards,
-	ClaimBonusReward,
-	TransferBack,
-}
-
 /// PendingStatus in slp protocol.
 #[derive(Encode, Decode, MaxEncodedLen, Clone, Copy, Debug, PartialEq, Eq, TypeInfo)]
 pub enum AstarDappStakingPendingStatus<AccountId> {

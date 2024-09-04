@@ -18,20 +18,18 @@
 
 use crate::{
 	astar_dapp_staking::types::{
-		AstarDappStakingLedger, AstarDappStakingPendingStatus, AstarDappStakingXcmTask,
-		AstarValidator, DappStaking,
+		AstarDappStakingLedger, AstarDappStakingPendingStatus, AstarValidator, DappStaking,
 	},
 	common::types::{Delegator, DelegatorIndex, StakingProtocolInfo},
 	Config, Error,
 };
-use bifrost_primitives::{Balance, TimeUnit, ASTR, DOT, GLMR};
+use bifrost_primitives::{TimeUnit, ASTR, DOT, GLMR};
 use frame_support::traits::Get;
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use polkadot_parachain_primitives::primitives::Sibling;
 use scale_info::TypeInfo;
 use sp_core::H160;
 use sp_runtime::traits::AccountIdConversion;
-use sp_std::vec::Vec;
 use xcm::{
 	prelude::{AccountId32, AccountKey20, PalletInstance, Parachain},
 	v4::Location,
@@ -124,20 +122,6 @@ impl StakingProtocol {
 		}
 	}
 
-	pub fn get_transfer_back_call_data<T: Config>(
-		&self,
-		amount: Balance,
-	) -> Result<(Vec<u8>, XcmTask), Error<T>> {
-		match &self {
-			StakingProtocol::AstarDappStaking => {
-				let call_data = crate::Pallet::<T>::wrap_polkadot_xcm_limited_reserve_transfer_assets_call_data(&self, amount)?;
-				let xcm_task = XcmTask::AstarDappStaking(AstarDappStakingXcmTask::TransferBack);
-				Ok((call_data, xcm_task))
-			},
-			_ => unreachable!(),
-		}
-	}
-
 	pub fn get_delegator<T: Config>(
 		&self,
 		delegator_index: DelegatorIndex,
@@ -177,14 +161,8 @@ pub enum Ledger {
 	AstarDappStaking(AstarDappStakingLedger),
 }
 
-// XcmTask in slp protocol.
 #[derive(Encode, Decode, MaxEncodedLen, Clone, Copy, Debug, PartialEq, Eq, TypeInfo)]
-pub enum XcmTask {
-	AstarDappStaking(AstarDappStakingXcmTask),
-}
-
-#[derive(Encode, Decode, MaxEncodedLen, Clone, Copy, Debug, PartialEq, Eq, TypeInfo)]
-pub enum XcmTaskWithParams<AccountId> {
+pub enum XcmTask<AccountId> {
 	AstarDappStaking(DappStaking<AccountId>),
 }
 

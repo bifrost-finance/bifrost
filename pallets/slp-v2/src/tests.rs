@@ -18,22 +18,21 @@
 
 use crate::{
 	astar_dapp_staking::types::{
-		AstarDappStakingLedger, AstarDappStakingPendingStatus, AstarDappStakingXcmTask,
-		AstarUnlockingRecord, AstarValidator, DappStaking,
+		AstarDappStakingLedger, AstarDappStakingPendingStatus, AstarUnlockingRecord,
+		AstarValidator, DappStaking,
 	},
 	common::types::{
-		Delegator, Ledger, PendingStatus, StakingProtocol, Validator, XcmFee, XcmTask,
-		XcmTaskWithParams,
+		Delegator, Ledger, PendingStatus, ProtocolConfiguration, StakingProtocol, Validator,
+		XcmFee, XcmTask,
 	},
 	mock::*,
 	DelegatorByStakingProtocolAndDelegatorIndex, DelegatorIndexByStakingProtocolAndDelegator,
 	Error as SlpV2Error, Event as SlpV2Event, LastUpdateOngoingTimeUnitBlockNumber,
 	LedgerByStakingProtocolAndDelegator, NextDelegatorIndexByStakingProtocol,
-	OperatorByStakingProtocol, ProtocolFeeRateByStakingProtocol,
-	UpdateOngoingTimeUintIntervalByStakingProtocol, UpdateTokenExchangeRateLimitByStakingProtocol,
-	ValidatorsByStakingProtocolAndDelegator, XcmFeeByXcmTask,
+	OperatorByStakingProtocol, ValidatorsByStakingProtocolAndDelegator,
 };
 use bifrost_primitives::{TimeUnit, VtokenMintingOperator, VASTR};
+use cumulus_primitives_core::Weight;
 use frame_support::{assert_noop, assert_ok, traits::fungibles::Mutate};
 use orml_traits::MultiCurrency;
 use pallet_xcm::Origin as XcmOrigin;
@@ -50,6 +49,23 @@ use xcm::{
 };
 
 pub const STAKING_PROTOCOL: StakingProtocol = StakingProtocol::AstarDappStaking;
+
+pub const CONFIGURATION: ProtocolConfiguration = ProtocolConfiguration {
+	xcm_task_fee: XcmFee { weight: Weight::zero(), fee: 100 },
+	protocol_fee_rate: Permill::from_perthousand(100),
+	unlock_period: TimeUnit::Era(9),
+	max_update_token_exchange_rate: Permill::from_perthousand(1),
+	update_time_unit_interval: 100u32,
+	update_exchange_rate_interval: 100u32,
+};
+
+fn set_protocol_configuration() {
+	assert_ok!(SlpV2::set_protocol_configuration(
+		RuntimeOrigin::root(),
+		STAKING_PROTOCOL,
+		CONFIGURATION
+	));
+}
 
 #[test]
 fn derivative_account_id_should_work() {
@@ -71,6 +87,17 @@ fn derivative_account_id_should_work() {
 			sub_2_sbling2030,
 			AccountId::from_ss58check("YeKP2BdVpFrXbbqkoVhDFZP9u3nUuop7fpMppQczQXBLhD1").unwrap()
 		)
+	})
+}
+
+#[test]
+fn set_configuration_should_work() {
+	new_test_ext().execute_with(|| {
+		set_protocol_configuration();
+		expect_event(SlpV2Event::SetConfiguration {
+			staking_protocol: STAKING_PROTOCOL,
+			configuration: CONFIGURATION,
+		});
 	})
 }
 
@@ -381,19 +408,14 @@ fn astar_dapp_staking_lock() {
 			AccountId::from_ss58check("YLF9AnL6V1vQRfuiB832NXNGZYCPAWkKLLkh7cf3KwXhB9o").unwrap(),
 		);
 		let task = DappStaking::Lock(100);
-		let xcm_fee = XcmFee { weight: Default::default(), fee: 100 };
 		let pending_status = PendingStatus::AstarDappStaking(AstarDappStakingPendingStatus::Lock(
 			delegator.clone(),
 			100,
 		));
 		let dest_location = STAKING_PROTOCOL.info().remote_dest_location;
 
+		set_protocol_configuration();
 		assert_ok!(SlpV2::add_delegator(RuntimeOrigin::root(), STAKING_PROTOCOL, None));
-		assert_ok!(SlpV2::set_xcm_task_fee(
-			RuntimeOrigin::root(),
-			XcmTask::AstarDappStaking(AstarDappStakingXcmTask::Lock),
-			xcm_fee
-		));
 
 		assert_ok!(SlpV2::astar_dapp_staking(
 			RuntimeOrigin::root(),
@@ -403,7 +425,7 @@ fn astar_dapp_staking_lock() {
 		expect_event(SlpV2Event::SendXcmTask {
 			query_id: Some(0),
 			delegator: delegator.clone(),
-			xcm_task_with_params: XcmTaskWithParams::AstarDappStaking(task),
+			task: XcmTask::AstarDappStaking(task),
 			pending_status: Some(pending_status),
 			dest_location,
 		});
@@ -433,7 +455,6 @@ fn repeat_astar_dapp_staking_lock() {
 		);
 		let task1 = DappStaking::Lock(100);
 		let task2 = DappStaking::Lock(200);
-		let xcm_fee = XcmFee { weight: Default::default(), fee: 100 };
 		let query_id_0 = 0;
 		let query_id_1 = 1;
 		let pending_status = PendingStatus::AstarDappStaking(AstarDappStakingPendingStatus::Lock(
@@ -441,13 +462,9 @@ fn repeat_astar_dapp_staking_lock() {
 			200,
 		));
 		let dest_location = STAKING_PROTOCOL.info().remote_dest_location;
+		set_protocol_configuration();
 
 		assert_ok!(SlpV2::add_delegator(RuntimeOrigin::root(), STAKING_PROTOCOL, None));
-		assert_ok!(SlpV2::set_xcm_task_fee(
-			RuntimeOrigin::root(),
-			XcmTask::AstarDappStaking(AstarDappStakingXcmTask::Lock),
-			xcm_fee
-		));
 
 		assert_ok!(SlpV2::astar_dapp_staking(RuntimeOrigin::root(), delegator.clone(), task1));
 		assert_ok!(SlpV2::notify_astar_dapp_staking(
@@ -464,7 +481,7 @@ fn repeat_astar_dapp_staking_lock() {
 		expect_event(SlpV2Event::SendXcmTask {
 			query_id: Some(query_id_1),
 			delegator: delegator.clone(),
-			xcm_task_with_params: XcmTaskWithParams::AstarDappStaking(task2),
+			task: XcmTask::AstarDappStaking(task2),
 			pending_status: Some(pending_status),
 			dest_location,
 		});
@@ -493,19 +510,9 @@ fn astar_dapp_staking_unlock() {
 			AccountId::from_ss58check("YLF9AnL6V1vQRfuiB832NXNGZYCPAWkKLLkh7cf3KwXhB9o").unwrap(),
 		);
 		let task = DappStaking::Lock(100);
-		let xcm_fee = XcmFee { weight: Default::default(), fee: 100 };
 
 		assert_ok!(SlpV2::add_delegator(RuntimeOrigin::root(), STAKING_PROTOCOL, None));
-		assert_ok!(SlpV2::set_xcm_task_fee(
-			RuntimeOrigin::root(),
-			XcmTask::AstarDappStaking(AstarDappStakingXcmTask::Lock),
-			xcm_fee
-		));
-		assert_ok!(SlpV2::set_xcm_task_fee(
-			RuntimeOrigin::root(),
-			XcmTask::AstarDappStaking(AstarDappStakingXcmTask::UnLock),
-			xcm_fee
-		));
+		set_protocol_configuration();
 
 		assert_ok!(SlpV2::astar_dapp_staking(RuntimeOrigin::root(), delegator.clone(), task));
 		assert_ok!(SlpV2::notify_astar_dapp_staking(
@@ -515,6 +522,7 @@ fn astar_dapp_staking_unlock() {
 		));
 
 		let task = DappStaking::Unlock(50);
+		RelaychainBlockNumber::set(100);
 		assert_ok!(SlpV2::update_ongoing_time_unit(
 			RuntimeOrigin::root(),
 			STAKING_PROTOCOL,
@@ -551,8 +559,6 @@ fn astar_dapp_staking_stake() {
 		);
 		let validator = Validator::AstarDappStaking(AstarValidator::Evm(H160::default()));
 		let task = DappStaking::Stake(AstarValidator::Evm(H160::default()), 100);
-		let xcm_task_with_params = XcmTaskWithParams::AstarDappStaking(task.clone());
-		let xcm_fee = XcmFee { weight: Default::default(), fee: 100 };
 		let query_id = None;
 		let pending_status = None;
 		let dest_location = STAKING_PROTOCOL.info().remote_dest_location;
@@ -564,17 +570,17 @@ fn astar_dapp_staking_stake() {
 			delegator.clone(),
 			validator.clone()
 		));
-		assert_ok!(SlpV2::set_xcm_task_fee(
-			RuntimeOrigin::root(),
-			XcmTask::AstarDappStaking(AstarDappStakingXcmTask::Stake),
-			xcm_fee
-		));
+		set_protocol_configuration();
 
-		assert_ok!(SlpV2::astar_dapp_staking(RuntimeOrigin::root(), delegator.clone(), task));
+		assert_ok!(SlpV2::astar_dapp_staking(
+			RuntimeOrigin::root(),
+			delegator.clone(),
+			task.clone()
+		));
 		expect_event(SlpV2Event::SendXcmTask {
 			query_id,
 			delegator,
-			xcm_task_with_params,
+			task: XcmTask::AstarDappStaking(task.clone()),
 			pending_status,
 			dest_location,
 		})
@@ -589,8 +595,6 @@ fn astar_dapp_staking_unstake() {
 		);
 		let validator = Validator::AstarDappStaking(AstarValidator::Evm(H160::default()));
 		let task = DappStaking::Unstake(AstarValidator::Evm(H160::default()), 100);
-		let xcm_task_with_params = XcmTaskWithParams::AstarDappStaking(task.clone());
-		let xcm_fee = XcmFee { weight: Default::default(), fee: 100 };
 		let query_id = None;
 		let pending_status = None;
 		let dest_location = STAKING_PROTOCOL.info().remote_dest_location;
@@ -602,17 +606,17 @@ fn astar_dapp_staking_unstake() {
 			delegator.clone(),
 			validator.clone()
 		));
-		assert_ok!(SlpV2::set_xcm_task_fee(
-			RuntimeOrigin::root(),
-			XcmTask::AstarDappStaking(AstarDappStakingXcmTask::Unstake),
-			xcm_fee
-		));
+		set_protocol_configuration();
 
-		assert_ok!(SlpV2::astar_dapp_staking(RuntimeOrigin::root(), delegator.clone(), task));
+		assert_ok!(SlpV2::astar_dapp_staking(
+			RuntimeOrigin::root(),
+			delegator.clone(),
+			task.clone()
+		));
 		expect_event(SlpV2Event::SendXcmTask {
 			query_id,
 			delegator,
-			xcm_task_with_params,
+			task: XcmTask::AstarDappStaking(task.clone()),
 			pending_status,
 			dest_location,
 		})
@@ -653,173 +657,6 @@ fn astar_polkadot_xcm_call() {
 		)
 		.unwrap();
 		assert_eq!(to_hex(&call_data, false), "0x630804000100b91f04000101006d6f646c62662f76746b696e0000000000000000000000000000000000000000040400000091010000000000");
-	})
-}
-
-#[test]
-fn set_protocol_fee_rate_should_work() {
-	new_test_ext().execute_with(|| {
-		let fee_rate = Permill::from_perthousand(1);
-		let staking_protocol = StakingProtocol::AstarDappStaking;
-		assert_ok!(SlpV2::set_protocol_fee_rate(RuntimeOrigin::root(), staking_protocol, fee_rate));
-		expect_event(SlpV2Event::SetProtocolFeeRate { staking_protocol, fee_rate });
-		assert_eq!(ProtocolFeeRateByStakingProtocol::<Test>::get(staking_protocol), fee_rate);
-	})
-}
-
-#[test]
-fn set_protocol_fee_rate_invalid_parameter() {
-	new_test_ext().execute_with(|| {
-		let fee_rate = Permill::from_perthousand(0);
-		let staking_protocol = StakingProtocol::AstarDappStaking;
-		assert_noop!(
-			SlpV2::set_protocol_fee_rate(RuntimeOrigin::root(), staking_protocol, fee_rate),
-			SlpV2Error::<Test>::InvalidParameter
-		);
-
-		let fee_rate = Permill::from_perthousand(1);
-		assert_ok!(SlpV2::set_protocol_fee_rate(RuntimeOrigin::root(), staking_protocol, fee_rate));
-		assert_noop!(
-			SlpV2::set_protocol_fee_rate(RuntimeOrigin::root(), staking_protocol, fee_rate),
-			SlpV2Error::<Test>::InvalidParameter
-		);
-	})
-}
-
-#[test]
-fn set_update_ongoing_time_unit_interval_should_work() {
-	new_test_ext().execute_with(|| {
-		let update_interval = 100u64;
-		let staking_protocol = StakingProtocol::AstarDappStaking;
-		assert_ok!(SlpV2::set_update_ongoing_time_unit_interval(
-			RuntimeOrigin::root(),
-			staking_protocol,
-			update_interval
-		));
-		expect_event(SlpV2Event::SetUpdateOngoingTimeUnitInterval {
-			staking_protocol,
-			update_interval,
-		});
-		assert_eq!(
-			UpdateOngoingTimeUintIntervalByStakingProtocol::<Test>::get(staking_protocol),
-			update_interval
-		);
-	})
-}
-
-#[test]
-fn set_update_ongoing_time_unit_interval_invalid_parameter() {
-	new_test_ext().execute_with(|| {
-		let update_interval = 0u64;
-		let staking_protocol = StakingProtocol::AstarDappStaking;
-		assert_noop!(
-			SlpV2::set_update_ongoing_time_unit_interval(
-				RuntimeOrigin::root(),
-				staking_protocol,
-				update_interval
-			),
-			SlpV2Error::<Test>::InvalidParameter
-		);
-
-		let update_interval = 100u64;
-		assert_ok!(SlpV2::set_update_ongoing_time_unit_interval(
-			RuntimeOrigin::root(),
-			staking_protocol,
-			update_interval
-		));
-		assert_noop!(
-			SlpV2::set_update_ongoing_time_unit_interval(
-				RuntimeOrigin::root(),
-				staking_protocol,
-				update_interval
-			),
-			SlpV2Error::<Test>::InvalidParameter
-		);
-	})
-}
-
-#[test]
-fn set_update_token_exchange_rate_limit_should_work() {
-	new_test_ext().execute_with(|| {
-		let update_interval = 100u64;
-		let max_update_permill = Permill::from_perthousand(1);
-		let staking_protocol = StakingProtocol::AstarDappStaking;
-		assert_ok!(SlpV2::set_update_token_exchange_rate_limit(
-			RuntimeOrigin::root(),
-			staking_protocol,
-			update_interval,
-			max_update_permill
-		));
-		expect_event(SlpV2Event::SetUpdateTokenExchangeRateLimit {
-			staking_protocol,
-			update_interval,
-			max_update_permill,
-		});
-		assert_eq!(
-			UpdateTokenExchangeRateLimitByStakingProtocol::<Test>::get(staking_protocol),
-			(update_interval, max_update_permill)
-		);
-	})
-}
-
-#[test]
-fn set_update_token_exchange_rate_limit_invalid_parameter() {
-	new_test_ext().execute_with(|| {
-		let update_interval = 0u64;
-		let max_update_permill = Permill::from_perthousand(0);
-		let staking_protocol = StakingProtocol::AstarDappStaking;
-		assert_noop!(
-			SlpV2::set_update_token_exchange_rate_limit(
-				RuntimeOrigin::root(),
-				staking_protocol,
-				update_interval,
-				max_update_permill
-			),
-			SlpV2Error::<Test>::InvalidParameter
-		);
-
-		let update_interval = 100u64;
-		let max_update_permill = Permill::from_perthousand(1);
-		assert_ok!(SlpV2::set_update_token_exchange_rate_limit(
-			RuntimeOrigin::root(),
-			staking_protocol,
-			update_interval,
-			max_update_permill
-		));
-		assert_noop!(
-			SlpV2::set_update_token_exchange_rate_limit(
-				RuntimeOrigin::root(),
-				staking_protocol,
-				update_interval,
-				max_update_permill
-			),
-			SlpV2Error::<Test>::InvalidParameter
-		);
-	})
-}
-
-#[test]
-fn set_xcm_task_fee_should_work() {
-	new_test_ext().execute_with(|| {
-		let xcm_task = XcmTask::AstarDappStaking(AstarDappStakingXcmTask::Lock);
-		let xcm_fee = XcmFee { weight: Default::default(), fee: 100 };
-		assert_ok!(SlpV2::set_xcm_task_fee(RuntimeOrigin::root(), xcm_task, xcm_fee));
-
-		expect_event(SlpV2Event::SetXcmFee { xcm_task, xcm_fee });
-		assert_eq!(XcmFeeByXcmTask::<Test>::get(xcm_task), Some(xcm_fee));
-	})
-}
-
-#[test]
-fn set_xcm_task_fee_invalid_parameter() {
-	new_test_ext().execute_with(|| {
-		let xcm_task = XcmTask::AstarDappStaking(AstarDappStakingXcmTask::Lock);
-		let xcm_fee = XcmFee { weight: Default::default(), fee: 100 };
-		assert_ok!(SlpV2::set_xcm_task_fee(RuntimeOrigin::root(), xcm_task, xcm_fee));
-		assert_noop!(
-			SlpV2::set_xcm_task_fee(RuntimeOrigin::root(), xcm_task, xcm_fee),
-			SlpV2Error::<Test>::InvalidParameter
-		);
 	})
 }
 
@@ -924,6 +761,8 @@ fn update_ongoing_time_unit_should_work() {
 	new_test_ext().execute_with(|| {
 		let staking_protocol = StakingProtocol::AstarDappStaking;
 		let currency_id = staking_protocol.info().currency_id;
+		set_protocol_configuration();
+		RelaychainDataProvider::set_block_number(100);
 		assert_ok!(SlpV2::update_ongoing_time_unit(
 			RuntimeOrigin::root(),
 			staking_protocol,
@@ -931,14 +770,14 @@ fn update_ongoing_time_unit_should_work() {
 		));
 		expect_event(SlpV2Event::TimeUnitUpdated { staking_protocol, time_unit: TimeUnit::Era(1) });
 		assert_eq!(VtokenMinting::get_ongoing_time_unit(currency_id), Some(TimeUnit::Era(1)));
-		assert_eq!(LastUpdateOngoingTimeUnitBlockNumber::<Test>::get(staking_protocol), 1);
+		assert_eq!(LastUpdateOngoingTimeUnitBlockNumber::<Test>::get(staking_protocol), 100);
 
-		RelaychainDataProvider::set_block_number(2);
+		RelaychainDataProvider::set_block_number(200);
 
 		assert_ok!(SlpV2::update_ongoing_time_unit(RuntimeOrigin::root(), staking_protocol, None));
 		expect_event(SlpV2Event::TimeUnitUpdated { staking_protocol, time_unit: TimeUnit::Era(2) });
 		assert_eq!(VtokenMinting::get_ongoing_time_unit(currency_id), Some(TimeUnit::Era(2)));
-		assert_eq!(LastUpdateOngoingTimeUnitBlockNumber::<Test>::get(staking_protocol), 2);
+		assert_eq!(LastUpdateOngoingTimeUnitBlockNumber::<Test>::get(staking_protocol), 200);
 	});
 }
 
@@ -946,13 +785,7 @@ fn update_ongoing_time_unit_should_work() {
 fn update_ongoing_time_unit_update_interval_too_short() {
 	new_test_ext().execute_with(|| {
 		let staking_protocol = StakingProtocol::AstarDappStaking;
-		let update_interval = 100u64;
-
-		assert_ok!(SlpV2::set_update_ongoing_time_unit_interval(
-			RuntimeOrigin::root(),
-			staking_protocol,
-			update_interval
-		));
+		set_protocol_configuration();
 
 		// current relaychain block number 1 < update_interval 100 + last update block number 0 =>
 		// Error
@@ -1008,33 +841,15 @@ fn update_token_exchange_rate_should_work() {
 		assert_ok!(SlpV2::add_delegator(RuntimeOrigin::root(), STAKING_PROTOCOL, None));
 		Currencies::set_balance(VASTR, &AccountId::from([0u8; 32]), vtoken_total_issuance);
 		assert_eq!(Currencies::total_issuance(VASTR), vtoken_total_issuance);
+		assert_ok!(VtokenMinting::increase_token_pool(currency_id, token_pool));
 
-		// No protocol fee rate
-		assert_ok!(SlpV2::update_token_exchange_rate(
-			RuntimeOrigin::root(),
-			staking_protocol,
-			delegator.clone(),
-			token_pool
-		));
+		set_protocol_configuration();
 		assert_eq!(VtokenMinting::get_token_pool(currency_id), token_pool);
-		expect_event(SlpV2Event::TokenExchangeRateUpdated {
-			staking_protocol,
-			delegator: delegator.clone(),
-			protocol_fee_currency_id: VASTR,
-			protocol_fee: 0,
-			amount: token_pool,
-		});
 
-		RelaychainDataProvider::set_block_number(2);
+		RelaychainDataProvider::set_block_number(100);
 
 		// Set protocol fee rate is 10%
 		let protocol_fee_rate = Permill::from_perthousand(100);
-		assert_ok!(SlpV2::set_protocol_fee_rate(
-			RuntimeOrigin::root(),
-			staking_protocol,
-			protocol_fee_rate
-		));
-
 		assert_ok!(SlpV2::update_token_exchange_rate(
 			RuntimeOrigin::root(),
 			staking_protocol,
@@ -1065,22 +880,9 @@ fn update_token_exchange_rate_should_work() {
 			protocol_fee
 		);
 
-		// Set update token exchange rate limit(update_interval 100, max_update_permill 0.10%)
-		let update_interval = 100u64;
-		let max_update_permill = Permill::from_perthousand(1);
-		// The max_update_amount is 24597.119664064597684680 ASTR
-		let max_update_amount = max_update_permill.mul_floor(token_pool);
-		println!("max_update_amount: {:?}", max_update_amount);
-		assert_ok!(SlpV2::set_update_token_exchange_rate_limit(
-			RuntimeOrigin::root(),
-			staking_protocol,
-			update_interval,
-			max_update_permill
-		));
-
-		RelaychainDataProvider::set_block_number(102);
-		// current relaychain block number 102 = update_interval 100 + last update block number 2 =>
-		// Ok
+		RelaychainDataProvider::set_block_number(200);
+		// current relaychain block number 300 = update_interval 100 + last update block number 200
+		// => Ok
 		assert_ok!(SlpV2::update_token_exchange_rate(
 			RuntimeOrigin::root(),
 			staking_protocol,
@@ -1130,25 +932,7 @@ fn update_token_exchange_rate_limt_error() {
 		Currencies::set_balance(VASTR, &AccountId::from([0u8; 32]), vtoken_total_issuance);
 		assert_ok!(VtokenMinting::increase_token_pool(currency_id, token_pool));
 
-		// Set protocol fee rate is 10%
-		let protocol_fee_rate = Permill::from_perthousand(100);
-		assert_ok!(SlpV2::set_protocol_fee_rate(
-			RuntimeOrigin::root(),
-			staking_protocol,
-			protocol_fee_rate
-		));
-		// Set update token exchange rate limit(update_interval 100, max_update_permill 0.10%)
-		let update_interval = 100u64;
-		let max_update_permill = Permill::from_perthousand(1);
-		// 12000 * 0.001 = 12
-		let max_update_amount = max_update_permill.mul_floor(token_pool);
-		println!("max_update_amount: {:?}", max_update_amount);
-		assert_ok!(SlpV2::set_update_token_exchange_rate_limit(
-			RuntimeOrigin::root(),
-			staking_protocol,
-			update_interval,
-			max_update_permill
-		));
+		set_protocol_configuration();
 
 		// current relaychain block number 1 < update_interval 100 + last update block number 0 =>
 		// Error

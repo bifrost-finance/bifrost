@@ -267,20 +267,20 @@ impl bifrost_vtoken_minting::Config for Test {
 }
 
 parameter_types! {
-	pub static RelaychainBlockNumber: u64 = 1;
+	pub static RelaychainBlockNumber: BlockNumber = 1;
 
 }
 
 pub struct RelaychainDataProvider;
 
 impl RelaychainDataProvider {
-	pub fn set_block_number(block: u64) {
+	pub fn set_block_number(block: BlockNumber) {
 		RelaychainBlockNumber::set(block);
 	}
 }
 
 impl BlockNumberProvider for RelaychainDataProvider {
-	type BlockNumber = u64;
+	type BlockNumber = BlockNumber;
 
 	fn current_block_number() -> Self::BlockNumber {
 		RelaychainBlockNumber::get()
