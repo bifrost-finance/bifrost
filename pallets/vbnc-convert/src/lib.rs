@@ -62,20 +62,39 @@ pub mod pallet {
 		/// Weight information for extrinsics in this module.
 		type WeightInfo: WeightInfo;
 	}
-
 	#[pallet::error]
+	/// Error types for the VBNC convert pallet.
 	pub enum Error<T> {
+		/// The account does not have enough balance to complete the operation.
 		NotEnoughBalance,
+
+		/// The resulting balance is less than the existential deposit, which would lead to the
+		/// account being reaped.
 		LessThanExistentialDeposit,
+
+		/// The specified currency is not supported for conversion to VBNC-P.
 		CurrencyNotSupport,
 	}
 
 	#[pallet::event]
+	/// Event types emitted by the VBNC convert pallet.
 	#[pallet::generate_deposit(pub(crate) fn deposit_event)]
 	pub enum Event<T: Config> {
-		VBNCPConverted { to: AccountIdOf<T>, value: BalanceOf<T> },
+		/// Emitted when VBNC-P has been successfully converted and transferred to the user.
+		VBNCPConverted {
+			/// The account that received the converted VBNC-P.
+			to: AccountIdOf<T>,
+			/// The amount of VBNC-P converted.
+			value: BalanceOf<T>,
+		},
 
-		VbncPCharged { who: AccountIdOf<T>, value: BalanceOf<T> },
+		/// Emitted when VBNC-P has been successfully charged from a user account.
+		VbncPCharged {
+			/// The account from which VBNC-P was charged.
+			who: AccountIdOf<T>,
+			/// The amount of VBNC-P charged.
+			value: BalanceOf<T>,
+		},
 	}
 
 	#[pallet::pallet]
@@ -87,6 +106,20 @@ pub mod pallet {
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
+		/// Converts the specified `value` of a supported currency to VBNC-P.
+		///
+		/// # Parameters
+		/// - `origin`: The origin of the transaction, which must be a signed account.
+		/// - `currency`: The currency to be converted into VBNC-P.
+		/// - `value`: The amount of the specified currency to be converted.
+		///
+		/// # Errors
+		/// - `Error::<T>::CurrencyNotSupport`: If the provided currency is not supported for
+		///   conversion.
+		/// - `Error::<T>::NotEnoughBalance`: If the user does not have sufficient balance of the
+		///   specified currency.
+		/// - `Error::<T>::LessThanExistentialDeposit`: If the converted amount of VBNC-P is less
+		///   than the minimum required balance.
 		#[pallet::call_index(0)]
 		#[pallet::weight(T::WeightInfo::convert_to_vbnc_p())]
 		pub fn convert_to_vbnc_p(
@@ -120,6 +153,16 @@ pub mod pallet {
 			Ok(())
 		}
 
+		/// Charges the specified `amount` of VBNC-P from the user's account.
+		///
+		/// # Parameters
+		/// - `origin`: The origin of the transaction, which must be a signed account.
+		/// - `amount`: The amount of VBNC-P to charge from the user's account.
+		///
+		/// # Errors
+		/// - `Error::<T>::NotEnoughBalance`: If the user does not have sufficient VBNC-P to charge.
+		/// - `Error::<T>::LessThanExistentialDeposit`: If the amount to be charged is less than the
+		///   existential deposit.
 		#[pallet::call_index(1)]
 		#[pallet::weight(T::WeightInfo::charge_vbnc_p())]
 		pub fn charge_vbnc_p(origin: OriginFor<T>, amount: BalanceOf<T>) -> DispatchResult {
@@ -143,31 +186,43 @@ pub mod pallet {
 	}
 
 	impl<T: Config> Pallet<T> {
+		/// Calculates the amount of VBNC-P that can be obtained from the provided currency and
+		/// value. Only support VBNC token.
 		fn calculate_can_get_vbnc_p(
 			currency: CurrencyIdOf<T>,
 			value: BalanceOf<T>,
 		) -> Result<BalanceOf<T>, Error<T>> {
+			// only support VBNC token
+			// the VBNC and VBNC-P exchange ratio is one to one
 			match currency {
 				VBNC => Ok(value),
 				_ => Err(Error::<T>::CurrencyNotSupport),
 			}
 		}
 
+		/// Returns the account ID of VBNCConvertPalletId.
+		/// This account is used to hold VBNC-P and perform conversions.
 		pub fn vbnc_p_pool_account() -> AccountIdOf<T> {
 			T::VBNCConvertPalletId::get().into_account_truncating()
 		}
 
+		/// Ensures that the provided currency is supported for conversion.
+		/// Currently, only VBNC is supported.
 		fn ensure_currency(currency: &CurrencyIdOf<T>) -> Result<(), DispatchError> {
+			// Ensure that the currency is VBNC, otherwise return an error.
 			ensure!([VBNC].contains(currency), Error::<T>::CurrencyNotSupport);
 			Ok(())
 		}
 
+		/// Ensures that the VBNC-P pool has enough balance to complete the transaction.
+		/// If the pool has insufficient balance, an error is returned.
 		fn ensure_pool_balance_enough(
 			currency: CurrencyIdOf<T>,
 			value: BalanceOf<T>,
 		) -> Result<(), DispatchError> {
 			let pool_account = Self::vbnc_p_pool_account();
 
+			// Check if the pool account can withdraw the specified amount of currency.
 			T::MultiCurrency::ensure_can_withdraw(currency, &pool_account, value)
 				.map_err(|_| Error::<T>::NotEnoughBalance)?;
 
