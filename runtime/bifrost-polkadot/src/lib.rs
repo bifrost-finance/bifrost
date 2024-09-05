@@ -139,6 +139,9 @@ use governance::{
 	TechAdminOrCouncil,
 };
 
+#[cfg(feature = "runtime-benchmarks")]
+use bifrost_primitives::{DoNothingRouter, MockXcmTransfer};
+
 /// Opaque types. These are used by the CLI to instantiate machinery that don't need to know
 /// the specifics of the runtime. They can then be made to be agnostic over specific formats
 /// of data like extrinsics, allowing for them to continue syncing the network through upgrades
@@ -1605,6 +1608,31 @@ impl bifrost_buy_back::Config for Runtime {
 	type VeMinting = VeMinting;
 }
 
+impl bifrost_slp_v2::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type RuntimeOrigin = RuntimeOrigin;
+	type RuntimeCall = RuntimeCall;
+	type ResponseOrigin = EnsureResponse<Everything>;
+	type WeightInfo = weights::bifrost_slp_v2::BifrostWeight<Runtime>;
+	type MultiCurrency = Currencies;
+	type ControlOrigin = TechAdminOrCouncil;
+	#[cfg(not(feature = "runtime-benchmarks"))]
+	type XcmTransfer = XTokens;
+	#[cfg(feature = "runtime-benchmarks")]
+	type XcmTransfer = MockXcmTransfer;
+	#[cfg(not(feature = "runtime-benchmarks"))]
+	type XcmSender = XcmRouter;
+	#[cfg(feature = "runtime-benchmarks")]
+	type XcmSender = DoNothingRouter;
+	type VtokenMinting = VtokenMinting;
+	type CurrencyIdConversion = AssetIdMaps<Runtime>;
+	type RelaychainBlockNumberProvider = RelaychainDataProvider<Runtime>;
+	type QueryTimeout = QueryTimeout;
+	type CommissionPalletId = CommissionPalletId;
+	type ParachainId = ParachainInfo;
+	type MaxValidators = ConstU32<256>;
+}
+
 // Below is the implementation of tokens manipulation functions other than native token.
 pub struct LocalAssetAdaptor<Local>(PhantomData<Local>);
 
@@ -1796,6 +1824,7 @@ construct_runtime! {
 		ChannelCommission: bifrost_channel_commission = 136,
 		CloudsConvert: bifrost_clouds_convert = 137,
 		BuyBack: bifrost_buy_back = 138,
+		SlpV2: bifrost_slp_v2 = 139,
 	}
 }
 
@@ -1961,6 +1990,7 @@ mod benches {
 	define_benchmarks!(
 		[bifrost_ve_minting, VeMinting]
 		[bifrost_buy_back, BuyBack]
+		[bifrost_slp_v2, SlpV2]
 	);
 }
 

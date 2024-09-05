@@ -31,6 +31,7 @@ pub mod bifrost_fee_share;
 pub mod bifrost_flexible_fee;
 pub mod bifrost_salp;
 pub mod bifrost_slp;
+pub mod bifrost_slp_v2;
 pub mod bifrost_slpx;
 pub mod bifrost_stable_pool;
 pub mod bifrost_system_maker;

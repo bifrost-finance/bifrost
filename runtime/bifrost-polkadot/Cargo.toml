@@ -150,6 +150,7 @@ bifrost-runtime-common = { workspace = true }
 bifrost-salp = { workspace = true }
 bifrost-salp-rpc-runtime-api = { workspace = true }
 bifrost-slp = { workspace = true }
+bifrost-slp-v2 = { workspace = true, features = ["polkadot"] }
 bifrost-slpx = { workspace = true }
 bifrost-stable-pool = { workspace = true }
 bifrost-stable-pool-rpc-runtime-api = { workspace = true }
@@ -267,6 +268,7 @@ std = [
 	"bifrost-salp-rpc-runtime-api/std",
 	"bifrost-salp/std",
 	"bifrost-slp/std",
+	"bifrost-slp-v2/std",
 	"bifrost-slpx/std",
 	"bifrost-stable-pool-rpc-runtime-api/std",
 	"bifrost-stable-pool/std",
@@ -333,6 +335,7 @@ runtime-benchmarks = [
 	"sp-runtime/runtime-benchmarks",
 	"xcm-builder/runtime-benchmarks",
 	"bifrost-slp/runtime-benchmarks",
+	"bifrost-slp-v2/runtime-benchmarks",
 	"bifrost-salp/runtime-benchmarks",
 	"bifrost-vtoken-minting/runtime-benchmarks",
 	"bifrost-ve-minting/runtime-benchmarks",
@@ -359,6 +362,7 @@ try-runtime = [
 	"bifrost-flexible-fee/try-runtime",
 	"bifrost-salp/try-runtime",
 	"bifrost-slp/try-runtime",
+	"bifrost-slp-v2/try-runtime",
 	"bifrost-slpx/try-runtime",
 	"bifrost-stable-asset/try-runtime",
 	"bifrost-stable-pool/try-runtime",

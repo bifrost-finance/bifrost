@@ -20,18 +20,21 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
+use orml_traits::{xcm_transfer::Transferred, XcmTransfer};
 use parity_scale_codec::MaxEncodedLen;
 use scale_info::TypeInfo;
 use sp_core::{ConstU32, Decode, Encode, RuntimeDebug, H160};
 use sp_runtime::{
 	generic,
 	traits::{BlakeTwo256, IdentifyAccount, Verify},
-	FixedU128, MultiSignature, OpaqueExtrinsic, Permill,
+	DispatchError, FixedU128, MultiSignature, OpaqueExtrinsic, Permill,
 };
+use sp_std::vec::Vec;
 use xcm::v4::{prelude::*, Asset, Location};
 use xcm_executor::traits::{AssetTransferError, TransferType, XcmAssetTransfers};
 
 pub mod currency;
+pub use currency::*;
 mod salp;
 pub mod traits;
 pub use salp::*;
@@ -39,13 +42,7 @@ pub use salp::*;
 #[cfg(test)]
 mod tests;
 
-pub use crate::{
-	currency::{
-		AssetIds, CurrencyId, ForeignAssetId, TokenId, TokenSymbol, ASTR, ASTR_TOKEN_ID, BNC, DOT,
-		DOT_TOKEN_ID, DOT_U, FIL, GLMR, GLMR_TOKEN_ID, KSM, MANTA, VBNC, VDOT, VKSM, VSKSM,
-	},
-	traits::*,
-};
+pub use crate::traits::*;
 
 /// An index to a block.
 pub type BlockNumber = u32;
@@ -192,6 +189,25 @@ pub enum TimeUnit {
 	Hour(#[codec(compact)] u32),
 }
 
+impl TimeUnit {
+	pub fn add_one(self) -> Self {
+		match self {
+			TimeUnit::Era(a) => TimeUnit::Era(a.saturating_add(1)),
+			TimeUnit::SlashingSpan(a) => TimeUnit::SlashingSpan(a.saturating_add(1)),
+			TimeUnit::Round(a) => TimeUnit::Round(a.saturating_add(1)),
+			TimeUnit::Kblock(a) => TimeUnit::Kblock(a.saturating_add(1)),
+			TimeUnit::Hour(a) => TimeUnit::Hour(a.saturating_add(1)),
+		}
+	}
+
+	pub fn add(self, other_time: Self) -> Option<Self> {
+		match (self, other_time) {
+			(TimeUnit::Era(a), TimeUnit::Era(b)) => Some(TimeUnit::Era(a.saturating_add(b))),
+			_ => None,
+		}
+	}
+}
+
 impl Default for TimeUnit {
 	fn default() -> Self {
 		TimeUnit::Era(0u32)
@@ -270,6 +286,74 @@ impl SendXcm for DoNothingRouter {
 	}
 	fn deliver(_: ()) -> Result<XcmHash, SendError> {
 		Ok([0; 32])
+	}
+}
+
+pub struct MockXcmTransfer;
+impl XcmTransfer<AccountId, Balance, CurrencyId> for MockXcmTransfer {
+	fn transfer(
+		who: AccountId,
+		_currency_id: CurrencyId,
+		amount: Balance,
+		dest: Location,
+		_dest_weight_limit: WeightLimit,
+	) -> Result<Transferred<AccountId>, DispatchError> {
+		Ok(Transferred {
+			sender: who,
+			assets: Default::default(),
+			fee: Asset { id: AssetId(Location::here()), fun: Fungible(amount) },
+			dest,
+		})
+	}
+
+	fn transfer_multiasset(
+		_who: AccountId,
+		_asset: Asset,
+		_dest: Location,
+		_dest_weight_limit: WeightLimit,
+	) -> Result<Transferred<AccountId>, DispatchError> {
+		unimplemented!()
+	}
+
+	fn transfer_with_fee(
+		_who: AccountId,
+		_currency_id: CurrencyId,
+		_amount: Balance,
+		_fee: Balance,
+		_dest: Location,
+		_dest_weight_limit: WeightLimit,
+	) -> Result<Transferred<AccountId>, DispatchError> {
+		unimplemented!()
+	}
+
+	fn transfer_multiasset_with_fee(
+		_who: AccountId,
+		_asset: Asset,
+		_fee: Asset,
+		_dest: Location,
+		_dest_weight_limit: WeightLimit,
+	) -> Result<Transferred<AccountId>, DispatchError> {
+		unimplemented!()
+	}
+
+	fn transfer_multicurrencies(
+		_who: AccountId,
+		_currencies: Vec<(CurrencyId, Balance)>,
+		_fee_item: u32,
+		_dest: Location,
+		_dest_weight_limit: WeightLimit,
+	) -> Result<Transferred<AccountId>, DispatchError> {
+		unimplemented!()
+	}
+
+	fn transfer_multiassets(
+		_who: AccountId,
+		_assets: Assets,
+		_fee: Asset,
+		_dest: Location,
+		_dest_weight_limit: WeightLimit,
+	) -> Result<Transferred<AccountId>, DispatchError> {
+		unimplemented!()
 	}
 }
 

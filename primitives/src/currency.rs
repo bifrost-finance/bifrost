@@ -55,6 +55,7 @@ pub const DOT_U_TOKEN_ID: u8 = 2u8;
 pub const DOT_U: CurrencyId = CurrencyId::Token2(DOT_U_TOKEN_ID);
 pub const ASTR_TOKEN_ID: u8 = 3u8;
 pub const ASTR: CurrencyId = CurrencyId::Token2(ASTR_TOKEN_ID);
+pub const VASTR: CurrencyId = CurrencyId::VToken2(ASTR_TOKEN_ID);
 pub const FIL_TOKEN_ID: u8 = 4u8;
 pub const FIL: CurrencyId = CurrencyId::Token2(FIL_TOKEN_ID);
 pub const VFIL: CurrencyId = CurrencyId::VToken2(FIL_TOKEN_ID);
