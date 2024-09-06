@@ -134,15 +134,3 @@ fn charge_vbnc_should_fail_with_account_balance_poor() {
 		);
 	});
 }
-
-#[test]
-fn charge_vbnc_should_fail_with_less_than_existential_depositr() {
-	new_test_ext().execute_with(|| {
-		assert_ok!(Tokens::deposit(VBNC_P, &BOB, 500));
-
-		assert_noop!(
-			VBNCConvert::charge_vbnc_p(RuntimeOrigin::signed(BOB), 1),
-			Error::<Runtime>::LessThanExistentialDeposit
-		);
-	});
-}
