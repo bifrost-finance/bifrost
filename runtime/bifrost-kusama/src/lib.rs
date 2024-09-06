@@ -1920,7 +1920,7 @@ construct_runtime! {
 		OracleMembership: pallet_membership::<Instance3> = 134,
 		LeverageStaking: leverage_staking = 135,
 		ChannelCommission: bifrost_channel_commission = 136,
-		VBNCConvert: bifrost_vbnc_convert = 138,
+		VBNCConvert: bifrost_vbnc_convert = 140,
 	}
 }
 
