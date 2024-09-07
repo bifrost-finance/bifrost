@@ -231,6 +231,7 @@ parameter_types! {
 	pub IncentivePoolAccount: PalletId = PalletId(*b"bf/inpoo");
 	pub const FarmingGaugeRewardIssuerPalletId: PalletId = PalletId(*b"bf/fmgar");
 	pub const FlexibleFeePalletId: PalletId = PalletId(*b"bf/flexi");
+	pub const VBNCConvertPalletId: PalletId = PalletId(*b"bf/vbncc");
 }
 
 impl frame_system::Config for Runtime {
@@ -1727,6 +1728,13 @@ impl bifrost_channel_commission::Config for Runtime {
 	type NameLengthLimit = NameLengthLimit;
 }
 
+impl bifrost_vbnc_convert::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type MultiCurrency = Currencies;
+	type VBNCConvertPalletId = VBNCConvertPalletId;
+	type WeightInfo = weights::bifrost_vbnc_convert::BifrostWeight<Runtime>;
+}
+
 // Below is the implementation of tokens manipulation functions other than native token.
 pub struct LocalAssetAdaptor<Local>(PhantomData<Local>);
 
@@ -1912,6 +1920,7 @@ construct_runtime! {
 		OracleMembership: pallet_membership::<Instance3> = 134,
 		LeverageStaking: leverage_staking = 135,
 		ChannelCommission: bifrost_channel_commission = 136,
+		VBNCConvert: bifrost_vbnc_convert = 140,
 	}
 }
 
@@ -2011,6 +2020,7 @@ mod benches {
 		[bifrost_vtoken_voting, VtokenVoting]
 		[lend_market, LendMarket]
 		[leverage_staking, LeverageStaking]
+		[bifrost_vbnc_convert, VBNCConvert]
 		// [bifrost_channel_commission, ChannelCommission]
 	);
 }

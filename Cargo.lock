@@ -1272,6 +1272,7 @@ dependencies = [
  "bifrost-system-maker",
  "bifrost-system-staking",
  "bifrost-token-issuer",
+ "bifrost-vbnc-convert",
  "bifrost-vesting",
  "bifrost-vsbond-auction",
  "bifrost-vstoken-conversion",
@@ -2135,6 +2136,28 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-std 14.0.0 (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.13.0)",
+]
+
+[[package]]
+name = "bifrost-vbnc-convert"
+version = "0.8.0"
+dependencies = [
+ "bifrost-asset-registry",
+ "bifrost-currencies",
+ "bifrost-primitives",
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "orml-tokens",
+ "orml-traits",
+ "pallet-balances",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std 14.0.0 (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.13.0)",
+ "staging-xcm-builder",
 ]
 
 [[package]]
