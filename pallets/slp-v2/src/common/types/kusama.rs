@@ -45,7 +45,7 @@ impl StakingProtocol {
 		match self {
 			StakingProtocol::MoonriverParachainStaking => StakingProtocolInfo {
 				utility_pallet_index: 30,
-				polkadot_xcm_pallet_index: 103,
+				xcm_pallet_index: 103,
 				currency_id: MOVR,
 				unlock_period: TimeUnit::Round(28),
 				remote_fee_location: Location::new(0, [PalletInstance(10)]),
@@ -61,7 +61,7 @@ impl StakingProtocol {
 			},
 			StakingProtocol::KusamaStaking => StakingProtocolInfo {
 				utility_pallet_index: 24,
-				polkadot_xcm_pallet_index: 99,
+				xcm_pallet_index: 99,
 				currency_id: KSM,
 				unlock_period: TimeUnit::Era(28),
 				remote_fee_location: Location::here(),
