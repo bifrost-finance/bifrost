@@ -208,7 +208,7 @@ impl<T: Config> Pallet<T> {
 		staking_protocol: &StakingProtocol,
 		amount: Balance,
 	) -> Result<Vec<u8>, Error<T>> {
-		let polkadot_xcm_pallet_index = staking_protocol.info().polkadot_xcm_pallet_index;
+		let xcm_pallet_index = staking_protocol.info().xcm_pallet_index;
 		let bifrost_dest_location = staking_protocol.info().bifrost_dest_location;
 		let (entrance_account, _) = T::VtokenMinting::get_entrance_and_exit_accounts();
 		let account_id = entrance_account
@@ -219,7 +219,7 @@ impl<T: Config> Pallet<T> {
 		let fee_asset_item = 0u32;
 		let weight_limit = WeightLimit::Unlimited;
 
-		let mut calldata = polkadot_xcm_pallet_index.encode();
+		let mut calldata = xcm_pallet_index.encode();
 		calldata.extend(LIMITED_RESERVE_TRANSFER_ASSETS_CALL_INDEX.encode());
 		// bifrost_dest_location
 		calldata.extend(VersionedLocation::V4(bifrost_dest_location).encode());
@@ -299,8 +299,8 @@ impl<T: Config> Pallet<T> {
 		let dest_location = staking_protocol.info().remote_dest_location;
 		let (ticket, _price) =
 			T::XcmSender::validate(&mut Some(dest_location), &mut Some(xcm_message))
-				.map_err(|_| Error::<T>::ErrorValidating)?;
-		T::XcmSender::deliver(ticket).map_err(|_| Error::<T>::ErrorDelivering)?;
+				.map_err(|_| Error::<T>::ValidatingFailed)?;
+		T::XcmSender::deliver(ticket).map_err(|_| Error::<T>::DeliveringFailed)?;
 		Ok(())
 	}
 

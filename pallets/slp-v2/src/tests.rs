@@ -772,7 +772,7 @@ fn update_ongoing_time_unit_update_interval_too_short() {
 				staking_protocol,
 				Some(TimeUnit::Era(1))
 			),
-			SlpV2Error::<Test>::UpdateOngoingTimeUnitIntervalTooShort
+			SlpV2Error::<Test>::UpdateIntervalTooShort
 		);
 
 		RelaychainDataProvider::set_block_number(100);
@@ -780,7 +780,7 @@ fn update_ongoing_time_unit_update_interval_too_short() {
 		// Ok
 		assert_noop!(
 			SlpV2::update_ongoing_time_unit(RuntimeOrigin::root(), staking_protocol, None),
-			SlpV2Error::<Test>::TimeUnitNotExist
+			SlpV2Error::<Test>::TimeUnitNotFound
 		);
 
 		assert_ok!(SlpV2::update_ongoing_time_unit(
@@ -794,7 +794,7 @@ fn update_ongoing_time_unit_update_interval_too_short() {
 		// => Error
 		assert_noop!(
 			SlpV2::update_ongoing_time_unit(RuntimeOrigin::root(), staking_protocol, None),
-			SlpV2Error::<Test>::UpdateOngoingTimeUnitIntervalTooShort
+			SlpV2Error::<Test>::UpdateIntervalTooShort
 		);
 		RelaychainDataProvider::set_block_number(200);
 		// current relaychain block number 200 = update_interval 100 + last update block number 100
@@ -920,7 +920,7 @@ fn update_token_exchange_rate_limt_error() {
 				delegator.clone(),
 				amount
 			),
-			SlpV2Error::<Test>::UpdateTokenExchangeRateIntervalTooShort
+			SlpV2Error::<Test>::UpdateIntervalTooShort
 		);
 
 		RelaychainDataProvider::set_block_number(101);

@@ -51,7 +51,7 @@ impl StakingProtocol {
 		match self {
 			StakingProtocol::AstarDappStaking => StakingProtocolInfo {
 				utility_pallet_index: 11,
-				polkadot_xcm_pallet_index: 51,
+				xcm_pallet_index: 51,
 				currency_id: ASTR,
 				unlock_period: TimeUnit::Era(9),
 				remote_fee_location: Location::here(),
@@ -67,7 +67,7 @@ impl StakingProtocol {
 			},
 			StakingProtocol::MoonbeamParachainStaking => StakingProtocolInfo {
 				utility_pallet_index: 30,
-				polkadot_xcm_pallet_index: 103,
+				xcm_pallet_index: 103,
 				currency_id: GLMR,
 				unlock_period: TimeUnit::Round(28),
 				remote_fee_location: Location::new(0, [PalletInstance(10)]),
@@ -83,7 +83,7 @@ impl StakingProtocol {
 			},
 			StakingProtocol::PolkadotStaking => StakingProtocolInfo {
 				utility_pallet_index: 26,
-				polkadot_xcm_pallet_index: 99,
+				xcm_pallet_index: 99,
 				currency_id: DOT,
 				unlock_period: TimeUnit::Era(28),
 				remote_fee_location: Location::here(),
