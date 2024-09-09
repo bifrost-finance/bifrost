@@ -122,7 +122,7 @@ use governance::{
 
 // xcm config
 pub mod xcm_config;
-use bifrost_primitives::MoonbeamChainId;
+use bifrost_primitives::MoonriverChainId;
 use bifrost_runtime_common::currency_converter::CurrencyIdConvert;
 use pallet_xcm::{EnsureResponse, QueryStatus};
 use sp_runtime::traits::{IdentityLookup, Verify};
@@ -1545,7 +1545,7 @@ impl bifrost_vtoken_minting::Config for Runtime {
 	type CurrencyIdConversion = AssetIdMaps<Runtime>;
 	type CurrencyIdRegister = AssetIdMaps<Runtime>;
 	type XcmTransfer = XTokens;
-	type MoonbeamChainId = MoonbeamChainId;
+	type MoonbeamChainId = MoonriverChainId;
 	type ChannelCommission = ChannelCommission;
 	type MaxLockRecords = ConstU32<100>;
 	type IncentivePoolAccount = IncentivePoolAccount;

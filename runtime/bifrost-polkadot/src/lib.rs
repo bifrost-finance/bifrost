@@ -132,6 +132,7 @@ use governance::{
 	TechAdminOrCouncil,
 };
 
+use bifrost_primitives::MoonbeamChainId;
 #[cfg(feature = "runtime-benchmarks")]
 use bifrost_primitives::{MockXcmRouter, MockXcmTransfer};
 use bifrost_runtime_common::currency_converter::CurrencyIdConvert;
@@ -1416,7 +1417,7 @@ impl bifrost_vtoken_minting::Config for Runtime {
 	type CurrencyIdConversion = AssetIdMaps<Runtime>;
 	type CurrencyIdRegister = AssetIdMaps<Runtime>;
 	type XcmTransfer = XTokens;
-	type MoonbeamChainId = ConstU32<2004>;
+	type MoonbeamChainId = MoonbeamChainId;
 	type ChannelCommission = ChannelCommission;
 	type MaxLockRecords = ConstU32<100>;
 	type IncentivePoolAccount = IncentivePoolAccount;
