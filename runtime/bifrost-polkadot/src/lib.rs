@@ -88,7 +88,7 @@ use bifrost_runtime_common::{
 use bifrost_slp::QueryId;
 use bifrost_ve_minting::traits::VeMintingInterface;
 use constants::currency::*;
-use cumulus_primitives_core::ParaId as CumulusParaId;
+use cumulus_primitives_core::AggregateMessageOrigin;
 use fp_evm::FeeCalculator;
 use fp_rpc::TransactionStatus;
 use frame_support::{
@@ -105,12 +105,10 @@ use frame_system::{EnsureRoot, EnsureRootWithSuccess, EnsureSigned};
 use hex_literal::hex;
 use pallet_ethereum::Transaction;
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
-// zenlink imports
 use zenlink_protocol::{
 	AssetBalance, AssetId as ZenlinkAssetId, LocalAssetHandler, MultiAssetsHandler, PairInfo,
 	PairLpGenerate, ZenlinkMultiAssets,
 };
-// xcm config
 pub mod xcm_config;
 use orml_traits::{currency::MutationHooks, location::RelativeReserveProvider};
 use pallet_evm::{GasWeightMapping, Runner};
@@ -124,13 +122,8 @@ use sp_runtime::{
 };
 use static_assertions::const_assert;
 use xcm::{v3::MultiLocation, v4::prelude::*};
-pub use xcm_config::{
-	parachains, BifrostCurrencyIdConvert, BifrostTreasuryAccount, MultiCurrency, SelfParaChainId,
-};
-use xcm_executor::{
-	traits::{Properties, QueryHandler},
-	XcmExecutor,
-};
+pub use xcm_config::{parachains, BifrostTreasuryAccount, MultiCurrency};
+use xcm_executor::{traits::QueryHandler, XcmExecutor};
 
 pub mod governance;
 use crate::xcm_config::XcmRouter;
@@ -139,8 +132,10 @@ use governance::{
 	TechAdminOrCouncil,
 };
 
+use bifrost_primitives::MoonbeamChainId;
 #[cfg(feature = "runtime-benchmarks")]
-use bifrost_primitives::{DoNothingRouter, MockXcmTransfer};
+use bifrost_primitives::{MockXcmRouter, MockXcmTransfer};
+use bifrost_runtime_common::currency_converter::CurrencyIdConvert;
 
 /// Opaque types. These are used by the CLI to instantiate machinery that don't need to know
 /// the specifics of the runtime. They can then be made to be agnostic over specific formats
@@ -818,10 +813,11 @@ impl pallet_tx_pause::Config for Runtime {
 parameter_types! {
 	pub const ReservedXcmpWeight: Weight = MAXIMUM_BLOCK_WEIGHT.saturating_div(4);
 	pub const ReservedDmpWeight: Weight = MAXIMUM_BLOCK_WEIGHT.saturating_div(4);
+	pub const RelayOrigin: AggregateMessageOrigin = AggregateMessageOrigin::Parent;
 }
 
 impl cumulus_pallet_parachain_system::Config for Runtime {
-	type DmpQueue = frame_support::traits::EnqueueWithOrigin<MessageQueue, xcm_config::RelayOrigin>;
+	type DmpQueue = frame_support::traits::EnqueueWithOrigin<MessageQueue, RelayOrigin>;
 	type RuntimeEvent = RuntimeEvent;
 	type OnSystemEvent = ();
 	type OutboundXcmpMessageSource = XcmpQueue;
@@ -1025,7 +1021,7 @@ pub fn create_x2_multilocation(index: u16, currency_id: CurrencyId) -> MultiLoca
 		_ => {
 			// get parachain id
 			if let Some(location) =
-				BifrostCurrencyIdConvert::<SelfParaChainId>::convert(currency_id)
+				CurrencyIdConvert::<ParachainInfo, Runtime>::convert(currency_id)
 			{
 				if let Some(Parachain(para_id)) = location.interior().first() {
 					xcm::v3::Location::new(
@@ -1162,7 +1158,7 @@ impl bifrost_slp::Config for Runtime {
 	type WeightInfo = weights::bifrost_slp::BifrostWeight<Runtime>;
 	type VtokenMinting = VtokenMinting;
 	type AccountConverter = SubAccountIndexMultiLocationConvertor;
-	type ParachainId = SelfParaChainId;
+	type ParachainId = ParachainInfo;
 	type SubstrateResponseManager = SubstrateResponseManager;
 	type MaxTypeEntryPerBlock = MaxTypeEntryPerBlock;
 	type MaxRefundPerBlock = MaxRefundPerBlock;
@@ -1274,7 +1270,7 @@ impl bifrost_slpx::Config for Runtime {
 	type XcmSender = XcmRouter;
 	type CurrencyIdConvert = AssetIdMaps<Runtime>;
 	type TreasuryAccount = BifrostTreasuryAccount;
-	type ParachainId = SelfParaChainId;
+	type ParachainId = ParachainInfo;
 	type WeightInfo = weights::bifrost_slpx::BifrostWeight<Runtime>;
 }
 
@@ -1336,7 +1332,7 @@ impl bifrost_vtoken_voting::Config for Runtime {
 	type DerivativeAccount = DerivativeAccountProvider<Runtime, DerivativeAccountTokenFilter>;
 	type RelaychainBlockNumberProvider = RelaychainDataProvider<Runtime>;
 	type VTokenSupplyProvider = VtokenMinting;
-	type ParachainId = SelfParaChainId;
+	type ParachainId = ParachainInfo;
 	type MaxVotes = ConstU32<256>;
 	type QueryTimeout = QueryTimeout;
 	type ReferendumCheckInterval = ReferendumCheckInterval;
@@ -1421,11 +1417,7 @@ impl bifrost_vtoken_minting::Config for Runtime {
 	type CurrencyIdConversion = AssetIdMaps<Runtime>;
 	type CurrencyIdRegister = AssetIdMaps<Runtime>;
 	type XcmTransfer = XTokens;
-	type AstarParachainId = ConstU32<2006>;
-	type MoonbeamParachainId = ConstU32<2004>;
-	type HydradxParachainId = ConstU32<2034>;
-	type MantaParachainId = ConstU32<2104>;
-	type InterlayParachainId = ConstU32<2032>;
+	type MoonbeamChainId = MoonbeamChainId;
 	type ChannelCommission = ChannelCommission;
 	type MaxLockRecords = ConstU32<100>;
 	type IncentivePoolAccount = IncentivePoolAccount;
@@ -1623,7 +1615,7 @@ impl bifrost_slp_v2::Config for Runtime {
 	#[cfg(not(feature = "runtime-benchmarks"))]
 	type XcmSender = XcmRouter;
 	#[cfg(feature = "runtime-benchmarks")]
-	type XcmSender = DoNothingRouter;
+	type XcmSender = MockXcmRouter;
 	type VtokenMinting = VtokenMinting;
 	type CurrencyIdConversion = AssetIdMaps<Runtime>;
 	type RelaychainBlockNumberProvider = RelaychainDataProvider<Runtime>;
