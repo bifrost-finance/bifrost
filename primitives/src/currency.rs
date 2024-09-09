@@ -81,6 +81,8 @@ pub const WETH: CurrencyId = CurrencyId::Token2(WETH_TOKEN_ID);
 pub const VSBOND_BNC_2001_0_8: CurrencyId = CurrencyId::VSBond(TokenSymbol::BNC, 2001, 0, 8);
 pub const CLOUD_TOKEN_ID: u8 = 12u8;
 pub const CLOUD: CurrencyId = CurrencyId::Token2(CLOUD_TOKEN_ID);
+pub const VBNC_P_TOKEN_ID: u8 = 14u8;
+pub const VBNC_P: CurrencyId = CurrencyId::VToken2(VBNC_P_TOKEN_ID);
 
 pub const LDOT: CurrencyId = CurrencyId::Lend(0);
 pub const LKSM: CurrencyId = CurrencyId::Lend(1);

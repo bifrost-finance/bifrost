@@ -578,6 +578,7 @@ impl Contains<AccountId> for DustRemovalWhitelist {
 			VsbondAuctionPalletId::get().into_account_truncating(),
 			ParachainStakingPalletId::get().into_account_truncating(),
 			SystemStakingPalletId::get().into_account_truncating(),
+			VBNCConvertPalletId::get().into_account_truncating(),
 		];
 		whitelist.contains(a) ||
 			FarmingKeeperPalletId::get().check_sub_account::<PoolId>(a) ||
