@@ -23,7 +23,7 @@ use crate::{BalanceOf, DerivativeAccountHandler, DerivativeIndex, DispatchResult
 use bifrost_primitives::{
 	currency::{KSM, VBNC, VKSM},
 	traits::XcmDestWeightAndFeeHandler,
-	CurrencyId, DoNothingRouter, TokenSymbol, VTokenSupplyProvider, XcmOperationType,
+	CurrencyId, MockXcmRouter, TokenSymbol, VTokenSupplyProvider, XcmOperationType,
 };
 use cumulus_primitives_core::ParaId;
 use frame_support::{
@@ -191,7 +191,7 @@ impl pallet_xcm::Config for Runtime {
 	type XcmExecuteFilter = Nothing;
 	type XcmExecutor = XcmExecutor<XcmConfig>;
 	type XcmReserveTransferFilter = Everything;
-	type XcmRouter = DoNothingRouter;
+	type XcmRouter = MockXcmRouter;
 	type XcmTeleportFilter = Nothing;
 	type RuntimeOrigin = RuntimeOrigin;
 	type RuntimeCall = RuntimeCall;

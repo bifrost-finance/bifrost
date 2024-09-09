@@ -23,7 +23,9 @@ use crate::{
 	common::types::{Delegator, DelegatorIndex, StakingProtocolInfo},
 	Config, Error,
 };
-use bifrost_primitives::{TimeUnit, ASTR, DOT, GLMR};
+use bifrost_primitives::{
+	AstarChainId, BifrostPolkadotChainId, MoonbeamChainId, TimeUnit, ASTR, DOT, GLMR,
+};
 use frame_support::traits::Get;
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use polkadot_parachain_primitives::primitives::Sibling;
@@ -51,7 +53,7 @@ impl StakingProtocol {
 		match self {
 			StakingProtocol::AstarDappStaking => StakingProtocolInfo {
 				utility_pallet_index: 11,
-				polkadot_xcm_pallet_index: 51,
+				xcm_pallet_index: 51,
 				currency_id: ASTR,
 				unlock_period: TimeUnit::Era(9),
 				remote_fee_location: Location::here(),
@@ -62,12 +64,12 @@ impl StakingProtocol {
 						id: Sibling::from(2030).into_account_truncating(),
 					}],
 				),
-				remote_dest_location: Location::new(1, [Parachain(2006)]),
-				bifrost_dest_location: Location::new(1, Parachain(2030)),
+				remote_dest_location: Location::new(1, [Parachain(AstarChainId::get())]),
+				bifrost_dest_location: Location::new(1, Parachain(BifrostPolkadotChainId::get())),
 			},
 			StakingProtocol::MoonbeamParachainStaking => StakingProtocolInfo {
 				utility_pallet_index: 30,
-				polkadot_xcm_pallet_index: 103,
+				xcm_pallet_index: 103,
 				currency_id: GLMR,
 				unlock_period: TimeUnit::Round(28),
 				remote_fee_location: Location::new(0, [PalletInstance(10)]),
@@ -78,18 +80,21 @@ impl StakingProtocol {
 						key: Sibling::from(2030).into_account_truncating(),
 					}],
 				),
-				remote_dest_location: Location::new(1, [Parachain(2004)]),
-				bifrost_dest_location: Location::new(1, Parachain(2030)),
+				remote_dest_location: Location::new(1, [Parachain(MoonbeamChainId::get())]),
+				bifrost_dest_location: Location::new(1, Parachain(BifrostPolkadotChainId::get())),
 			},
 			StakingProtocol::PolkadotStaking => StakingProtocolInfo {
 				utility_pallet_index: 26,
-				polkadot_xcm_pallet_index: 99,
+				xcm_pallet_index: 99,
 				currency_id: DOT,
 				unlock_period: TimeUnit::Era(28),
 				remote_fee_location: Location::here(),
-				remote_refund_beneficiary: Location::new(0, [Parachain(2030)]),
+				remote_refund_beneficiary: Location::new(
+					0,
+					[Parachain(BifrostPolkadotChainId::get())],
+				),
 				remote_dest_location: Location::parent(),
-				bifrost_dest_location: Location::new(0, Parachain(2030)),
+				bifrost_dest_location: Location::new(0, Parachain(BifrostPolkadotChainId::get())),
 			},
 		}
 	}
@@ -103,7 +108,10 @@ impl StakingProtocol {
 				account_id.encode().try_into().ok().and_then(|account_id| {
 					Some(Location::new(
 						1,
-						[Parachain(2006), AccountId32 { network: None, id: account_id }],
+						[
+							Parachain(AstarChainId::get()),
+							AccountId32 { network: None, id: account_id },
+						],
 					))
 				}),
 			(StakingProtocol::PolkadotStaking, Delegator::Substrate(account_id)) =>
@@ -114,7 +122,7 @@ impl StakingProtocol {
 				Some(Location::new(
 					1,
 					[
-						Parachain(2004),
+						Parachain(MoonbeamChainId::get()),
 						AccountKey20 { network: None, key: account_id.to_fixed_bytes() },
 					],
 				)),
