@@ -20,7 +20,10 @@ use crate::{
 	common::types::{Delegator, DelegatorIndex, StakingProtocolInfo},
 	Config, Error,
 };
-use bifrost_primitives::{Balance, TimeUnit, KSM, MOVR};
+use bifrost_primitives::{
+	Balance, BifrostKusamaChainId, MoonbeamChainId, MoonriverChainId, TimeUnit, KSM, MOVR,
+};
+use frame_support::traits::Get;
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use polkadot_parachain_primitives::primitives::Sibling;
 use scale_info::TypeInfo;
@@ -53,11 +56,11 @@ impl StakingProtocol {
 					0,
 					[AccountKey20 {
 						network: None,
-						key: Sibling::from(2001).into_account_truncating(),
+						key: Sibling::from(BifrostKusamaChainId::get()).into_account_truncating(),
 					}],
 				),
-				remote_dest_location: Location::new(1, [Parachain(2023)]),
-				bifrost_dest_location: Location::new(1, Parachain(2001)),
+				remote_dest_location: Location::new(1, [Parachain(MoonbeamChainId::get())]),
+				bifrost_dest_location: Location::new(1, Parachain(BifrostKusamaChainId::get())),
 			},
 			StakingProtocol::KusamaStaking => StakingProtocolInfo {
 				utility_pallet_index: 24,
@@ -65,9 +68,12 @@ impl StakingProtocol {
 				currency_id: KSM,
 				unlock_period: TimeUnit::Era(28),
 				remote_fee_location: Location::here(),
-				remote_refund_beneficiary: Location::new(0, [Parachain(2001)]),
+				remote_refund_beneficiary: Location::new(
+					0,
+					[Parachain(BifrostKusamaChainId::get())],
+				),
 				remote_dest_location: Location::parent(),
-				bifrost_dest_location: Location::new(0, Parachain(2001)),
+				bifrost_dest_location: Location::new(0, Parachain(BifrostKusamaChainId::get())),
 			},
 		}
 	}
@@ -85,7 +91,7 @@ impl StakingProtocol {
 				Some(Location::new(
 					1,
 					[
-						Parachain(2023),
+						Parachain(MoonriverChainId::get()),
 						AccountKey20 { network: None, key: account_id.to_fixed_bytes() },
 					],
 				)),

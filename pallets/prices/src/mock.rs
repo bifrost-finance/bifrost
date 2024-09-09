@@ -27,6 +27,7 @@ pub use bifrost_primitives::{
 	currency::{FIL, VFIL},
 	DOT, KSM, VDOT,
 };
+use bifrost_primitives::{Moment, ASTR, BNC, DOT_U, GLMR};
 use sp_runtime::BuildStorage;
 
 pub type AccountId = u128;
@@ -192,17 +193,8 @@ impl bifrost_asset_registry::Config for Test {
 }
 
 orml_traits::parameter_type_with_key! {
-	pub ExistentialDeposits: |currency_id: CurrencyId| -> Balance {
-		match currency_id {
-			&CurrencyId::Native(TokenSymbol::BNC) => 0,
-			&CurrencyId::Token(TokenSymbol::KSM) => 0,
-			&CurrencyId::VToken(TokenSymbol::KSM) => 0,
-			&DOT => 0,
-			&VDOT => 0,
-			&VBNC => 0,
-			&CurrencyId::BLP(_) => 0,
-			_ => 0
-		}
+	pub ExistentialDeposits: |_currency_id: CurrencyId| -> Balance {
+		0
 	};
 }
 
@@ -239,8 +231,8 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
 
 	bifrost_asset_registry::GenesisConfig::<Test> {
 		currency: vec![
-			(CurrencyId::Token(TokenSymbol::KSM), 1, None),
-			(CurrencyId::Native(TokenSymbol::BNC), 1, None),
+			(KSM, 1, None),
+			(BNC, 1, None),
 			(DOT, 1, Some(("_".to_string(), "_".to_string(), 10))),
 			(ASTR, 1, None),
 			(GLMR, 1, None),

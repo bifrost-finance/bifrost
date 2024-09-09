@@ -87,6 +87,7 @@ pub use bifrost_runtime_common::{
 use bifrost_slp::QueryId;
 use constants::currency::*;
 use cumulus_pallet_parachain_system::{RelayNumberStrictlyIncreases, RelaychainDataProvider};
+use cumulus_primitives_core::AggregateMessageOrigin;
 use frame_support::{
 	dispatch::DispatchClass,
 	genesis_builder_helper::{build_state, get_preset},
@@ -121,13 +122,14 @@ use governance::{
 
 // xcm config
 pub mod xcm_config;
+use bifrost_primitives::MoonbeamChainId;
+use bifrost_runtime_common::currency_converter::CurrencyIdConvert;
 use pallet_xcm::{EnsureResponse, QueryStatus};
 use sp_runtime::traits::{IdentityLookup, Verify};
 use xcm::{v3::MultiLocation, v4::prelude::*};
 pub use xcm_config::{
-	parachains, AccountId32Aliases, BifrostCurrencyIdConvert, BifrostTreasuryAccount,
-	ExistentialDeposits, MultiCurrency, SelfParaChainId, Sibling, SiblingParachainConvertsVia,
-	XcmConfig, XcmRouter,
+	parachains, AccountId32Aliases, BifrostTreasuryAccount, ExistentialDeposits, MultiCurrency,
+	Sibling, SiblingParachainConvertsVia, XcmConfig, XcmRouter,
 };
 use xcm_executor::{traits::QueryHandler, XcmExecutor};
 
@@ -867,10 +869,11 @@ where
 parameter_types! {
 	pub const ReservedXcmpWeight: Weight = MAXIMUM_BLOCK_WEIGHT.saturating_div(4);
 	pub const ReservedDmpWeight: Weight = MAXIMUM_BLOCK_WEIGHT.saturating_div(4);
+	pub const RelayOrigin: AggregateMessageOrigin = AggregateMessageOrigin::Parent;
 }
 
 impl cumulus_pallet_parachain_system::Config for Runtime {
-	type DmpQueue = frame_support::traits::EnqueueWithOrigin<MessageQueue, xcm_config::RelayOrigin>;
+	type DmpQueue = frame_support::traits::EnqueueWithOrigin<MessageQueue, RelayOrigin>;
 	type RuntimeEvent = RuntimeEvent;
 	type OnSystemEvent = ();
 	type OutboundXcmpMessageSource = XcmpQueue;
@@ -1125,7 +1128,7 @@ pub fn create_x2_multilocation(index: u16, currency_id: CurrencyId) -> xcm::v3::
 		_ => {
 			// get parachain id
 			if let Some(location) =
-				BifrostCurrencyIdConvert::<SelfParaChainId>::convert(currency_id)
+				CurrencyIdConvert::<ParachainInfo, Runtime>::convert(currency_id)
 			{
 				if let Some(Parachain(para_id)) = location.interior().first() {
 					xcm::v3::Location::new(
@@ -1289,7 +1292,7 @@ impl bifrost_slp::Config for Runtime {
 	type WeightInfo = weights::bifrost_slp::BifrostWeight<Runtime>;
 	type VtokenMinting = VtokenMinting;
 	type AccountConverter = SubAccountIndexMultiLocationConvertor;
-	type ParachainId = SelfParaChainId;
+	type ParachainId = ParachainInfo;
 	type SubstrateResponseManager = SubstrateResponseManager;
 	type MaxTypeEntryPerBlock = MaxTypeEntryPerBlock;
 	type MaxRefundPerBlock = MaxRefundPerBlock;
@@ -1409,7 +1412,7 @@ impl bifrost_vtoken_voting::Config for Runtime {
 	type DerivativeAccount = DerivativeAccountProvider<Runtime, DerivativeAccountTokenFilter>;
 	type RelaychainBlockNumberProvider = RelaychainDataProvider<Runtime>;
 	type VTokenSupplyProvider = VtokenMinting;
-	type ParachainId = SelfParaChainId;
+	type ParachainId = ParachainInfo;
 	type MaxVotes = ConstU32<256>;
 	type QueryTimeout = QueryTimeout;
 	type ReferendumCheckInterval = ReferendumCheckInterval;
@@ -1541,11 +1544,7 @@ impl bifrost_vtoken_minting::Config for Runtime {
 	type CurrencyIdConversion = AssetIdMaps<Runtime>;
 	type CurrencyIdRegister = AssetIdMaps<Runtime>;
 	type XcmTransfer = XTokens;
-	type AstarParachainId = ConstU32<2007>;
-	type MoonbeamParachainId = ConstU32<2023>;
-	type HydradxParachainId = ConstU32<2034>;
-	type MantaParachainId = ConstU32<2104>;
-	type InterlayParachainId = ConstU32<2092>;
+	type MoonbeamChainId = MoonbeamChainId;
 	type ChannelCommission = ChannelCommission;
 	type MaxLockRecords = ConstU32<100>;
 	type IncentivePoolAccount = IncentivePoolAccount;
@@ -1564,7 +1563,7 @@ impl bifrost_slpx::Config for Runtime {
 	type XcmSender = XcmRouter;
 	type CurrencyIdConvert = AssetIdMaps<Runtime>;
 	type TreasuryAccount = BifrostTreasuryAccount;
-	type ParachainId = SelfParaChainId;
+	type ParachainId = ParachainInfo;
 	type WeightInfo = weights::bifrost_slpx::BifrostWeight<Runtime>;
 }
 

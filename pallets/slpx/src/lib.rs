@@ -25,7 +25,8 @@ use crate::types::{
 use bifrost_asset_registry::AssetMetadata;
 use bifrost_primitives::{
 	currency::{BNC, VFIL},
-	CurrencyId, CurrencyIdMapping, RedeemType, SlpxOperator, TokenInfo, VtokenMintingInterface,
+	AstarChainId, CurrencyId, CurrencyIdMapping, HydrationChainId, InterlayChainId, MantaChainId,
+	RedeemType, SlpxOperator, TokenInfo, VtokenMintingInterface,
 };
 use cumulus_primitives_core::ParaId;
 use ethereum::TransactionAction;
@@ -60,8 +61,6 @@ pub mod types;
 pub mod weights;
 pub use weights::WeightInfo;
 
-const BIFROST_KUSAMA_PARA_ID: u32 = 2001;
-
 #[cfg(test)]
 mod mock;
 
@@ -75,7 +74,7 @@ mod benchmarking;
 pub mod pallet {
 	use super::*;
 	use crate::types::{Order, OrderType};
-	use bifrost_primitives::{currency::MOVR, GLMR};
+	use bifrost_primitives::{currency::MOVR, BifrostKusamaChainId, GLMR};
 	use bifrost_stable_pool::{traits::StablePoolHandler, PoolTokenIndex, StableAssetPoolId};
 	use frame_support::{
 		pallet_prelude::{ValueQuery, *},
@@ -364,7 +363,7 @@ pub mod pallet {
 							});
 
 							let mut target_fee_currency_id = GLMR;
-							if T::ParachainId::get() == Id::from(BIFROST_KUSAMA_PARA_ID) {
+							if T::ParachainId::get() == Id::from(BifrostKusamaChainId::get()) {
 								target_fee_currency_id = MOVR;
 							}
 
@@ -936,7 +935,7 @@ impl<T: Config> Pallet<T> {
 				let dest = Location::new(
 					1,
 					[
-						Parachain(T::VtokenMintingInterface::get_astar_parachain_id()),
+						Parachain(AstarChainId::get()),
 						AccountId32 { network: None, id: receiver.encode().try_into().unwrap() },
 					],
 				);
@@ -947,7 +946,7 @@ impl<T: Config> Pallet<T> {
 				let dest = Location::new(
 					1,
 					[
-						Parachain(T::VtokenMintingInterface::get_hydradx_parachain_id()),
+						Parachain(HydrationChainId::get()),
 						AccountId32 { network: None, id: receiver.encode().try_into().unwrap() },
 					],
 				);
@@ -958,7 +957,7 @@ impl<T: Config> Pallet<T> {
 				let dest = Location::new(
 					1,
 					[
-						Parachain(T::VtokenMintingInterface::get_interlay_parachain_id()),
+						Parachain(InterlayChainId::get()),
 						AccountId32 { network: None, id: receiver.encode().try_into().unwrap() },
 					],
 				);
@@ -969,7 +968,7 @@ impl<T: Config> Pallet<T> {
 				let dest = Location::new(
 					1,
 					[
-						Parachain(T::VtokenMintingInterface::get_manta_parachain_id()),
+						Parachain(MantaChainId::get()),
 						AccountId32 { network: None, id: receiver.encode().try_into().unwrap() },
 					],
 				);

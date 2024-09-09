@@ -23,7 +23,9 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use bifrost_asset_registry::AssetMetadata;
-use bifrost_primitives::*;
+use bifrost_primitives::{
+	Balance, CurrencyId, CurrencyIdMapping, Price, PriceDetail, TimeStampedPrice, TokenInfo,
+};
 use frame_support::{dispatch::DispatchClass, pallet_prelude::*, transactional};
 use frame_system::pallet_prelude::*;
 use log;
