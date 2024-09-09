@@ -35,8 +35,7 @@ use frame_support::{
 	pallet_prelude::*,
 	sp_runtime::{
 		traits::{
-			AccountIdConversion, BlockNumberProvider, CheckedAdd, CheckedMul, SaturatedConversion,
-			Saturating, Zero,
+			AccountIdConversion, CheckedAdd, CheckedMul, SaturatedConversion, Saturating, Zero,
 		},
 		ArithmeticError, FixedU128, Perbill,
 	},
@@ -46,7 +45,7 @@ use frame_system::pallet_prelude::*;
 use orml_traits::MultiCurrency;
 pub use pallet::*;
 use pallet_traits::PriceFeeder;
-use sp_std::{cmp::Ordering, collections::btree_map::BTreeMap, vec::Vec};
+use sp_std::cmp::Ordering;
 pub use weights::WeightInfo;
 
 pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
@@ -57,6 +56,31 @@ pub type CurrencyIdOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<
 
 type BalanceOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<AccountIdOf<T>>>::Balance;
 
+/// Distribution information
+#[derive(Clone, Encode, Decode, PartialEq, Eq, RuntimeDebug, TypeInfo)]
+pub struct Info<AccountIdOf> {
+	/// Account id used for distribution
+	pub fee_share_account_id: AccountIdOf,
+	/// The token type of the distribution
+	pub token_type: BoundedVec<CurrencyId, ConstU32<32>>,
+	/// If the distribution is auto
+	pub if_auto: bool,
+}
+
+/// USD Standard Accumulation Logic Configuration
+#[derive(Clone, Encode, Decode, PartialEq, Eq, RuntimeDebug, TypeInfo)]
+pub struct DollarStandardInfo<BlockNumberFor, AccountIdOf> {
+	/// The target value of the USD standard
+	pub target_value: u128,
+	/// The cumulative value of the USD standard
+	pub cumulative: u128,
+	/// The target account id of the USD standard
+	pub target_account_id: AccountIdOf,
+	/// Target block to perform accumulation clear operation
+	pub target_block: BlockNumberFor,
+	/// Cumulative clearing operation interval
+	pub interval: BlockNumberFor,
+}
 #[frame_support::pallet]
 pub mod pallet {
 	use super::*;
@@ -80,9 +104,6 @@ pub mod pallet {
 
 		/// The oracle price feeder
 		type PriceFeeder: PriceFeeder;
-
-		/// Relaychain block number provider
-		type RelaychainBlockNumberProvider: BlockNumberProvider<BlockNumber = BlockNumberFor<Self>>;
 	}
 
 	#[pallet::event]
@@ -155,24 +176,21 @@ pub mod pallet {
 		IntervalIsZero,
 		/// Value is zero
 		ValueIsZero,
+		/// Tokens proportions not cleared
+		TokensProportionsNotCleared,
 	}
 
+	/// The distribution information
 	#[pallet::storage]
 	pub type DistributionInfos<T: Config> =
 		StorageMap<_, Twox64Concat, DistributionId, Info<AccountIdOf<T>>>;
 
-	#[derive(Clone, Encode, Decode, PartialEq, Eq, RuntimeDebug, TypeInfo)]
-	pub struct Info<AccountIdOf> {
-		/// Account id used for distribution
-		pub fee_share_account_id: AccountIdOf,
-		/// The token type of the distribution
-		pub token_type: Vec<CurrencyId>,
-		///	The tokens proportion of the distribution
-		pub tokens_proportion: BTreeMap<AccountIdOf, Perbill>,
-		/// If the distribution is auto
-		pub if_auto: bool,
-	}
+	/// The proportion of the token distribution
+	#[pallet::storage]
+	pub type TokensProportions<T: Config> =
+		StorageDoubleMap<_, Twox64Concat, DistributionId, Twox64Concat, AccountIdOf<T>, Perbill>;
 
+	/// USD Standard Accumulation Logic Configuration
 	#[pallet::storage]
 	pub type DollarStandardInfos<T: Config> = StorageMap<
 		_,
@@ -181,20 +199,7 @@ pub mod pallet {
 		DollarStandardInfo<BlockNumberFor<T>, AccountIdOf<T>>,
 	>;
 
-	#[derive(Clone, Encode, Decode, PartialEq, Eq, RuntimeDebug, TypeInfo)]
-	pub struct DollarStandardInfo<BlockNumberFor, AccountIdOf> {
-		/// The target value of the USD standard
-		pub target_value: u128,
-		/// The cumulative value of the USD standard
-		pub cumulative: u128,
-		/// The target account id of the USD standard
-		pub target_account_id: AccountIdOf,
-		/// Target block to perform accumulation clear operation
-		pub target_block: BlockNumberFor,
-		/// Cumulative clearing operation interval
-		pub interval: BlockNumberFor,
-	}
-
+	/// The next distribution ID
 	#[pallet::storage]
 	pub type DistributionNextId<T: Config> = StorageValue<_, DistributionId, ValueQuery>;
 
@@ -254,31 +259,23 @@ pub mod pallet {
 		#[pallet::weight(T::WeightInfo::create_distribution())]
 		pub fn create_distribution(
 			origin: OriginFor<T>,
-			token_type: Vec<CurrencyId>,
-			tokens_proportion: Vec<(AccountIdOf<T>, Perbill)>,
+			token_type: BoundedVec<CurrencyId, ConstU32<32>>,
+			tokens_proportion: BoundedVec<(AccountIdOf<T>, Perbill), ConstU32<256>>,
 			if_auto: bool,
 		) -> DispatchResult {
 			T::ControlOrigin::ensure_origin(origin)?;
 
+			let distribution_id = DistributionNextId::<T>::get();
 			let mut total_proportion = Perbill::from_percent(0);
-			let tokens_proportion_map: BTreeMap<AccountIdOf<T>, Perbill> = tokens_proportion
-				.into_iter()
-				.map(|(k, v)| {
-					total_proportion = total_proportion.saturating_add(v);
-					(k, v)
-				})
-				.collect();
+			tokens_proportion.into_iter().for_each(|(k, v)| {
+				total_proportion = total_proportion.saturating_add(v);
+				TokensProportions::<T>::insert(distribution_id, k, v);
+			});
 			ensure!(total_proportion.is_one(), Error::<T>::NotSupportProportion);
 
-			let distribution_id = DistributionNextId::<T>::get();
 			let fee_share_account_id =
 				T::FeeSharePalletId::get().into_sub_account_truncating(distribution_id);
-			let info = Info {
-				fee_share_account_id,
-				token_type,
-				tokens_proportion: tokens_proportion_map,
-				if_auto,
-			};
+			let info = Info { fee_share_account_id, token_type, if_auto };
 			DistributionInfos::<T>::insert(distribution_id, info.clone());
 			DistributionNextId::<T>::mutate(|id| -> DispatchResult {
 				*id = id.checked_add(1).ok_or(ArithmeticError::Overflow)?;
@@ -300,8 +297,8 @@ pub mod pallet {
 		pub fn edit_distribution(
 			origin: OriginFor<T>,
 			distribution_id: DistributionId,
-			token_type: Option<Vec<CurrencyId>>,
-			tokens_proportion: Option<Vec<(AccountIdOf<T>, Perbill)>>,
+			token_type: Option<BoundedVec<CurrencyId, ConstU32<32>>>,
+			tokens_proportion: Option<BoundedVec<(AccountIdOf<T>, Perbill), ConstU32<256>>>,
 			if_auto: Option<bool>,
 		) -> DispatchResult {
 			T::ControlOrigin::ensure_origin(origin)?;
@@ -309,16 +306,17 @@ pub mod pallet {
 			let mut info = DistributionInfos::<T>::get(distribution_id)
 				.ok_or(Error::<T>::DistributionNotExist)?;
 			if let Some(tokens_proportion) = tokens_proportion {
+				// Clear the original proportion
+				let res =
+					TokensProportions::<T>::clear_prefix(distribution_id, u32::max_value(), None);
+				ensure!(res.maybe_cursor.is_none(), Error::<T>::TokensProportionsNotCleared);
+
 				let mut total_proportion = Perbill::from_percent(0);
-				let tokens_proportion_map: BTreeMap<AccountIdOf<T>, Perbill> = tokens_proportion
-					.into_iter()
-					.map(|(k, v)| {
-						total_proportion = total_proportion.saturating_add(v);
-						(k, v)
-					})
-					.collect();
+				tokens_proportion.into_iter().for_each(|(k, v)| {
+					total_proportion = total_proportion.saturating_add(v);
+					TokensProportions::<T>::insert(distribution_id, k, v);
+				});
 				ensure!(total_proportion.is_one(), Error::<T>::NotSupportProportion);
-				info.tokens_proportion = tokens_proportion_map;
 			}
 
 			if let Some(token_type) = token_type {
@@ -469,8 +467,8 @@ pub mod pallet {
 				let ed = T::MultiCurrency::minimum_balance(currency_id);
 				let amount =
 					T::MultiCurrency::free_balance(currency_id, &infos.fee_share_account_id);
-				infos.tokens_proportion.iter().try_for_each(
-					|(account_to_send, &proportion)| -> DispatchResult {
+				TokensProportions::<T>::iter_prefix(distribution_id).try_for_each(
+					|(account_to_send, proportion)| -> DispatchResult {
 						let withdraw_amount = proportion.mul_floor(amount);
 						if withdraw_amount < ed {
 							let receiver_balance =
@@ -500,8 +498,8 @@ pub mod pallet {
 			let (price, _) =
 				T::PriceFeeder::get_price(&currency_id).ok_or(Error::<T>::PriceOracleNotReady)?;
 			log::trace!(
-					target: "fee-share::get_price", "price: {:?}", price.into_inner()
-				);
+				target: "fee-share::get_price", "price: {:?}", price.into_inner()
+			);
 			if price.is_zero() {
 				return Err(Error::<T>::PriceIsZero.into());
 			}

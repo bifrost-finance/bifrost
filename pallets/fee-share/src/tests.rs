@@ -31,8 +31,8 @@ fn on_idle() {
 
 		assert_ok!(FeeShare::create_distribution(
 			RuntimeOrigin::signed(ALICE),
-			vec![KSM],
-			tokens_proportion,
+			BoundedVec::try_from(vec![KSM]).unwrap(),
+			BoundedVec::try_from(tokens_proportion).unwrap(),
 			true,
 		));
 		let keeper: AccountId =
@@ -53,15 +53,15 @@ fn edit_delete_distribution() {
 
 		assert_ok!(FeeShare::create_distribution(
 			RuntimeOrigin::signed(ALICE),
-			vec![KSM],
-			tokens_proportion.clone(),
+			BoundedVec::try_from(vec![KSM]).unwrap(),
+			BoundedVec::try_from(tokens_proportion.clone()).unwrap(),
 			true,
 		));
 		assert_ok!(FeeShare::edit_distribution(
 			RuntimeOrigin::signed(ALICE),
 			0,
 			None, // Some(vec![KSM]),
-			Some(tokens_proportion),
+			Some(BoundedVec::try_from(tokens_proportion).unwrap()),
 			Some(false),
 		));
 		let keeper: AccountId =
@@ -90,8 +90,8 @@ fn set_usd_config_should_work() {
 
 		assert_ok!(FeeShare::create_distribution(
 			RuntimeOrigin::signed(ALICE),
-			vec![KSM],
-			tokens_proportion,
+			BoundedVec::try_from(vec![KSM]).unwrap(),
+			BoundedVec::try_from(tokens_proportion.clone()).unwrap(),
 			true,
 		));
 
@@ -145,8 +145,8 @@ fn set_usd_config_should_not_work() {
 		);
 		assert_ok!(FeeShare::create_distribution(
 			RuntimeOrigin::signed(ALICE),
-			vec![KSM],
-			tokens_proportion,
+			BoundedVec::try_from(vec![KSM]).unwrap(),
+			BoundedVec::try_from(tokens_proportion.clone()).unwrap(),
 			true,
 		));
 		assert_err!(
