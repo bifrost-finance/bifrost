@@ -35,7 +35,8 @@ use frame_support::{
 	pallet_prelude::*,
 	sp_runtime::{
 		traits::{
-			AccountIdConversion, CheckedAdd, CheckedMul, SaturatedConversion, Saturating, Zero,
+			AccountIdConversion, BlockNumberProvider, CheckedAdd, CheckedMul, SaturatedConversion,
+			Saturating, Zero,
 		},
 		ArithmeticError, FixedU128, Perbill,
 	},
@@ -79,30 +80,61 @@ pub mod pallet {
 
 		/// The oracle price feeder
 		type PriceFeeder: PriceFeeder;
+
+		/// Relaychain block number provider
+		type RelaychainBlockNumberProvider: BlockNumberProvider<BlockNumber = BlockNumberFor<Self>>;
 	}
 
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
 		/// A successful call of the `CreateDistribution` extrinsic will create this event.
-		Created { distribution_id: DistributionId, info: Info<AccountIdOf<T>> },
+		Created {
+			/// Distribution ID
+			distribution_id: DistributionId,
+			/// Distribution information
+			/// proportion,
+			info: Info<AccountIdOf<T>>,
+		},
 		/// A successful call of the `EditDistribution` extrinsic will create this event.
-		Edited { distribution_id: DistributionId, info: Info<AccountIdOf<T>> },
+		Edited {
+			/// Distribution ID
+			distribution_id: DistributionId,
+			/// Distribution information
+			/// proportion,
+			info: Info<AccountIdOf<T>>,
+		},
 		/// A successful call of the `SetEraLength` extrinsic will create this event.
-		EraLengthSet { era_length: BlockNumberFor<T>, next_era: BlockNumberFor<T> },
+		EraLengthSet {
+			/// The interval between distribution executions
+			era_length: BlockNumberFor<T>,
+			/// The block number of the next era
+			next_era: BlockNumberFor<T>,
+		},
 		/// A successful call of the `ExecuteDistribute` extrinsic will create this event.
-		Executed { distribution_id: DistributionId },
+		Executed {
+			/// Distribution ID
+			distribution_id: DistributionId,
+		},
 		/// A successful call of the `DeleteDistribution` extrinsic will create this event.
-		Deleted { distribution_id: DistributionId },
+		Deleted {
+			/// Distribution ID
+			distribution_id: DistributionId,
+		},
 		/// A failed call of the `ExecuteDistribute` extrinsic will create this event.
 		ExecuteFailed {
+			/// Distribution ID
 			distribution_id: DistributionId,
+			/// Distribution information
 			info: Info<AccountIdOf<T>>,
+			/// The block number of the next era
 			next_era: BlockNumberFor<T>,
 		},
 		/// A successful call of the `SetUSDConfig` extrinsic will create this event.
 		USDConfigSet {
+			/// Distribution ID
 			distribution_id: DistributionId,
+			/// USD standard information
 			info: DollarStandardInfo<BlockNumberFor<T>, AccountIdOf<T>>,
 		},
 	}
@@ -131,8 +163,8 @@ pub mod pallet {
 
 	#[derive(Clone, Encode, Decode, PartialEq, Eq, RuntimeDebug, TypeInfo)]
 	pub struct Info<AccountIdOf> {
-		/// The receiving address of the distribution
-		pub receiving_address: AccountIdOf,
+		/// Account id used for distribution
+		pub fee_share_account_id: AccountIdOf,
 		/// The token type of the distribution
 		pub token_type: Vec<CurrencyId>,
 		///	The tokens proportion of the distribution
@@ -155,8 +187,8 @@ pub mod pallet {
 		pub target_value: u128,
 		/// The cumulative value of the USD standard
 		pub cumulative: u128,
-		/// The target address of the USD standard
-		pub target_address: AccountIdOf,
+		/// The target account id of the USD standard
+		pub target_account_id: AccountIdOf,
 		/// Target block to perform accumulation clear operation
 		pub target_block: BlockNumberFor,
 		/// Cumulative clearing operation interval
@@ -166,6 +198,7 @@ pub mod pallet {
 	#[pallet::storage]
 	pub type DistributionNextId<T: Config> = StorageValue<_, DistributionId, ValueQuery>;
 
+	/// The era length and the next era
 	#[pallet::storage]
 	pub type AutoEra<T: Config> =
 		StorageValue<_, (BlockNumberFor<T>, BlockNumberFor<T>), ValueQuery>;
@@ -174,7 +207,7 @@ pub mod pallet {
 	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
 		fn on_idle(bn: BlockNumberFor<T>, _remaining_weight: Weight) -> Weight {
 			DollarStandardInfos::<T>::iter().for_each(|(distribution_id, mut info)| {
-				if bn == info.target_block {
+				if bn.eq(&info.target_block) {
 					info.target_block = info.target_block.saturating_add(info.interval);
 					info.cumulative = Zero::zero();
 					DollarStandardInfos::<T>::insert(distribution_id, info);
@@ -182,7 +215,7 @@ pub mod pallet {
 			});
 			let (era_length, next_era) = AutoEra::<T>::get();
 			if bn.eq(&next_era) {
-				for (distribution_id, info) in DistributionInfos::<T>::iter() {
+				DistributionInfos::<T>::iter().for_each(|(distribution_id, info)| {
 					if info.if_auto {
 						if let Some(e) =
 							Self::execute_distribute_inner(distribution_id, &info).err()
@@ -202,7 +235,7 @@ pub mod pallet {
 							Self::deposit_event(Event::Executed { distribution_id });
 						}
 					}
-				}
+				});
 				let next_era = next_era.saturating_add(era_length);
 				AutoEra::<T>::put((era_length, next_era));
 			}
@@ -238,10 +271,10 @@ pub mod pallet {
 			ensure!(total_proportion.is_one(), Error::<T>::NotSupportProportion);
 
 			let distribution_id = DistributionNextId::<T>::get();
-			let receiving_address =
+			let fee_share_account_id =
 				T::FeeSharePalletId::get().into_sub_account_truncating(distribution_id);
 			let info = Info {
-				receiving_address,
+				fee_share_account_id,
 				token_type,
 				tokens_proportion: tokens_proportion_map,
 				if_auto,
@@ -365,8 +398,8 @@ pub mod pallet {
 		/// - `distribution_id`: Distribution ID
 		/// - `target_value`: Target's USD based value
 		/// - `interval`: The interval of the cumulative clearing operation
-		/// - `target_address`: When the cumulative dollar value falls below the target_value, the
-		///   funds will be transferred to the target_address
+		/// - `target_account_id`: When the cumulative dollar value falls below the target_value,
+		///   the funds will be transferred to the target_account_id
 		#[pallet::call_index(5)]
 		#[pallet::weight(T::WeightInfo::set_usd_config())]
 		pub fn set_usd_config(
@@ -374,7 +407,7 @@ pub mod pallet {
 			distribution_id: DistributionId,
 			target_value: u128,
 			interval: BlockNumberFor<T>,
-			target_address: AccountIdOf<T>,
+			target_account_id: AccountIdOf<T>,
 		) -> DispatchResult {
 			T::ControlOrigin::ensure_origin(origin)?;
 
@@ -389,8 +422,8 @@ pub mod pallet {
 			let info = DollarStandardInfo {
 				target_value,
 				cumulative: Zero::zero(),
-				target_address,
-				target_block: now + interval,
+				target_account_id,
+				target_block: now.saturating_add(interval),
 				interval,
 			};
 			DollarStandardInfos::<T>::insert(distribution_id, info.clone());
@@ -408,7 +441,8 @@ pub mod pallet {
 			let mut usd_value: FixedU128 = Zero::zero();
 			// Calculate the total value based on the US dollar standard
 			infos.token_type.iter().try_for_each(|&currency_id| -> DispatchResult {
-				let amount = T::MultiCurrency::free_balance(currency_id, &infos.receiving_address);
+				let amount =
+					T::MultiCurrency::free_balance(currency_id, &infos.fee_share_account_id);
 				let value = Self::get_asset_value(currency_id, amount)?;
 				usd_value = usd_value.checked_add(&value).ok_or(ArithmeticError::Overflow)?;
 				Ok(())
@@ -426,14 +460,15 @@ pub mod pallet {
 							.checked_add(usd_value.into_inner())
 							.ok_or(ArithmeticError::Overflow)?;
 						DollarStandardInfos::<T>::insert(distribution_id, &usd_infos);
-						return Self::transfer_all(infos, usd_infos.target_address);
+						return Self::transfer_all(infos, usd_infos.target_account_id);
 					},
 				}
 			}
 
 			infos.token_type.iter().try_for_each(|&currency_id| -> DispatchResult {
 				let ed = T::MultiCurrency::minimum_balance(currency_id);
-				let amount = T::MultiCurrency::free_balance(currency_id, &infos.receiving_address);
+				let amount =
+					T::MultiCurrency::free_balance(currency_id, &infos.fee_share_account_id);
 				infos.tokens_proportion.iter().try_for_each(
 					|(account_to_send, &proportion)| -> DispatchResult {
 						let withdraw_amount = proportion.mul_floor(amount);
@@ -445,12 +480,14 @@ pub mod pallet {
 								.checked_add(&withdraw_amount)
 								.ok_or(ArithmeticError::Overflow)?;
 							if receiver_balance_after < ed {
-								Err(Error::<T>::ExistentialDeposit)?;
+								// If the balance of the receiving account is less than the
+								// existential deposit, the balance is not transferred
+								return Ok(());
 							}
 						}
 						T::MultiCurrency::transfer(
 							currency_id,
-							&infos.receiving_address,
+							&infos.fee_share_account_id,
 							&account_to_send,
 							withdraw_amount,
 						)
@@ -462,12 +499,12 @@ pub mod pallet {
 		pub fn get_price(currency_id: CurrencyIdOf<T>) -> Result<Price, DispatchError> {
 			let (price, _) =
 				T::PriceFeeder::get_price(&currency_id).ok_or(Error::<T>::PriceOracleNotReady)?;
+			log::trace!(
+					target: "fee-share::get_price", "price: {:?}", price.into_inner()
+				);
 			if price.is_zero() {
 				return Err(Error::<T>::PriceIsZero.into());
 			}
-			log::trace!(
-				target: "fee-share::get_price", "price: {:?}", price.into_inner()
-			);
 
 			Ok(price)
 		}
@@ -485,14 +522,15 @@ pub mod pallet {
 
 		fn transfer_all(
 			infos: &Info<AccountIdOf<T>>,
-			target_address: AccountIdOf<T>,
+			target_account_id: AccountIdOf<T>,
 		) -> DispatchResult {
 			infos.token_type.iter().try_for_each(|&currency_id| -> DispatchResult {
-				let amount = T::MultiCurrency::free_balance(currency_id, &infos.receiving_address);
+				let amount =
+					T::MultiCurrency::free_balance(currency_id, &infos.fee_share_account_id);
 				T::MultiCurrency::transfer(
 					currency_id,
-					&infos.receiving_address,
-					&target_address,
+					&infos.fee_share_account_id,
+					&target_account_id,
 					amount,
 				)
 			})
