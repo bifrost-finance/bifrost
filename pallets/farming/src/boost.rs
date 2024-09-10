@@ -17,7 +17,7 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 use crate::*;
-use bifrost_ve_minting::VeMintingInterface;
+use bb_bnc::BbBNCInterface;
 
 #[derive(Clone, Encode, Decode, PartialEq, Eq, RuntimeDebug, TypeInfo, Default)]
 pub struct BoostPoolInfo<Balance, BlockNumber> {
@@ -44,7 +44,7 @@ impl<T: Config> BoostInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>, Bl
 {
 	fn refresh_vebnc_farming(who: &AccountIdOf<T>) -> DispatchResult {
 		let mut boost_pool_info = Self::boost_pool_infos();
-		let new_vote_amount = T::VeMinting::balance_of(who, None)?;
+		let new_vote_amount = T::BbBNC::balance_of(who, None)?;
 
 		if let Some(mut user_boost_info) = Self::user_boost_infos(who) {
 			// If the user's last voting block height is greater than or equal to the block height
@@ -227,7 +227,7 @@ impl<T: Config> Pallet<T> {
 			}
 		}
 
-		let new_vote_amount = T::VeMinting::balance_of(who, None)?;
+		let new_vote_amount = T::BbBNC::balance_of(who, None)?;
 		let mut percent_check = Percent::from_percent(0);
 		vote_list.iter().try_for_each(|(pid, proportion)| -> DispatchResult {
 			ensure!(Self::boost_whitelist(pid) != None, Error::<T>::NotInWhitelist);

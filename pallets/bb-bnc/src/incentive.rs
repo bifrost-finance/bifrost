@@ -16,7 +16,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-use crate::{traits::VeMintingInterface, *};
+use crate::{traits::BbBNCInterface, *};
 use bifrost_primitives::PoolId;
 pub use pallet::*;
 use sp_std::collections::btree_map::BTreeMap;

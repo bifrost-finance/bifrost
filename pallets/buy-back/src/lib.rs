@@ -30,8 +30,8 @@ mod benchmarking;
 
 pub mod weights;
 
+use bb_bnc::BbBNCInterface;
 use bifrost_primitives::{currency::BNC, CurrencyId, CurrencyIdRegister, TryConvertFrom};
-use bifrost_ve_minting::VeMintingInterface;
 use cumulus_primitives_core::ParaId;
 use frame_support::{
 	pallet_prelude::*,
@@ -89,7 +89,7 @@ pub mod pallet {
 
 		type CurrencyIdRegister: CurrencyIdRegister<CurrencyId>;
 
-		type VeMinting: VeMintingInterface<
+		type BbBNC: BbBNCInterface<
 			AccountIdOf<Self>,
 			CurrencyIdOf<Self>,
 			BalanceOf<Self>,
@@ -413,7 +413,7 @@ pub mod pallet {
 			}
 			let bnc_balance = T::MultiCurrency::free_balance(BNC, &buyback_address);
 			let pool_id = 0;
-			T::VeMinting::notify_reward(
+			T::BbBNC::notify_reward(
 				pool_id,
 				&Some(buyback_address.clone()),
 				vec![(BNC, bnc_balance)],

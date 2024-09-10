@@ -21,7 +21,7 @@
 #![cfg(test)]
 
 use crate::{mock::*, *};
-use bifrost_ve_minting::VeMintingInterface;
+use bb_bnc::BbBNCInterface;
 use frame_support::{assert_err, assert_ok};
 
 #[test]
@@ -293,9 +293,9 @@ fn init_gauge() -> (PoolId, BalanceOf<Runtime>) {
 	let charge_rewards = vec![(KSM, 300000)];
 	assert_ok!(Farming::charge(RuntimeOrigin::signed(BOB), pid, charge_rewards, false));
 	assert_ok!(Farming::deposit(RuntimeOrigin::signed(ALICE), pid, tokens, Some((100, 100))));
-	assert_ok!(VeMinting::set_config(RuntimeOrigin::signed(ALICE), Some(0), Some(7 * 86400 / 12)));
-	assert_ok!(VeMinting::notify_reward_amount(pid, &Some(CHARLIE), gauge_basic_rewards.clone()));
-	assert_ok!(VeMinting::create_lock_inner(
+	assert_ok!(BbBNC::set_config(RuntimeOrigin::signed(ALICE), Some(0), Some(7 * 86400 / 12)));
+	assert_ok!(BbBNC::notify_reward_amount(pid, &Some(CHARLIE), gauge_basic_rewards.clone()));
+	assert_ok!(BbBNC::create_lock_inner(
 		&ALICE,
 		100_000_000_000,
 		System::block_number() + (4 * 365 * 86400 - 7 * 86400) / 12

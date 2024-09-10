@@ -49,7 +49,7 @@ frame_support::construct_runtime!(
 		Balances: pallet_balances,
 		Currencies: bifrost_currencies,
 		Farming: bifrost_farming,
-		VeMinting: bifrost_ve_minting,
+		BbBNC: bb_bnc,
 		AssetRegistry: bifrost_asset_registry,
 	}
 );
@@ -145,15 +145,15 @@ impl bifrost_farming::Config for Runtime {
 	type RewardIssuer = FarmingRewardIssuerPalletId;
 	type FarmingBoost = FarmingBoostPalletId;
 	type WeightInfo = ();
-	type VeMinting = VeMinting;
+	type BbBNC = BbBNC;
 	type BlockNumberToBalance = ConvertInto;
 	type WhitelistMaximumLimit = WhitelistMaximumLimit;
 	type GaugeRewardIssuer = FarmingGaugeRewardIssuerPalletId;
 }
 
 parameter_types! {
-	pub const VeMintingTokenType: CurrencyId = CurrencyId::VToken(TokenSymbol::BNC);
-	pub VeMintingPalletId: PalletId = PalletId(*b"bf/vemnt");
+	pub const BbBNCTokenType: CurrencyId = CurrencyId::VToken(TokenSymbol::BNC);
+	pub BbBNCPalletId: PalletId = PalletId(*b"bf/vemnt");
 	pub IncentivePalletId: PalletId = PalletId(*b"bf/veict");
 	pub const BuyBackAccount: PalletId = PalletId(*b"bf/bybck");
 	pub const Week: BlockNumber = 50400; // a week
@@ -164,12 +164,12 @@ parameter_types! {
 	pub const MarkupRefreshLimit: u32 = 100;
 }
 
-impl bifrost_ve_minting::Config for Runtime {
+impl bb_bnc::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type MultiCurrency = Currencies;
 	type ControlOrigin = EnsureSignedBy<One, AccountId>;
-	type TokenType = VeMintingTokenType;
-	type VeMintingPalletId = VeMintingPalletId;
+	type TokenType = BbBNCTokenType;
+	type BbBNCPalletId = BbBNCPalletId;
 	type IncentivePalletId = IncentivePalletId;
 	type BuyBackAccount = BuyBackAccount;
 	type WeightInfo = ();

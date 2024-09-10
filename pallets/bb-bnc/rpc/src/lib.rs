@@ -18,8 +18,8 @@
 
 use std::{marker::PhantomData, sync::Arc};
 
+pub use bb_bnc_rpc_runtime_api::{self as runtime_api, BbBNCRuntimeApi};
 use bifrost_primitives::Balance;
-pub use bifrost_ve_minting_rpc_runtime_api::{self as runtime_api, VeMintingRuntimeApi};
 use jsonrpsee::{
 	core::{async_trait, RpcResult},
 	proc_macros::rpc,
@@ -37,27 +37,27 @@ use sp_runtime::{
 };
 
 #[rpc(client, server)]
-pub trait VeMintingRpcApi<BlockHash, AccountId> {
+pub trait BbBNCRpcApi<BlockHash, AccountId> {
 	/// rpc method for getting user balance
-	#[method(name = "ve_minting_balanceOf")]
+	#[method(name = "bb_bnc_balanceOf")]
 	fn balance_of(&self, who: AccountId, at: Option<BlockHash>) -> RpcResult<NumberOrHex>;
 
 	/// RPC method to get total supply
-	#[method(name = "ve_minting_totalSupply")]
+	#[method(name = "bb_bnc_totalSupply")]
 	fn total_supply(&self, at: Option<BlockHash>) -> RpcResult<NumberOrHex>;
 
 	/// RPC method to find block epoch
-	#[method(name = "ve_minting_findBlockEpoch")]
+	#[method(name = "bb_bnc_findBlockEpoch")]
 	fn find_block_epoch(&self, max_epoch: U256, at: Option<BlockHash>) -> RpcResult<NumberOrHex>;
 }
 
 #[derive(Clone, Debug)]
-pub struct VeMintingRpc<C, Block> {
+pub struct BbBNCRpc<C, Block> {
 	client: Arc<C>,
 	_marker: PhantomData<Block>,
 }
 
-impl<C, Block> VeMintingRpc<C, Block>
+impl<C, Block> BbBNCRpc<C, Block>
 where
 	Block: BlockT,
 	C: BlockIdTo<Block>,
@@ -68,12 +68,12 @@ where
 }
 
 #[async_trait]
-impl<C, Block, AccountId> VeMintingRpcApiServer<<Block as BlockT>::Hash, AccountId>
-	for VeMintingRpc<C, Block>
+impl<C, Block, AccountId> BbBNCRpcApiServer<<Block as BlockT>::Hash, AccountId>
+	for BbBNCRpc<C, Block>
 where
 	Block: BlockT,
 	C: Send + Sync + 'static + ProvideRuntimeApi<Block> + HeaderBackend<Block> + BlockIdTo<Block>,
-	C::Api: VeMintingRuntimeApi<Block, AccountId>,
+	C::Api: BbBNCRuntimeApi<Block, AccountId>,
 	AccountId: Codec,
 	// CallError: From<<C as BlockIdTo<Block>>::Error>,
 {

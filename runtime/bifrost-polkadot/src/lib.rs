@@ -69,6 +69,7 @@ pub mod constants;
 mod evm;
 mod migration;
 pub mod weights;
+use bb_bnc::traits::BbBNCInterface;
 use bifrost_asset_registry::{AssetIdMaps, FixedRateOfAsset};
 pub use bifrost_primitives::{
 	traits::{
@@ -86,7 +87,6 @@ use bifrost_runtime_common::{
 	TechnicalCollective,
 };
 use bifrost_slp::QueryId;
-use bifrost_ve_minting::traits::VeMintingInterface;
 use constants::currency::*;
 use cumulus_primitives_core::ParaId as CumulusParaId;
 use fp_evm::FeeCalculator;
@@ -245,7 +245,7 @@ parameter_types! {
 	pub const SystemMakerPalletId: PalletId = PalletId(*b"bf/sysmk");
 	pub const FeeSharePalletId: PalletId = PalletId(*b"bf/feesh");
 	pub CheckingAccount: AccountId = PolkadotXcm::check_account();
-	pub const VeMintingPalletId: PalletId = PalletId(*b"bf/vemnt");
+	pub const BbBNCPalletId: PalletId = PalletId(*b"bf/vemnt");
 	pub const IncentivePalletId: PalletId = PalletId(*b"bf/veict");
 	pub const FarmingBoostPalletId: PalletId = PalletId(*b"bf/fmbst");
 	pub const LendMarketPalletId: PalletId = PalletId(*b"bf/ldmkt");
@@ -1205,7 +1205,7 @@ impl bifrost_farming::Config for Runtime {
 	type RewardIssuer = FarmingRewardIssuerPalletId;
 	type WeightInfo = weights::bifrost_farming::BifrostWeight<Runtime>;
 	type FarmingBoost = FarmingBoostPalletId;
-	type VeMinting = VeMinting;
+	type BbBNC = BbBNC;
 	type BlockNumberToBalance = ConvertInto;
 	type WhitelistMaximumLimit = WhitelistMaximumLimit;
 	type GaugeRewardIssuer = FarmingGaugeRewardIssuerPalletId;
@@ -1429,12 +1429,12 @@ impl bifrost_vtoken_minting::Config for Runtime {
 	type ChannelCommission = ChannelCommission;
 	type MaxLockRecords = ConstU32<100>;
 	type IncentivePoolAccount = IncentivePoolAccount;
-	type VeMinting = VeMinting;
+	type BbBNC = BbBNC;
 	type AssetIdMaps = AssetIdMaps<Runtime>;
 }
 
 parameter_types! {
-	pub const VeMintingTokenType: CurrencyId = CurrencyId::VToken(TokenSymbol::BNC);
+	pub const BbBNCTokenType: CurrencyId = CurrencyId::VToken(TokenSymbol::BNC);
 	pub const Week: BlockNumber = prod_or_fast!(WEEKS, 10);
 	pub const MaxBlock: BlockNumber = 4 * 365 * DAYS;
 	pub const Multiplier: Balance = 10_u128.pow(12);
@@ -1443,15 +1443,15 @@ parameter_types! {
 	pub const MarkupRefreshLimit: u32 = 100;
 }
 
-impl bifrost_ve_minting::Config for Runtime {
+impl bb_bnc::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type MultiCurrency = Currencies;
 	type ControlOrigin = TechAdminOrCouncil;
-	type TokenType = VeMintingTokenType;
-	type VeMintingPalletId = VeMintingPalletId;
+	type TokenType = BbBNCTokenType;
+	type BbBNCPalletId = BbBNCPalletId;
 	type IncentivePalletId = IncentivePalletId;
 	type BuyBackAccount = BuyBackAccount;
-	type WeightInfo = weights::bifrost_ve_minting::BifrostWeight<Runtime>;
+	type WeightInfo = weights::bb_bnc::BifrostWeight<Runtime>;
 	type BlockNumberToBalance = ConvertInto;
 	type Week = Week;
 	type MaxBlock = MaxBlock;
@@ -1589,7 +1589,7 @@ impl bifrost_clouds_convert::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type MultiCurrency = Currencies;
 	type CloudsPalletId = CloudsPalletId;
-	type VeMinting = VeMinting;
+	type BbBNC = BbBNC;
 	type WeightInfo = weights::bifrost_clouds_convert::BifrostWeight<Runtime>;
 	type LockedBlocks = MaxBlock;
 }
@@ -1605,7 +1605,7 @@ impl bifrost_buy_back::Config for Runtime {
 	type LiquidityAccount = LiquidityAccount;
 	type ParachainId = ParachainInfo;
 	type CurrencyIdRegister = AssetIdMaps<Runtime>;
-	type VeMinting = VeMinting;
+	type BbBNC = BbBNC;
 }
 
 impl bifrost_slp_v2::Config for Runtime {
@@ -1809,7 +1809,7 @@ construct_runtime! {
 		SystemMaker: bifrost_system_maker = 121,
 		FeeShare: bifrost_fee_share = 122,
 		CrossInOut: bifrost_cross_in_out = 123,
-		VeMinting: bifrost_ve_minting = 124,
+		BbBNC: bb_bnc = 124,
 		Slpx: bifrost_slpx = 125,
 		FellowshipCollective: pallet_ranked_collective::<Instance1> = 126,
 		FellowshipReferenda: pallet_referenda::<Instance2> = 127,
@@ -1988,7 +1988,7 @@ extern crate frame_benchmarking;
 #[cfg(feature = "runtime-benchmarks")]
 mod benches {
 	define_benchmarks!(
-		[bifrost_ve_minting, VeMinting]
+		[bb_bnc, BbBNC]
 		[bifrost_buy_back, BuyBack]
 		[bifrost_slp_v2, SlpV2]
 	);
@@ -2478,25 +2478,25 @@ impl fp_rpc::EthereumRuntimeRPCApi<Block> for Runtime {
 		}
 	}
 
-	impl bifrost_ve_minting_rpc_runtime_api::VeMintingRuntimeApi<Block, AccountId> for Runtime {
+	impl bb_bnc_rpc_runtime_api::BbBNCRuntimeApi<Block, AccountId> for Runtime {
 		fn balance_of(
 			who: AccountId,
 			t: Option<bifrost_primitives::BlockNumber>,
 		) -> Balance{
-			VeMinting::balance_of(&who, t).unwrap_or(Zero::zero())
+			BbBNC::balance_of(&who, t).unwrap_or(Zero::zero())
 		}
 
 		fn total_supply(
 			t: bifrost_primitives::BlockNumber,
 		) -> Balance{
-			VeMinting::total_supply(t).unwrap_or(Zero::zero())
+			BbBNC::total_supply(t).unwrap_or(Zero::zero())
 		}
 
 		fn find_block_epoch(
 			block: bifrost_primitives::BlockNumber,
 			max_epoch: U256,
 		) -> U256{
-			VeMinting::find_block_epoch(block, max_epoch)
+			BbBNC::find_block_epoch(block, max_epoch)
 		}
 	}
 

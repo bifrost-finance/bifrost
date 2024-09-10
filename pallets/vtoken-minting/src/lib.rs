@@ -33,13 +33,13 @@ pub mod traits;
 pub mod weights;
 pub use weights::WeightInfo;
 
+use bb_bnc::traits::BbBNCInterface;
 use bifrost_asset_registry::AssetMetadata;
 use bifrost_primitives::{
 	CurrencyId, CurrencyIdConversion, CurrencyIdExt, CurrencyIdMapping, CurrencyIdRegister,
 	RedeemType, SlpOperator, SlpxOperator, TimeUnit, VTokenMintRedeemProvider,
 	VTokenSupplyProvider, VtokenMintingInterface, VtokenMintingOperator,
 };
-use bifrost_ve_minting::traits::VeMintingInterface;
 use frame_support::{
 	pallet_prelude::*,
 	sp_runtime::{
@@ -154,7 +154,7 @@ pub mod pallet {
 		type BifrostSlpx: SlpxOperator<BalanceOf<Self>>;
 
 		// veMinting interface
-		type VeMinting: VeMintingInterface<
+		type BbBNC: BbBNCInterface<
 			AccountIdOf<Self>,
 			CurrencyIdOf<Self>,
 			BalanceOf<Self>,
@@ -916,8 +916,8 @@ pub mod pallet {
 			ensure!(MinimumMint::<T>::contains_key(token_id), Error::<T>::NotSupportTokenType);
 
 			// check whether the user has veBNC
-			let vebnc_balance = T::VeMinting::balance_of(&minter, None)
-				.map_err(|_| Error::<T>::VeBNCCheckingError)?;
+			let vebnc_balance =
+				T::BbBNC::balance_of(&minter, None).map_err(|_| Error::<T>::VeBNCCheckingError)?;
 			ensure!(vebnc_balance > BalanceOf::<T>::zero(), Error::<T>::NotEnoughBalance);
 
 			// check whether the vtoken coefficient is set
@@ -941,7 +941,7 @@ pub mod pallet {
 				Self::mint_inner(minter.clone(), token_id, token_amount, remark, channel_id)?;
 
 			// lock vtoken and record the lock
-			Self::lock_vtoken_for_incentive_minting(minter.clone(), vtoken_id, vtoken_minted)?;
+			Self::lock_vtoken_for_incentibb_bnc(minter.clone(), vtoken_id, vtoken_minted)?;
 
 			// calculate the incentive amount
 			let incentive_amount =
@@ -1796,7 +1796,7 @@ pub mod pallet {
 		}
 
 		// to lock user vtoken for incentive minting
-		fn lock_vtoken_for_incentive_minting(
+		fn lock_vtoken_for_incentibb_bnc(
 			minter: AccountIdOf<T>,
 			vtoken_id: CurrencyIdOf<T>,
 			vtoken_amount: BalanceOf<T>,
@@ -1868,13 +1868,13 @@ pub mod pallet {
 			// get current block number
 			let current_block_number: BlockNumberFor<T> = frame_system::Pallet::<T>::block_number();
 			// get the veBNC total amount
-			let vebnc_total_issuance = T::VeMinting::total_supply(current_block_number)
+			let vebnc_total_issuance = T::BbBNC::total_supply(current_block_number)
 				.map_err(|_| Error::<T>::VeBNCCheckingError)?;
 			ensure!(vebnc_total_issuance > BalanceOf::<T>::zero(), Error::<T>::BalanceZero);
 
 			// get the veBNC balance of the minter
-			let minter_vebnc_balance = T::VeMinting::balance_of(minter, None)
-				.map_err(|_| Error::<T>::VeBNCCheckingError)?;
+			let minter_vebnc_balance =
+				T::BbBNC::balance_of(minter, None).map_err(|_| Error::<T>::VeBNCCheckingError)?;
 			ensure!(minter_vebnc_balance > BalanceOf::<T>::zero(), Error::<T>::NotEnoughBalance);
 
 			// get the percentage of the veBNC balance of the minter to the total veBNC amount and

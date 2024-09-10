@@ -49,9 +49,7 @@ pub use incentive::*;
 use orml_traits::{LockIdentifier, MultiCurrency, MultiLockableCurrency};
 use sp_core::{U256, U512};
 use sp_std::{borrow::ToOwned, cmp::Ordering, collections::btree_map::BTreeMap, vec, vec::Vec};
-pub use traits::{
-	LockedToken, MarkupCoefficientInfo, MarkupInfo, UserMarkupInfo, VeMintingInterface,
-};
+pub use traits::{BbBNCInterface, LockedToken, MarkupCoefficientInfo, MarkupInfo, UserMarkupInfo};
 pub use weights::WeightInfo;
 
 type BalanceOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<AccountIdOf<T>>>::Balance;
@@ -109,7 +107,7 @@ pub mod pallet {
 		type TokenType: Get<CurrencyId>;
 
 		#[pallet::constant]
-		type VeMintingPalletId: Get<PalletId>;
+		type BbBNCPalletId: Get<PalletId>;
 
 		#[pallet::constant]
 		type IncentivePalletId: Get<PalletId>;
@@ -335,7 +333,7 @@ pub mod pallet {
 				.err()
 				{
 					log::error!(
-						target: "ve-minting::notify_reward_amount",
+						target: "bb-bnc::notify_reward_amount",
 						"Received invalid justification for {:?}",
 						e,
 					);
@@ -562,7 +560,7 @@ pub mod pallet {
 			} else {
 				// last_point.amount = T::MultiCurrency::free_balance(
 				// 	T::TokenType::get(),
-				// 	&T::VeMintingPalletId::get().into_account_truncating(),
+				// 	&T::BbBNCPalletId::get().into_account_truncating(),
 				// );
 				last_point.amount = Supply::<T>::get();
 			}
@@ -615,7 +613,7 @@ pub mod pallet {
 					last_point.amount = Supply::<T>::get();
 					// last_point.amount = T::MultiCurrency::free_balance(
 					// 	T::TokenType::get(),
-					// 	&T::VeMintingPalletId::get().into_account_truncating(),
+					// 	&T::BbBNCPalletId::get().into_account_truncating(),
 					// );
 					break;
 				} else {

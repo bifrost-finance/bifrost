@@ -21,7 +21,7 @@ use bifrost_primitives::PoolId;
 // Ensure we're `no_std` when compiling for Wasm.
 use crate::*;
 
-pub trait VeMintingInterface<AccountId, CurrencyId, Balance, BlockNumber> {
+pub trait BbBNCInterface<AccountId, CurrencyId, Balance, BlockNumber> {
 	fn deposit_for(_who: &AccountId, position: u128, value: Balance) -> DispatchResult;
 	fn withdraw_inner(who: &AccountId, position: u128) -> DispatchResult;
 	fn balance_of(addr: &AccountId, time: Option<BlockNumber>) -> Result<Balance, DispatchError>;
@@ -75,7 +75,7 @@ pub trait VeMintingInterface<AccountId, CurrencyId, Balance, BlockNumber> {
 	) -> DispatchResult;
 }
 
-impl<T: Config> VeMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>, BlockNumberFor<T>>
+impl<T: Config> BbBNCInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>, BlockNumberFor<T>>
 	for Pallet<T>
 {
 	fn create_lock_inner(
@@ -385,7 +385,7 @@ impl<T: Config> VeMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>
 }
 
 impl<AccountId, CurrencyId, Balance, BlockNumber>
-	VeMintingInterface<AccountId, CurrencyId, Balance, BlockNumber> for ()
+	BbBNCInterface<AccountId, CurrencyId, Balance, BlockNumber> for ()
 where
 	Balance: orml_traits::arithmetic::Zero,
 {

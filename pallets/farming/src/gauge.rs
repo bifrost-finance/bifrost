@@ -123,7 +123,7 @@ where
 		})?;
 
 		let controller = T::GaugeRewardIssuer::get().into_sub_account_truncating(pid);
-		T::VeMinting::set_incentive(pid, Some(max_block), Some(controller));
+		T::BbBNC::set_incentive(pid, Some(max_block), Some(controller));
 		Ok(())
 	}
 
@@ -248,14 +248,10 @@ where
 		let pool_info = PoolInfos::<T>::get(pid).ok_or(Error::<T>::PoolDoesNotExist)?;
 		let share_info =
 			SharesAndWithdrawnRewards::<T>::get(pid, who).ok_or(Error::<T>::ShareInfoNotExists)?;
-		if T::VeMinting::balance_of(who, None)? == BalanceOf::<T>::zero() {
+		if T::BbBNC::balance_of(who, None)? == BalanceOf::<T>::zero() {
 			return Ok(());
 		}
-		T::VeMinting::update_reward(
-			pid,
-			Some(who),
-			Some((share_info.share, pool_info.total_shares)),
-		)?;
+		T::BbBNC::update_reward(pid, Some(who), Some((share_info.share, pool_info.total_shares)))?;
 		Ok(())
 	}
 }
