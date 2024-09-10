@@ -64,7 +64,7 @@ pub type CurrencyIdOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<
 
 const VE_LOCK_ID: LockIdentifier = *b"vebnclck";
 const MARKUP_LOCK_ID: LockIdentifier = *b"vebncmkp";
-const VE_MINTING_SYSTEM_POOL_ID: PoolId = 0;
+const VE_MINTING_SYSTEM_POOL_ID: PoolId = u32::MAX;
 #[derive(Clone, Encode, Decode, PartialEq, Eq, RuntimeDebug, TypeInfo, Default)]
 pub struct VeConfig<Balance, BlockNumber> {
 	amount: Balance,

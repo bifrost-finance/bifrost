@@ -28,7 +28,6 @@ use frame_support::{assert_noop, assert_ok};
 
 const POSITIONID0: u128 = 0;
 const POSITIONID1: u128 = 1;
-const POOLID0: PoolId = 0;
 
 #[test]
 fn create_lock_should_work() {
@@ -197,7 +196,7 @@ fn update_reward() {
 		assert_eq!(VeMinting::balance_of(&BOB, None), Ok(25407883680));
 		assert_eq!(VeMinting::balance_of_position_current_block(0), Ok(25407883680));
 		assert_ok!(VeMinting::deposit_for(&BOB, 0, 100_000_000_000));
-		assert_ok!(VeMinting::update_reward(POOLID0, Some(&BOB), None)); // TODO
+		assert_ok!(VeMinting::update_reward(VE_MINTING_SYSTEM_POOL_ID, Some(&BOB), None)); // TODO
 
 		assert_eq!(VeMinting::balance_of(&BOB, None), Ok(50818438500));
 		assert_eq!(VeMinting::balance_of(&BOB, Some(System::block_number())), Ok(50818438500));
@@ -257,7 +256,7 @@ fn notify_reward_amount() {
 		assert_ok!(VeMinting::get_rewards(RuntimeOrigin::signed(BOB)));
 		assert_eq!(Tokens::free_balance(KSM, &BOB), 396819);
 		System::set_block_number(System::block_number() + 7 * 86400 / 12);
-		assert_ok!(VeMinting::get_rewards_inner(POOLID0, &BOB, None));
+		assert_ok!(VeMinting::get_rewards_inner(VE_MINTING_SYSTEM_POOL_ID, &BOB, None));
 		assert_eq!(Tokens::free_balance(KSM, &BOB), 999986398);
 		assert_ok!(VeMinting::notify_rewards(
 			RuntimeOrigin::root(),
@@ -271,14 +270,14 @@ fn notify_reward_amount() {
 			(4 * 365 * 86400 - 7 * 86400) / 12
 		));
 		System::set_block_number(System::block_number() + 1 * 86400 / 12);
-		assert_ok!(VeMinting::get_rewards_inner(POOLID0, &BOB, None));
+		assert_ok!(VeMinting::get_rewards_inner(VE_MINTING_SYSTEM_POOL_ID, &BOB, None));
 		assert_eq!(Tokens::free_balance(KSM, &BOB), 1071241763);
-		assert_ok!(VeMinting::get_rewards_inner(POOLID0, &CHARLIE, None));
+		assert_ok!(VeMinting::get_rewards_inner(VE_MINTING_SYSTEM_POOL_ID, &CHARLIE, None));
 		assert_eq!(Tokens::free_balance(KSM, &CHARLIE), 71599834);
 		System::set_block_number(System::block_number() + 7 * 86400 / 12);
-		assert_ok!(VeMinting::get_rewards_inner(POOLID0, &CHARLIE, None));
+		assert_ok!(VeMinting::get_rewards_inner(VE_MINTING_SYSTEM_POOL_ID, &CHARLIE, None));
 		assert_eq!(Tokens::free_balance(KSM, &CHARLIE), 501203849);
-		assert_ok!(VeMinting::get_rewards_inner(POOLID0, &BOB, None));
+		assert_ok!(VeMinting::get_rewards_inner(VE_MINTING_SYSTEM_POOL_ID, &BOB, None));
 		assert_eq!(Tokens::free_balance(KSM, &BOB), 1498768947);
 	});
 }

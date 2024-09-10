@@ -197,7 +197,7 @@ impl<T: Config> Pallet<T> {
 	/// Update reward for all pools
 	pub fn update_reward_all(addr: Option<&AccountIdOf<T>>) -> DispatchResult {
 		// TODO: pool_id
-		Self::update_reward(0, addr, None)?;
+		Self::update_reward(VE_MINTING_SYSTEM_POOL_ID, addr, None)?;
 		Ok(())
 	}
 
