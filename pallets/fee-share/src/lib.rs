@@ -114,7 +114,6 @@ pub mod pallet {
 			/// Distribution ID
 			distribution_id: DistributionId,
 			/// Distribution information
-			/// proportion,
 			info: Info<AccountIdOf<T>>,
 		},
 		/// A successful call of the `EditDistribution` extrinsic will create this event.
@@ -122,7 +121,6 @@ pub mod pallet {
 			/// Distribution ID
 			distribution_id: DistributionId,
 			/// Distribution information
-			/// proportion,
 			info: Info<AccountIdOf<T>>,
 		},
 		/// A successful call of the `SetEraLength` extrinsic will create this event.

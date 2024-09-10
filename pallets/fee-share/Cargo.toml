@@ -1,8 +1,8 @@
 [package]
-authors = ["yooml <ymlll0508@gmail.com>"]
-edition = "2021"
 name = "bifrost-fee-share"
 version = "0.8.0"
+authors = ["yooml <ymlll0508@gmail.com>"]
+edition = "2021"
 
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu"]

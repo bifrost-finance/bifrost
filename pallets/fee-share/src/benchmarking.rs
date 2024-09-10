@@ -36,7 +36,7 @@ benchmarks! {
 		const KSM: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
 		let token_type = vec![KSM];
 	}: _(RawOrigin::Root,
-		BoundedVec::try_from(token_type.clone()).unwrap(),
+	BoundedVec::try_from(token_type.clone()).unwrap(),
 	BoundedVec::try_from(tokens_proportion.clone()).unwrap(),
 	true)
 
