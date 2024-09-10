@@ -236,10 +236,7 @@ fn notify_reward_amount() {
 		));
 		assert_eq!(Tokens::free_balance(KSM, &BOB), 0);
 		// balance of veBNC is not 0
-		assert_noop!(
-			VeMinting::get_rewards(RuntimeOrigin::signed(BOB)),
-			Error::<Runtime>::NoRewards
-		);
+		assert_ok!(VeMinting::get_rewards(RuntimeOrigin::signed(BOB)));
 		assert_ok!(VeMinting::increase_amount(RuntimeOrigin::signed(BOB), 0, 80_000_000_000));
 		assert_eq!(VeMinting::balance_of(&BOB, None), Ok(99715627680));
 

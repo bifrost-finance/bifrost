@@ -203,10 +203,10 @@ pub mod pallet {
 		BelowMinimumMint,
 		LockNotExist,
 		LockExist,
-		NoRewards,
 		ArgumentsError,
 		ExceedsMaxPositions,
 		NoController,
+		UserFarmingPoolOverflow,
 	}
 
 	#[pallet::storage]
@@ -309,6 +309,16 @@ pub mod pallet {
 		Blake2_128Concat,
 		AccountIdOf<T>,
 		BoundedVec<u128, T::MaxPositions>,
+		ValueQuery,
+	>;
+
+	/// The pool ID of the user participating in the farming pool.
+	#[pallet::storage]
+	pub type UserFarmingPool<T: Config> = StorageMap<
+		_,
+		Blake2_128Concat,
+		AccountIdOf<T>,
+		BoundedVec<PoolId, ConstU32<{ u32::MAX }>>,
 		ValueQuery,
 	>;
 
@@ -494,7 +504,7 @@ pub mod pallet {
 			old_locked: LockedBalance<BalanceOf<T>, BlockNumberFor<T>>,
 			new_locked: LockedBalance<BalanceOf<T>, BlockNumberFor<T>>,
 		) -> DispatchResult {
-			Self::update_reward_all(Some(who))?;
+			Self::update_reward_all(who)?;
 
 			let mut u_old = Point::<BalanceOf<T>, BlockNumberFor<T>>::default();
 			let mut u_new = Point::<BalanceOf<T>, BlockNumberFor<T>>::default();

@@ -286,7 +286,7 @@ impl<T: Config> VeMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>
 		rewards: Vec<(CurrencyIdOf<T>, BalanceOf<T>)>,
 	) -> DispatchResult {
 		let conf = IncentiveConfigs::<T>::get(pool_id);
-		if n == conf.last_update_time + conf.rewards_duration {
+		if n == conf.period_finish {
 			Self::notify_reward_amount(pool_id, &conf.incentive_controller, rewards)?;
 		}
 		Ok(())

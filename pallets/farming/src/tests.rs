@@ -79,7 +79,7 @@ fn deposit() {
 				(BalanceOf<Runtime>, BalanceOf<Runtime>, BalanceOf<Runtime>),
 			>::new(),
 			gauge_basic_rewards,
-			max_block: 1000,
+			max_block: 7 * 86400 / 12,
 			gauge_amount: 0,
 			total_time_factor: 0,
 			gauge_last_block: 0,
@@ -281,7 +281,7 @@ fn init_gauge() -> (PoolId, BalanceOf<Runtime>) {
 		RuntimeOrigin::signed(ALICE),
 		tokens_proportion.clone(),
 		basic_rewards.clone(),
-		Some((1000, gauge_basic_rewards.clone())),
+		Some((7 * 86400 / 12, gauge_basic_rewards.clone())),
 		0,
 		0,
 		0,
@@ -294,12 +294,7 @@ fn init_gauge() -> (PoolId, BalanceOf<Runtime>) {
 	assert_ok!(Farming::charge(RuntimeOrigin::signed(BOB), pid, charge_rewards, false));
 	assert_ok!(Farming::deposit(RuntimeOrigin::signed(ALICE), pid, tokens, Some((100, 100))));
 	assert_ok!(VeMinting::set_config(RuntimeOrigin::signed(ALICE), Some(0), Some(7 * 86400 / 12)));
-	assert_ok!(VeMinting::notify_rewards(
-		RuntimeOrigin::signed(ALICE),
-		CHARLIE,
-		Some(7 * 86400 / 12),
-		gauge_basic_rewards.clone()
-	));
+	assert_ok!(VeMinting::notify_reward_amount(pid, &Some(CHARLIE), gauge_basic_rewards.clone()));
 	assert_ok!(VeMinting::create_lock_inner(
 		&ALICE,
 		100_000_000_000,

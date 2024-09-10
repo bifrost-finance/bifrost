@@ -136,6 +136,15 @@ impl<T: Config> Pallet<T> {
 			// and total share.
 			match share_info {
 				Some((share, total_share)) => {
+					let mut pools = UserFarmingPool::<T>::get(addr);
+					if share.is_zero() {
+						if let Some(pos) = pools.iter().position(|&x| x == pool_id) {
+							pools.remove(pos);
+						}
+					} else {
+						pools.try_push(pool_id).map_err(|_| Error::<T>::UserFarmingPoolOverflow)?;
+					}
+					UserFarmingPool::<T>::insert(addr, pools);
 					let reward = increment
 						.checked_mul(U256::from(share.saturated_into::<u128>()))
 						.ok_or(ArithmeticError::Overflow)?
@@ -195,9 +204,13 @@ impl<T: Config> Pallet<T> {
 	}
 
 	/// Update reward for all pools
-	pub fn update_reward_all(addr: Option<&AccountIdOf<T>>) -> DispatchResult {
-		// TODO: pool_id
-		Self::update_reward(VE_MINTING_SYSTEM_POOL_ID, addr, None)?;
+	pub fn update_reward_all(addr: &AccountIdOf<T>) -> DispatchResult {
+		UserFarmingPool::<T>::get(addr)
+			.iter()
+			.try_for_each(|&pool_id| -> DispatchResult {
+				Self::update_reward(pool_id, Some(addr), None)
+			})?;
+		Self::update_reward(VE_MINTING_SYSTEM_POOL_ID, Some(addr), None)?;
 		Ok(())
 	}
 
@@ -225,8 +238,6 @@ impl<T: Config> Pallet<T> {
 				addr: addr.to_owned(),
 				rewards: rewards.into_iter().collect(),
 			});
-		} else {
-			return Err(Error::<T>::NoRewards.into());
 		}
 		Ok(())
 	}
