@@ -146,6 +146,7 @@ pallet-prices = { workspace = true }
 leverage-staking = { workspace = true }
 bifrost-channel-commission = { workspace = true }
 bifrost-vtoken-minting-rpc-runtime-api = { workspace = true }
+bifrost-vbnc-convert = { workspace = true }
 
 [build-dependencies]
 substrate-wasm-builder = { workspace = true, optional = true }
@@ -272,6 +273,7 @@ std = [
 	"bifrost-parachain-staking/std",
 	"bifrost-xcm-interface/std",
 	"bifrost-channel-commission/std",
+	"bifrost-vbnc-convert/std",
 
 	"substrate-wasm-builder"
 ]
@@ -323,6 +325,7 @@ runtime-benchmarks = [
 	"lend-market/runtime-benchmarks",
 	"leverage-staking/runtime-benchmarks",
 	"bifrost-channel-commission/runtime-benchmarks",
+	"bifrost-vbnc-convert/runtime-benchmarks",
 ]
 
 try-runtime = [
@@ -395,6 +398,7 @@ try-runtime = [
 	"bifrost-vtoken-voting/try-runtime",
 	"leverage-staking/try-runtime",
 	"bifrost-channel-commission/try-runtime",
+	"bifrost-vbnc-convert/try-runtime",
 ]
 
 # Enable the metadata hash generation in the wasm builder.

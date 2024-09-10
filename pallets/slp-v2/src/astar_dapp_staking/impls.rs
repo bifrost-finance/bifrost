@@ -132,7 +132,7 @@ impl<T: Config> Pallet<T> {
 		let (query_id, xcm_message) =
 			Self::get_query_id_and_xcm_message(call, delegator_index, &pending_status)?;
 		if let Some(query_id) = query_id {
-			let pending_status = pending_status.clone().ok_or(Error::<T>::MissingXcmFee)?;
+			let pending_status = pending_status.clone().ok_or(Error::<T>::XcmFeeNotFound)?;
 			PendingStatusByQueryId::<T>::insert(query_id, pending_status.clone());
 		}
 		Self::send_xcm_message(ASTAR_DAPP_STAKING, xcm_message)?;
@@ -208,13 +208,13 @@ impl<T: Config> Pallet<T> {
 							let currency_id = ASTAR_DAPP_STAKING.info().currency_id;
 							let current_time_unit =
 								T::VtokenMinting::get_ongoing_time_unit(currency_id)
-									.ok_or(Error::<T>::TimeUnitNotExist)?;
+									.ok_or(Error::<T>::TimeUnitNotFound)?;
 							let configuration =
 								ConfigurationByStakingProtocol::<T>::get(ASTAR_DAPP_STAKING)
 									.ok_or(Error::<T>::ConfigurationNotFound)?;
 							let unlock_time = current_time_unit
 								.add(configuration.unlock_period)
-								.ok_or(Error::<T>::TimeUnitNotExist)?;
+								.ok_or(Error::<T>::TimeUnitNotFound)?;
 							pending_ledger
 								.unlocking
 								.try_push(AstarUnlockingRecord { amount, unlock_time })
@@ -226,7 +226,7 @@ impl<T: Config> Pallet<T> {
 							let currency_id = ASTAR_DAPP_STAKING.info().currency_id;
 							let current_time_unit =
 								T::VtokenMinting::get_ongoing_time_unit(currency_id)
-									.ok_or(Error::<T>::TimeUnitNotExist)?;
+									.ok_or(Error::<T>::TimeUnitNotFound)?;
 							pending_ledger.unlocking.retain(|record| {
 								current_time_unit.cmp(&record.unlock_time) != Ordering::Greater
 							});

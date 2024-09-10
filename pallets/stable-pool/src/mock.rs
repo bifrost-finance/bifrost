@@ -17,14 +17,11 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 use crate as bifrost_stable_pool;
 use bifrost_asset_registry::AssetIdMaps;
+use bifrost_primitives::MoonbeamChainId;
 pub use bifrost_primitives::{
 	currency::{MOVR, VMOVR},
 	Balance, CurrencyId, CurrencyIdMapping, SlpOperator, SlpxOperator, TokenSymbol, ASTR, BNC, DOT,
 	GLMR, VBNC, VDOT,
-};
-use bifrost_primitives::{
-	AstarParachainId, HydradxParachainId, InterlayParachainId, MantaParachainId,
-	MoonbeamParachainId,
 };
 use bifrost_runtime_common::milli;
 use frame_support::{
@@ -296,11 +293,7 @@ impl bifrost_vtoken_minting::Config for Test {
 	type WeightInfo = ();
 	type OnRedeemSuccess = ();
 	type XcmTransfer = XTokens;
-	type AstarParachainId = AstarParachainId;
-	type MoonbeamParachainId = MoonbeamParachainId;
-	type HydradxParachainId = HydradxParachainId;
-	type MantaParachainId = MantaParachainId;
-	type InterlayParachainId = InterlayParachainId;
+	type MoonbeamChainId = MoonbeamChainId;
 	type BifrostSlpx = SlpxInterface;
 	type ChannelCommission = ();
 	type MaxLockRecords = ConstU32<100>;

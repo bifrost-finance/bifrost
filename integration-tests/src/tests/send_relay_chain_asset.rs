@@ -17,7 +17,8 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 use crate::mock::{
-	Bifrost, BifrostTokens, BifrostXTokens, Relay, RelayBalances, RelaySystem, TestNet, ALICE, BOB,
+	Bifrost, BifrostAssetRegistry, BifrostTokens, BifrostXTokens, Relay, RelayBalances,
+	RelaySystem, TestNet, ALICE, BOB,
 };
 use bifrost_primitives::CurrencyId;
 use cumulus_primitives_core::ParaId;
@@ -39,6 +40,10 @@ fn send_relay_chain_asset_to_relay_chain() {
 	});
 
 	Bifrost::execute_with(|| {
+		assert_ok!(BifrostAssetRegistry::do_register_location(
+			CurrencyId::Token2(0),
+			&Location::parent()
+		));
 		assert_ok!(BifrostXTokens::transfer(
 			Some(ALICE).into(),
 			CurrencyId::Token2(0),

@@ -25,8 +25,7 @@ use crate::{Config, DispatchResult, QueryResponseManager};
 use bifrost_asset_registry::AssetIdMaps;
 use bifrost_primitives::{
 	currency::{BNC, KSM, MANTA},
-	Amount, AstarParachainId, Balance, CurrencyId, DoNothingExecuteXcm, DoNothingRouter,
-	HydradxParachainId, InterlayParachainId, MantaParachainId, MoonbeamParachainId, SlpxOperator,
+	Amount, Balance, CurrencyId, MockXcmExecutor, MockXcmRouter, MoonbeamChainId, SlpxOperator,
 	TokenSymbol, XcmDestWeightAndFeeHandler, XcmOperationType,
 };
 pub use cumulus_primitives_core::ParaId;
@@ -219,11 +218,11 @@ impl orml_xtokens::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type Balance = Balance;
 	type CurrencyId = CurrencyId;
-	type CurrencyIdConvert = BifrostCurrencyIdConvert;
+	type CurrencyIdConvert = CurrencyIdConvert;
 	type AccountIdToLocation = ();
 	type UniversalLocation = UniversalLocation;
 	type SelfLocation = SelfRelativeLocation;
-	type XcmExecutor = DoNothingExecuteXcm;
+	type XcmExecutor = MockXcmExecutor;
 	type Weigher = FixedWeightBounds<UnitWeightCost, RuntimeCall, MaxInstructions>;
 	type BaseXcmWeight = BaseXcmWeight;
 	type MaxAssetsForTransfer = MaxAssetsForTransfer;
@@ -268,11 +267,7 @@ impl bifrost_vtoken_minting::Config for Runtime {
 	type WeightInfo = ();
 	type OnRedeemSuccess = ();
 	type XcmTransfer = XTokens;
-	type AstarParachainId = AstarParachainId;
-	type MoonbeamParachainId = MoonbeamParachainId;
-	type HydradxParachainId = HydradxParachainId;
-	type MantaParachainId = MantaParachainId;
-	type InterlayParachainId = InterlayParachainId;
+	type MoonbeamChainId = MoonbeamChainId;
 	type ChannelCommission = ();
 	type MaxLockRecords = ConstU32<100>;
 	type IncentivePoolAccount = IncentivePoolAccount;
@@ -400,7 +395,7 @@ impl Convert<(u16, CurrencyId), MultiLocation> for SubAccountIndexMultiLocationC
 			),
 			MANTA => {
 				// get parachain id
-				if let Some(location) = BifrostCurrencyIdConvert::convert(currency_id) {
+				if let Some(location) = CurrencyIdConvert::convert(currency_id) {
 					let v3_location = xcm::v3::Location::try_from(location).unwrap();
 					if let Some(Parachain(para_id)) = v3_location.interior().first() {
 						MultiLocation::new(
@@ -430,7 +425,7 @@ impl Convert<(u16, CurrencyId), MultiLocation> for SubAccountIndexMultiLocationC
 			// Other sibling chains use the Bifrost para account with "sibl"
 			_ => {
 				// get parachain id
-				if let Some(location) = BifrostCurrencyIdConvert::convert(currency_id) {
+				if let Some(location) = CurrencyIdConvert::convert(currency_id) {
 					let v3_location = xcm::v3::Location::try_from(location).unwrap();
 					if let Some(Parachain(para_id)) = v3_location.interior().first() {
 						MultiLocation::new(
@@ -483,8 +478,8 @@ parameter_types! {
 	pub const MaxLengthLimit: u32 = 100;
 }
 
-pub struct BifrostCurrencyIdConvert;
-impl Convert<CurrencyId, Option<xcm::v4::Location>> for BifrostCurrencyIdConvert {
+pub struct CurrencyIdConvert;
+impl Convert<CurrencyId, Option<xcm::v4::Location>> for CurrencyIdConvert {
 	fn convert(id: CurrencyId) -> Option<xcm::v4::Location> {
 		use CurrencyId::*;
 		use TokenSymbol::*;
@@ -605,7 +600,7 @@ impl xcm_executor::Config for XcmConfig {
 	type SubscriptionService = PolkadotXcm;
 	type Trader = ();
 	type Weigher = FixedWeightBounds<UnitWeightCost, RuntimeCall, MaxInstructions>;
-	type XcmSender = DoNothingRouter;
+	type XcmSender = MockXcmRouter;
 	type PalletInstancesInfo = AllPalletsWithSystem;
 	type MaxAssetsIntoHolding = ConstU32<64>;
 	type FeeManager = ();
@@ -635,9 +630,9 @@ impl pallet_xcm::Config for Runtime {
 	type SendXcmOrigin = xcm_builder::EnsureXcmOrigin<RuntimeOrigin, ()>;
 	type Weigher = FixedWeightBounds<UnitWeightCost, RuntimeCall, MaxInstructions>;
 	type XcmExecuteFilter = Nothing;
-	type XcmExecutor = DoNothingExecuteXcm;
+	type XcmExecutor = MockXcmExecutor;
 	type XcmReserveTransferFilter = Everything;
-	type XcmRouter = DoNothingRouter;
+	type XcmRouter = MockXcmRouter;
 	type XcmTeleportFilter = Nothing;
 	type RuntimeOrigin = RuntimeOrigin;
 	type RuntimeCall = RuntimeCall;

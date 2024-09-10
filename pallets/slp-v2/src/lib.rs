@@ -105,7 +105,7 @@ pub mod pallet {
 	#[pallet::pallet]
 	pub struct Pallet<T>(_);
 
-	/// Operator for different staking protocols.
+	/// Configuration for different staking protocols.
 	#[pallet::storage]
 	pub type ConfigurationByStakingProtocol<T: Config> = StorageMap<
 		_,
@@ -193,55 +193,96 @@ pub mod pallet {
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
+		/// Add a delegator to the staking protocol.
 		AddDelegator {
+			/// Slp supports staking protocols.
 			staking_protocol: StakingProtocol,
+			/// Delegator index.
 			delegator_index: DelegatorIndex,
+			/// Delegator account.
 			delegator: Delegator<T::AccountId>,
 		},
+		/// Remove a delegator from the staking protocol.
 		RemoveDelegator {
+			/// Slp supports staking protocols.
 			staking_protocol: StakingProtocol,
+			/// Delegator index.
 			delegator_index: DelegatorIndex,
+			/// Delegator account.
 			delegator: Delegator<T::AccountId>,
 		},
+		/// Add a validator to the staking protocol.
 		AddValidator {
+			/// Slp supports staking protocols.
 			staking_protocol: StakingProtocol,
+			/// Delegator account.
 			delegator: Delegator<T::AccountId>,
+			/// Validator account.
 			validator: Validator<T::AccountId>,
 		},
+		/// Remove a validator from the staking protocol.
 		RemoveValidator {
+			/// Slp supports staking protocols.
 			staking_protocol: StakingProtocol,
+			/// Delegator account.
 			delegator: Delegator<T::AccountId>,
+			/// Validator account.
 			validator: Validator<T::AccountId>,
 		},
+		/// Set configuration for a specific staking protocol.
 		SetConfiguration {
+			/// Slp supports staking protocols.
 			staking_protocol: StakingProtocol,
+			/// The staking protocol configuration.
 			configuration: ProtocolConfiguration<T::AccountId>,
 		},
+		/// Set ledger for a specific delegator.
 		SetLedger {
+			/// Slp supports staking protocols.
 			staking_protocol: StakingProtocol,
+			/// Delegator account.
 			delegator: Delegator<T::AccountId>,
+			/// Ledger.
 			ledger: Ledger,
 		},
+		/// Send xcm task.
 		SendXcmTask {
+			/// Xcm Message Query id.
 			query_id: Option<QueryId>,
+			/// Delegator account.
 			delegator: Delegator<T::AccountId>,
+			/// Xcm task.
 			task: XcmTask<T::AccountId>,
+			/// Pending confirmation status.
 			pending_status: Option<PendingStatus<T::AccountId>>,
+			/// Destination.
 			dest_location: Location,
 		},
+		/// Xcm task response received.
 		NotifyResponseReceived {
+			/// Xcm responder.
 			responder: Location,
+			/// Pending confirmation status.
 			pending_status: PendingStatus<T::AccountId>,
 		},
+		/// Time unit updated.
 		TimeUnitUpdated {
+			/// Slp supports staking protocols.
 			staking_protocol: StakingProtocol,
+			/// Time unit.
 			time_unit: TimeUnit,
 		},
+		/// Token exchange rate updated.
 		TokenExchangeRateUpdated {
+			/// Slp supports staking protocols.
 			staking_protocol: StakingProtocol,
+			/// Delegator account.
 			delegator: Delegator<T::AccountId>,
+			/// The type of token that the fee is charged to
 			protocol_fee_currency_id: CurrencyId,
+			/// The amount of the fee charged to the protocol
 			protocol_fee: Balance,
+			/// Amount of exchange rates updated
 			amount: Balance,
 		},
 	}
@@ -250,6 +291,10 @@ pub mod pallet {
 	pub enum Error<T> {
 		/// Delegator index has exceeded the maximum allowed value of 65535.
 		DelegatorIndexOverflow,
+		/// The maximum number of validators has been reached.
+		ValidatorsOverflow,
+		/// UnlockRecordOverflow
+		UnlockRecordOverflow,
 		/// The staking protocol is not supported.
 		UnsupportedStakingProtocol,
 		/// The delegator index was not found.
@@ -262,44 +307,36 @@ pub mod pallet {
 		LedgerNotFound,
 		/// The validator was not found.
 		ValidatorNotFound,
+		/// Missing XCM fee value.
+		XcmFeeNotFound,
+		/// Missing pending status.
+		PendingStatusNotFound,
+		/// The specified time unit does not exist.
+		TimeUnitNotFound,
 		/// The delegator already exists.
 		DelegatorAlreadyExists,
 		/// The delegator index already exists.
 		DelegatorIndexAlreadyExists,
 		/// The validator already exists.
 		ValidatorAlreadyExists,
-		/// The maximum number of validators has been reached.
-		ValidatorsTooMuch,
 		/// Failed to derive the derivative account ID.
 		DerivativeAccountIdFailed,
-		/// Missing XCM fee value.
-		MissingXcmFee,
-		/// Missing pending status.
-		MissingPendingStatus,
-		/// Missing query ID.
-		MissingQueryId,
 		/// Error during validation.
-		ErrorValidating,
+		ValidatingFailed,
 		/// Error during delivery.
-		ErrorDelivering,
-		/// The specified time unit does not exist.
-		TimeUnitNotExist,
-		/// The specified time unit is too short.
-		UpdateOngoingTimeUnitIntervalTooShort,
-		/// The specified token exchange rate is too short.
-		UpdateTokenExchangeRateIntervalTooShort,
+		DeliveringFailed,
+		/// calculate protocol fee failed.
+		CalculateProtocolFeeFailed,
+		/// IncreaseTokenPoolFailed
+		IncreaseTokenPoolFailed,
+		/// The update interval is too short.
+		UpdateIntervalTooShort,
 		/// The specified token exchange rate amount is too large.
 		UpdateTokenExchangeRateAmountTooLarge,
 		/// Invalid parameter.
 		InvalidParameter,
-		/// calculate protocol fee failed.
-		CalculateProtocolFeeFailed,
 		/// Not authorized.
 		NotAuthorized,
-		/// IncreaseTokenPoolError
-		IncreaseTokenPoolError,
-		/// UnlockRecordOverflow
-		UnlockRecordOverflow,
 	}
 
 	#[pallet::hooks]
@@ -308,6 +345,12 @@ pub mod pallet {
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
 		/// Set the XCM fee for a specific XCM task.
+		///
+		/// Can only be called by governance
+		///
+		/// Parameters
+		/// - `staking_protocol`: Slp supports staking protocols.
+		/// - `configuration`: The staking protocol configuration.
 		#[pallet::call_index(0)]
 		#[pallet::weight(<T as Config>::WeightInfo::set_protocol_configuration())]
 		pub fn set_protocol_configuration(
@@ -334,6 +377,13 @@ pub mod pallet {
 		}
 
 		/// Add a delegator to the staking protocol.
+		///
+		/// Can only be called by governance
+		///
+		/// Parameters
+		/// - `staking_protocol`: Slp supports staking protocols.
+		/// - `delegator`: If delegator is None, the delegator will be derived from sovereign
+		///   account.
 		#[pallet::call_index(1)]
 		#[pallet::weight(<T as Config>::WeightInfo::add_delegator())]
 		pub fn add_delegator(
@@ -346,6 +396,12 @@ pub mod pallet {
 		}
 
 		/// Remove a delegator from the staking protocol.
+		///
+		/// Can only be called by governance
+		///
+		/// Parameters
+		/// - `staking_protocol`: Slp supports staking protocols.
+		/// - `delegator`: Delegator that need to be removed.
 		#[pallet::call_index(2)]
 		#[pallet::weight(<T as Config>::WeightInfo::remove_delegator())]
 		pub fn remove_delegator(
@@ -358,6 +414,13 @@ pub mod pallet {
 		}
 
 		/// Add a validator to the staking protocol.
+		///
+		/// Can only be called by governance
+		///
+		/// Parameters
+		/// - `staking_protocol`: Slp supports staking protocols.
+		/// - `delegator`: Select the delegator which is existed.
+		/// - `validator`: Validator that need to be added.
 		#[pallet::call_index(3)]
 		#[pallet::weight(<T as Config>::WeightInfo::add_validator())]
 		pub fn add_validator(
@@ -374,7 +437,7 @@ pub mod pallet {
 					ensure!(!validators.contains(&validator), Error::<T>::ValidatorAlreadyExists);
 					validators
 						.try_push(validator.clone())
-						.map_err(|_| Error::<T>::ValidatorsTooMuch)?;
+						.map_err(|_| Error::<T>::ValidatorsOverflow)?;
 					Self::deposit_event(Event::<T>::AddValidator {
 						staking_protocol,
 						delegator,
@@ -386,6 +449,13 @@ pub mod pallet {
 		}
 
 		/// Remove a validator from the staking protocol.
+		///
+		/// Can only be called by governance
+		///
+		/// Parameters
+		/// - `staking_protocol`: Slp supports staking protocols.
+		/// - `delegator`: Select the delegator which is existed.
+		/// - `validator`: Validator that need to be removed.
 		#[pallet::call_index(4)]
 		#[pallet::weight(<T as Config>::WeightInfo::remove_validator())]
 		pub fn remove_validator(
@@ -412,6 +482,13 @@ pub mod pallet {
 		}
 
 		/// Set the update token exchange rate limit for a specific staking protocol.
+		///
+		/// Can only be called by governance.
+		///
+		/// Parameters
+		/// - `staking_protocol`: Slp supports staking protocols.
+		/// - `delegator`: Select the delegator which is existed.
+		/// - `ledger`: Ledger that need to be set.
 		#[pallet::call_index(5)]
 		#[pallet::weight(<T as Config>::WeightInfo::set_ledger())]
 		pub fn set_ledger(
@@ -446,6 +523,13 @@ pub mod pallet {
 		}
 
 		/// Transfer the staking token to remote chain.
+		/// Transfer the free balance of the Entrance Account to the selected delegator.
+		///
+		/// Can be called by governance or staking protocol operator.
+		///
+		/// Parameters
+		/// - `staking_protocol`: Slp supports staking protocols.
+		/// - `delegator`: Select the delegator which is existed.
 		#[pallet::call_index(6)]
 		#[pallet::weight(<T as Config>::WeightInfo::transfer_to())]
 		pub fn transfer_to(
@@ -458,6 +542,14 @@ pub mod pallet {
 		}
 
 		/// Transfer the staking token back from remote chain.
+		/// Transfer the amount of tokens from the selected delegator back to the entrance account.
+		///
+		/// Can be called by governance or staking protocol operator.
+		///
+		/// Parameters
+		/// - `staking_protocol`: Slp supports staking protocols.
+		/// - `delegator`: Select the delegator which is existed.
+		/// - `amount`: The amount of tokens to transfer back.
 		#[pallet::call_index(7)]
 		#[pallet::weight(<T as Config>::WeightInfo::transfer_back())]
 		pub fn transfer_back(
@@ -471,6 +563,15 @@ pub mod pallet {
 		}
 
 		/// Update the ongoing time unit for a specific staking protocol.
+		/// Update frequency controlled by update_time_unit_interval.
+		/// Less than update_time_unit_interval will report an error.
+		///
+		/// Can be called by governance or staking protocol operator.
+		///
+		/// Parameters
+		/// - `staking_protocol`: Slp supports staking protocols.
+		/// - `time_uint_option`: If time_uint is None, the ongoing time unit will be increased by
+		///   one. Otherwise, the ongoing time unit will be updated to the specified time unit.
 		#[pallet::call_index(8)]
 		#[pallet::weight(<T as Config>::WeightInfo::update_ongoing_time_unit())]
 		pub fn update_ongoing_time_unit(
@@ -488,7 +589,7 @@ pub mod pallet {
 				LastUpdateOngoingTimeUnitBlockNumber::<T>::get(staking_protocol);
 			ensure!(
 				current_block_number >= last_update_block_number + update_interval,
-				Error::<T>::UpdateOngoingTimeUnitIntervalTooShort
+				Error::<T>::UpdateIntervalTooShort
 			);
 
 			let currency_id = staking_protocol.info().currency_id;
@@ -497,7 +598,7 @@ pub mod pallet {
 				Some(time_unit) => time_unit,
 				None => {
 					let current_time_unit = T::VtokenMinting::get_ongoing_time_unit(currency_id)
-						.ok_or(Error::<T>::TimeUnitNotExist)?;
+						.ok_or(Error::<T>::TimeUnitNotFound)?;
 					current_time_unit.add_one()
 				},
 			};
@@ -511,6 +612,15 @@ pub mod pallet {
 		}
 
 		/// Update the token exchange rate for a specific staking protocol.
+		/// Update frequency controlled by update_exchange_rate_interval.
+		/// Amount max update for token pool * max_update_token_exchange_rate.
+		///
+		/// Can be called by governance or staking protocol operator.
+		///
+		/// Parameters
+		/// - `staking_protocol`: Slp supports staking protocols.
+		/// - `delegator`: Select the delegator which is existed.
+		/// - `amount`: The amount of tokens to update the token exchange rate.
 		#[pallet::call_index(9)]
 		#[pallet::weight(<T as Config>::WeightInfo::update_token_exchange_rate())]
 		pub fn update_token_exchange_rate(
@@ -539,7 +649,7 @@ pub mod pallet {
 			);
 			ensure!(
 				current_block_number >= last_update_block_number + update_interval,
-				Error::<T>::UpdateTokenExchangeRateIntervalTooShort
+				Error::<T>::UpdateIntervalTooShort
 			);
 			let pool_token_amount = T::VtokenMinting::get_token_pool(currency_id);
 			let max_amount = max_update_permill.mul_floor(pool_token_amount);
@@ -568,7 +678,7 @@ pub mod pallet {
 
 			// Update the token exchange rate.
 			T::VtokenMinting::increase_token_pool(currency_id, amount)
-				.map_err(|_| Error::<T>::IncreaseTokenPoolError)?;
+				.map_err(|_| Error::<T>::IncreaseTokenPoolFailed)?;
 			LedgerByStakingProtocolAndDelegator::<T>::mutate(
 				staking_protocol,
 				delegator.clone(),
@@ -597,6 +707,14 @@ pub mod pallet {
 			Ok(().into())
 		}
 
+		/// Manipulate a delegator to perform Dapp staking related operations.
+		///
+		/// Can be called by governance or staking protocol operator.
+		///
+		/// Parameters
+		/// - `staking_protocol`: Slp supports staking protocols.
+		/// - `delegator`: Select the delegator which is existed.
+		/// - `task`: The Dapp staking task.
 		#[cfg(feature = "polkadot")]
 		#[pallet::call_index(10)]
 		#[pallet::weight(<T as Config>::WeightInfo::astar_dapp_staking())]
@@ -609,6 +727,9 @@ pub mod pallet {
 			Self::do_dapp_staking(delegator, task)
 		}
 
+		/// Processing Xcm message execution results.
+		///
+		/// Can be called by governance or xcm origin.
 		#[cfg(feature = "polkadot")]
 		#[pallet::call_index(11)]
 		#[pallet::weight(<T as Config>::WeightInfo::notify_astar_dapp_staking())]
@@ -619,7 +740,7 @@ pub mod pallet {
 		) -> DispatchResultWithPostInfo {
 			let responder = Self::ensure_governance_or_xcm_response(origin)?;
 			let pending_status = PendingStatusByQueryId::<T>::get(query_id)
-				.ok_or(Error::<T>::MissingPendingStatus)?;
+				.ok_or(Error::<T>::PendingStatusNotFound)?;
 			if Response::DispatchResult(MaybeErrorCode::Success) == response {
 				Self::do_notify_astar_dapp_staking(responder, pending_status)?;
 			};
