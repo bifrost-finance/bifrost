@@ -19,12 +19,9 @@
 
 use crate as slpx;
 use bifrost_asset_registry::AssetIdMaps;
-use bifrost_primitives::{
-	AstarParachainId, HydradxParachainId, InterlayParachainId, MantaParachainId,
-	MoonbeamParachainId,
-};
+use bifrost_primitives::MoonbeamChainId;
 pub use bifrost_primitives::{
-	CurrencyId, CurrencyIdMapping, DoNothingExecuteXcm, SlpxOperator, TokenSymbol, BNC, KSM,
+	CurrencyId, CurrencyIdMapping, MockXcmExecutor, SlpxOperator, TokenSymbol, BNC, KSM,
 };
 use bifrost_slp::{QueryId, QueryResponseManager};
 use cumulus_primitives_core::ParaId;
@@ -200,11 +197,7 @@ impl bifrost_vtoken_minting::Config for Test {
 	type WeightInfo = ();
 	type OnRedeemSuccess = ();
 	type XcmTransfer = XTokens;
-	type AstarParachainId = AstarParachainId;
-	type MoonbeamParachainId = MoonbeamParachainId;
-	type HydradxParachainId = HydradxParachainId;
-	type MantaParachainId = MantaParachainId;
-	type InterlayParachainId = InterlayParachainId;
+	type MoonbeamChainId = MoonbeamChainId;
 	type ChannelCommission = ();
 	type MaxLockRecords = ConstU32<100>;
 	type IncentivePoolAccount = IncentivePoolAccount;
@@ -349,14 +342,14 @@ parameter_types! {
 	pub const MaxAssetsForTransfer: usize = 2;
 }
 
-pub struct BifrostCurrencyIdConvert<T>(sp_std::marker::PhantomData<T>);
-impl<T: Get<ParaId>> Convert<CurrencyId, Option<Location>> for BifrostCurrencyIdConvert<T> {
+pub struct CurrencyIdConvert<T>(sp_std::marker::PhantomData<T>);
+impl<T: Get<ParaId>> Convert<CurrencyId, Option<Location>> for CurrencyIdConvert<T> {
 	fn convert(id: CurrencyId) -> Option<Location> {
 		AssetIdMaps::<Test>::get_location(id)
 	}
 }
 
-impl<T: Get<ParaId>> Convert<Location, Option<CurrencyId>> for BifrostCurrencyIdConvert<T> {
+impl<T: Get<ParaId>> Convert<Location, Option<CurrencyId>> for CurrencyIdConvert<T> {
 	fn convert(location: Location) -> Option<CurrencyId> {
 		AssetIdMaps::<Test>::get_currency_id(location)
 	}
@@ -368,11 +361,11 @@ impl orml_xtokens::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
 	type Balance = Balance;
 	type CurrencyId = CurrencyId;
-	type CurrencyIdConvert = BifrostCurrencyIdConvert<ParachainInfo>;
+	type CurrencyIdConvert = CurrencyIdConvert<ParachainInfo>;
 	type AccountIdToLocation = ();
 	type UniversalLocation = UniversalLocation;
 	type SelfLocation = SelfRelativeLocation;
-	type XcmExecutor = DoNothingExecuteXcm;
+	type XcmExecutor = MockXcmExecutor;
 	type Weigher = FixedWeightBounds<UnitWeightCost, RuntimeCall, MaxInstructions>;
 	type BaseXcmWeight = BaseXcmWeight;
 	type MaxAssetsForTransfer = MaxAssetsForTransfer;
@@ -458,9 +451,9 @@ impl pallet_xcm::Config for Test {
 	type SendXcmOrigin = EnsureXcmOrigin<RuntimeOrigin, ()>;
 	type Weigher = FixedWeightBounds<UnitWeightCost, RuntimeCall, MaxInstructions>;
 	type XcmExecuteFilter = Nothing;
-	type XcmExecutor = DoNothingExecuteXcm;
+	type XcmExecutor = MockXcmExecutor;
 	type XcmReserveTransferFilter = Everything;
-	type XcmRouter = bifrost_primitives::DoNothingRouter;
+	type XcmRouter = bifrost_primitives::MockXcmRouter;
 	type XcmTeleportFilter = Nothing;
 	type RuntimeOrigin = RuntimeOrigin;
 	type RuntimeCall = RuntimeCall;

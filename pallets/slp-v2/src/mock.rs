@@ -19,7 +19,7 @@
 use crate as slp_v2;
 use bifrost_asset_registry::AssetIdMaps;
 use bifrost_primitives::{
-	Amount, Balance, BlockNumber, CurrencyId, DoNothingRouter, MockXcmTransfer, SlpOperator,
+	Amount, Balance, BlockNumber, CurrencyId, MockXcmRouter, MockXcmTransfer, SlpOperator,
 	SlpxOperator, BNC, DOT,
 };
 use frame_support::{
@@ -187,7 +187,7 @@ impl pallet_xcm::Config for Test {
 	type XcmExecuteFilter = Nothing;
 	type XcmExecutor = XcmExecutor<XcmConfig>;
 	type XcmReserveTransferFilter = Everything;
-	type XcmRouter = DoNothingRouter;
+	type XcmRouter = MockXcmRouter;
 	type XcmTeleportFilter = Nothing;
 	type RuntimeOrigin = RuntimeOrigin;
 	type RuntimeCall = RuntimeCall;
@@ -254,11 +254,7 @@ impl bifrost_vtoken_minting::Config for Test {
 	type WeightInfo = ();
 	type OnRedeemSuccess = ();
 	type XcmTransfer = MockXcmTransfer;
-	type AstarParachainId = ConstU32<2007>;
-	type MoonbeamParachainId = ConstU32<2023>;
-	type HydradxParachainId = ConstU32<2034>;
-	type MantaParachainId = ConstU32<2104>;
-	type InterlayParachainId = ConstU32<2032>;
+	type MoonbeamChainId = ConstU32<2023>;
 	type ChannelCommission = ();
 	type MaxLockRecords = ConstU32<100>;
 	type IncentivePoolAccount = IncentivePoolAccount;
@@ -291,7 +287,7 @@ impl slp_v2::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
 	type RuntimeOrigin = RuntimeOrigin;
 	type RuntimeCall = RuntimeCall;
-	type XcmSender = DoNothingRouter;
+	type XcmSender = MockXcmRouter;
 	type WeightInfo = ();
 	type MultiCurrency = Tokens;
 	type ControlOrigin = EnsureRoot<AccountId>;

@@ -22,7 +22,7 @@ use bifrost_polkadot_runtime::{
 };
 use bifrost_primitives::{
 	currency::{BNCS, DED, IBTC, INTR, PEN, PINK, USDC, WETH},
-	CurrencyId,
+	BifrostPolkadotChainId, CurrencyId,
 	CurrencyId::*,
 	TokenInfo, TokenSymbol, ASTR, BNC, DOT, DOT_TOKEN_ID, DOT_U, FIL, GLMR, MANTA,
 };
@@ -46,8 +46,6 @@ pub type ChainSpec = sc_service::GenericChainSpec<RelayExtensions>;
 pub fn ENDOWMENT() -> u128 {
 	1_000_000 * DOLLARS
 }
-
-pub const PARA_ID: u32 = 2030;
 
 fn bifrost_polkadot_properties() -> Properties {
 	let mut properties = sc_chain_spec::Properties::new();
@@ -227,7 +225,11 @@ pub fn local_testnet_config() -> ChainSpec {
 
 	ChainSpec::builder(
 		bifrost_polkadot_runtime::WASM_BINARY.expect("WASM binary was not built, please build it!"),
-		RelayExtensions { relay_chain: "polkadot-local".into(), para_id: PARA_ID, evm_since: 1 },
+		RelayExtensions {
+			relay_chain: "polkadot-local".into(),
+			para_id: BifrostPolkadotChainId::get(),
+			evm_since: 1,
+		},
 	)
 	.with_name("Bifrost Polkadot Local Testnet")
 	.with_id("bifrost_polkadot_local_testnet")
@@ -242,7 +244,7 @@ pub fn local_testnet_config() -> ChainSpec {
 		],
 		balances,
 		vec![],
-		PARA_ID.into(),
+		BifrostPolkadotChainId::get().into(),
 		tokens,
 		council_membership,
 		technical_committee_membership,
@@ -336,7 +338,11 @@ pub fn dev_config() -> ChainSpec {
 
 	ChainSpec::builder(
 		bifrost_polkadot_runtime::WASM_BINARY.expect("WASM binary was not built, please build it!"),
-		RelayExtensions { relay_chain: "polkadot".into(), para_id: PARA_ID, evm_since: 1 },
+		RelayExtensions {
+			relay_chain: "polkadot".into(),
+			para_id: BifrostPolkadotChainId::get(),
+			evm_since: 1,
+		},
 	)
 	.with_name("Bifrost Polkadot Dev Testnet")
 	.with_id("dev")
@@ -351,7 +357,7 @@ pub fn dev_config() -> ChainSpec {
 		],
 		balances,
 		vec![],
-		PARA_ID.into(),
+		BifrostPolkadotChainId::get().into(),
 		tokens,
 		council_membership,
 		technical_committee_membership,
@@ -425,7 +431,11 @@ pub fn paseo_config() -> ChainSpec {
 
 	ChainSpec::builder(
 		bifrost_polkadot_runtime::WASM_BINARY.expect("WASM binary was not built, please build it!"),
-		RelayExtensions { relay_chain: "paseo".into(), para_id: PARA_ID, evm_since: 1 },
+		RelayExtensions {
+			relay_chain: "paseo".into(),
+			para_id: BifrostPolkadotChainId::get(),
+			evm_since: 1,
+		},
 	)
 	.with_name("Bifrost Paseo")
 	.with_id("bifrost_paseo")
@@ -434,7 +444,7 @@ pub fn paseo_config() -> ChainSpec {
 		invulnerables,
 		balances,
 		vec![],
-		PARA_ID.into(),
+		BifrostPolkadotChainId::get().into(),
 		vec![],
 		council_membership,
 		technical_committee_membership,
@@ -480,7 +490,11 @@ pub fn chainspec_config() -> ChainSpec {
 
 	ChainSpec::builder(
 		bifrost_polkadot_runtime::WASM_BINARY.expect("WASM binary was not built, please build it!"),
-		RelayExtensions { relay_chain: "polkadot".into(), para_id: PARA_ID, evm_since: 1 },
+		RelayExtensions {
+			relay_chain: "polkadot".into(),
+			para_id: BifrostPolkadotChainId::get(),
+			evm_since: 1,
+		},
 	)
 	.with_name("Bifrost Polkadot")
 	.with_id("bifrost_polkadot")
@@ -489,7 +503,7 @@ pub fn chainspec_config() -> ChainSpec {
 		invulnerables,
 		vec![],
 		vec![],
-		PARA_ID.into(),
+		BifrostPolkadotChainId::get().into(),
 		vec![],
 		vec![],
 		vec![],

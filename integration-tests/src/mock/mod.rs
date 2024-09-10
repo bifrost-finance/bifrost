@@ -62,6 +62,7 @@ decl_test_network! {
 pub type BifrostTokens = orml_tokens::Pallet<bifrost::Runtime>;
 pub type BifrostXTokens = orml_xtokens::Pallet<bifrost::Runtime>;
 pub type BifrostSlp = bifrost_slp::Pallet<bifrost::Runtime>;
+pub type BifrostAssetRegistry = bifrost_asset_registry::Pallet<bifrost::Runtime>;
 
 pub type RelayBalances = pallet_balances::Pallet<relaychain::Runtime>;
 pub type RelaySystem = frame_system::Pallet<relaychain::Runtime>;
@@ -71,6 +72,15 @@ pub fn para_ext(para_id: u32) -> TestExternalities {
 	use bifrost::{MessageQueue, Runtime, System};
 
 	let mut t = frame_system::GenesisConfig::<Runtime>::default().build_storage().unwrap();
+
+	bifrost_asset_registry::GenesisConfig::<Runtime> {
+		currency: vec![(CurrencyId::Token2(0), 1_000_000, None)],
+		vcurrency: vec![],
+		vsbond: vec![],
+		phantom: Default::default(),
+	}
+	.assimilate_storage(&mut t)
+	.unwrap();
 
 	orml_tokens::GenesisConfig::<Runtime> {
 		balances: vec![(ALICE, CurrencyId::Token2(0), 100_000_000_000)],

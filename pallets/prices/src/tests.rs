@@ -15,6 +15,7 @@
 //! Unit tests for the prices pallet.
 
 use super::*;
+use bifrost_primitives::VKSM;
 use frame_support::{assert_noop, assert_ok};
 use mock::{RuntimeEvent, *};
 use sp_runtime::{traits::BadOrigin, FixedPointNumber};

@@ -25,8 +25,7 @@ use bb_bnc::{BbBNCInterface, Point};
 use bifrost_asset_registry::AssetIdMaps;
 use bifrost_primitives::{
 	currency::{BNC, DOT, FIL, KSM, MOVR, VBNC, VFIL, VKSM, VMOVR},
-	AstarParachainId, CurrencyId, CurrencyIdMapping, HydradxParachainId, InterlayParachainId,
-	MantaParachainId, MoonbeamParachainId, SlpxOperator, TokenSymbol,
+	CurrencyId, CurrencyIdMapping, MoonbeamChainId, SlpxOperator, TokenSymbol,
 };
 use bifrost_runtime_common::{micro, milli};
 use bifrost_slp::{QueryId, QueryResponseManager};
@@ -230,11 +229,7 @@ impl vtoken_minting::Config for Runtime {
 	type WeightInfo = ();
 	type OnRedeemSuccess = ();
 	type XcmTransfer = XTokens;
-	type AstarParachainId = AstarParachainId;
-	type MoonbeamParachainId = MoonbeamParachainId;
-	type HydradxParachainId = HydradxParachainId;
-	type MantaParachainId = MantaParachainId;
-	type InterlayParachainId = InterlayParachainId;
+	type MoonbeamChainId = MoonbeamChainId;
 	type ChannelCommission = ();
 	type AssetIdMaps = AssetIdMaps<Runtime>;
 }

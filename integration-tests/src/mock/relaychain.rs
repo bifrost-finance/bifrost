@@ -17,7 +17,7 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 use bifrost_polkadot_runtime::{
-	xcm_config, BlockHashCount, Hash, Nonce, ReservedDmpWeight, ReservedXcmpWeight,
+	BlockHashCount, Hash, Nonce, RelayOrigin, ReservedDmpWeight, ReservedXcmpWeight,
 	RuntimeBlockLength, RuntimeBlockWeights, SS58Prefix, Version, XcmpQueue,
 };
 use cumulus_pallet_parachain_system::RelayNumberStrictlyIncreases;
@@ -71,7 +71,7 @@ impl frame_system::Config for Runtime {
 impl cumulus_pallet_parachain_system::Config for Runtime {
 	type DmpQueue = frame_support::traits::EnqueueWithOrigin<
 		bifrost_polkadot_runtime::MessageQueue,
-		xcm_config::RelayOrigin,
+		RelayOrigin,
 	>;
 	type RuntimeEvent = RuntimeEvent;
 	type OnSystemEvent = ();

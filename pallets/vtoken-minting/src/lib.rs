@@ -76,7 +76,9 @@ const INCENTIVE_LOCK_ID: LockIdentifier = *b"vmincntv";
 #[frame_support::pallet]
 pub mod pallet {
 	use super::*;
-	use bifrost_primitives::{currency::BNC, FIL};
+	use bifrost_primitives::{
+		currency::BNC, AstarChainId, HydrationChainId, InterlayChainId, MantaChainId, FIL,
+	};
 	use frame_support::pallet_prelude::DispatchResultWithPostInfo;
 	use orml_traits::XcmTransfer;
 	use xcm::{prelude::*, v4::Location};
@@ -135,19 +137,7 @@ pub mod pallet {
 		type RelayChainToken: Get<CurrencyId>;
 
 		#[pallet::constant]
-		type AstarParachainId: Get<u32>;
-
-		#[pallet::constant]
-		type MoonbeamParachainId: Get<u32>;
-
-		#[pallet::constant]
-		type HydradxParachainId: Get<u32>;
-
-		#[pallet::constant]
-		type InterlayParachainId: Get<u32>;
-
-		#[pallet::constant]
-		type MantaParachainId: Get<u32>;
+		type MoonbeamChainId: Get<u32>;
 
 		type BifrostSlp: SlpOperator<CurrencyId>;
 
@@ -1256,7 +1246,7 @@ pub mod pallet {
 						let dest = Location::new(
 							1,
 							[
-								Parachain(T::AstarParachainId::get()),
+								Parachain(AstarChainId::get()),
 								AccountId32 {
 									network: None,
 									id: receiver.encode().try_into().unwrap(),
@@ -1276,7 +1266,7 @@ pub mod pallet {
 						let dest = Location::new(
 							1,
 							[
-								Parachain(T::HydradxParachainId::get()),
+								Parachain(HydrationChainId::get()),
 								AccountId32 {
 									network: None,
 									id: receiver.encode().try_into().unwrap(),
@@ -1296,7 +1286,7 @@ pub mod pallet {
 						let dest = Location::new(
 							1,
 							[
-								Parachain(T::InterlayParachainId::get()),
+								Parachain(InterlayChainId::get()),
 								AccountId32 {
 									network: None,
 									id: receiver.encode().try_into().unwrap(),
@@ -1316,7 +1306,7 @@ pub mod pallet {
 						let dest = Location::new(
 							1,
 							[
-								Parachain(T::MantaParachainId::get()),
+								Parachain(MantaChainId::get()),
 								AccountId32 {
 									network: None,
 									id: receiver.encode().try_into().unwrap(),
@@ -1336,7 +1326,7 @@ pub mod pallet {
 						let dest = Location::new(
 							1,
 							[
-								Parachain(T::MoonbeamParachainId::get()),
+								Parachain(T::MoonbeamChainId::get()),
 								AccountKey20 { network: None, key: receiver.to_fixed_bytes() },
 							],
 						);
@@ -2110,20 +2100,8 @@ impl<T: Config> VtokenMintingOperator<CurrencyId, BalanceOf<T>, AccountIdOf<T>, 
 		TokenUnlockLedger::<T>::get(currency_id, index)
 	}
 
-	fn get_astar_parachain_id() -> u32 {
-		T::AstarParachainId::get()
-	}
 	fn get_moonbeam_parachain_id() -> u32 {
-		T::MoonbeamParachainId::get()
-	}
-	fn get_hydradx_parachain_id() -> u32 {
-		T::HydradxParachainId::get()
-	}
-	fn get_interlay_parachain_id() -> u32 {
-		T::InterlayParachainId::get()
-	}
-	fn get_manta_parachain_id() -> u32 {
-		T::MantaParachainId::get()
+		T::MoonbeamChainId::get()
 	}
 }
 
@@ -2189,20 +2167,8 @@ impl<T: Config> VtokenMintingInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceO
 		TokenPool::<T>::get(currency_id)
 	}
 
-	fn get_astar_parachain_id() -> u32 {
-		T::AstarParachainId::get()
-	}
 	fn get_moonbeam_parachain_id() -> u32 {
-		T::MoonbeamParachainId::get()
-	}
-	fn get_hydradx_parachain_id() -> u32 {
-		T::HydradxParachainId::get()
-	}
-	fn get_interlay_parachain_id() -> u32 {
-		T::InterlayParachainId::get()
-	}
-	fn get_manta_parachain_id() -> u32 {
-		T::MantaParachainId::get()
+		T::MoonbeamChainId::get()
 	}
 }
 

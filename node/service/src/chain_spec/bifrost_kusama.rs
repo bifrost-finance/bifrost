@@ -16,11 +16,14 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
+use crate::chain_spec::{get_account_id_from_seed, get_from_seed, RelayExtensions};
 use bifrost_kusama_runtime::{
 	constants::currency::DOLLARS, AccountId, Balance, BalancesConfig, BlockNumber,
 	DefaultBlocksPerRound, InflationInfo, Range, SS58Prefix, VestingConfig,
 };
-use bifrost_primitives::{CurrencyId, CurrencyId::*, TokenInfo, TokenSymbol::*};
+use bifrost_primitives::{
+	BifrostKusamaChainId, CurrencyId, CurrencyId::*, TokenInfo, TokenSymbol::*,
+};
 use bifrost_runtime_common::AuraId;
 use cumulus_primitives_core::ParaId;
 use frame_benchmarking::{account, whitelisted_caller};
@@ -37,8 +40,6 @@ use std::{
 	path::PathBuf,
 };
 
-use crate::chain_spec::{get_account_id_from_seed, get_from_seed, RelayExtensions};
-
 const DEFAULT_PROTOCOL_ID: &str = "bifrost";
 
 /// Specialized `ChainSpec` for the bifrost runtime.
@@ -48,8 +49,6 @@ pub type ChainSpec = sc_service::GenericChainSpec<RelayExtensions>;
 pub fn ENDOWMENT() -> u128 {
 	1_000_000 * DOLLARS
 }
-
-pub const PARA_ID: u32 = 2001;
 
 pub fn inflation_config() -> InflationInfo<Balance> {
 	fn to_round_inflation(annual: Range<Perbill>) -> Range<Perbill> {
@@ -219,7 +218,11 @@ pub fn local_testnet_config() -> ChainSpec {
 
 	ChainSpec::builder(
 		bifrost_kusama_runtime::WASM_BINARY.expect("WASM binary was not built, please build it!"),
-		RelayExtensions { relay_chain: "kusama-local".into(), para_id: PARA_ID, evm_since: 1 },
+		RelayExtensions {
+			relay_chain: "kusama-local".into(),
+			para_id: BifrostKusamaChainId::get(),
+			evm_since: 1,
+		},
 	)
 	.with_name("Bifrost Local Testnet")
 	.with_id("bifrost_local_testnet")
@@ -240,7 +243,7 @@ pub fn local_testnet_config() -> ChainSpec {
 		vec![],
 		balances,
 		vestings,
-		PARA_ID.into(),
+		BifrostKusamaChainId::get().into(),
 		council_membership,
 		technical_committee_membership,
 		salp_multisig,
@@ -325,7 +328,11 @@ pub fn chainspec_config() -> ChainSpec {
 
 	ChainSpec::builder(
 		bifrost_kusama_runtime::WASM_BINARY.expect("WASM binary was not built, please build it!"),
-		RelayExtensions { relay_chain: "kusama".into(), para_id: PARA_ID, evm_since: 1 },
+		RelayExtensions {
+			relay_chain: "kusama".into(),
+			para_id: BifrostKusamaChainId::get(),
+			evm_since: 1,
+		},
 	)
 	.with_name("Bifrost")
 	.with_id("bifrost")
@@ -335,7 +342,7 @@ pub fn chainspec_config() -> ChainSpec {
 		vec![],
 		balances,
 		vesting_configs.into_iter().flat_map(|vc| vc.vesting).collect(),
-		PARA_ID.into(),
+		BifrostKusamaChainId::get().into(),
 		vec![], // council membership
 		vec![], // technical committee membership
 		salp_multisig,
