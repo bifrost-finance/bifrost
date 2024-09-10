@@ -22,7 +22,6 @@ pub use bifrost_primitives::{currency::*, *};
 use frame_support::{
 	construct_runtime, derive_impl, parameter_types,
 	traits::{AsEnsureOriginWithArg, Nothing, SortedMembers},
-	PalletId,
 };
 use frame_system::{EnsureRoot, EnsureSigned, EnsureSignedBy};
 use orml_traits::{DataFeeder, DataProvider, DataProviderExtended};
@@ -302,7 +301,6 @@ impl pallet_prices::Config for Test {
 }
 
 parameter_types! {
-	pub const LendMarketPalletId: PalletId = PalletId(*b"bf/ldmkt");
 	pub const RewardAssetId: CurrencyId = BNC;
 	pub const LiquidationFreeAssetId: CurrencyId = DOT;
 }

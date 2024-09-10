@@ -23,8 +23,13 @@
 use crate::*;
 use bifrost_asset_registry::AssetIdMaps;
 use bifrost_primitives::{
-	Amount, Balance, CurrencyId, CurrencyId::*, MessageId, MockXcmExecutor, ParaId, SlpOperator,
-	SlpxOperator, TokenSymbol, TokenSymbol::*, VKSM,
+	Amount, Balance, BifrostCrowdloanId, BifrostEntranceAccount, BifrostExitAccount,
+	BuybackPalletId,
+	CurrencyId::{self, *},
+	IncentivePoolAccount, MessageId, MockXcmExecutor, ParaId, SlpOperator, SlpxOperator,
+	StableAssetPalletId,
+	TokenSymbol::{self, *},
+	ZenlinkPalletId, VKSM,
 };
 use bifrost_xcm_interface::traits::XcmHelper;
 use cumulus_primitives_core::ParaId as Pid;
@@ -33,7 +38,6 @@ use frame_support::{
 	sp_runtime::{DispatchError, DispatchResult, SaturatedConversion},
 	traits::{ConstU128, ConstU64, EnsureOrigin, Everything, Get, Nothing},
 	weights::Weight,
-	PalletId,
 };
 use frame_system::{EnsureRoot, EnsureSignedBy, RawOrigin};
 use orml_traits::{location::RelativeReserveProvider, parameter_type_with_key, MultiCurrency};
@@ -178,7 +182,6 @@ impl bifrost_currencies::Config for Test {
 }
 
 parameter_types! {
-	pub const ZenlinkPalletId: PalletId = PalletId(*b"/zenlink");
 	pub const GetExchangeFee: (u32, u32) = (3, 1000);   // 0.3%
 	pub const SelfParaId: u32 = 2001;
 }
@@ -269,7 +272,6 @@ pub const TREASURY_ACCOUNT: AccountId = AccountId::new([9u8; 32]);
 
 parameter_types! {
 	pub const MinContribution: Balance = 10;
-	pub const BifrostCrowdloanId: PalletId = PalletId(*b"bf/salp#");
 	pub const RemoveKeysLimit: u32 = 50;
 	pub const SlotLength: BlockNumber = 8u32 as BlockNumber;
 	pub const LeasePeriod: BlockNumber = 6 * WEEKS;
@@ -282,7 +284,6 @@ parameter_types! {
 		CATHI
 	],2);
 	pub const TreasuryAccount: AccountId = TREASURY_ACCOUNT;
-	pub const BuybackPalletId: PalletId = PalletId(*b"bf/salpc");
 	pub const BatchLimit: u32 = 50;
 }
 
@@ -331,9 +332,6 @@ impl bifrost_stable_asset::traits::ValidateAssetId<CurrencyId> for EnsurePoolAss
 		true
 	}
 }
-parameter_types! {
-	pub const StableAssetPalletId: PalletId = PalletId(*b"nuts/sta");
-}
 
 impl bifrost_stable_asset::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
@@ -365,9 +363,6 @@ impl bifrost_stable_pool::Config for Test {
 parameter_types! {
 	pub const MaximumUnlockIdOfUser: u32 = 1_000;
 	pub const MaximumUnlockIdOfTimeUnit: u32 = 1_000;
-	pub BifrostEntranceAccount: PalletId = PalletId(*b"bf/vtkin");
-	pub BifrostExitAccount: PalletId = PalletId(*b"bf/vtout");
-	pub IncentivePoolAccount: PalletId = PalletId(*b"bf/inpoo");
 }
 
 pub struct SlpxInterface;

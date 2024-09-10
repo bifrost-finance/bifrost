@@ -22,12 +22,14 @@ use bifrost_asset_registry::AssetIdMaps;
 pub use bifrost_primitives::{
 	currency::*, Balance, CurrencyId, CurrencyIdMapping, SlpOperator, SlpxOperator, TokenSymbol,
 };
-use bifrost_primitives::{Moment, MoonbeamChainId, Price, PriceDetail, Ratio};
+use bifrost_primitives::{
+	BifrostEntranceAccount, BifrostExitAccount, IncentivePoolAccount, LendMarketPalletId, Moment,
+	MoonbeamChainId, Price, PriceDetail, Ratio, StableAssetPalletId,
+};
 use bifrost_runtime_common::milli;
 use frame_support::{
 	derive_impl, ord_parameter_types, parameter_types,
 	traits::{ConstU128, ConstU32, Everything, Nothing},
-	PalletId,
 };
 use frame_system::{EnsureRoot, EnsureSignedBy};
 use lend_market::{InterestRateModel, JumpModel, Market, MarketState};
@@ -235,9 +237,6 @@ impl bifrost_stable_asset::traits::ValidateAssetId<CurrencyId> for EnsurePoolAss
 		true
 	}
 }
-parameter_types! {
-	pub const StableAssetPalletId: PalletId = PalletId(*b"nuts/sta");
-}
 
 impl bifrost_stable_asset::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
@@ -279,9 +278,6 @@ impl leverage_staking::Config for Test {
 parameter_types! {
 	pub const MaximumUnlockIdOfUser: u32 = 1_000;
 	pub const MaximumUnlockIdOfTimeUnit: u32 = 1_000;
-	pub BifrostEntranceAccount: PalletId = PalletId(*b"bf/vtkin");
-	pub BifrostExitAccount: PalletId = PalletId(*b"bf/vtout");
-	pub IncentivePoolAccount: PalletId = PalletId(*b"bf/inpoo");
 }
 
 pub struct SlpxInterface;
@@ -425,7 +421,6 @@ impl PriceFeeder for MockPriceFeeder {
 }
 
 parameter_types! {
-	pub const LendMarketPalletId: PalletId = PalletId(*b"bf/ldmkt");
 	pub const RewardAssetId: CurrencyId = BNC;
 	pub const LiquidationFreeAssetId: CurrencyId = DOT;
 }

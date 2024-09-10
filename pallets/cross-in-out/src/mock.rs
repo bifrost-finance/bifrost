@@ -21,7 +21,7 @@
 
 use bifrost_primitives::{
 	currency::{BNC, DOT, KSM, VDOT},
-	CurrencyId, TokenSymbol,
+	CurrencyId, SlpEntrancePalletId, TokenSymbol,
 };
 use frame_support::{derive_impl, ord_parameter_types, parameter_types, traits::Nothing, PalletId};
 use frame_system::EnsureSignedBy;
@@ -126,7 +126,6 @@ ord_parameter_types! {
 }
 
 parameter_types! {
-	pub const SlpEntrancePalletId: PalletId = PalletId(*b"bf/vtkin");
 	pub const MaxLengthLimit: u32 = 100;
 }
 

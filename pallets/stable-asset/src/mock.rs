@@ -17,12 +17,12 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 use crate as stable_asset;
+use bifrost_primitives::StableAssetPalletId;
 use frame_support::{
 	derive_impl,
 	dispatch::DispatchResult,
 	parameter_types,
 	traits::{ConstU128, ConstU32, Currency, EnsureOrigin, Nothing, OnUnbalanced},
-	PalletId,
 };
 use frame_system::RawOrigin;
 use orml_traits::MultiCurrency;
@@ -264,10 +264,6 @@ impl crate::traits::ValidateAssetId<i64> for EnsurePoolAssetId {
 	fn validate(_: i64) -> bool {
 		true
 	}
-}
-
-parameter_types! {
-	pub const StableAssetPalletId: PalletId = PalletId(*b"nuts/sta");
 }
 
 impl stable_asset::Config for Test {

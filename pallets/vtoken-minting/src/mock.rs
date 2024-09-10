@@ -24,7 +24,8 @@
 use bifrost_asset_registry::AssetIdMaps;
 use bifrost_primitives::{
 	currency::{BNC, DOT, FIL, KSM, MOVR, VBNC, VFIL, VKSM, VMOVR},
-	CurrencyId, CurrencyIdMapping, MoonbeamChainId, SlpxOperator, TokenSymbol,
+	BifrostEntranceAccount, BifrostExitAccount, BifrostFeeAccount, CurrencyId, CurrencyIdMapping,
+	IncentivePoolAccount, MoonbeamChainId, SlpxOperator, TokenSymbol,
 };
 use bifrost_runtime_common::{micro, milli};
 use bifrost_slp::{QueryId, QueryResponseManager};
@@ -35,10 +36,8 @@ use frame_support::{
 	pallet_prelude::Get,
 	parameter_types,
 	traits::{Everything, Nothing},
-	PalletId,
 };
 use frame_system::{EnsureRoot, EnsureSignedBy};
-use hex_literal::hex;
 use orml_traits::{location::RelativeReserveProvider, parameter_type_with_key};
 use sp_runtime::{
 	traits::{ConstU32, IdentityLookup},
@@ -197,10 +196,6 @@ parameter_types! {
 	pub const MaximumUnlockIdOfUser: u32 = 1_000;
 	pub const MaximumUnlockIdOfTimeUnit: u32 = 1_000;
 	pub const MaxLockRecords: u32 = 64;
-	pub BifrostEntranceAccount: PalletId = PalletId(*b"bf/vtkin");
-	pub BifrostExitAccount: PalletId = PalletId(*b"bf/vtout");
-	pub IncentivePoolAccount: PalletId = PalletId(*b"bf/inpoo");
-	pub BifrostFeeAccount: AccountId = hex!["e4da05f08e89bf6c43260d96f26fffcfc7deae5b465da08669a9d008e64c2c63"].into();
 }
 
 ord_parameter_types! {

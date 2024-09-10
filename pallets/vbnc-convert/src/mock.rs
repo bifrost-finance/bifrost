@@ -24,9 +24,9 @@
 use bifrost_asset_registry::AssetIdMaps;
 use bifrost_primitives::{
 	currency::{BNC, KSM, VBNC, VBNC_P, VKSM},
-	CurrencyId, CurrencyIdMapping, TokenSymbol,
+	CurrencyId, CurrencyIdMapping, TokenSymbol, VBNCConvertPalletId,
 };
-use frame_support::{ord_parameter_types, parameter_types, traits::Nothing, PalletId};
+use frame_support::{ord_parameter_types, parameter_types, traits::Nothing};
 use frame_system::EnsureSignedBy;
 use sp_core::H256;
 use sp_runtime::{
@@ -163,10 +163,6 @@ impl bifrost_asset_registry::Config for Runtime {
 	type Currency = Balances;
 	type RegisterOrigin = EnsureSignedBy<One, AccountId>;
 	type WeightInfo = ();
-}
-
-parameter_types! {
-	pub const VBNCConvertPalletId: PalletId = PalletId(*b"bf/vbncc");
 }
 
 impl bifrost_vbnc_convert::Config for Runtime {

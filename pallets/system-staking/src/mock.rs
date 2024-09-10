@@ -19,8 +19,12 @@
 #![allow(non_upper_case_globals)]
 
 use bifrost_asset_registry::AssetIdMaps;
-use bifrost_primitives::MoonbeamChainId;
 pub use bifrost_primitives::{currency::*, CurrencyId, SlpxOperator, TokenSymbol};
+use bifrost_primitives::{
+	BifrostEntranceAccount, BifrostExitAccount, BifrostFeeAccount, FarmingBoostPalletId,
+	FarmingGaugeRewardIssuerPalletId, FarmingKeeperPalletId, FarmingRewardIssuerPalletId,
+	IncentivePoolAccount, MoonbeamChainId, SystemStakingPalletId,
+};
 use bifrost_slp::{QueryId, QueryResponseManager};
 pub use cumulus_primitives_core::ParaId;
 use cumulus_primitives_core::*;
@@ -29,10 +33,8 @@ use frame_support::{
 	pallet_prelude::Get,
 	parameter_types,
 	traits::{Everything, Nothing, OnFinalize, OnInitialize},
-	PalletId,
 };
 use frame_system::{EnsureRoot, EnsureSignedBy};
-use hex_literal::hex;
 use orml_traits::{location::RelativeReserveProvider, parameter_type_with_key};
 use sp_core::ConstU32;
 use sp_runtime::{
@@ -173,11 +175,7 @@ impl orml_xtokens::Config for Runtime {
 parameter_types! {
 	pub const MaximumUnlockIdOfUser: u32 = 10;
 	pub const MaximumUnlockIdOfTimeUnit: u32 = 50;
-	pub BifrostEntranceAccount: PalletId = PalletId(*b"bf/vtkin");
-	pub BifrostExitAccount: PalletId = PalletId(*b"bf/vtout");
-	pub BifrostFeeAccount: AccountId = hex!["e4da05f08e89bf6c43260d96f26fffcfc7deae5b465da08669a9d008e64c2c63"].into();
 	pub const RelayCurrencyId: CurrencyId = KSM;
-	pub IncentivePoolAccount: PalletId = PalletId(*b"bf/inpoo");
 }
 
 impl bifrost_vtoken_minting::Config for Runtime {
@@ -277,11 +275,7 @@ impl bifrost_slp::Config for Runtime {
 }
 
 parameter_types! {
-	pub const FarmingKeeperPalletId: PalletId = PalletId(*b"bf/fmkpr");
-	pub const FarmingRewardIssuerPalletId: PalletId = PalletId(*b"bf/fmrir");
-	pub const FarmingBoostPalletId: PalletId = PalletId(*b"bf/fmbst");
 	pub const WhitelistMaximumLimit: u32 = 10;
-	pub const FarmingGaugeRewardIssuerPalletId: PalletId = PalletId(*b"bf/fmgar");
 }
 
 ord_parameter_types! {
@@ -309,7 +303,6 @@ parameter_types! {
 	pub const BlocksPerRound: u32 = 5;
 	pub const MaxTokenLen: u32 = 50;
 	pub const MaxFarmingPoolIdLen: u32 = 100;
-	pub const SystemStakingPalletId: PalletId = PalletId(*b"bf/sysst");
 }
 
 impl system_staking::Config for Runtime {

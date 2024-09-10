@@ -21,8 +21,9 @@
 #![cfg(test)]
 #![allow(non_upper_case_globals)]
 
+use bifrost_primitives::BifrostVsbondAccount;
 pub use bifrost_primitives::{currency::*, CurrencyId, TokenSymbol};
-use frame_support::{derive_impl, ord_parameter_types, parameter_types, traits::Nothing, PalletId};
+use frame_support::{derive_impl, ord_parameter_types, parameter_types, traits::Nothing};
 use frame_system::EnsureSignedBy;
 use sp_core::ConstU32;
 use sp_runtime::{traits::IdentityLookup, AccountId32, BuildStorage};
@@ -120,7 +121,6 @@ impl orml_tokens::Config for Runtime {
 
 parameter_types! {
 	pub const TreasuryAccount: AccountId32 = TREASURY_ACCOUNT;
-	pub BifrostVsbondAccount: PalletId = PalletId(*b"bf/salpb");
 }
 
 ord_parameter_types! {

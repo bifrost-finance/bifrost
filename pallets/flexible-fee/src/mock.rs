@@ -22,8 +22,9 @@ use super::*;
 use crate::{self as flexible_fee, tests::CHARLIE};
 use bifrost_asset_registry::AssetIdMaps;
 use bifrost_primitives::{
-	Balance, CurrencyId, DerivativeAccountHandler, DerivativeIndex, ExtraFeeInfo, MessageId,
-	ParaId, TokenSymbol, VTokenSupplyProvider, VKSM,
+	Balance, BifrostCrowdloanId, BuybackPalletId, CurrencyId, DerivativeAccountHandler,
+	DerivativeIndex, ExtraFeeInfo, FlexibleFeePalletId, MessageId, ParaId, TokenSymbol,
+	VTokenSupplyProvider, ZenlinkPalletId, VKSM,
 };
 use bifrost_vtoken_voting::AccountVote;
 use bifrost_xcm_interface::traits::XcmHelper;
@@ -175,7 +176,6 @@ impl orml_tokens::Config for Test {
 parameter_types! {
 	pub const TreasuryAccount: AccountId32 = TREASURY_ACCOUNT;
 	pub const MaxFeeCurrencyOrderListLen: u32 = 50;
-	pub const FlexibleFeePalletId: PalletId = PalletId(*b"bf/flexi");
 }
 
 ord_parameter_types! {
@@ -260,7 +260,6 @@ impl bifrost_currencies::Config for Test {
 }
 
 parameter_types! {
-	pub const ZenlinkPalletId: PalletId = PalletId(*b"/zenlink");
 	pub const GetExchangeFee: (u32, u32) = (3, 1000);   // 0.3%
 	pub const SelfParaId: u32 = 2001;
 }
@@ -371,7 +370,6 @@ pub const ALICE: AccountId = AccountId::new([0u8; 32]);
 
 parameter_types! {
 	pub const MinContribution: Balance = 10;
-	pub const BifrostCrowdloanId: PalletId = PalletId(*b"bf/salp#");
 	pub const RemoveKeysLimit: u32 = 50;
 	pub const SlotLength: BlockNumber = 8u32 as BlockNumber;
 	pub const LeasePeriod: BlockNumber = 8u32 as BlockNumber;
@@ -380,7 +378,6 @@ parameter_types! {
 	pub const ReleaseRatio: Percent = Percent::from_percent(50);
 	pub ConfirmMuitiSigAccount: AccountId = ALICE;
 	pub const RelayCurrencyId: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
-	pub const BuybackPalletId: PalletId = PalletId(*b"bf/salpc");
 	pub const SalpLockId: LockIdentifier = *b"salplock";
 	pub const BatchLimit: u32 = 50;
 }

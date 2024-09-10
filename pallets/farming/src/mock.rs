@@ -22,7 +22,11 @@
 #![allow(non_upper_case_globals)]
 
 pub use bifrost_primitives::{currency::*, CurrencyId, TokenSymbol};
-use frame_support::{derive_impl, ord_parameter_types, parameter_types, traits::Nothing, PalletId};
+use bifrost_primitives::{
+	BuyBackAccount, FarmingBoostPalletId, FarmingGaugeRewardIssuerPalletId, FarmingKeeperPalletId,
+	FarmingRewardIssuerPalletId, IncentivePalletId, VeMintingPalletId,
+};
+use frame_support::{derive_impl, ord_parameter_types, parameter_types, traits::Nothing};
 use frame_system::EnsureSignedBy;
 use sp_core::ConstU32;
 use sp_runtime::{
@@ -123,12 +127,8 @@ impl orml_tokens::Config for Runtime {
 }
 
 parameter_types! {
-	pub const FarmingKeeperPalletId: PalletId = PalletId(*b"bf/fmkpr");
-	pub const FarmingRewardIssuerPalletId: PalletId = PalletId(*b"bf/fmrir");
-	pub const FarmingBoostPalletId: PalletId = PalletId(*b"bf/fmbst");
 	pub const TreasuryAccount: AccountId32 = TREASURY_ACCOUNT;
 	pub const WhitelistMaximumLimit: u32 = 10;
-	pub const FarmingGaugeRewardIssuerPalletId: PalletId = PalletId(*b"bf/fmgar");
 }
 
 ord_parameter_types! {
@@ -153,9 +153,6 @@ impl bifrost_farming::Config for Runtime {
 
 parameter_types! {
 	pub const VeMintingTokenType: CurrencyId = CurrencyId::VToken(TokenSymbol::BNC);
-	pub VeMintingPalletId: PalletId = PalletId(*b"bf/vemnt");
-	pub IncentivePalletId: PalletId = PalletId(*b"bf/veict");
-	pub const BuyBackAccount: PalletId = PalletId(*b"bf/bybck");
 	pub const Week: BlockNumber = 50400; // a week
 	pub const MaxBlock: BlockNumber = 10512000; // four years
 	pub const Multiplier: Balance = 10_u128.pow(12);
