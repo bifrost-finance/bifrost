@@ -931,7 +931,7 @@ pub mod pallet {
 				Self::mint_inner(minter.clone(), token_id, token_amount, remark, channel_id)?;
 
 			// lock vtoken and record the lock
-			Self::lock_vtoken_for_incentibb_bnc(minter.clone(), vtoken_id, vtoken_minted)?;
+			Self::lock_vtoken_for_incentive_minting(minter.clone(), vtoken_id, vtoken_minted)?;
 
 			// calculate the incentive amount
 			let incentive_amount =
@@ -1786,7 +1786,7 @@ pub mod pallet {
 		}
 
 		// to lock user vtoken for incentive minting
-		fn lock_vtoken_for_incentibb_bnc(
+		fn lock_vtoken_for_incentive_minting(
 			minter: AccountIdOf<T>,
 			vtoken_id: CurrencyIdOf<T>,
 			vtoken_amount: BalanceOf<T>,
