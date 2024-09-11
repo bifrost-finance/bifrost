@@ -313,7 +313,7 @@ pub mod pallet {
 		_,
 		Blake2_128Concat,
 		AccountIdOf<T>,
-		BoundedVec<PoolId, ConstU32<{ u32::MAX }>>,
+		BoundedVec<PoolId, ConstU32<256>>,
 		ValueQuery,
 	>;
 
