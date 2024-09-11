@@ -466,8 +466,7 @@ impl pallet_xcm::Config for Runtime {
 
 parameter_types! {
 	pub const BbBNCTokenType: CurrencyId = CurrencyId::VToken(TokenSymbol::BNC);
-	pub BbBNCPalletId: PalletId = PalletId(*b"bf/vemnt");
-	pub IncentivePalletId: PalletId = PalletId(*b"bf/veict");
+	pub IncentivePalletId: PalletId = PalletId(*b"bf/bbict");
 	pub const Week: BlockNumber = 50400; // a week
 	pub const MaxBlock: BlockNumber = 10512000; // four years
 	pub const Multiplier: Balance = 10_u128.pow(12);
@@ -481,7 +480,6 @@ impl bb_bnc::Config for Runtime {
 	type MultiCurrency = Currencies;
 	type ControlOrigin = EnsureSignedBy<One, AccountId>;
 	type TokenType = BbBNCTokenType;
-	type BbBNCPalletId = BbBNCPalletId;
 	type IncentivePalletId = IncentivePalletId;
 	type BuyBackAccount = BuyBackAccount;
 	type WeightInfo = ();

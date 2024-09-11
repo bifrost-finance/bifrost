@@ -70,7 +70,7 @@ pub mod pallet {
 		/// Clouds Pallet Id
 		type CloudsPalletId: Get<PalletId>;
 
-		// veMinting interface
+		// bbBNC interface
 		type BbBNC: BbBNCInterface<
 			AccountIdOf<Self>,
 			CurrencyIdOf<Self>,

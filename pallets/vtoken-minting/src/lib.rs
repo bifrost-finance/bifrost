@@ -143,7 +143,7 @@ pub mod pallet {
 
 		type BifrostSlpx: SlpxOperator<BalanceOf<Self>>;
 
-		// veMinting interface
+		// bbBNC interface
 		type BbBNC: BbBNCInterface<
 			AccountIdOf<Self>,
 			CurrencyIdOf<Self>,

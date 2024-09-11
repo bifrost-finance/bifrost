@@ -241,8 +241,7 @@ impl bifrost_asset_registry::Config for Runtime {
 
 parameter_types! {
 	pub const BbBNCTokenType: CurrencyId = CurrencyId::VToken(TokenSymbol::BNC);
-	pub BbBNCPalletId: PalletId = PalletId(*b"bf/vemnt");
-	pub IncentivePalletId: PalletId = PalletId(*b"bf/veict");
+	pub IncentivePalletId: PalletId = PalletId(*b"bf/bbict");
 	pub const BuyBackAccount: PalletId = PalletId(*b"bf/bybck");
 	pub const Week: BlockNumber = 50400; // a week
 	pub const MaxBlock: BlockNumber = 10512000; // four years
@@ -257,7 +256,6 @@ impl bb_bnc::Config for Runtime {
 	type MultiCurrency = Currencies;
 	type ControlOrigin = EnsureRoot<AccountId>;
 	type TokenType = BbBNCTokenType;
-	type BbBNCPalletId = BbBNCPalletId;
 	type IncentivePalletId = IncentivePalletId;
 	type BuyBackAccount = BuyBackAccount;
 	type WeightInfo = ();

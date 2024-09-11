@@ -107,9 +107,6 @@ pub mod pallet {
 		type TokenType: Get<CurrencyId>;
 
 		#[pallet::constant]
-		type BbBNCPalletId: Get<PalletId>;
-
-		#[pallet::constant]
 		type IncentivePalletId: Get<PalletId>;
 
 		#[pallet::constant]
@@ -558,10 +555,6 @@ pub mod pallet {
 			if g_epoch > U256::zero() {
 				last_point = PointHistory::<T>::get(g_epoch);
 			} else {
-				// last_point.amount = T::MultiCurrency::free_balance(
-				// 	T::TokenType::get(),
-				// 	&T::BbBNCPalletId::get().into_account_truncating(),
-				// );
 				last_point.amount = Supply::<T>::get();
 			}
 			let mut last_checkpoint = last_point.block;
@@ -611,10 +604,6 @@ pub mod pallet {
 				// Fill for the current block, if applicable
 				if t_i == current_block_number {
 					last_point.amount = Supply::<T>::get();
-					// last_point.amount = T::MultiCurrency::free_balance(
-					// 	T::TokenType::get(),
-					// 	&T::BbBNCPalletId::get().into_account_truncating(),
-					// );
 					break;
 				} else {
 					PointHistory::<T>::insert(g_epoch, last_point);

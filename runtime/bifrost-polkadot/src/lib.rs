@@ -240,8 +240,7 @@ parameter_types! {
 	pub const SystemMakerPalletId: PalletId = PalletId(*b"bf/sysmk");
 	pub const FeeSharePalletId: PalletId = PalletId(*b"bf/feesh");
 	pub CheckingAccount: AccountId = PolkadotXcm::check_account();
-	pub const BbBNCPalletId: PalletId = PalletId(*b"bf/vemnt");
-	pub const IncentivePalletId: PalletId = PalletId(*b"bf/veict");
+	pub const IncentivePalletId: PalletId = PalletId(*b"bf/bbict");
 	pub const FarmingBoostPalletId: PalletId = PalletId(*b"bf/fmbst");
 	pub const LendMarketPalletId: PalletId = PalletId(*b"bf/ldmkt");
 	pub const OraclePalletId: PalletId = PalletId(*b"bf/oracl");
@@ -1440,7 +1439,6 @@ impl bb_bnc::Config for Runtime {
 	type MultiCurrency = Currencies;
 	type ControlOrigin = TechAdminOrCouncil;
 	type TokenType = BbBNCTokenType;
-	type BbBNCPalletId = BbBNCPalletId;
 	type IncentivePalletId = IncentivePalletId;
 	type BuyBackAccount = BuyBackAccount;
 	type WeightInfo = weights::bb_bnc::BifrostWeight<Runtime>;
