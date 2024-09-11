@@ -1,5 +1,5 @@
 [package]
-name = "bifrost-ve-minting"
+name = "bb-bnc"
 version = "0.8.0"
 authors = ["Kadokura <ymlll0508@gmail.com>"]
 edition = "2021"

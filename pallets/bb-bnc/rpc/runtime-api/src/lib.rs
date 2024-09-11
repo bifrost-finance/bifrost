@@ -24,7 +24,7 @@ use sp_api::decl_runtime_apis;
 use sp_core::U256;
 
 decl_runtime_apis! {
-	pub trait VeMintingRuntimeApi<AccountId> where
+	pub trait BbBNCRuntimeApi<AccountId> where
 		AccountId: Codec,
 		BlockNumber: Codec,
 	{

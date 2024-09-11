@@ -49,9 +49,7 @@ pub use incentive::*;
 use orml_traits::{LockIdentifier, MultiCurrency, MultiLockableCurrency};
 use sp_core::{U256, U512};
 use sp_std::{borrow::ToOwned, cmp::Ordering, collections::btree_map::BTreeMap, vec, vec::Vec};
-pub use traits::{
-	LockedToken, MarkupCoefficientInfo, MarkupInfo, UserMarkupInfo, VeMintingInterface,
-};
+pub use traits::{BbBNCInterface, LockedToken, MarkupCoefficientInfo, MarkupInfo, UserMarkupInfo};
 pub use weights::WeightInfo;
 
 type BalanceOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<AccountIdOf<T>>>::Balance;
@@ -64,7 +62,7 @@ pub type CurrencyIdOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<
 
 const VE_LOCK_ID: LockIdentifier = *b"vebnclck";
 const MARKUP_LOCK_ID: LockIdentifier = *b"vebncmkp";
-const VE_MINTING_SYSTEM_POOL_ID: PoolId = 0;
+const VE_MINTING_SYSTEM_POOL_ID: PoolId = u32::MAX;
 #[derive(Clone, Encode, Decode, PartialEq, Eq, RuntimeDebug, TypeInfo, Default)]
 pub struct VeConfig<Balance, BlockNumber> {
 	amount: Balance,
@@ -107,9 +105,6 @@ pub mod pallet {
 
 		#[pallet::constant]
 		type TokenType: Get<CurrencyId>;
-
-		#[pallet::constant]
-		type VeMintingPalletId: Get<PalletId>;
 
 		#[pallet::constant]
 		type IncentivePalletId: Get<PalletId>;
@@ -203,10 +198,10 @@ pub mod pallet {
 		BelowMinimumMint,
 		LockNotExist,
 		LockExist,
-		NoRewards,
 		ArgumentsError,
 		ExceedsMaxPositions,
 		NoController,
+		UserFarmingPoolOverflow,
 	}
 
 	#[pallet::storage]
@@ -312,6 +307,16 @@ pub mod pallet {
 		ValueQuery,
 	>;
 
+	/// The pool ID of the user participating in the farming pool.
+	#[pallet::storage]
+	pub type UserFarmingPool<T: Config> = StorageMap<
+		_,
+		Blake2_128Concat,
+		AccountIdOf<T>,
+		BoundedVec<PoolId, ConstU32<256>>,
+		ValueQuery,
+	>;
+
 	#[pallet::hooks]
 	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
 		fn on_initialize(n: BlockNumberFor<T>) -> Weight {
@@ -325,7 +330,7 @@ pub mod pallet {
 				.err()
 				{
 					log::error!(
-						target: "ve-minting::notify_reward_amount",
+						target: "bb-bnc::notify_reward_amount",
 						"Received invalid justification for {:?}",
 						e,
 					);
@@ -494,7 +499,7 @@ pub mod pallet {
 			old_locked: LockedBalance<BalanceOf<T>, BlockNumberFor<T>>,
 			new_locked: LockedBalance<BalanceOf<T>, BlockNumberFor<T>>,
 		) -> DispatchResult {
-			Self::update_reward_all(Some(who))?;
+			Self::update_reward_all(who)?;
 
 			let mut u_old = Point::<BalanceOf<T>, BlockNumberFor<T>>::default();
 			let mut u_new = Point::<BalanceOf<T>, BlockNumberFor<T>>::default();
@@ -550,10 +555,6 @@ pub mod pallet {
 			if g_epoch > U256::zero() {
 				last_point = PointHistory::<T>::get(g_epoch);
 			} else {
-				// last_point.amount = T::MultiCurrency::free_balance(
-				// 	T::TokenType::get(),
-				// 	&T::VeMintingPalletId::get().into_account_truncating(),
-				// );
 				last_point.amount = Supply::<T>::get();
 			}
 			let mut last_checkpoint = last_point.block;
@@ -603,10 +604,6 @@ pub mod pallet {
 				// Fill for the current block, if applicable
 				if t_i == current_block_number {
 					last_point.amount = Supply::<T>::get();
-					// last_point.amount = T::MultiCurrency::free_balance(
-					// 	T::TokenType::get(),
-					// 	&T::VeMintingPalletId::get().into_account_truncating(),
-					// );
 					break;
 				} else {
 					PointHistory::<T>::insert(g_epoch, last_point);
