@@ -24,9 +24,9 @@
 use bifrost_asset_registry::AssetIdMaps;
 pub use bifrost_primitives::{currency::*, CurrencyId, SlpxOperator};
 use bifrost_primitives::{
-	BifrostEntranceAccount, BifrostExitAccount, BifrostFeeAccount, BuyBackAccount,
+	BbBNCTokenType, BifrostEntranceAccount, BifrostExitAccount, BifrostFeeAccount, BuyBackAccount,
 	GetNativeCurrencyId, IncentivePalletId, IncentivePoolAccount, LiquidityAccount,
-	MoonbeamChainId, RelayCurrencyId, VeMintingPalletId, VeMintingTokenType, ZenlinkPalletId,
+	MoonbeamChainId, RelayCurrencyId, ZenlinkPalletId,
 };
 use bifrost_slp::{QueryId, QueryResponseManager};
 pub use cumulus_primitives_core::ParaId;
@@ -454,8 +454,6 @@ impl pallet_xcm::Config for Runtime {
 }
 
 parameter_types! {
-	pub const BbBNCTokenType: CurrencyId = CurrencyId::VToken(TokenSymbol::BNC);
-	pub IncentivePalletId: PalletId = PalletId(*b"bf/bbict");
 	pub const Week: BlockNumber = 50400; // a week
 	pub const MaxBlock: BlockNumber = 10512000; // four years
 	pub const Multiplier: Balance = 10_u128.pow(12);

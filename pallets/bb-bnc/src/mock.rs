@@ -27,9 +27,8 @@ pub use bifrost_primitives::{
 	currency::*, CurrencyId, CurrencyIdMapping, SlpxOperator, TokenSymbol,
 };
 use bifrost_primitives::{
-	BifrostEntranceAccount, BifrostExitAccount, BifrostFeeAccount, BuyBackAccount,
+	BbBNCTokenType, BifrostEntranceAccount, BifrostExitAccount, BifrostFeeAccount, BuyBackAccount,
 	IncentivePalletId, IncentivePoolAccount, MoonbeamChainId, NativeCurrencyId, RelayCurrencyId,
-	VeMintingPalletId, VeMintingTokenType,
 };
 use bifrost_runtime_common::{micro, milli};
 use bifrost_slp::{QueryId, QueryResponseManager};
@@ -229,9 +228,6 @@ impl bifrost_asset_registry::Config for Runtime {
 }
 
 parameter_types! {
-	pub const BbBNCTokenType: CurrencyId = CurrencyId::VToken(TokenSymbol::BNC);
-	pub IncentivePalletId: PalletId = PalletId(*b"bf/bbict");
-	pub const BuyBackAccount: PalletId = PalletId(*b"bf/bybck");
 	pub const Week: BlockNumber = 50400; // a week
 	pub const MaxBlock: BlockNumber = 10512000; // four years
 	pub const Multiplier: Balance = 10_u128.pow(12);

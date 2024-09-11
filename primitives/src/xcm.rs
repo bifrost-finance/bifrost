@@ -63,7 +63,7 @@ parameter_types! {
 	pub const FeeSharePalletId: PalletId = PalletId(*b"bf/feesh");
 	pub const FlexibleFeePalletId: PalletId = PalletId(*b"bf/flexi");
 	pub IncentivePoolAccount: PalletId = PalletId(*b"bf/inpoo");
-	pub IncentivePalletId: PalletId = PalletId(*b"bf/veict");
+	pub IncentivePalletId: PalletId = PalletId(*b"bf/bbict");
 	pub const LendMarketPalletId: PalletId = PalletId(*b"bf/ldmkt");
 	pub const LighteningRedeemPalletId: PalletId = PalletId(*b"lighten#");
 	pub const LiquidityAccount: PalletId = PalletId(*b"bf/liqdt");
@@ -86,13 +86,14 @@ parameter_types! {
 
 // Currency Id
 parameter_types! {
+	pub const BbBNCTokenType: CurrencyId = CurrencyId::VToken(TokenSymbol::BNC);
 	pub const GetNativeCurrencyId: CurrencyId = CurrencyId::Native(TokenSymbol::BNC);
-	pub const RelayCurrencyId: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
-	pub const VeMintingTokenType: CurrencyId = CurrencyId::VToken(TokenSymbol::BNC);
-	pub const NativeCurrencyId: CurrencyId = CurrencyId::Native(TokenSymbol::BNC);
-	pub const StableCurrencyId: CurrencyId = CurrencyId::Stable(TokenSymbol::KUSD);
-	pub const PolkadotCurrencyId: CurrencyId = CurrencyId::Token(TokenSymbol::DOT);
 	pub const InvoicingCurrency: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
+	pub const NativeCurrencyId: CurrencyId = CurrencyId::Native(TokenSymbol::BNC);
+	pub const PolkadotCurrencyId: CurrencyId = CurrencyId::Token(TokenSymbol::DOT);
+	pub const RelayCurrencyId: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
+	pub const StableCurrencyId: CurrencyId = CurrencyId::Stable(TokenSymbol::KUSD);
+	pub const VeMintingTokenType: CurrencyId = CurrencyId::VToken(TokenSymbol::BNC);
 }
 
 // Location

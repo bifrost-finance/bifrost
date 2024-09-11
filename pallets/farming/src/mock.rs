@@ -23,9 +23,8 @@
 
 pub use bifrost_primitives::{currency::*, CurrencyId};
 use bifrost_primitives::{
-	BuyBackAccount, FarmingBoostPalletId, FarmingGaugeRewardIssuerPalletId, FarmingKeeperPalletId,
-	FarmingRewardIssuerPalletId, GetNativeCurrencyId, IncentivePalletId, VeMintingPalletId,
-	VeMintingTokenType,
+	BbBNCTokenType, BuyBackAccount, FarmingBoostPalletId, FarmingGaugeRewardIssuerPalletId,
+	FarmingKeeperPalletId, FarmingRewardIssuerPalletId, GetNativeCurrencyId, IncentivePalletId,
 };
 use frame_support::{derive_impl, ord_parameter_types, parameter_types, traits::Nothing};
 use frame_system::EnsureSignedBy;
@@ -149,9 +148,6 @@ impl bifrost_farming::Config for Runtime {
 }
 
 parameter_types! {
-	pub const BbBNCTokenType: CurrencyId = CurrencyId::VToken(TokenSymbol::BNC);
-	pub IncentivePalletId: PalletId = PalletId(*b"bf/bbict");
-	pub const BuyBackAccount: PalletId = PalletId(*b"bf/bybck");
 	pub const Week: BlockNumber = 50400; // a week
 	pub const MaxBlock: BlockNumber = 10512000; // four years
 	pub const Multiplier: Balance = 10_u128.pow(12);
