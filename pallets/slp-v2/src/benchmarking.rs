@@ -84,6 +84,7 @@ mod benchmarks {
 				.unwrap()
 				.into(),
 		);
+		assert_ok!(SlpV2::<T>::add_delegator(RawOrigin::Root.into(), STAKING_PROTOCOL, None));
 		let validator = Validator::AstarDappStaking(AstarValidator::Evm(H160::zero()));
 		#[extrinsic_call]
 		_(RawOrigin::Root, STAKING_PROTOCOL, delegator, validator);
@@ -97,6 +98,7 @@ mod benchmarks {
 				.unwrap()
 				.into(),
 		);
+		assert_ok!(SlpV2::<T>::add_delegator(RawOrigin::Root.into(), STAKING_PROTOCOL, None));
 		let validator = Validator::AstarDappStaking(AstarValidator::Evm(H160::zero()));
 		assert_ok!(SlpV2::<T>::add_validator(
 			RawOrigin::Root.into(),

@@ -285,6 +285,28 @@ pub mod pallet {
 			/// Amount of exchange rates updated
 			amount: Balance,
 		},
+		/// Transfer the staking token to remote chain.
+		TransferTo {
+			/// Slp supports staking protocols.
+			staking_protocol: StakingProtocol,
+			/// Bifrost Account
+			from: T::AccountId,
+			/// Delegator account.
+			to: Delegator<T::AccountId>,
+			/// Amount
+			amount: Balance,
+		},
+		/// Transfer the staking token back from remote chain.
+		TransferBack {
+			/// Slp supports staking protocols.
+			staking_protocol: StakingProtocol,
+			/// Delegator account.
+			from: Delegator<T::AccountId>,
+			/// Bifrost Account.
+			to: T::AccountId,
+			/// Amount
+			amount: Balance,
+		},
 	}
 
 	#[pallet::error]
@@ -430,6 +452,7 @@ pub mod pallet {
 			validator: Validator<T::AccountId>,
 		) -> DispatchResultWithPostInfo {
 			T::ControlOrigin::ensure_origin(origin)?;
+			Self::ensure_delegator_exist(&staking_protocol, &delegator)?;
 			ValidatorsByStakingProtocolAndDelegator::<T>::mutate(
 				staking_protocol,
 				delegator.clone(),
@@ -465,6 +488,7 @@ pub mod pallet {
 			validator: Validator<T::AccountId>,
 		) -> DispatchResultWithPostInfo {
 			T::ControlOrigin::ensure_origin(origin)?;
+			Self::ensure_delegator_exist(&staking_protocol, &delegator)?;
 			ValidatorsByStakingProtocolAndDelegator::<T>::mutate(
 				staking_protocol,
 				delegator.clone(),
@@ -498,18 +522,7 @@ pub mod pallet {
 			ledger: Ledger,
 		) -> DispatchResultWithPostInfo {
 			T::ControlOrigin::ensure_origin(origin)?;
-			let delegator_index = DelegatorIndexByStakingProtocolAndDelegator::<T>::get(
-				staking_protocol,
-				delegator.clone(),
-			)
-			.ok_or(Error::<T>::DelegatorIndexNotFound)?;
-			ensure!(
-				DelegatorByStakingProtocolAndDelegatorIndex::<T>::contains_key(
-					staking_protocol,
-					delegator_index
-				),
-				Error::<T>::DelegatorNotFound
-			);
+			Self::ensure_delegator_exist(&staking_protocol, &delegator)?;
 			LedgerByStakingProtocolAndDelegator::<T>::mutate(
 				staking_protocol,
 				delegator.clone(),
@@ -743,7 +756,9 @@ pub mod pallet {
 				.ok_or(Error::<T>::PendingStatusNotFound)?;
 			if Response::DispatchResult(MaybeErrorCode::Success) == response {
 				Self::do_notify_astar_dapp_staking(responder, pending_status)?;
-			};
+			} else {
+				PendingStatusByQueryId::<T>::remove(query_id);
+			}
 			Ok(().into())
 		}
 	}

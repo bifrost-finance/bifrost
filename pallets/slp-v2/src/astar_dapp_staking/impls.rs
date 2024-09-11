@@ -23,9 +23,9 @@ use crate::{
 	common::types::{
 		Delegator, DelegatorIndex, Ledger, PendingStatus, StakingProtocol, Validator, XcmTask,
 	},
-	Call, Config, ConfigurationByStakingProtocol, DelegatorByStakingProtocolAndDelegatorIndex,
-	DelegatorIndexByStakingProtocolAndDelegator, Error, Event, LedgerByStakingProtocolAndDelegator,
-	Pallet, PendingStatusByQueryId, ValidatorsByStakingProtocolAndDelegator,
+	Call, Config, ConfigurationByStakingProtocol, Error, Event,
+	LedgerByStakingProtocolAndDelegator, Pallet, PendingStatusByQueryId,
+	ValidatorsByStakingProtocolAndDelegator,
 };
 use bifrost_primitives::VtokenMintingOperator;
 use frame_support::{dispatch::DispatchResultWithPostInfo, ensure};
@@ -54,18 +54,7 @@ impl<T: Config> Pallet<T> {
 		delegator: Delegator<T::AccountId>,
 		task: DappStaking<T::AccountId>,
 	) -> DispatchResultWithPostInfo {
-		let delegator_index = DelegatorIndexByStakingProtocolAndDelegator::<T>::get(
-			ASTAR_DAPP_STAKING,
-			delegator.clone(),
-		)
-		.ok_or(Error::<T>::DelegatorIndexNotFound)?;
-		ensure!(
-			DelegatorByStakingProtocolAndDelegatorIndex::<T>::contains_key(
-				ASTAR_DAPP_STAKING,
-				delegator_index
-			),
-			Error::<T>::DelegatorNotFound
-		);
+		let delegator_index = Self::ensure_delegator_exist(&ASTAR_DAPP_STAKING, &delegator)?;
 		let (call, pending_status) = match task.clone() {
 			DappStaking::Lock(amount) => (
 				AstarCall::<T>::DappStaking(DappStaking::<T::AccountId>::Lock(amount)).encode(),
