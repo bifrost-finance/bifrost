@@ -24,7 +24,7 @@
 use bifrost_asset_registry::AssetIdMaps;
 use bifrost_primitives::{
 	currency::{BNC, KSM, VBNC, VBNC_P, VKSM},
-	CurrencyId, CurrencyIdMapping, TokenSymbol, VBNCConvertPalletId,
+	CurrencyId, CurrencyIdMapping, NativeCurrencyId, VBNCConvertPalletId,
 };
 use frame_support::{ord_parameter_types, parameter_types, traits::Nothing};
 use frame_system::EnsureSignedBy;
@@ -91,10 +91,6 @@ impl frame_system::Config for Runtime {
 	type PreInherents = ();
 	type PostInherents = ();
 	type PostTransactions = ();
-}
-
-parameter_types! {
-	pub const NativeCurrencyId: CurrencyId = CurrencyId::Native(TokenSymbol::BNC);
 }
 
 pub type AdaptedBasicCurrency =

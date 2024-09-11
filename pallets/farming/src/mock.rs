@@ -21,10 +21,11 @@
 #![cfg(test)]
 #![allow(non_upper_case_globals)]
 
-pub use bifrost_primitives::{currency::*, CurrencyId, TokenSymbol};
+pub use bifrost_primitives::{currency::*, CurrencyId};
 use bifrost_primitives::{
 	BuyBackAccount, FarmingBoostPalletId, FarmingGaugeRewardIssuerPalletId, FarmingKeeperPalletId,
-	FarmingRewardIssuerPalletId, IncentivePalletId, VeMintingPalletId,
+	FarmingRewardIssuerPalletId, GetNativeCurrencyId, IncentivePalletId, VeMintingPalletId,
+	VeMintingTokenType,
 };
 use frame_support::{derive_impl, ord_parameter_types, parameter_types, traits::Nothing};
 use frame_system::EnsureSignedBy;
@@ -70,10 +71,6 @@ impl frame_system::Config for Runtime {
 	type AccountId = AccountId;
 	type Block = Block;
 	type Lookup = IdentityLookup<Self::AccountId>;
-}
-
-parameter_types! {
-	pub const GetNativeCurrencyId: CurrencyId = CurrencyId::Native(TokenSymbol::ASG);
 }
 
 pub type AdaptedBasicCurrency =
@@ -152,7 +149,6 @@ impl bifrost_farming::Config for Runtime {
 }
 
 parameter_types! {
-	pub const VeMintingTokenType: CurrencyId = CurrencyId::VToken(TokenSymbol::BNC);
 	pub const Week: BlockNumber = 50400; // a week
 	pub const MaxBlock: BlockNumber = 10512000; // four years
 	pub const Multiplier: Balance = 10_u128.pow(12);

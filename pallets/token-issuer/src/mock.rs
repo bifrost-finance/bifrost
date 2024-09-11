@@ -22,7 +22,7 @@
 use crate::Weight;
 use bifrost_primitives::{
 	currency::{BNC, DOT, KSM, VDOT},
-	CurrencyId, TokenSymbol,
+	CurrencyId, GetNativeCurrencyId,
 };
 use frame_support::{derive_impl, parameter_types, traits::Nothing, PalletId};
 use frame_system::EnsureRoot;
@@ -67,10 +67,6 @@ impl frame_system::Config for Runtime {
 	type AccountId = AccountId;
 	type Block = Block;
 	type Lookup = IdentityLookup<Self::AccountId>;
-}
-
-parameter_types! {
-	pub const GetNativeCurrencyId: CurrencyId = CurrencyId::Native(TokenSymbol::ASG);
 }
 
 pub type AdaptedBasicCurrency =

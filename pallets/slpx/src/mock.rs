@@ -20,11 +20,11 @@
 use crate as slpx;
 use bifrost_asset_registry::AssetIdMaps;
 use bifrost_primitives::{
-	BifrostEntranceAccount, BifrostExitAccount, BifrostFeeAccount, IncentivePoolAccount,
-	MoonbeamChainId, StableAssetPalletId, ZenlinkPalletId,
+	BifrostEntranceAccount, BifrostExitAccount, BifrostFeeAccount, GetNativeCurrencyId,
+	IncentivePoolAccount, MoonbeamChainId, StableAssetPalletId, ZenlinkPalletId,
 };
 pub use bifrost_primitives::{
-	CurrencyId, CurrencyIdMapping, MockXcmExecutor, SlpxOperator, TokenSymbol, BNC, KSM,
+	CurrencyId, CurrencyIdMapping, MockXcmExecutor, SlpxOperator, BNC, KSM,
 };
 use bifrost_slp::{QueryId, QueryResponseManager};
 use cumulus_primitives_core::ParaId;
@@ -117,10 +117,6 @@ impl pallet_balances::Config for Test {
 	type RuntimeFreezeReason = RuntimeFreezeReason;
 	type FreezeIdentifier = ();
 	type MaxFreezes = ConstU32<0>;
-}
-
-parameter_types! {
-	pub const GetNativeCurrencyId: CurrencyId = CurrencyId::Native(TokenSymbol::BNC);
 }
 
 pub type AdaptedBasicCurrency =
@@ -498,11 +494,6 @@ impl bifrost_stable_pool::Config for Test {
 	type VtokenMinting = VtokenMinting;
 	type CurrencyIdConversion = AssetIdMaps<Test>;
 	type CurrencyIdRegister = AssetIdMaps<Test>;
-}
-
-// Pallet slpx configuration
-parameter_types! {
-	pub const NativeCurrencyId: CurrencyId = CurrencyId::Native(TokenSymbol::BNC);
 }
 
 pub struct XTokensMock;

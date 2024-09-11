@@ -20,7 +20,7 @@
 
 use crate::{mock::*, Error, FundStatus, *};
 use bifrost_primitives::{
-	BuybackPalletId, ContributionStatus, CurrencyId, TokenSymbol, KSM, VKSM, VSKSM,
+	BuybackPalletId, ContributionStatus, CurrencyId, RelayCurrencyId, TokenSymbol, KSM, VKSM, VSKSM,
 };
 use bifrost_xcm_interface::SalpHelper;
 use frame_support::{assert_noop, assert_ok};

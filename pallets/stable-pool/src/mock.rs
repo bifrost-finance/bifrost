@@ -24,7 +24,7 @@ pub use bifrost_primitives::{
 };
 use bifrost_primitives::{
 	BifrostEntranceAccount, BifrostExitAccount, IncentivePoolAccount, MoonbeamChainId,
-	StableAssetPalletId,
+	NativeCurrencyId, RelayCurrencyId, StableAssetPalletId,
 };
 use bifrost_runtime_common::milli;
 use frame_support::{
@@ -62,10 +62,6 @@ impl frame_system::Config for Test {
 	type AccountId = u128;
 	type Lookup = IdentityLookup<Self::AccountId>;
 	type AccountData = pallet_balances::AccountData<Balance>;
-}
-
-parameter_types! {
-	pub const NativeCurrencyId: CurrencyId = CurrencyId::Native(TokenSymbol::BNC);
 }
 
 orml_traits::parameter_type_with_key! {
@@ -189,11 +185,7 @@ impl orml_xtokens::Config for Test {
 
 parameter_types! {
 	pub const ExistentialDeposit: Balance = 1;
-	// pub const NativeCurrencyId: CurrencyId = CurrencyId::Native(TokenSymbol::BNC);
-	// pub const RelayCurrencyId: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
-	pub const StableCurrencyId: CurrencyId = CurrencyId::Stable(TokenSymbol::KUSD);
 	// pub SelfParaId: u32 = ParachainInfo::parachain_id().into();
-	pub const PolkadotCurrencyId: CurrencyId = CurrencyId::Token(TokenSymbol::DOT);
 }
 
 impl pallet_balances::Config for Test {
@@ -266,10 +258,6 @@ impl SlpxOperator<Balance> for SlpxInterface {
 	fn get_moonbeam_transfer_to_fee() -> Balance {
 		Default::default()
 	}
-}
-
-ord_parameter_types! {
-	pub const RelayCurrencyId: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
 }
 
 impl bifrost_vtoken_minting::Config for Test {

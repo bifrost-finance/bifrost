@@ -22,11 +22,11 @@
 #![allow(non_upper_case_globals)]
 
 use bifrost_asset_registry::AssetIdMaps;
-pub use bifrost_primitives::{currency::*, CurrencyId, SlpxOperator, TokenSymbol};
+pub use bifrost_primitives::{currency::*, CurrencyId, SlpxOperator};
 use bifrost_primitives::{
 	BifrostEntranceAccount, BifrostExitAccount, BifrostFeeAccount, BuyBackAccount,
-	IncentivePalletId, IncentivePoolAccount, LiquidityAccount, MoonbeamChainId, VeMintingPalletId,
-	ZenlinkPalletId,
+	GetNativeCurrencyId, IncentivePalletId, IncentivePoolAccount, LiquidityAccount,
+	MoonbeamChainId, RelayCurrencyId, VeMintingPalletId, VeMintingTokenType, ZenlinkPalletId,
 };
 use bifrost_slp::{QueryId, QueryResponseManager};
 pub use cumulus_primitives_core::ParaId;
@@ -105,10 +105,6 @@ impl frame_system::Config for Runtime {
 	type Lookup = IdentityLookup<Self::AccountId>;
 }
 
-parameter_types! {
-	pub const GetNativeCurrencyId: CurrencyId = CurrencyId::Native(TokenSymbol::BNC);
-}
-
 pub type AdaptedBasicCurrency =
 	bifrost_currencies::BasicCurrencyAdapter<Runtime, Balances, Amount, BlockNumber>;
 
@@ -164,7 +160,6 @@ parameter_types! {
 
 ord_parameter_types! {
 	pub const One: AccountId = ALICE;
-	pub const RelayCurrencyId: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
 }
 
 impl bifrost_buy_back::Config for Runtime {
@@ -459,7 +454,6 @@ impl pallet_xcm::Config for Runtime {
 }
 
 parameter_types! {
-	pub const VeMintingTokenType: CurrencyId = CurrencyId::VToken(TokenSymbol::BNC);
 	pub const Week: BlockNumber = 50400; // a week
 	pub const MaxBlock: BlockNumber = 10512000; // four years
 	pub const Multiplier: Balance = 10_u128.pow(12);

@@ -22,7 +22,7 @@
 use crate::mock::sp_api_hidden_includes_construct_runtime::hidden_include::traits::OnInitialize;
 use bifrost_primitives::{
 	currency::{BNC, KSM},
-	CommissionPalletId, CurrencyId, TokenSymbol,
+	CommissionPalletId, CurrencyId, GetNativeCurrencyId,
 };
 use frame_support::{derive_impl, ord_parameter_types, parameter_types, traits::Nothing, PalletId};
 use frame_system::EnsureSignedBy;
@@ -63,10 +63,6 @@ impl frame_system::Config for Runtime {
 	type AccountData = pallet_balances::AccountData<Balance>;
 	type Block = Block;
 	type Lookup = sp_runtime::traits::IdentityLookup<Self::AccountId>;
-}
-
-parameter_types! {
-	pub const GetNativeCurrencyId: CurrencyId = CurrencyId::Native(TokenSymbol::ASG);
 }
 
 pub type AdaptedBasicCurrency =

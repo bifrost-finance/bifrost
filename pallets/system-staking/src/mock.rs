@@ -19,11 +19,11 @@
 #![allow(non_upper_case_globals)]
 
 use bifrost_asset_registry::AssetIdMaps;
-pub use bifrost_primitives::{currency::*, CurrencyId, SlpxOperator, TokenSymbol};
+pub use bifrost_primitives::{currency::*, CurrencyId, SlpxOperator};
 use bifrost_primitives::{
 	BifrostEntranceAccount, BifrostExitAccount, BifrostFeeAccount, FarmingBoostPalletId,
 	FarmingGaugeRewardIssuerPalletId, FarmingKeeperPalletId, FarmingRewardIssuerPalletId,
-	IncentivePoolAccount, MoonbeamChainId, SystemStakingPalletId,
+	GetNativeCurrencyId, IncentivePoolAccount, MoonbeamChainId, SystemStakingPalletId,
 };
 use bifrost_slp::{QueryId, QueryResponseManager};
 pub use cumulus_primitives_core::ParaId;
@@ -86,10 +86,6 @@ impl frame_system::Config for Runtime {
 	type AccountId = AccountId;
 	type Block = Block;
 	type Lookup = IdentityLookup<Self::AccountId>;
-}
-
-parameter_types! {
-	pub const GetNativeCurrencyId: CurrencyId = CurrencyId::Native(TokenSymbol::ASG);
 }
 
 pub type AdaptedBasicCurrency =

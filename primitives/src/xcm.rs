@@ -16,7 +16,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-use crate::AccountId;
+use crate::{AccountId, CurrencyId, TokenSymbol};
 use frame_support::{
 	parameter_types,
 	traits::{ContainsPair, Get},
@@ -82,6 +82,17 @@ parameter_types! {
 // Account Id
 parameter_types! {
 	pub BifrostFeeAccount: AccountId = hex!["e4da05f08e89bf6c43260d96f26fffcfc7deae5b465da08669a9d008e64c2c63"].into();
+}
+
+// Currency Id
+parameter_types! {
+	pub const GetNativeCurrencyId: CurrencyId = CurrencyId::Native(TokenSymbol::BNC);
+	pub const RelayCurrencyId: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
+	pub const VeMintingTokenType: CurrencyId = CurrencyId::VToken(TokenSymbol::BNC);
+	pub const NativeCurrencyId: CurrencyId = CurrencyId::Native(TokenSymbol::BNC);
+	pub const StableCurrencyId: CurrencyId = CurrencyId::Stable(TokenSymbol::KUSD);
+	pub const PolkadotCurrencyId: CurrencyId = CurrencyId::Token(TokenSymbol::DOT);
+	pub const InvoicingCurrency: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
 }
 
 // Location

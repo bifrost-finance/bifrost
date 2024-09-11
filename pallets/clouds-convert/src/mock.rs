@@ -24,8 +24,8 @@
 use bifrost_asset_registry::AssetIdMaps;
 use bifrost_primitives::{
 	currency::{BNC, CLOUD, KSM, VBNC, VKSM},
-	BuyBackAccount, CloudsPalletId, CurrencyId, CurrencyIdMapping, IncentivePalletId, TokenSymbol,
-	VeMintingPalletId,
+	BuyBackAccount, CloudsPalletId, CurrencyId, CurrencyIdMapping, IncentivePalletId,
+	NativeCurrencyId, VeMintingPalletId, VeMintingTokenType,
 };
 use frame_support::{ord_parameter_types, parameter_types, traits::Nothing};
 use frame_system::EnsureSignedBy;
@@ -93,10 +93,6 @@ impl frame_system::Config for Runtime {
 	type PreInherents = ();
 	type PostInherents = ();
 	type PostTransactions = ();
-}
-
-parameter_types! {
-	pub const NativeCurrencyId: CurrencyId = CurrencyId::Native(TokenSymbol::BNC);
 }
 
 pub type AdaptedBasicCurrency =
@@ -177,7 +173,6 @@ impl bifrost_clouds_convert::Config for Runtime {
 }
 
 parameter_types! {
-	pub const VeMintingTokenType: CurrencyId = CurrencyId::VToken(TokenSymbol::BNC);
 	pub const Week: BlockNumber = 50400; // a week
 	pub const MaxBlock: BlockNumber = 10512000; // four years
 	pub const Multiplier: Balance = 10_u128.pow(12);

@@ -26,8 +26,8 @@ use bifrost_primitives::{
 	Amount, Balance, BifrostCrowdloanId, BifrostEntranceAccount, BifrostExitAccount,
 	BuybackPalletId,
 	CurrencyId::{self, *},
-	IncentivePoolAccount, MessageId, MockXcmExecutor, ParaId, SlpOperator, SlpxOperator,
-	StableAssetPalletId,
+	IncentivePoolAccount, MessageId, MockXcmExecutor, NativeCurrencyId, ParaId, RelayCurrencyId,
+	SlpOperator, SlpxOperator, StableAssetPalletId,
 	TokenSymbol::{self, *},
 	ZenlinkPalletId, VKSM,
 };
@@ -83,12 +83,6 @@ construct_runtime!(
 		XcmInterface: bifrost_xcm_interface,
 	}
 );
-
-parameter_types! {
-	pub const NativeCurrencyId: CurrencyId = CurrencyId::Native(TokenSymbol::ASG);
-	pub const RelayCurrencyId: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
-	pub const StableCurrencyId: CurrencyId = CurrencyId::Stable(TokenSymbol::KUSD);
-}
 
 parameter_types! {
 	pub const BlockHashCount: BlockNumber = 250;

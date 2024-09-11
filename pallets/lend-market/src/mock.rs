@@ -87,11 +87,6 @@ parameter_types! {
 	pub const MaxLocks: u32 = 50;
 }
 
-parameter_types! {
-	pub const StableCurrencyId: CurrencyId = CurrencyId::Stable(TokenSymbol::KUSD);
-	pub const PolkadotCurrencyId: CurrencyId = CurrencyId::Token(TokenSymbol::DOT);
-}
-
 impl pallet_balances::Config for Test {
 	type AccountStore = frame_system::Pallet<Test>;
 	type Balance = Balance;
@@ -113,10 +108,6 @@ impl bifrost_asset_registry::Config for Test {
 	type Currency = Balances;
 	type RegisterOrigin = EnsureSignedBy<AliceCreatePoolOrigin, AccountId>;
 	type WeightInfo = ();
-}
-
-parameter_types! {
-	pub const NativeCurrencyId: CurrencyId = CurrencyId::Native(TokenSymbol::BNC);
 }
 
 orml_traits::parameter_type_with_key! {

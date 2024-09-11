@@ -23,8 +23,8 @@ use crate::{self as flexible_fee, tests::CHARLIE};
 use bifrost_asset_registry::AssetIdMaps;
 use bifrost_primitives::{
 	Balance, BifrostCrowdloanId, BuybackPalletId, CurrencyId, DerivativeAccountHandler,
-	DerivativeIndex, ExtraFeeInfo, FlexibleFeePalletId, MessageId, ParaId, TokenSymbol,
-	VTokenSupplyProvider, ZenlinkPalletId, VKSM,
+	DerivativeIndex, ExtraFeeInfo, FlexibleFeePalletId, GetNativeCurrencyId, MessageId, ParaId,
+	RelayCurrencyId, VTokenSupplyProvider, ZenlinkPalletId, VKSM,
 };
 use bifrost_vtoken_voting::AccountVote;
 use bifrost_xcm_interface::traits::XcmHelper;
@@ -245,10 +245,6 @@ impl Get<Pid> for ParaInfo {
 	}
 }
 
-parameter_types! {
-	pub const GetNativeCurrencyId: CurrencyId = CurrencyId::Native(TokenSymbol::BNC);
-}
-
 pub type AdaptedBasicCurrency =
 	bifrost_currencies::BasicCurrencyAdapter<Test, Balances, Amount, BlockNumber>;
 
@@ -377,7 +373,6 @@ parameter_types! {
 	pub const ReleaseCycle: BlockNumber = 8u32 as BlockNumber;
 	pub const ReleaseRatio: Percent = Percent::from_percent(50);
 	pub ConfirmMuitiSigAccount: AccountId = ALICE;
-	pub const RelayCurrencyId: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
 	pub const SalpLockId: LockIdentifier = *b"salplock";
 	pub const BatchLimit: u32 = 50;
 }
