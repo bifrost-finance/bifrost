@@ -1,5 +1,5 @@
 [package]
-name = "bifrost-ve-minting-rpc-runtime-api"
+name = "bb-bnc-rpc-runtime-api"
 version = "0.8.0"
 authors = ["Kadokura <ymlll0508@gmail.com>"]
 edition = "2021"

@@ -1332,7 +1332,7 @@ impl bifrost_farming::Config for Runtime {
 	type RewardIssuer = FarmingRewardIssuerPalletId;
 	type WeightInfo = weights::bifrost_farming::BifrostWeight<Runtime>;
 	type FarmingBoost = FarmingBoostPalletId;
-	type VeMinting = ();
+	type BbBNC = ();
 	type BlockNumberToBalance = ConvertInto;
 	type WhitelistMaximumLimit = WhitelistMaximumLimit;
 	type GaugeRewardIssuer = FarmingGaugeRewardIssuerPalletId;
@@ -1549,7 +1549,7 @@ impl bifrost_vtoken_minting::Config for Runtime {
 	type ChannelCommission = ChannelCommission;
 	type MaxLockRecords = ConstU32<100>;
 	type IncentivePoolAccount = IncentivePoolAccount;
-	type VeMinting = ();
+	type BbBNC = ();
 	type AssetIdMaps = AssetIdMaps<Runtime>;
 }
 

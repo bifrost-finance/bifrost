@@ -306,7 +306,7 @@ impl bifrost_vtoken_minting::Config for Test {
 	type ChannelCommission = ();
 	type MaxLockRecords = ConstU32<100>;
 	type IncentivePoolAccount = IncentivePoolAccount;
-	type VeMinting = ();
+	type BbBNC = ();
 	type AssetIdMaps = AssetIdMaps<Test>;
 }
 

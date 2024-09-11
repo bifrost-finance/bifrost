@@ -269,11 +269,11 @@ impl Contains<RuntimeCall> for SafeCallFilter {
 				bifrost_vstoken_conversion::Call::vsbond_convert_to_vstoken { .. } |
 				bifrost_vstoken_conversion::Call::vstoken_convert_to_vsbond { .. }
 			) |
-			RuntimeCall::VeMinting(
-				bifrost_ve_minting::Call::increase_amount { .. } |
-				bifrost_ve_minting::Call::increase_unlock_time { .. } |
-				bifrost_ve_minting::Call::withdraw { .. } |
-				bifrost_ve_minting::Call::get_rewards { .. }
+			RuntimeCall::BbBNC(
+				bb_bnc::Call::increase_amount { .. } |
+				bb_bnc::Call::increase_unlock_time { .. } |
+				bb_bnc::Call::withdraw { .. } |
+				bb_bnc::Call::get_rewards { .. }
 			) |
 			RuntimeCall::VtokenMinting(
 				bifrost_vtoken_minting::Call::mint { .. } |

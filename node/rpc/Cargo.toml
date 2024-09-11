@@ -44,8 +44,8 @@ bifrost-salp-rpc = { workspace = true }
 bifrost-salp-rpc-runtime-api = { workspace = true }
 bifrost-farming-rpc = { workspace = true }
 bifrost-farming-rpc-runtime-api = { workspace = true }
-bifrost-ve-minting-rpc = { workspace = true }
-bifrost-ve-minting-rpc-runtime-api = { workspace = true }
+bb-bnc-rpc = { workspace = true }
+bb-bnc-rpc-runtime-api = { workspace = true }
 bifrost-stable-pool-rpc = { workspace = true }
 bifrost-stable-pool-rpc-runtime-api = { workspace = true }
 lend-market-rpc = { workspace = true }

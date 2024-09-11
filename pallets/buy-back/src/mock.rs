@@ -77,7 +77,7 @@ frame_support::construct_runtime!(
 		ZenlinkProtocol: zenlink_protocol,
 		AssetRegistry: bifrost_asset_registry,
 		PolkadotXcm: pallet_xcm,
-		VeMinting: bifrost_ve_minting,
+		BbBNC: bb_bnc,
 	}
 );
 
@@ -173,7 +173,7 @@ impl bifrost_buy_back::Config for Runtime {
 	type LiquidityAccount = LiquidityAccount;
 	type ParachainId = ParaInfo;
 	type CurrencyIdRegister = AssetIdMaps<Runtime>;
-	type VeMinting = VeMinting;
+	type BbBNC = BbBNC;
 }
 
 pub struct ParaInfo;
@@ -301,7 +301,7 @@ impl bifrost_vtoken_minting::Config for Runtime {
 	type ChannelCommission = ();
 	type MaxLockRecords = ConstU32<100>;
 	type IncentivePoolAccount = IncentivePoolAccount;
-	type VeMinting = ();
+	type BbBNC = ();
 	type AssetIdMaps = AssetIdMaps<Runtime>;
 }
 
@@ -454,6 +454,8 @@ impl pallet_xcm::Config for Runtime {
 }
 
 parameter_types! {
+	pub const BbBNCTokenType: CurrencyId = CurrencyId::VToken(TokenSymbol::BNC);
+	pub IncentivePalletId: PalletId = PalletId(*b"bf/bbict");
 	pub const Week: BlockNumber = 50400; // a week
 	pub const MaxBlock: BlockNumber = 10512000; // four years
 	pub const Multiplier: Balance = 10_u128.pow(12);
@@ -462,12 +464,11 @@ parameter_types! {
 	pub const MarkupRefreshLimit: u32 = 100;
 }
 
-impl bifrost_ve_minting::Config for Runtime {
+impl bb_bnc::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type MultiCurrency = Currencies;
 	type ControlOrigin = EnsureSignedBy<One, AccountId>;
-	type TokenType = VeMintingTokenType;
-	type VeMintingPalletId = VeMintingPalletId;
+	type TokenType = BbBNCTokenType;
 	type IncentivePalletId = IncentivePalletId;
 	type BuyBackAccount = BuyBackAccount;
 	type WeightInfo = ();

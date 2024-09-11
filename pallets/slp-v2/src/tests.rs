@@ -261,10 +261,18 @@ fn remove_delegator_should_work() {
 			None
 		);
 		assert_eq!(
-			DelegatorIndexByStakingProtocolAndDelegator::<Test>::get(STAKING_PROTOCOL, delegator),
+			DelegatorIndexByStakingProtocolAndDelegator::<Test>::get(
+				STAKING_PROTOCOL,
+				delegator.clone()
+			),
 			None
 		);
 		assert_eq!(NextDelegatorIndexByStakingProtocol::<Test>::get(STAKING_PROTOCOL), 1);
+		assert_eq!(
+			ValidatorsByStakingProtocolAndDelegator::<Test>::get(STAKING_PROTOCOL, delegator)
+				.to_vec(),
+			vec![]
+		);
 	});
 }
 
@@ -282,30 +290,14 @@ fn remove_delegator_delegator_index_not_found() {
 }
 
 #[test]
-fn remove_delegator_delegator_not_found() {
-	new_test_ext().execute_with(|| {
-		let delegator = Delegator::Substrate(
-			AccountId::from_ss58check("YLF9AnL6V1vQRfuiB832NXNGZYCPAWkKLLkh7cf3KwXhB9o").unwrap(),
-		);
-		DelegatorIndexByStakingProtocolAndDelegator::<Test>::insert(
-			STAKING_PROTOCOL,
-			delegator.clone(),
-			0,
-		);
-		assert_noop!(
-			SlpV2::remove_delegator(RuntimeOrigin::root(), STAKING_PROTOCOL, delegator.clone()),
-			SlpV2Error::<Test>::DelegatorNotFound
-		);
-	});
-}
-
-#[test]
 fn add_validator_should_work() {
 	new_test_ext().execute_with(|| {
 		let delegator = Delegator::Substrate(
 			AccountId::from_ss58check("YLF9AnL6V1vQRfuiB832NXNGZYCPAWkKLLkh7cf3KwXhB9o").unwrap(),
 		);
 		let validator = Validator::AstarDappStaking(AstarValidator::Evm(H160::default()));
+
+		assert_ok!(SlpV2::add_delegator(RuntimeOrigin::root(), STAKING_PROTOCOL, None));
 
 		assert_ok!(SlpV2::add_validator(
 			RuntimeOrigin::root(),
@@ -336,6 +328,8 @@ fn repeat_add_validator_should_work() {
 		let validator2 = Validator::AstarDappStaking(AstarValidator::Wasm(
 			AccountId::from_ss58check("YeKP2BdVpFrXbbqkoVhDFZP9u3nUuop7fpMppQczQXBLhD1").unwrap(),
 		));
+
+		assert_ok!(SlpV2::add_delegator(RuntimeOrigin::root(), STAKING_PROTOCOL, None));
 
 		assert_ok!(SlpV2::add_validator(
 			RuntimeOrigin::root(),
@@ -373,6 +367,8 @@ fn remove_validator_should_work() {
 			AccountId::from_ss58check("YLF9AnL6V1vQRfuiB832NXNGZYCPAWkKLLkh7cf3KwXhB9o").unwrap(),
 		);
 		let validator = Validator::AstarDappStaking(AstarValidator::Evm(H160::default()));
+
+		assert_ok!(SlpV2::add_delegator(RuntimeOrigin::root(), STAKING_PROTOCOL, None));
 
 		assert_ok!(SlpV2::add_validator(
 			RuntimeOrigin::root(),
@@ -644,9 +640,11 @@ fn staking_protocol_get_dest_beneficiary_location() {
 #[test]
 fn astar_polkadot_xcm_call() {
 	new_test_ext().execute_with(|| {
+		let (to, _) = VtokenMinting::get_entrance_and_exit_accounts();
 		let calldata = SlpV2::wrap_polkadot_xcm_limited_reserve_transfer_assets_call_data(
 			&StakingProtocol::AstarDappStaking,
 			100,
+			to.clone()
 		)
 		.unwrap();
 
@@ -655,6 +653,7 @@ fn astar_polkadot_xcm_call() {
 		let call_data = SlpV2::wrap_polkadot_xcm_limited_reserve_transfer_assets_call_data(
 			&StakingProtocol::PolkadotStaking,
 			100,
+			to
 		)
 		.unwrap();
 		assert_eq!(to_hex(&call_data, false), "0x630804000100b91f04000101006d6f646c62662f76746b696e0000000000000000000000000000000000000000040400000091010000000000");

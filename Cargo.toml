@@ -27,7 +27,7 @@ members = [
 	"pallets/system-maker",
 	"pallets/fee-share",
 	"pallets/parachain-staking",
-	"pallets/ve-minting",
+	"pallets/bb-bnc",
 	"pallets/stable-pool",
 	"pallets/lend-market",
 	"pallets/prices",
@@ -53,7 +53,7 @@ bifrost-flexible-fee-rpc = { path = "pallets/flexible-fee/rpc" }
 bifrost-rpc              = { path = "node/rpc" }
 bifrost-salp-rpc         = { path = "pallets/salp/rpc" }
 bifrost-stable-pool-rpc  = { path = "pallets/stable-pool/rpc" }
-bifrost-ve-minting-rpc   = { path = "pallets/ve-minting/rpc" }
+bb-bnc-rpc               = { path = "pallets/bb-bnc/rpc" }
 lend-market-rpc          = { path = "pallets/lend-market/rpc" }
 bifrost-vtoken-minting-rpc = { path = "pallets/vtoken-minting/rpc" }
 
@@ -89,8 +89,8 @@ bifrost-system-maker                   = { path = "pallets/system-maker", defaul
 bifrost-system-staking                 = { path = "pallets/system-staking", default-features = false }
 bifrost-token-issuer                   = { path = "pallets/token-issuer", default-features = false }
 bifrost-vbnc-convert                   = { path = "pallets/vbnc-convert", default-features = false }
-bifrost-ve-minting                     = { path = "pallets/ve-minting", default-features = false }
-bifrost-ve-minting-rpc-runtime-api     = { path = "pallets/ve-minting/rpc/runtime-api", default-features = false }
+bb-bnc                                 = { path = "pallets/bb-bnc", default-features = false }
+bb-bnc-rpc-runtime-api                 = { path = "pallets/bb-bnc/rpc/runtime-api", default-features = false }
 bifrost-vesting                        = { path = "pallets/vesting", default-features = false }
 bifrost-vsbond-auction                 = { path = "pallets/vsbond-auction", default-features = false }
 bifrost-vstoken-conversion             = { path = "pallets/vstoken-conversion", default-features = false }

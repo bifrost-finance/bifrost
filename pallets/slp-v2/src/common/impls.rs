@@ -23,7 +23,7 @@ use crate::{
 	},
 	Config, ConfigurationByStakingProtocol, DelegatorByStakingProtocolAndDelegatorIndex,
 	DelegatorIndexByStakingProtocolAndDelegator, Error, Event, LedgerByStakingProtocolAndDelegator,
-	NextDelegatorIndexByStakingProtocol, Pallet,
+	NextDelegatorIndexByStakingProtocol, Pallet, ValidatorsByStakingProtocolAndDelegator,
 };
 use bifrost_primitives::{Balance, CurrencyId, VtokenMintingOperator};
 use frame_support::{
@@ -103,15 +103,15 @@ impl<T: Config> Pallet<T> {
 		staking_protocol: StakingProtocol,
 		delegator: Delegator<T::AccountId>,
 	) -> DispatchResultWithPostInfo {
-		let delegator_index = DelegatorIndexByStakingProtocolAndDelegator::<T>::take(
-			staking_protocol,
-			delegator.clone(),
-		)
-		.ok_or(Error::<T>::DelegatorIndexNotFound)?;
-		DelegatorByStakingProtocolAndDelegatorIndex::<T>::take(staking_protocol, delegator_index)
-			.ok_or(Error::<T>::DelegatorNotFound)?;
-		LedgerByStakingProtocolAndDelegator::<T>::take(staking_protocol, delegator.clone())
-			.ok_or(Error::<T>::LedgerNotFound)?;
+		let delegator_index =
+			DelegatorIndexByStakingProtocolAndDelegator::<T>::take(&staking_protocol, &delegator)
+				.ok_or(Error::<T>::DelegatorIndexNotFound)?;
+		DelegatorByStakingProtocolAndDelegatorIndex::<T>::remove(
+			&staking_protocol,
+			delegator_index,
+		);
+		ValidatorsByStakingProtocolAndDelegator::<T>::remove(&staking_protocol, &delegator);
+		LedgerByStakingProtocolAndDelegator::<T>::remove(&staking_protocol, &delegator);
 		Self::deposit_event(Event::RemoveDelegator {
 			staking_protocol,
 			delegator_index,
@@ -124,21 +124,28 @@ impl<T: Config> Pallet<T> {
 		staking_protocol: StakingProtocol,
 		delegator: Delegator<T::AccountId>,
 	) -> DispatchResultWithPostInfo {
+		Self::ensure_delegator_exist(&staking_protocol, &delegator)?;
 		let currency_id = staking_protocol.info().currency_id;
 		let dest_beneficiary_location = staking_protocol
-			.get_dest_beneficiary_location::<T>(delegator)
+			.get_dest_beneficiary_location::<T>(delegator.clone())
 			.ok_or(Error::<T>::UnsupportedStakingProtocol)?;
 		let (entrance_account, _) = T::VtokenMinting::get_entrance_and_exit_accounts();
-		let entrance_account_fee_balance =
+		let entrance_account_free_balance =
 			T::MultiCurrency::free_balance(currency_id, &entrance_account);
 		T::XcmTransfer::transfer(
-			entrance_account,
+			entrance_account.clone(),
 			currency_id,
-			entrance_account_fee_balance,
+			entrance_account_free_balance,
 			dest_beneficiary_location,
 			WeightLimit::Unlimited,
 		)
 		.map_err(|_| Error::<T>::DerivativeAccountIdFailed)?;
+		Self::deposit_event(Event::TransferTo {
+			staking_protocol,
+			from: entrance_account,
+			to: delegator,
+			amount: entrance_account_free_balance,
+		});
 		Ok(().into())
 	}
 
@@ -147,23 +154,13 @@ impl<T: Config> Pallet<T> {
 		delegator: Delegator<T::AccountId>,
 		amount: Balance,
 	) -> DispatchResultWithPostInfo {
-		let delegator_index = DelegatorIndexByStakingProtocolAndDelegator::<T>::get(
-			staking_protocol,
-			delegator.clone(),
-		)
-		.ok_or(Error::<T>::DelegatorIndexNotFound)?;
-		ensure!(
-			DelegatorByStakingProtocolAndDelegatorIndex::<T>::contains_key(
-				staking_protocol,
-				delegator_index
-			),
-			Error::<T>::DelegatorNotFound
-		);
-
+		let delegator_index = Self::ensure_delegator_exist(&staking_protocol, &delegator)?;
+		let (entrance_account, _) = T::VtokenMinting::get_entrance_and_exit_accounts();
 		let transfer_back_call_data =
 			Self::wrap_polkadot_xcm_limited_reserve_transfer_assets_call_data(
 				&staking_protocol,
 				amount,
+				entrance_account.clone(),
 			)?;
 		let utility_as_derivative_call_data = Self::wrap_utility_as_derivative_call_data(
 			&staking_protocol,
@@ -173,6 +170,12 @@ impl<T: Config> Pallet<T> {
 		let xcm_message =
 			Self::wrap_xcm_message(&staking_protocol, utility_as_derivative_call_data)?;
 		Self::send_xcm_message(staking_protocol, xcm_message)?;
+		Self::deposit_event(Event::TransferBack {
+			staking_protocol,
+			from: delegator,
+			to: entrance_account,
+			amount,
+		});
 		Ok(().into())
 	}
 
@@ -207,14 +210,12 @@ impl<T: Config> Pallet<T> {
 	pub fn wrap_polkadot_xcm_limited_reserve_transfer_assets_call_data(
 		staking_protocol: &StakingProtocol,
 		amount: Balance,
+		to: T::AccountId,
 	) -> Result<Vec<u8>, Error<T>> {
 		let xcm_pallet_index = staking_protocol.info().xcm_pallet_index;
 		let bifrost_dest_location = staking_protocol.info().bifrost_dest_location;
-		let (entrance_account, _) = T::VtokenMinting::get_entrance_and_exit_accounts();
-		let account_id = entrance_account
-			.encode()
-			.try_into()
-			.map_err(|_| Error::<T>::DerivativeAccountIdFailed)?;
+		let account_id =
+			to.encode().try_into().map_err(|_| Error::<T>::DerivativeAccountIdFailed)?;
 		let beneficiary = Location::new(0, AccountId32 { network: None, id: account_id });
 		let fee_asset_item = 0u32;
 		let weight_limit = WeightLimit::Unlimited;
@@ -350,5 +351,22 @@ impl<T: Config> Pallet<T> {
 				Ok(())
 			},
 		}
+	}
+
+	pub fn ensure_delegator_exist(
+		staking_protocol: &StakingProtocol,
+		delegator: &Delegator<T::AccountId>,
+	) -> Result<DelegatorIndex, Error<T>> {
+		let delegator_index =
+			DelegatorIndexByStakingProtocolAndDelegator::<T>::get(staking_protocol, delegator)
+				.ok_or(Error::<T>::DelegatorIndexNotFound)?;
+		ensure!(
+			DelegatorByStakingProtocolAndDelegatorIndex::<T>::contains_key(
+				staking_protocol,
+				delegator_index
+			),
+			Error::<T>::DelegatorNotFound
+		);
+		Ok(delegator_index)
 	}
 }
