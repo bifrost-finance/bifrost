@@ -952,7 +952,7 @@ benchmarks! {
 		// y controls number of delegations, its maximum per collator is the max top delegations
 		let y in 0..<<T as Config>::MaxTopDelegationsPerCandidate as Get<u32>>::get();
 
-		// must come after 'let foo in 0..` statements for macro
+		// must come after `let foo in 0..` statements for macro
 		use crate::{
 			DelayedPayout, DelayedPayouts, AtStake, CollatorSnapshot, Bond, Points,
 			AwardedPts,
