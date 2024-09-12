@@ -21,7 +21,7 @@ impl<T: Config> Pallet<T> {
 	/// Accrue interest and update corresponding storage
 	pub(crate) fn accrue_interest(asset_id: AssetIdOf<T>) -> DispatchResult {
 		let now = T::UnixTime::now().as_secs();
-		let last_accrued_interest_time = Self::last_accrued_interest_time(asset_id);
+		let last_accrued_interest_time = LastAccruedInterestTime::<T>::get(asset_id);
 		if last_accrued_interest_time.is_zero() {
 			// For the initialization
 			Self::update_last_accrued_interest_time(asset_id, now)?;
@@ -59,11 +59,11 @@ impl<T: Config> Pallet<T> {
 		asset_id: AssetIdOf<T>,
 	) -> Result<(Rate, Rate, Rate, Ratio, BalanceOf<T>, BalanceOf<T>, FixedU128), DispatchError> {
 		let market = Self::market(asset_id)?;
-		let total_supply = Self::total_supply(asset_id);
+		let total_supply = TotalSupply::<T>::get(asset_id);
 		let total_cash = Self::get_total_cash(asset_id);
-		let mut total_borrows = Self::total_borrows(asset_id);
-		let mut total_reserves = Self::total_reserves(asset_id);
-		let mut borrow_index = Self::borrow_index(asset_id);
+		let mut total_borrows = TotalBorrows::<T>::get(asset_id);
+		let mut total_reserves = TotalReserves::<T>::get(asset_id);
+		let mut borrow_index = BorrowIndex::<T>::get(asset_id);
 
 		let util = Self::calc_utilization_ratio(total_cash, total_borrows, total_reserves)?;
 		let borrow_rate =
@@ -72,7 +72,7 @@ impl<T: Config> Pallet<T> {
 			InterestRateModel::get_supply_rate(borrow_rate, util, market.reserve_factor);
 
 		let now = T::UnixTime::now().as_secs();
-		let last_accrued_interest_time = Self::last_accrued_interest_time(asset_id);
+		let last_accrued_interest_time = LastAccruedInterestTime::<T>::get(asset_id);
 		if now > last_accrued_interest_time {
 			let delta_time = now - last_accrued_interest_time;
 			let interest_accumulated =
@@ -110,10 +110,10 @@ impl<T: Config> Pallet<T> {
 	/// This function does not accrue interest before calculating the exchange rate.
 	/// exchangeRate = (totalCash + totalBorrows - totalReserves) / totalSupply
 	pub fn exchange_rate_stored(asset_id: AssetIdOf<T>) -> Result<Rate, DispatchError> {
-		let total_supply = Self::total_supply(asset_id);
+		let total_supply = TotalSupply::<T>::get(asset_id);
 		let total_cash = Self::get_total_cash(asset_id);
-		let total_borrows = Self::total_borrows(asset_id);
-		let total_reserves = Self::total_reserves(asset_id);
+		let total_borrows = TotalBorrows::<T>::get(asset_id);
+		let total_reserves = TotalReserves::<T>::get(asset_id);
 
 		Self::calculate_exchange_rate(total_supply, total_cash, total_borrows, total_reserves)
 	}

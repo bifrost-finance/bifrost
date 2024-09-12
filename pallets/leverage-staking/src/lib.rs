@@ -249,7 +249,7 @@ impl<T: Config> Pallet<T> {
 		if !AccountDeposits::<T>::contains_key(asset_id, supplier) {
 			return Ok(BalanceOf::<T>::zero());
 		}
-		let deposits = lend_market::Pallet::<T>::account_deposits(asset_id, supplier);
+		let deposits = AccountDeposits::<T>::get(asset_id, supplier);
 		if deposits.voucher_balance.is_zero() {
 			return Ok(BalanceOf::<T>::zero());
 		}

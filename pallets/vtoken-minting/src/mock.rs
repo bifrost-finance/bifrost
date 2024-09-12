@@ -21,14 +21,14 @@
 #![cfg(test)]
 #![allow(non_upper_case_globals)]
 
+use bb_bnc::{BbBNCInterface, Point};
 use bifrost_asset_registry::AssetIdMaps;
 use bifrost_primitives::{
 	currency::{BNC, DOT, FIL, KSM, MOVR, VBNC, VFIL, VKSM, VMOVR},
-	CurrencyId, CurrencyIdMapping, SlpxOperator, TokenSymbol,
+	CurrencyId, CurrencyIdMapping, MoonbeamChainId, SlpxOperator, TokenSymbol,
 };
 use bifrost_runtime_common::{micro, milli};
 use bifrost_slp::{QueryId, QueryResponseManager};
-use bifrost_ve_minting::{Point, VeMintingInterface};
 pub use cumulus_primitives_core::ParaId;
 use frame_support::{
 	derive_impl, ord_parameter_types,
@@ -222,18 +222,14 @@ impl vtoken_minting::Config for Runtime {
 	type IncentivePoolAccount = IncentivePoolAccount;
 	type BifrostSlp = Slp;
 	type BifrostSlpx = SlpxInterface;
-	type VeMinting = VeMinting;
+	type BbBNC = BbBNC;
 	type RelayChainToken = RelayCurrencyId;
 	type CurrencyIdConversion = AssetIdMaps<Runtime>;
 	type CurrencyIdRegister = AssetIdMaps<Runtime>;
 	type WeightInfo = ();
 	type OnRedeemSuccess = ();
 	type XcmTransfer = XTokens;
-	type AstarParachainId = ConstU32<2007>;
-	type MoonbeamParachainId = ConstU32<2023>;
-	type HydradxParachainId = ConstU32<2034>;
-	type MantaParachainId = ConstU32<2104>;
-	type InterlayParachainId = ConstU32<2032>;
+	type MoonbeamChainId = MoonbeamChainId;
 	type ChannelCommission = ();
 	type AssetIdMaps = AssetIdMaps<Runtime>;
 }
@@ -467,11 +463,11 @@ pub fn run_to_block(n: BlockNumber) {
 	}
 }
 
+use bb_bnc::IncentiveConfig;
 use bifrost_primitives::PoolId;
-use bifrost_ve_minting::IncentiveConfig;
-// Mock VeMinting Struct
-pub struct VeMinting;
-impl VeMintingInterface<AccountId, CurrencyId, Balance, BlockNumber> for VeMinting {
+// Mock BbBNC Struct
+pub struct BbBNC;
+impl BbBNCInterface<AccountId, CurrencyId, Balance, BlockNumber> for BbBNC {
 	fn balance_of(_addr: &AccountId, _time: Option<BlockNumber>) -> Result<Balance, DispatchError> {
 		Ok(100)
 	}

@@ -537,25 +537,21 @@ pub mod pallet {
 	/// One operate origin(can be a multisig account) for a currency. An operating origins are
 	/// normal account in Bifrost chain.
 	#[pallet::storage]
-	#[pallet::getter(fn get_operate_origin)]
 	pub type OperateOrigins<T> = StorageMap<_, Blake2_128Concat, CurrencyId, AccountIdOf<T>>;
 
 	/// Origins and Amounts for the staking operating account fee supplement. An operating account
 	/// is identified in MultiLocation format.
 	#[pallet::storage]
-	#[pallet::getter(fn get_fee_source)]
 	pub type FeeSources<T> =
 		StorageMap<_, Blake2_128Concat, CurrencyId, (MultiLocation, BalanceOf<T>)>;
 
 	/// Hosting fee percentage and beneficiary account for different chains
 	#[pallet::storage]
-	#[pallet::getter(fn get_hosting_fee)]
 	pub type HostingFees<T> = StorageMap<_, Blake2_128Concat, CurrencyId, (Permill, MultiLocation)>;
 
 	/// Delegators in service. A delegator is identified in MultiLocation format.
 	/// Currency Id + Sub-account index => MultiLocation
 	#[pallet::storage]
-	#[pallet::getter(fn get_delegator_multilocation_by_index)]
 	pub type DelegatorsIndex2Multilocation<T> = StorageDoubleMap<
 		_,
 		Blake2_128Concat,
@@ -568,7 +564,6 @@ pub mod pallet {
 
 	/// Delegators in service. Currency Id + MultiLocation => Sub-account index
 	#[pallet::storage]
-	#[pallet::getter(fn get_delegator_index_by_multilocation)]
 	pub type DelegatorsMultilocation2Index<T> = StorageDoubleMap<
 		_,
 		Blake2_128Concat,
@@ -581,18 +576,15 @@ pub mod pallet {
 
 	/// Next index of different currency delegators.
 	#[pallet::storage]
-	#[pallet::getter(fn get_delegator_next_index)]
 	pub type DelegatorNextIndex<T> = StorageMap<_, Blake2_128Concat, CurrencyId, u16, ValueQuery>;
 
 	/// (VWL) Validator in service. A validator is identified in MultiLocation format.
 	#[pallet::storage]
-	#[pallet::getter(fn get_validators)]
 	pub type Validators<T: Config> =
 		StorageMap<_, Blake2_128Concat, CurrencyId, BoundedVec<MultiLocation, T::MaxLengthLimit>>;
 
 	/// (VBL) Validator Boost List -> (validator multilocation, due block number)
 	#[pallet::storage]
-	#[pallet::getter(fn get_validator_boost_list)]
 	pub type ValidatorBoostList<T: Config> = StorageMap<
 		_,
 		Blake2_128Concat,
@@ -602,7 +594,6 @@ pub mod pallet {
 
 	/// Validators for each delegator. CurrencyId + Delegator => Vec<Validator>
 	#[pallet::storage]
-	#[pallet::getter(fn get_validators_by_delegator)]
 	pub type ValidatorsByDelegator<T: Config> = StorageDoubleMap<
 		_,
 		Blake2_128Concat,
@@ -614,7 +605,6 @@ pub mod pallet {
 	>;
 
 	#[pallet::storage]
-	#[pallet::getter(fn get_validators_by_delegator_update_entry)]
 	pub type ValidatorsByDelegatorXcmUpdateQueue<T> = StorageMap<
 		_,
 		Blake2_128Concat,
@@ -624,7 +614,6 @@ pub mod pallet {
 
 	/// Delegator ledgers. A delegator is identified in MultiLocation format.
 	#[pallet::storage]
-	#[pallet::getter(fn get_delegator_ledger)]
 	pub type DelegatorLedgers<T> = StorageDoubleMap<
 		_,
 		Blake2_128Concat,
@@ -636,7 +625,6 @@ pub mod pallet {
 	>;
 
 	#[pallet::storage]
-	#[pallet::getter(fn get_delegator_ledger_update_entry)]
 	pub type DelegatorLedgerXcmUpdateQueue<T> = StorageMap<
 		_,
 		Blake2_128Concat,
@@ -646,19 +634,16 @@ pub mod pallet {
 
 	/// Minimum and Maximum constraints for different chains.
 	#[pallet::storage]
-	#[pallet::getter(fn get_minimums_maximums)]
 	pub type MinimumsAndMaximums<T> =
 		StorageMap<_, Blake2_128Concat, CurrencyId, MinimumsMaximums<BalanceOf<T>>>;
 
 	/// TimeUnit delay params for different chains.
 	#[pallet::storage]
-	#[pallet::getter(fn get_currency_delays)]
 	pub type CurrencyDelays<T> = StorageMap<_, Blake2_128Concat, CurrencyId, Delays>;
 
 	/// A delegator's tuning record of exchange rate for the current time unit.
 	/// Currency Id + Delegator Id => latest tuned TimeUnit
 	#[pallet::storage]
-	#[pallet::getter(fn get_delegator_latest_tune_record)]
 	pub type DelegatorLatestTuneRecord<T> = StorageDoubleMap<
 		_,
 		Blake2_128Concat,
@@ -672,7 +657,6 @@ pub mod pallet {
 	/// Currency's tuning record of exchange rate for the current time unit.
 	/// Currency Id => (latest tuned TimeUnit, number of tuning times)
 	#[pallet::storage]
-	#[pallet::getter(fn get_currency_latest_tune_record)]
 	pub type CurrencyLatestTuneRecord<T> =
 		StorageMap<_, Blake2_128Concat, CurrencyId, (TimeUnit, u32), OptionQuery>;
 
@@ -680,28 +664,23 @@ pub mod pallet {
 	/// rate for a single time unit, and how much at most each time can tune the
 	/// exchange rate
 	#[pallet::storage]
-	#[pallet::getter(fn get_currency_tune_exchange_rate_limit)]
 	pub type CurrencyTuneExchangeRateLimit<T> =
 		StorageMap<_, Blake2_128Concat, CurrencyId, (u32, Permill)>;
 
 	/// reflect if all delegations are on a decrease/revoke status. If yes, then new user redeeming
 	/// is unaccepted.
 	#[pallet::storage]
-	#[pallet::getter(fn get_all_delegations_occupied_status)]
 	pub type DelegationsOccupied<T> = StorageMap<_, Blake2_128Concat, CurrencyId, bool>;
 
 	#[pallet::storage]
-	#[pallet::getter(fn get_last_time_updated_ongoing_time_unit)]
 	pub type LastTimeUpdatedOngoingTimeUnit<T> =
 		StorageMap<_, Blake2_128Concat, CurrencyId, BlockNumberFor<T>>;
 
 	#[pallet::storage]
-	#[pallet::getter(fn get_ongoing_time_unit_update_interval)]
 	pub type OngoingTimeUnitUpdateInterval<T> =
 		StorageMap<_, Blake2_128Concat, CurrencyId, BlockNumberFor<T>>;
 
 	#[pallet::storage]
-	#[pallet::getter(fn get_supplement_fee_account_wihtelist)]
 	pub type SupplementFeeAccountWhitelist<T> =
 		StorageMap<_, Blake2_128Concat, CurrencyId, Vec<(MultiLocation, Hash<T>)>>;
 
@@ -1271,7 +1250,7 @@ pub mod pallet {
 			ensure!(value > Zero::zero(), Error::<T>::AmountZero);
 
 			// Ensure the value is valid.
-			let (limit_num, max_permill) = Self::get_currency_tune_exchange_rate_limit(currency_id)
+			let (limit_num, max_permill) = CurrencyTuneExchangeRateLimit::<T>::get(currency_id)
 				.ok_or(Error::<T>::TuneExchangeRateLimitNotSet)?;
 			// Get pool token value
 			let pool_token = T::VtokenMinting::get_token_pool(currency_id);
@@ -1290,9 +1269,8 @@ pub mod pallet {
 			}
 
 			// Get CurrencyLatestTuneRecord for the currencyId.
-			let (latest_time_unit, tune_num) =
-				Self::get_currency_latest_tune_record(currency_id)
-					.ok_or(Error::<T>::CurrencyLatestTuneRecordNotExist)?;
+			let (latest_time_unit, tune_num) = CurrencyLatestTuneRecord::<T>::get(currency_id)
+				.ok_or(Error::<T>::CurrencyLatestTuneRecordNotExist)?;
 
 			// See if exceeds tuning limit.
 			// If it has been tuned in the current time unit, ensure this tuning is within limit.
@@ -1306,7 +1284,7 @@ pub mod pallet {
 
 			// Get charged fee value
 			let (fee_permill, beneficiary) =
-				Self::get_hosting_fee(currency_id).ok_or(Error::<T>::InvalidHostingFee)?;
+				HostingFees::<T>::get(currency_id).ok_or(Error::<T>::InvalidHostingFee)?;
 			let fee_to_charge = fee_permill.mul_floor(value);
 
 			// Should first charge fee, and then tune exchange rate. Otherwise, the rate will be
@@ -1940,7 +1918,7 @@ pub mod pallet {
 
 			// Add the boost list to the validator set
 			let mut validator_vec;
-			if let Some(validator_set) = Self::get_validators(currency_id) {
+			if let Some(validator_set) = Validators::<T>::get(currency_id) {
 				validator_vec = validator_set.to_vec();
 			} else {
 				validator_vec = vec![];
@@ -2036,7 +2014,7 @@ pub mod pallet {
 				due_block_number,
 			});
 
-			let validator_set_op = Self::get_validators(currency_id);
+			let validator_set_op = Validators::<T>::get(currency_id);
 
 			let mut validator_vec;
 			// Add the newly added validator to the validator set
@@ -2282,14 +2260,14 @@ impl<T: Config, F: Contains<CurrencyIdOf<T>>>
 		token: CurrencyIdOf<T>,
 		derivative_index: DerivativeIndex,
 	) -> bool {
-		Pallet::<T>::get_delegator_multilocation_by_index(token, derivative_index).is_some()
+		DelegatorsIndex2Multilocation::<T>::get(token, derivative_index).is_some()
 	}
 
 	fn get_multilocation(
 		token: CurrencyIdOf<T>,
 		derivative_index: DerivativeIndex,
 	) -> Option<MultiLocation> {
-		Pallet::<T>::get_delegator_multilocation_by_index(token, derivative_index)
+		DelegatorsIndex2Multilocation::<T>::get(token, derivative_index)
 	}
 
 	fn get_stake_info(
@@ -2297,7 +2275,7 @@ impl<T: Config, F: Contains<CurrencyIdOf<T>>>
 		derivative_index: DerivativeIndex,
 	) -> Option<(BalanceOf<T>, BalanceOf<T>)> {
 		Self::get_multilocation(token, derivative_index).and_then(|location| {
-			Pallet::<T>::get_delegator_ledger(token, location).and_then(|ledger| match ledger {
+			DelegatorLedgers::<T>::get(token, location).and_then(|ledger| match ledger {
 				Ledger::Substrate(l) if F::contains(&token) => Some((l.total, l.active)),
 				_ => None,
 			})

@@ -36,8 +36,8 @@ benchmarks! {
 		const KSM: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
 		let token_type = vec![KSM];
 	}: _(RawOrigin::Root,
-	token_type.clone(),
-	tokens_proportion.clone(),
+	BoundedVec::try_from(token_type.clone()).unwrap(),
+	BoundedVec::try_from(tokens_proportion.clone()).unwrap(),
 	true)
 
 	edit_distribution {
@@ -47,14 +47,14 @@ benchmarks! {
 		let token_type = vec![KSM];
 		assert_ok!(FeeShare::<T>::create_distribution(
 			RawOrigin::Root.into(),
-			vec![KSM],
-			tokens_proportion.clone(),
+			BoundedVec::try_from(vec![KSM]).unwrap(),
+			BoundedVec::try_from(tokens_proportion.clone()).unwrap(),
 			true,
 		));
 	}: _(RawOrigin::Root,
 		0,
 		None,
-		Some(tokens_proportion.clone()),
+		Some(BoundedVec::try_from(tokens_proportion.clone()).unwrap()),
 		Some(true))
 	set_era_length {}: _(RawOrigin::Root,BlockNumberFor::<T>::from(10u32))
 	execute_distribute {
@@ -64,8 +64,8 @@ benchmarks! {
 		let token_type = vec![KSM];
 		assert_ok!(FeeShare::<T>::create_distribution(
 			RawOrigin::Root.into(),
-			vec![KSM],
-			tokens_proportion.clone(),
+			BoundedVec::try_from(vec![KSM]).unwrap(),
+			BoundedVec::try_from(tokens_proportion.clone()).unwrap(),
 			true,
 		));
 	}: _(RawOrigin::Root,0)
@@ -76,9 +76,25 @@ benchmarks! {
 		let token_type = vec![KSM];
 		assert_ok!(FeeShare::<T>::create_distribution(
 			RawOrigin::Root.into(),
-			vec![KSM],
-			tokens_proportion.clone(),
+			BoundedVec::try_from(vec![KSM]).unwrap(),
+			BoundedVec::try_from(tokens_proportion.clone()).unwrap(),
 			true,
 		));
 	}: _(RawOrigin::Root,0)
+	set_usd_config {
+		let caller: T::AccountId = whitelisted_caller();
+		let tokens_proportion = vec![(caller.clone(), Perbill::from_percent(100))];
+		const KSM: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
+		let token_type = vec![KSM];
+		assert_ok!(FeeShare::<T>::create_distribution(
+			RawOrigin::Root.into(),
+			BoundedVec::try_from(vec![KSM]).unwrap(),
+			BoundedVec::try_from(tokens_proportion.clone()).unwrap(),
+			true,
+		));
+	}: _(RawOrigin::Root,
+		0,
+		100u128,
+		10u32.into(),
+		caller)
 }

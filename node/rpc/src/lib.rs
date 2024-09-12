@@ -33,6 +33,8 @@
 
 use std::sync::Arc;
 
+use bb_bnc_rpc::{BbBNCRpc, BbBNCRpcApiServer};
+use bb_bnc_rpc_runtime_api::BbBNCRuntimeApi;
 use bifrost_farming_rpc::{FarmingRpc, FarmingRpcApiServer};
 use bifrost_farming_rpc_runtime_api::FarmingRuntimeApi;
 use bifrost_flexible_fee_rpc::{FeeRpcApiServer, FlexibleFeeRpc};
@@ -43,8 +45,6 @@ use bifrost_salp_rpc::{SalpRpc, SalpRpcApiServer};
 use bifrost_salp_rpc_runtime_api::SalpRuntimeApi;
 use bifrost_stable_pool_rpc::{StablePoolRpc, StablePoolRpcApiServer};
 use bifrost_stable_pool_rpc_runtime_api::StablePoolRuntimeApi;
-use bifrost_ve_minting_rpc::{VeMintingRpc, VeMintingRpcApiServer};
-use bifrost_ve_minting_rpc_runtime_api::VeMintingRuntimeApi;
 use bifrost_vtoken_minting_rpc::{VtokenMintingRpc, VtokenMintingRpcApiServer};
 use bifrost_vtoken_minting_rpc_runtime_api::VtokenMintingRuntimeApi;
 use futures::channel::mpsc;
@@ -152,7 +152,7 @@ where
 	C::Api: FarmingRuntimeApi<Block, AccountId, PoolId, CurrencyId>,
 	C::Api: FeeRuntimeApi<Block, AccountId>,
 	C::Api: SalpRuntimeApi<Block, ParaId, AccountId>,
-	C::Api: VeMintingRuntimeApi<Block, AccountId>,
+	C::Api: BbBNCRuntimeApi<Block, AccountId>,
 	C::Api: LendMarketApi<Block, AccountId, Balance>,
 	C::Api: VtokenMintingRuntimeApi<Block, CurrencyId>,
 	C::Api: ZenlinkProtocolRuntimeApi<Block, AccountId, AssetId>,
@@ -169,7 +169,7 @@ where
 	module.merge(FarmingRpc::new(client.clone()).into_rpc())?;
 	module.merge(FlexibleFeeRpc::new(client.clone()).into_rpc())?;
 	module.merge(SalpRpc::new(client.clone()).into_rpc())?;
-	module.merge(VeMintingRpc::new(client.clone()).into_rpc())?;
+	module.merge(BbBNCRpc::new(client.clone()).into_rpc())?;
 	module.merge(ZenlinkProtocol::new(client.clone()).into_rpc())?;
 	module.merge(StablePoolRpc::new(client.clone()).into_rpc())?;
 	module.merge(LendMarket::new(client.clone()).into_rpc())?;

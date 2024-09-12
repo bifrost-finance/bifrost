@@ -84,6 +84,48 @@ fn set_commission_tokens_should_work() {
 }
 
 #[test]
+fn set_commission_tokens_should_fail_with_invalid_vtoken() {
+	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
+		assert_noop!(
+			ChannelCommission::set_commission_tokens(RuntimeOrigin::signed(ALICE), KSM, Some(KSM)),
+			Error::<Runtime>::InvalidVtoken
+		);
+
+		assert_noop!(
+			ChannelCommission::set_commission_tokens(RuntimeOrigin::signed(ALICE), KSM, None),
+			Error::<Runtime>::InvalidVtoken
+		);
+	});
+}
+
+#[test]
+fn set_commission_tokens_should_fail_with_no_change() {
+	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
+		assert_ok!(ChannelCommission::set_commission_tokens(
+			RuntimeOrigin::signed(ALICE),
+			VKSM,
+			Some(KSM),
+		));
+
+		assert_noop!(
+			ChannelCommission::set_commission_tokens(RuntimeOrigin::signed(ALICE), VKSM, Some(KSM)),
+			Error::<Runtime>::NoChangesMade
+		);
+
+		assert_ok!(ChannelCommission::set_commission_tokens(
+			RuntimeOrigin::signed(ALICE),
+			VKSM,
+			None,
+		));
+
+		assert_noop!(
+			ChannelCommission::set_commission_tokens(RuntimeOrigin::signed(ALICE), VKSM, None),
+			Error::<Runtime>::NoChangesMade
+		);
+	});
+}
+
+#[test]
 fn register_channel_should_work() {
 	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
 		// set commission tokens: VKSM -> KSM
@@ -156,6 +198,17 @@ fn remove_channel_should_work() {
 }
 
 #[test]
+fn remove_channel_should_fail_with_channel_not_exist() {
+	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
+		assert_eq!(Channels::<Runtime>::get(0), None);
+		assert_noop!(
+			ChannelCommission::remove_channel(RuntimeOrigin::signed(ALICE), 0),
+			Error::<Runtime>::ChannelNotExist
+		);
+	});
+}
+
+#[test]
 fn update_channel_receive_account_should_work() {
 	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
 		setup();
@@ -180,6 +233,49 @@ fn update_channel_receive_account_should_work() {
 				CHANNEL_A_BACKUP_RECEIVER,
 				BoundedVec::try_from(CHANNEL_A_NAME.to_vec()).unwrap()
 			))
+		);
+	});
+}
+
+#[test]
+fn update_channel_receive_account_should_fail_with_channel_not_exist() {
+	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
+		assert_eq!(Channels::<Runtime>::get(0), None);
+		assert_noop!(
+			ChannelCommission::update_channel_receive_account(
+				RuntimeOrigin::signed(ALICE),
+				0,
+				CHANNEL_A_RECEIVER,
+			),
+			Error::<Runtime>::ChannelNotExist
+		);
+	});
+}
+
+#[test]
+fn update_channel_receive_account_should_fail_with_no_changes() {
+	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
+		setup();
+
+		// Channel A is registered
+		assert_eq!(
+			Channels::<Runtime>::get(0),
+			Some((CHANNEL_A_RECEIVER, BoundedVec::try_from(CHANNEL_A_NAME.to_vec()).unwrap()))
+		);
+
+		assert_noop!(
+			ChannelCommission::update_channel_receive_account(
+				RuntimeOrigin::signed(ALICE),
+				0,
+				CHANNEL_A_RECEIVER,
+			),
+			Error::<Runtime>::NoChangesMade
+		);
+
+		// Channel A's receive account is updated
+		assert_eq!(
+			Channels::<Runtime>::get(0),
+			Some((CHANNEL_A_RECEIVER, BoundedVec::try_from(CHANNEL_A_NAME.to_vec()).unwrap()))
 		);
 	});
 }
@@ -214,6 +310,58 @@ fn set_channel_commission_token_should_work() {
 		));
 
 		assert_eq!(ChannelCommissionTokenRates::<Runtime>::get(0, VBNC), Zero::zero());
+	});
+}
+
+#[test]
+fn set_channel_commission_token_should_fail_with_invalid_vtoken() {
+	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
+		assert_noop!(
+			ChannelCommission::set_channel_commission_token(
+				RuntimeOrigin::signed(ALICE),
+				0,
+				KSM,
+				Percent::from_percent(50),
+			),
+			Error::<Runtime>::InvalidVtoken
+		);
+	});
+}
+
+#[test]
+fn set_channel_commission_token_should_fail_with_channel_not_exist() {
+	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
+		assert_eq!(Channels::<Runtime>::get(0), None);
+		assert_noop!(
+			ChannelCommission::set_channel_commission_token(
+				RuntimeOrigin::signed(ALICE),
+				0,
+				VKSM,
+				Percent::from_percent(50),
+			),
+			Error::<Runtime>::ChannelNotExist
+		);
+	});
+}
+
+#[test]
+fn set_channel_commission_token_should_fail_with_not_configure_commission() {
+	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
+		assert_ok!(ChannelCommission::register_channel(
+			RuntimeOrigin::signed(ALICE),
+			CHANNEL_A_NAME.to_vec(),
+			CHANNEL_A_RECEIVER.clone(),
+		));
+
+		assert_noop!(
+			ChannelCommission::set_channel_commission_token(
+				RuntimeOrigin::signed(ALICE),
+				0,
+				VKSM,
+				Percent::from_percent(50),
+			),
+			Error::<Runtime>::VtokenNotConfiguredForCommission
+		);
 	});
 }
 
@@ -260,6 +408,35 @@ fn claim_commissions_should_work() {
 
 		// assure channel A's receiver's BNC balance is increased by 120
 		assert_eq!(Currencies::free_balance(BNC, &CHANNEL_A_RECEIVER), receiver_bnc_before + 120);
+	});
+}
+
+#[test]
+fn claim_commissions_should_fail_with_channel_not_exist() {
+	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
+		assert_noop!(
+			ChannelCommission::claim_commissions(
+				RuntimeOrigin::signed(CHANNEL_A_RECEIVER.clone()),
+				0,
+			),
+			Error::<Runtime>::ChannelNotExist
+		);
+	});
+}
+
+#[test]
+fn claim_commissions_should_fail_with_transfer_error() {
+	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
+		setup();
+
+		ChannelClaimableCommissions::<Runtime>::insert(0, KSM, 100);
+		assert_noop!(
+			ChannelCommission::claim_commissions(
+				RuntimeOrigin::signed(CHANNEL_A_RECEIVER.clone()),
+				0,
+			),
+			Error::<Runtime>::TransferError
+		);
 	});
 }
 
@@ -542,6 +719,42 @@ fn set_channel_vtoken_shares_should_work() {
 	});
 }
 
+#[test]
+fn set_channel_vtoken_shares_should_fail_with_channel_not_exist() {
+	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
+		assert_noop!(
+			ChannelCommission::set_channel_vtoken_shares(
+				RuntimeOrigin::signed(ALICE),
+				0,
+				VKSM,
+				Permill::from_percent(90),
+			),
+			Error::<Runtime>::ChannelNotExist
+		);
+	});
+}
+
+#[test]
+fn set_channel_vtoken_shares_should_fail_with_vtoken_not_configured() {
+	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
+		assert_ok!(ChannelCommission::register_channel(
+			RuntimeOrigin::signed(ALICE),
+			CHANNEL_A_NAME.to_vec(),
+			CHANNEL_A_RECEIVER.clone(),
+		));
+
+		assert_noop!(
+			ChannelCommission::set_channel_vtoken_shares(
+				RuntimeOrigin::signed(ALICE),
+				0,
+				VKSM,
+				Permill::from_percent(90),
+			),
+			Error::<Runtime>::VtokenNotConfiguredForCommission
+		);
+	});
+}
+
 // register a new channel base on some existing channels, and mint some tokens to see whether the
 // shares of existing channels are updated correctly.s
 #[test]
@@ -597,5 +810,125 @@ fn register_a_new_channel_and_mint_should_update_shares_and_get_claimable_tokens
 				.unwrap();
 		// check channel A vtoken share after being cleared
 		assert_eq!(ChannelVtokenShares::<Runtime>::get(0, VKSM), channel_a_new_percentage);
+	});
+}
+
+#[test]
+fn on_initialize_hook_should_work() {
+	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
+		let commission_account: AccountId =
+			<Runtime as crate::Config>::CommissionPalletId::get().into_account_truncating();
+
+		// set the block number to 35
+		System::set_block_number(35);
+
+		setup();
+
+		// test case 1: net mint is positive.(VKSM)
+
+		// first, set storages for test case 1
+		// The first round, set channel A has a share of 20%, channel B has a share of 10%. Channel
+		// C has not participated yet.
+		let channel_a_share = Permill::from_percent(20);
+		ChannelVtokenShares::<Runtime>::insert(0, VKSM, channel_a_share);
+
+		let channel_b_share = Permill::from_percent(10);
+		ChannelVtokenShares::<Runtime>::insert(1, VKSM, channel_b_share);
+
+		// VtokenIssuanceSnapshots, set both VKSM and VBNC old total issuance to 10000. newly minted
+		// VKSM is 1000, VBNC is 1000.
+		VtokenIssuanceSnapshots::<Runtime>::insert(VKSM, (9000, 10000));
+
+		// PeriodVtokenTotalMint
+		PeriodVtokenTotalMint::<Runtime>::insert(VKSM, (10000, 2000));
+
+		// PeriodVtokenTotalRedeem
+		PeriodVtokenTotalRedeem::<Runtime>::insert(VKSM, (0, 1000));
+
+		// PeriodChannelVtokenMint. Channel A mint 1000 VKSM, Channel B mint 1000 VKSM.
+		PeriodChannelVtokenMint::<Runtime>::insert(0, VKSM, (2000, 500));
+		PeriodChannelVtokenMint::<Runtime>::insert(1, VKSM, (2000, 100));
+
+		// PeriodTotalCommissions
+		PeriodTotalCommissions::<Runtime>::insert(KSM, (0, 100));
+
+		// set vksm token issuance to 11000
+		let _ = Currencies::update_balance(
+			RuntimeOrigin::root(),
+			commission_account.clone(),
+			VKSM,
+			11000,
+		);
+
+		// set ksm token issuance to 11000
+		let _ = Currencies::update_balance(
+			RuntimeOrigin::root(),
+			commission_account.clone(),
+			KSM,
+			11000,
+		);
+
+		// check balance of commission account
+		assert_eq!(Currencies::free_balance(VKSM, &commission_account), 11000);
+
+		// set block number to 100
+		ChannelCommission::on_initialize(100);
+		// set_clearing_environment already been called in block 100
+		// check whether the clearing environment is set correctly for block 100
+		assert_eq!(VtokenIssuanceSnapshots::<Runtime>::get(VKSM), (10000, 11000));
+		assert_eq!(PeriodVtokenTotalMint::<Runtime>::get(VKSM), (2000, 0));
+		assert_eq!(PeriodVtokenTotalRedeem::<Runtime>::get(VKSM), (1000, 0));
+		assert_eq!(PeriodChannelVtokenMint::<Runtime>::get(0, VKSM), (500, 0));
+		assert_eq!(PeriodChannelVtokenMint::<Runtime>::get(1, VKSM), (100, 0));
+		assert_eq!(PeriodTotalCommissions::<Runtime>::get(KSM), (100, 0));
+
+		// get channel B's vtoken share before being cleared
+		let channel_b_vtoken_share_before = ChannelVtokenShares::<Runtime>::get(1, VKSM);
+
+		ChannelCommission::on_initialize(101);
+
+		let channel_a_commission = 4;
+		// check channel A claimable KSM amount after being cleared
+		assert_eq!(ChannelClaimableCommissions::<Runtime>::get(0, KSM), channel_a_commission);
+
+		let channel_a_new_percentage =
+			Permill::from_rational_with_rounding(2250u32, 11000u32, Rounding::Down).unwrap();
+		// check channel A vtoken share after being cleared
+		assert_eq!(ChannelVtokenShares::<Runtime>::get(0, VKSM), channel_a_new_percentage);
+
+		// check channel B has not been cleared yet
+		assert_eq!(ChannelClaimableCommissions::<Runtime>::get(1, KSM), 0);
+		assert_eq!(ChannelVtokenShares::<Runtime>::get(1, VKSM), channel_b_vtoken_share_before);
+
+		ChannelCommission::on_initialize(102);
+
+		let channel_b_commission = 2;
+		// check channel B claimable KSM amount after being cleared
+		assert_eq!(ChannelClaimableCommissions::<Runtime>::get(1, KSM), channel_b_commission);
+
+		let channel_b_new_percentage =
+			Permill::from_rational_with_rounding(1050u32, 11000u32, Rounding::Down).unwrap();
+		// check channel B vtoken share after being cleared
+		assert_eq!(ChannelVtokenShares::<Runtime>::get(1, VKSM), channel_b_new_percentage);
+
+		// check PeriodClearedCommissions, should be channel a commission + channel b commission
+		assert_eq!(PeriodClearedCommissions::<Runtime>::get(KSM), 6);
+
+		let bifrost_commission_receiver: AccountId32 =
+			<Runtime as crate::Config>::BifrostCommissionReceiver::get();
+		// check Bifrost commission balance before being cleared
+		let bifrost_account_balance_before =
+			Currencies::free_balance(KSM, &bifrost_commission_receiver);
+		assert_eq!(bifrost_account_balance_before, 0);
+
+		ChannelCommission::on_initialize(103);
+
+		// cleared commissions should be none
+		assert_eq!(PeriodClearedCommissions::<Runtime>::get(KSM), 0);
+
+		// check Bifrost commission balance after being cleared
+		let bifrost_commission_balance_after =
+			Currencies::free_balance(KSM, &bifrost_commission_receiver);
+		assert_eq!(bifrost_commission_balance_after, 100 - 6);
 	});
 }

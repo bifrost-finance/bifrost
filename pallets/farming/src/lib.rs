@@ -62,7 +62,7 @@ pub type CurrencyIdOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<
 
 type BalanceOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<AccountIdOf<T>>>::Balance;
 
-use bifrost_ve_minting::VeMintingInterface;
+use bb_bnc::BbBNCInterface;
 use parity_scale_codec::FullCodec;
 use sp_std::fmt::Debug;
 
@@ -109,7 +109,7 @@ pub mod pallet {
 		#[pallet::constant]
 		type FarmingBoost: Get<PalletId>;
 
-		type VeMinting: bifrost_ve_minting::VeMintingInterface<
+		type BbBNC: bb_bnc::BbBNCInterface<
 			AccountIdOf<Self>,
 			CurrencyIdOf<Self>,
 			BalanceOf<Self>,
@@ -363,7 +363,7 @@ pub mod pallet {
 				match gauge_pool_info.gauge_state {
 					GaugeState::Bonded => {
 						let rewards = gauge_pool_info.gauge_basic_rewards.into_iter().collect();
-						T::VeMinting::auto_notify_reward(gid, n, rewards).unwrap_or_default();
+						T::BbBNC::auto_notify_reward(gid, n, rewards).unwrap_or_default();
 					},
 					_ => (),
 				}
@@ -804,7 +804,7 @@ pub mod pallet {
 			let pool_info = PoolInfos::<T>::get(gid).ok_or(Error::<T>::PoolDoesNotExist)?;
 			let share_info = SharesAndWithdrawnRewards::<T>::get(gid, &who)
 				.ok_or(Error::<T>::ShareInfoNotExists)?;
-			T::VeMinting::get_rewards(gid, &who, Some((share_info.share, pool_info.total_shares)))?;
+			T::BbBNC::get_rewards(gid, &who, Some((share_info.share, pool_info.total_shares)))?;
 
 			Self::deposit_event(Event::GaugeWithdrawn { who, gid });
 			Ok(())
@@ -827,7 +827,7 @@ pub mod pallet {
 				let pool_info = PoolInfos::<T>::get(gid).ok_or(Error::<T>::PoolDoesNotExist)?;
 				let share_info = SharesAndWithdrawnRewards::<T>::get(gid, &gauge_info.who)
 					.ok_or(Error::<T>::ShareInfoNotExists)?;
-				T::VeMinting::get_rewards(
+				T::BbBNC::get_rewards(
 					gid,
 					&gauge_info.who,
 					Some((share_info.share, pool_info.total_shares)),

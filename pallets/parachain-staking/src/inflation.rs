@@ -25,14 +25,17 @@ use substrate_fixed::{
 	types::{I32F32, I64F64},
 };
 
-use crate::pallet::{BalanceOf, Config, Pallet};
+use crate::{
+	pallet::{BalanceOf, Config},
+	Round,
+};
 
 const SECONDS_PER_YEAR: u32 = 31557600;
 const SECONDS_PER_BLOCK: u32 = 12;
 pub const BLOCKS_PER_YEAR: u32 = SECONDS_PER_YEAR / SECONDS_PER_BLOCK;
 
 fn rounds_per_year<T: Config>() -> u32 {
-	let blocks_per_round = <Pallet<T>>::round().length;
+	let blocks_per_round = Round::<T>::get().length;
 	BLOCKS_PER_YEAR / blocks_per_round
 }
 

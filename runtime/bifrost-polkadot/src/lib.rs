@@ -69,6 +69,7 @@ pub mod constants;
 mod evm;
 mod migration;
 pub mod weights;
+use bb_bnc::traits::BbBNCInterface;
 use bifrost_asset_registry::{AssetIdMaps, FixedRateOfAsset};
 pub use bifrost_primitives::{
 	traits::{
@@ -86,9 +87,8 @@ use bifrost_runtime_common::{
 	TechnicalCollective,
 };
 use bifrost_slp::QueryId;
-use bifrost_ve_minting::traits::VeMintingInterface;
 use constants::currency::*;
-use cumulus_primitives_core::ParaId as CumulusParaId;
+use cumulus_primitives_core::AggregateMessageOrigin;
 use fp_evm::FeeCalculator;
 use fp_rpc::TransactionStatus;
 use frame_support::{
@@ -105,12 +105,10 @@ use frame_system::{EnsureRoot, EnsureRootWithSuccess, EnsureSigned};
 use hex_literal::hex;
 use pallet_ethereum::Transaction;
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
-// zenlink imports
 use zenlink_protocol::{
 	AssetBalance, AssetId as ZenlinkAssetId, LocalAssetHandler, MultiAssetsHandler, PairInfo,
 	PairLpGenerate, ZenlinkMultiAssets,
 };
-// xcm config
 pub mod xcm_config;
 use orml_traits::{currency::MutationHooks, location::RelativeReserveProvider};
 use pallet_evm::{GasWeightMapping, Runner};
@@ -124,13 +122,8 @@ use sp_runtime::{
 };
 use static_assertions::const_assert;
 use xcm::{v3::MultiLocation, v4::prelude::*};
-pub use xcm_config::{
-	parachains, BifrostCurrencyIdConvert, BifrostTreasuryAccount, MultiCurrency, SelfParaChainId,
-};
-use xcm_executor::{
-	traits::{Properties, QueryHandler},
-	XcmExecutor,
-};
+pub use xcm_config::{parachains, BifrostTreasuryAccount, MultiCurrency};
+use xcm_executor::{traits::QueryHandler, XcmExecutor};
 
 pub mod governance;
 use crate::xcm_config::XcmRouter;
@@ -138,6 +131,11 @@ use governance::{
 	custom_origins, CoreAdminOrCouncil, LiquidStaking, SALPAdmin, Spender, TechAdmin,
 	TechAdminOrCouncil,
 };
+
+use bifrost_primitives::MoonbeamChainId;
+#[cfg(feature = "runtime-benchmarks")]
+use bifrost_primitives::{MockXcmRouter, MockXcmTransfer};
+use bifrost_runtime_common::currency_converter::CurrencyIdConvert;
 
 /// Opaque types. These are used by the CLI to instantiate machinery that don't need to know
 /// the specifics of the runtime. They can then be made to be agnostic over specific formats
@@ -171,7 +169,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: create_runtime_str!("bifrost_polkadot"),
 	impl_name: create_runtime_str!("bifrost_polkadot"),
 	authoring_version: 0,
-	spec_version: 12001,
+	spec_version: 13000,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 1,
@@ -242,8 +240,7 @@ parameter_types! {
 	pub const SystemMakerPalletId: PalletId = PalletId(*b"bf/sysmk");
 	pub const FeeSharePalletId: PalletId = PalletId(*b"bf/feesh");
 	pub CheckingAccount: AccountId = PolkadotXcm::check_account();
-	pub const VeMintingPalletId: PalletId = PalletId(*b"bf/vemnt");
-	pub const IncentivePalletId: PalletId = PalletId(*b"bf/veict");
+	pub const IncentivePalletId: PalletId = PalletId(*b"bf/bbict");
 	pub const FarmingBoostPalletId: PalletId = PalletId(*b"bf/fmbst");
 	pub const LendMarketPalletId: PalletId = PalletId(*b"bf/ldmkt");
 	pub const OraclePalletId: PalletId = PalletId(*b"bf/oracl");
@@ -815,10 +812,11 @@ impl pallet_tx_pause::Config for Runtime {
 parameter_types! {
 	pub const ReservedXcmpWeight: Weight = MAXIMUM_BLOCK_WEIGHT.saturating_div(4);
 	pub const ReservedDmpWeight: Weight = MAXIMUM_BLOCK_WEIGHT.saturating_div(4);
+	pub const RelayOrigin: AggregateMessageOrigin = AggregateMessageOrigin::Parent;
 }
 
 impl cumulus_pallet_parachain_system::Config for Runtime {
-	type DmpQueue = frame_support::traits::EnqueueWithOrigin<MessageQueue, xcm_config::RelayOrigin>;
+	type DmpQueue = frame_support::traits::EnqueueWithOrigin<MessageQueue, RelayOrigin>;
 	type RuntimeEvent = RuntimeEvent;
 	type OnSystemEvent = ();
 	type OutboundXcmpMessageSource = XcmpQueue;
@@ -1022,7 +1020,7 @@ pub fn create_x2_multilocation(index: u16, currency_id: CurrencyId) -> MultiLoca
 		_ => {
 			// get parachain id
 			if let Some(location) =
-				BifrostCurrencyIdConvert::<SelfParaChainId>::convert(currency_id)
+				CurrencyIdConvert::<ParachainInfo, Runtime>::convert(currency_id)
 			{
 				if let Some(Parachain(para_id)) = location.interior().first() {
 					xcm::v3::Location::new(
@@ -1159,7 +1157,7 @@ impl bifrost_slp::Config for Runtime {
 	type WeightInfo = weights::bifrost_slp::BifrostWeight<Runtime>;
 	type VtokenMinting = VtokenMinting;
 	type AccountConverter = SubAccountIndexMultiLocationConvertor;
-	type ParachainId = SelfParaChainId;
+	type ParachainId = ParachainInfo;
 	type SubstrateResponseManager = SubstrateResponseManager;
 	type MaxTypeEntryPerBlock = MaxTypeEntryPerBlock;
 	type MaxRefundPerBlock = MaxRefundPerBlock;
@@ -1202,7 +1200,7 @@ impl bifrost_farming::Config for Runtime {
 	type RewardIssuer = FarmingRewardIssuerPalletId;
 	type WeightInfo = weights::bifrost_farming::BifrostWeight<Runtime>;
 	type FarmingBoost = FarmingBoostPalletId;
-	type VeMinting = VeMinting;
+	type BbBNC = BbBNC;
 	type BlockNumberToBalance = ConvertInto;
 	type WhitelistMaximumLimit = WhitelistMaximumLimit;
 	type GaugeRewardIssuer = FarmingGaugeRewardIssuerPalletId;
@@ -1231,7 +1229,7 @@ impl bifrost_system_staking::Config for Runtime {
 impl bifrost_system_maker::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type MultiCurrency = Currencies;
-	type ControlOrigin = EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
+	type ControlOrigin = TechAdminOrCouncil;
 	type WeightInfo = weights::bifrost_system_maker::BifrostWeight<Runtime>;
 	type DexOperator = ZenlinkProtocol;
 	type CurrencyIdConversion = AssetIdMaps<Runtime>;
@@ -1248,6 +1246,7 @@ impl bifrost_fee_share::Config for Runtime {
 	type ControlOrigin = CoreAdminOrCouncil;
 	type WeightInfo = weights::bifrost_fee_share::BifrostWeight<Runtime>;
 	type FeeSharePalletId = FeeSharePalletId;
+	type PriceFeeder = Prices;
 }
 
 impl bifrost_cross_in_out::Config for Runtime {
@@ -1270,7 +1269,7 @@ impl bifrost_slpx::Config for Runtime {
 	type XcmSender = XcmRouter;
 	type CurrencyIdConvert = AssetIdMaps<Runtime>;
 	type TreasuryAccount = BifrostTreasuryAccount;
-	type ParachainId = SelfParaChainId;
+	type ParachainId = ParachainInfo;
 	type WeightInfo = weights::bifrost_slpx::BifrostWeight<Runtime>;
 }
 
@@ -1294,7 +1293,7 @@ impl bifrost_stable_asset::Config for Runtime {
 	type PoolAssetLimit = ConstU32<5>;
 	type SwapExactOverAmount = ConstU128<100>;
 	type WeightInfo = ();
-	type ListingOrigin = EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
+	type ListingOrigin = TechAdminOrCouncil;
 	type EnsurePoolAssetId = EnsurePoolAssetId;
 }
 
@@ -1332,7 +1331,7 @@ impl bifrost_vtoken_voting::Config for Runtime {
 	type DerivativeAccount = DerivativeAccountProvider<Runtime, DerivativeAccountTokenFilter>;
 	type RelaychainBlockNumberProvider = RelaychainDataProvider<Runtime>;
 	type VTokenSupplyProvider = VtokenMinting;
-	type ParachainId = SelfParaChainId;
+	type ParachainId = ParachainInfo;
 	type MaxVotes = ConstU32<256>;
 	type QueryTimeout = QueryTimeout;
 	type ReferendumCheckInterval = ReferendumCheckInterval;
@@ -1417,20 +1416,16 @@ impl bifrost_vtoken_minting::Config for Runtime {
 	type CurrencyIdConversion = AssetIdMaps<Runtime>;
 	type CurrencyIdRegister = AssetIdMaps<Runtime>;
 	type XcmTransfer = XTokens;
-	type AstarParachainId = ConstU32<2006>;
-	type MoonbeamParachainId = ConstU32<2004>;
-	type HydradxParachainId = ConstU32<2034>;
-	type MantaParachainId = ConstU32<2104>;
-	type InterlayParachainId = ConstU32<2032>;
+	type MoonbeamChainId = MoonbeamChainId;
 	type ChannelCommission = ChannelCommission;
 	type MaxLockRecords = ConstU32<100>;
 	type IncentivePoolAccount = IncentivePoolAccount;
-	type VeMinting = VeMinting;
+	type BbBNC = BbBNC;
 	type AssetIdMaps = AssetIdMaps<Runtime>;
 }
 
 parameter_types! {
-	pub const VeMintingTokenType: CurrencyId = CurrencyId::VToken(TokenSymbol::BNC);
+	pub const BbBNCTokenType: CurrencyId = CurrencyId::VToken(TokenSymbol::BNC);
 	pub const Week: BlockNumber = prod_or_fast!(WEEKS, 10);
 	pub const MaxBlock: BlockNumber = 4 * 365 * DAYS;
 	pub const Multiplier: Balance = 10_u128.pow(12);
@@ -1439,14 +1434,14 @@ parameter_types! {
 	pub const MarkupRefreshLimit: u32 = 100;
 }
 
-impl bifrost_ve_minting::Config for Runtime {
+impl bb_bnc::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type MultiCurrency = Currencies;
 	type ControlOrigin = TechAdminOrCouncil;
-	type TokenType = VeMintingTokenType;
-	type VeMintingPalletId = VeMintingPalletId;
+	type TokenType = BbBNCTokenType;
 	type IncentivePalletId = IncentivePalletId;
-	type WeightInfo = weights::bifrost_ve_minting::BifrostWeight<Runtime>;
+	type BuyBackAccount = BuyBackAccount;
+	type WeightInfo = weights::bb_bnc::BifrostWeight<Runtime>;
 	type BlockNumberToBalance = ConvertInto;
 	type Week = Week;
 	type MaxBlock = MaxBlock;
@@ -1515,8 +1510,8 @@ impl DataFeeder<CurrencyId, TimeStampedPrice, AccountId> for AggregatedDataProvi
 impl pallet_prices::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type Source = AggregatedDataProvider;
-	type FeederOrigin = EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
-	type UpdateOrigin = EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
+	type FeederOrigin = TechAdminOrCouncil;
+	type UpdateOrigin = TechAdminOrCouncil;
 	type RelayCurrency = RelayCurrencyId;
 	type CurrencyIdConvert = AssetIdMaps<Runtime>;
 	type Assets = Currencies;
@@ -1584,7 +1579,7 @@ impl bifrost_clouds_convert::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type MultiCurrency = Currencies;
 	type CloudsPalletId = CloudsPalletId;
-	type VeMinting = VeMinting;
+	type BbBNC = BbBNC;
 	type WeightInfo = weights::bifrost_clouds_convert::BifrostWeight<Runtime>;
 	type LockedBlocks = MaxBlock;
 }
@@ -1592,17 +1587,40 @@ impl bifrost_clouds_convert::Config for Runtime {
 impl bifrost_buy_back::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type MultiCurrency = Currencies;
-	type ControlOrigin = EitherOfDiverse<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
+	type ControlOrigin = TechAdminOrCouncil;
 	type WeightInfo = weights::bifrost_buy_back::BifrostWeight<Runtime>;
 	type DexOperator = ZenlinkProtocol;
-	type CurrencyIdConversion = AssetIdMaps<Runtime>;
 	type TreasuryAccount = BifrostTreasuryAccount;
-	type RelayChainToken = RelayCurrencyId;
 	type BuyBackAccount = BuyBackAccount;
 	type LiquidityAccount = LiquidityAccount;
 	type ParachainId = ParachainInfo;
 	type CurrencyIdRegister = AssetIdMaps<Runtime>;
-	type VeMinting = VeMinting;
+	type BbBNC = BbBNC;
+}
+
+impl bifrost_slp_v2::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type RuntimeOrigin = RuntimeOrigin;
+	type RuntimeCall = RuntimeCall;
+	type ResponseOrigin = EnsureResponse<Everything>;
+	type WeightInfo = weights::bifrost_slp_v2::BifrostWeight<Runtime>;
+	type MultiCurrency = Currencies;
+	type ControlOrigin = TechAdminOrCouncil;
+	#[cfg(not(feature = "runtime-benchmarks"))]
+	type XcmTransfer = XTokens;
+	#[cfg(feature = "runtime-benchmarks")]
+	type XcmTransfer = MockXcmTransfer;
+	#[cfg(not(feature = "runtime-benchmarks"))]
+	type XcmSender = XcmRouter;
+	#[cfg(feature = "runtime-benchmarks")]
+	type XcmSender = MockXcmRouter;
+	type VtokenMinting = VtokenMinting;
+	type CurrencyIdConversion = AssetIdMaps<Runtime>;
+	type RelaychainBlockNumberProvider = RelaychainDataProvider<Runtime>;
+	type QueryTimeout = QueryTimeout;
+	type CommissionPalletId = CommissionPalletId;
+	type ParachainId = ParachainInfo;
+	type MaxValidators = ConstU32<256>;
 }
 
 // Below is the implementation of tokens manipulation functions other than native token.
@@ -1762,7 +1780,7 @@ construct_runtime! {
 		// Third party modules
 		XTokens: orml_xtokens = 70,
 		Tokens: orml_tokens = 71,
-		Currencies: bifrost_currencies = 72,
+		Currencies: bifrost_currencies exclude_parts { Call } = 72,
 		UnknownTokens: orml_unknown_tokens = 73,
 		OrmlXcm: orml_xcm = 74,
 		ZenlinkProtocol: zenlink_protocol = 80,
@@ -1781,7 +1799,7 @@ construct_runtime! {
 		SystemMaker: bifrost_system_maker = 121,
 		FeeShare: bifrost_fee_share = 122,
 		CrossInOut: bifrost_cross_in_out = 123,
-		VeMinting: bifrost_ve_minting = 124,
+		BbBNC: bb_bnc = 124,
 		Slpx: bifrost_slpx = 125,
 		FellowshipCollective: pallet_ranked_collective::<Instance1> = 126,
 		FellowshipReferenda: pallet_referenda::<Instance2> = 127,
@@ -1796,6 +1814,7 @@ construct_runtime! {
 		ChannelCommission: bifrost_channel_commission = 136,
 		CloudsConvert: bifrost_clouds_convert = 137,
 		BuyBack: bifrost_buy_back = 138,
+		SlpV2: bifrost_slp_v2 = 139,
 	}
 }
 
@@ -1863,10 +1882,6 @@ pub type CheckedExtrinsic =
 /// The payload being signed in transactions.
 pub type SignedPayload = generic::SignedPayload<RuntimeCall, SignedExtra>;
 
-parameter_types! {
-	pub const CallSwitchgearPalletName: &'static str = "CallSwitchgear";
-}
-
 impl cumulus_pallet_xcmp_queue::migration::v5::V5Config for Runtime {
 	// This must be the same as the `ChannelInfo` from the `Config`:
 	type ChannelList = ParachainSystem;
@@ -1887,16 +1902,6 @@ pub mod migrations {
 	pub type Unreleased = (
 		// permanent migration, do not remove
 		pallet_xcm::migration::MigrateToLatestXcmVersion<Runtime>,
-		frame_support::migrations::RemovePallet<
-			CallSwitchgearPalletName,
-			<Runtime as frame_system::Config>::DbWeight,
-		>,
-		cumulus_pallet_xcmp_queue::migration::v5::MigrateV4ToV5<Runtime>,
-		crate::migration::opengov::RankedCollectiveV1<
-			Runtime,
-			governance::fellowship::FellowshipCollectiveInstance,
-		>,
-		crate::migration::genesis_evm_storage::GenesisEVMStorage,
 	);
 }
 
@@ -1973,8 +1978,9 @@ extern crate frame_benchmarking;
 #[cfg(feature = "runtime-benchmarks")]
 mod benches {
 	define_benchmarks!(
-		[bifrost_ve_minting, VeMinting]
+		[bb_bnc, BbBNC]
 		[bifrost_buy_back, BuyBack]
+		[bifrost_slp_v2, SlpV2]
 	);
 }
 
@@ -2462,25 +2468,25 @@ impl fp_rpc::EthereumRuntimeRPCApi<Block> for Runtime {
 		}
 	}
 
-	impl bifrost_ve_minting_rpc_runtime_api::VeMintingRuntimeApi<Block, AccountId> for Runtime {
+	impl bb_bnc_rpc_runtime_api::BbBNCRuntimeApi<Block, AccountId> for Runtime {
 		fn balance_of(
 			who: AccountId,
 			t: Option<bifrost_primitives::BlockNumber>,
 		) -> Balance{
-			VeMinting::balance_of(&who, t).unwrap_or(Zero::zero())
+			BbBNC::balance_of(&who, t).unwrap_or(Zero::zero())
 		}
 
 		fn total_supply(
 			t: bifrost_primitives::BlockNumber,
 		) -> Balance{
-			VeMinting::total_supply(t).unwrap_or(Zero::zero())
+			BbBNC::total_supply(t).unwrap_or(Zero::zero())
 		}
 
 		fn find_block_epoch(
 			block: bifrost_primitives::BlockNumber,
 			max_epoch: U256,
 		) -> U256{
-			VeMinting::find_block_epoch(block, max_epoch)
+			BbBNC::find_block_epoch(block, max_epoch)
 		}
 	}
 

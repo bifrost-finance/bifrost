@@ -23,7 +23,7 @@ xcm = { workspace = true }
 cumulus-primitives-core = { workspace = true }
 sp-core = { workspace = true }
 sp-runtime = { workspace = true }
-bifrost-ve-minting = { workspace = true }
+bb-bnc = { workspace = true }
 bifrost-asset-registry = { workspace = true }
 
 [dev-dependencies]

@@ -25,7 +25,8 @@ use crate::types::{
 use bifrost_asset_registry::AssetMetadata;
 use bifrost_primitives::{
 	currency::{BNC, VFIL},
-	CurrencyId, CurrencyIdMapping, RedeemType, SlpxOperator, TokenInfo, VtokenMintingInterface,
+	AstarChainId, CurrencyId, CurrencyIdMapping, HydrationChainId, InterlayChainId, MantaChainId,
+	RedeemType, SlpxOperator, TokenInfo, VtokenMintingInterface,
 };
 use cumulus_primitives_core::ParaId;
 use ethereum::TransactionAction;
@@ -60,8 +61,6 @@ pub mod types;
 pub mod weights;
 pub use weights::WeightInfo;
 
-const BIFROST_KUSAMA_PARA_ID: u32 = 2001;
-
 #[cfg(test)]
 mod mock;
 
@@ -75,7 +74,7 @@ mod benchmarking;
 pub mod pallet {
 	use super::*;
 	use crate::types::{Order, OrderType};
-	use bifrost_primitives::{currency::MOVR, GLMR};
+	use bifrost_primitives::{currency::MOVR, BifrostKusamaChainId, GLMR};
 	use bifrost_stable_pool::{traits::StablePoolHandler, PoolTokenIndex, StableAssetPoolId};
 	use frame_support::{
 		pallet_prelude::{ValueQuery, *},
@@ -267,7 +266,6 @@ pub mod pallet {
 
 	/// Contract whitelist
 	#[pallet::storage]
-	#[pallet::getter(fn whitelist_account_ids)]
 	pub type WhitelistAccountId<T: Config> = StorageMap<
 		_,
 		Blake2_128Concat,
@@ -278,28 +276,23 @@ pub mod pallet {
 
 	/// Charge corresponding fees for different CurrencyId
 	#[pallet::storage]
-	#[pallet::getter(fn execution_fee)]
 	pub type ExecutionFee<T: Config> =
 		StorageMap<_, Blake2_128Concat, CurrencyId, BalanceOf<T>, OptionQuery>;
 
 	/// XCM fee for transferring to Moonbeam(BNC)
 	#[pallet::storage]
-	#[pallet::getter(fn transfer_to_fee)]
 	pub type TransferToFee<T: Config> =
 		StorageMap<_, Blake2_128Concat, SupportChain, BalanceOf<T>, OptionQuery>;
 
 	#[pallet::storage]
-	#[pallet::getter(fn xcm_ethereum_call_configuration)]
 	pub type XcmEthereumCallConfiguration<T: Config> =
 		StorageValue<_, EthereumCallConfiguration<BlockNumberFor<T>>>;
 
 	#[pallet::storage]
-	#[pallet::getter(fn currency_id_list)]
 	pub type CurrencyIdList<T: Config> =
 		StorageValue<_, BoundedVec<CurrencyId, ConstU32<10>>, ValueQuery>;
 
 	#[pallet::storage]
-	#[pallet::getter(fn support_xcm_fee_list)]
 	pub type SupportXcmFeeList<T: Config> =
 		StorageValue<_, BoundedVec<CurrencyId, ConstU32<100>>, ValueQuery>;
 
@@ -370,7 +363,7 @@ pub mod pallet {
 							});
 
 							let mut target_fee_currency_id = GLMR;
-							if T::ParachainId::get() == Id::from(BIFROST_KUSAMA_PARA_ID) {
+							if T::ParachainId::get() == Id::from(BifrostKusamaChainId::get()) {
 								target_fee_currency_id = MOVR;
 							}
 
@@ -500,7 +493,7 @@ pub mod pallet {
 				Self::ensure_singer_on_whitelist(origin, evm_caller, &target_chain)?;
 
 			if vtoken_id == VFIL {
-				let fee_amount = Self::transfer_to_fee(SupportChain::Moonbeam)
+				let fee_amount = TransferToFee::<T>::get(SupportChain::Moonbeam)
 					.unwrap_or_else(|| Self::get_default_fee(BNC));
 				T::MultiCurrency::transfer(
 					BNC,
@@ -914,8 +907,8 @@ impl<T: Config> Pallet<T> {
 		evm_caller_account_id: &AccountIdOf<T>,
 	) -> Result<BalanceOf<T>, DispatchError> {
 		let free_balance = T::MultiCurrency::free_balance(currency_id, evm_caller_account_id);
-		let execution_fee =
-			Self::execution_fee(currency_id).unwrap_or_else(|| Self::get_default_fee(currency_id));
+		let execution_fee = ExecutionFee::<T>::get(currency_id)
+			.unwrap_or_else(|| Self::get_default_fee(currency_id));
 
 		T::MultiCurrency::transfer(
 			currency_id,
@@ -942,7 +935,7 @@ impl<T: Config> Pallet<T> {
 				let dest = Location::new(
 					1,
 					[
-						Parachain(T::VtokenMintingInterface::get_astar_parachain_id()),
+						Parachain(AstarChainId::get()),
 						AccountId32 { network: None, id: receiver.encode().try_into().unwrap() },
 					],
 				);
@@ -953,7 +946,7 @@ impl<T: Config> Pallet<T> {
 				let dest = Location::new(
 					1,
 					[
-						Parachain(T::VtokenMintingInterface::get_hydradx_parachain_id()),
+						Parachain(HydrationChainId::get()),
 						AccountId32 { network: None, id: receiver.encode().try_into().unwrap() },
 					],
 				);
@@ -964,7 +957,7 @@ impl<T: Config> Pallet<T> {
 				let dest = Location::new(
 					1,
 					[
-						Parachain(T::VtokenMintingInterface::get_interlay_parachain_id()),
+						Parachain(InterlayChainId::get()),
 						AccountId32 { network: None, id: receiver.encode().try_into().unwrap() },
 					],
 				);
@@ -975,7 +968,7 @@ impl<T: Config> Pallet<T> {
 				let dest = Location::new(
 					1,
 					[
-						Parachain(T::VtokenMintingInterface::get_manta_parachain_id()),
+						Parachain(MantaChainId::get()),
 						AccountId32 { network: None, id: receiver.encode().try_into().unwrap() },
 					],
 				);
@@ -993,7 +986,7 @@ impl<T: Config> Pallet<T> {
 				if SupportXcmFeeList::<T>::get().contains(&currency_id) {
 					T::XcmTransfer::transfer(caller, currency_id, amount, dest, Unlimited)?;
 				} else {
-					let fee_amount = Self::transfer_to_fee(SupportChain::Moonbeam)
+					let fee_amount = TransferToFee::<T>::get(SupportChain::Moonbeam)
 						.unwrap_or_else(|| Self::get_default_fee(BNC));
 					T::MultiCurrency::transfer(BNC, evm_contract_account_id, &caller, fee_amount)?;
 					let assets = vec![(currency_id, amount), (BNC, fee_amount)];
@@ -1084,6 +1077,7 @@ impl<T: Config> Pallet<T> {
 // Functions to be called by other pallets.
 impl<T: Config> SlpxOperator<BalanceOf<T>> for Pallet<T> {
 	fn get_moonbeam_transfer_to_fee() -> BalanceOf<T> {
-		Self::transfer_to_fee(SupportChain::Moonbeam).unwrap_or_else(|| Self::get_default_fee(BNC))
+		TransferToFee::<T>::get(SupportChain::Moonbeam)
+			.unwrap_or_else(|| Self::get_default_fee(BNC))
 	}
 }

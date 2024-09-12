@@ -57,7 +57,7 @@ fn clouds_to_vebnc_should_work() {
 
 		// check the veBNC balance of Bob
 		let bob_old_vebnc_balance =
-			<Runtime as crate::Config>::VeMinting::balance_of(&BOB, None).unwrap();
+			<Runtime as crate::Config>::BbBNC::balance_of(&BOB, None).unwrap();
 
 		// check the old pool balance
 		let old_pool_balance = <Runtime as crate::Config>::MultiCurrency::free_balance(
@@ -70,7 +70,7 @@ fn clouds_to_vebnc_should_work() {
 
 		// check the veBNC balance of Bob
 		assert_eq!(
-			<Runtime as crate::Config>::VeMinting::balance_of(&BOB, None).unwrap(),
+			<Runtime as crate::Config>::BbBNC::balance_of(&BOB, None).unwrap(),
 			bob_old_vebnc_balance + 20034907200
 		);
 

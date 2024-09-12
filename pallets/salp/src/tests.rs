@@ -31,8 +31,8 @@ use zenlink_protocol::AssetId;
 fn create_fund_should_work() {
 	new_test_ext().execute_with(|| {
 		assert_ok!(Salp::create(Some(ALICE).into(), 3_000, 1_000, 1, SlotLength::get()));
-		assert_ok!(Salp::funds(3_000).ok_or(()));
-		assert_eq!(Salp::current_trie_index(), 1);
+		assert_ok!(Funds::<Test>::get(3_000).ok_or(()));
+		assert_eq!(CurrentTrieIndex::<Test>::get(), 1);
 	});
 }
 
@@ -85,7 +85,7 @@ fn set_fund_success_should_work() {
 		assert_ok!(Salp::fund_success(Some(ALICE).into(), 3_000));
 
 		// Check status
-		let fund = Salp::funds(3_000).unwrap();
+		let fund = Funds::<Test>::get(3_000).unwrap();
 		assert_eq!(fund.status, FundStatus::Success);
 	});
 }
@@ -125,7 +125,7 @@ fn set_fund_fail_should_work() {
 		assert_ok!(Salp::fund_fail(Some(ALICE).into(), 3_000));
 
 		// Check status
-		let fund = Salp::funds(3_000).unwrap();
+		let fund = Funds::<Test>::get(3_000).unwrap();
 		assert_eq!(fund.status, FundStatus::Failed);
 	});
 }
@@ -163,7 +163,7 @@ fn set_fund_retire_should_work() {
 		assert_ok!(Salp::fund_retire(Some(ALICE).into(), 3_000));
 
 		// Check status
-		let fund = Salp::funds(3_000).unwrap();
+		let fund = Funds::<Test>::get(3_000).unwrap();
 		assert_eq!(fund.status, FundStatus::Retired);
 	});
 }
@@ -207,7 +207,7 @@ fn set_fund_end_should_work() {
 		assert_ok!(Salp::fund_end(Some(ALICE).into(), 3_000));
 
 		// Check storage
-		let fund = Salp::funds(3_000).unwrap();
+		let fund = Funds::<Test>::get(3_000).unwrap();
 		assert_eq!(fund.status, FundStatus::End);
 	});
 }
@@ -353,7 +353,7 @@ fn contribute_should_work() {
 		Salp::bind_query_id_and_contribution(0, 3_000, BRUCE, 100);
 		assert_ok!(Salp::confirm_contribute(Some(ALICE).into(), 0, true));
 
-		let fund = Salp::funds(3_000).unwrap();
+		let fund = Funds::<Test>::get(3_000).unwrap();
 		let (contributed, status) = Salp::contribution(fund.trie_index, &BRUCE);
 		assert_eq!(fund.raised, 100);
 		assert_eq!(contributed, 100);
@@ -386,7 +386,7 @@ fn double_contribute_should_work() {
 		assert_ok!(Salp::confirm_contribute(Some(ALICE).into(), 0, true,));
 
 		// Check the contribution
-		let fund = Salp::funds(3_000).unwrap();
+		let fund = Funds::<Test>::get(3_000).unwrap();
 		let (contributed, status) = Salp::contribution(fund.trie_index, &BRUCE);
 		assert_eq!(fund.raised, 200);
 		assert_eq!(contributed, 200);
@@ -415,7 +415,7 @@ fn contribute_when_xcm_error_should_work() {
 		Salp::bind_query_id_and_contribution(0, 3_000, BRUCE, 100);
 		assert_ok!(Salp::confirm_contribute(Some(ALICE).into(), 0, false,));
 
-		let fund = Salp::funds(3_000).unwrap();
+		let fund = Funds::<Test>::get(3_000).unwrap();
 		let (contributed, status) = Salp::contribution(fund.trie_index, &BRUCE);
 		assert_eq!(fund.raised, 0);
 		assert_eq!(contributed, 0);
@@ -449,7 +449,7 @@ fn confirm_contribute_later_should_work() {
 		assert_ok!(Salp::fund_success(Some(ALICE).into(), 3_000));
 		assert_ok!(Salp::confirm_contribute(Some(ALICE).into(), 0, true,));
 
-		let fund = Salp::funds(3_000).unwrap();
+		let fund = Funds::<Test>::get(3_000).unwrap();
 		let (contributed, status) = Salp::contribution(fund.trie_index, &BRUCE);
 		assert_eq!(fund.raised, 100);
 		assert_eq!(contributed, 100);
@@ -568,7 +568,7 @@ fn withdraw_should_work() {
 		assert_ok!(Salp::fund_retire(Some(ALICE).into(), 3_000));
 		assert_ok!(Salp::withdraw(Some(ALICE).into(), 3_000));
 
-		let fund = Salp::funds(3_000).unwrap();
+		let fund = Funds::<Test>::get(3_000).unwrap();
 		assert_eq!(fund.status, FundStatus::RedeemWithdrew);
 
 		assert_ok!(Salp::create(Some(ALICE).into(), 4_000, 1_000, 1, SlotLength::get()));
@@ -578,7 +578,7 @@ fn withdraw_should_work() {
 		assert_ok!(Salp::fund_fail(Some(ALICE).into(), 4_000));
 		assert_ok!(Salp::withdraw(Some(ALICE).into(), 4_000));
 
-		let fund = Salp::funds(4_000).unwrap();
+		let fund = Funds::<Test>::get(4_000).unwrap();
 		assert_eq!(fund.status, FundStatus::RefundWithdrew);
 	});
 }
@@ -594,7 +594,7 @@ fn withdraw_when_xcm_error_should_work() {
 		assert_ok!(Salp::fund_retire(Some(ALICE).into(), 3_000));
 		assert_ok!(Salp::withdraw(Some(ALICE).into(), 3_000));
 
-		let fund = Salp::funds(3_000).unwrap();
+		let fund = Funds::<Test>::get(3_000).unwrap();
 		assert_eq!(fund.status, FundStatus::RedeemWithdrew);
 
 		assert_ok!(Salp::create(Some(ALICE).into(), 4_000, 1_000, 1, SlotLength::get()));
@@ -604,7 +604,7 @@ fn withdraw_when_xcm_error_should_work() {
 		assert_ok!(Salp::fund_fail(Some(ALICE).into(), 4_000));
 		assert_ok!(Salp::withdraw(Some(ALICE).into(), 4_000));
 
-		let fund = Salp::funds(4_000).unwrap();
+		let fund = Funds::<Test>::get(4_000).unwrap();
 		assert_eq!(fund.status, FundStatus::RefundWithdrew);
 	});
 }
@@ -621,7 +621,7 @@ fn double_withdraw_same_fund_should_fail() {
 		assert_ok!(Salp::withdraw(Some(ALICE).into(), 3_000));
 		assert_noop!(Salp::withdraw(Some(ALICE).into(), 3_000), Error::<Test>::InvalidFundStatus);
 
-		let fund = Salp::funds(3_000).unwrap();
+		let fund = Funds::<Test>::get(3_000).unwrap();
 		assert_eq!(fund.status, FundStatus::RedeemWithdrew);
 
 		assert_ok!(Salp::create(Some(ALICE).into(), 4_000, 1_000, 1, SlotLength::get()));
@@ -632,7 +632,7 @@ fn double_withdraw_same_fund_should_fail() {
 		assert_ok!(Salp::withdraw(Some(ALICE).into(), 4_000));
 		assert_noop!(Salp::withdraw(Some(ALICE).into(), 4_000), Error::<Test>::InvalidFundStatus);
 
-		let fund = Salp::funds(4_000).unwrap();
+		let fund = Funds::<Test>::get(4_000).unwrap();
 		assert_eq!(fund.status, FundStatus::RefundWithdrew);
 	});
 }
@@ -828,7 +828,7 @@ fn dissolve_should_work() {
 			assert_ok!(Salp::dissolve(Some(ALICE).into(), 3_000));
 		}
 
-		assert!(Salp::funds(3_000).is_none());
+		assert!(Funds::<Test>::get(3_000).is_none());
 		assert!(Salp::contribution_iterator(0).next().is_none());
 	});
 }
@@ -1178,7 +1178,7 @@ fn release_from_redeem_to_bancor_should_work() {
 fn check_next_trie_index() {
 	new_test_ext().execute_with(|| {
 		for i in 0..100 {
-			assert_eq!(Salp::current_trie_index(), i);
+			assert_eq!(CurrentTrieIndex::<Test>::get(), i);
 			assert_ok!(Salp::next_trie_index());
 		}
 	});
@@ -1276,10 +1276,10 @@ fn refund_meanwhile_issue_should_work() {
 			),
 			true
 		);
-		let old_fund = Salp::failed_funds_to_refund((3_000, 1, SlotLength::get())).unwrap();
+		let old_fund = FailedFundsToRefund::<Test>::get((3_000, 1, SlotLength::get())).unwrap();
 		assert_eq!(old_fund.first_slot, 1);
 		assert_eq!(old_fund.raised, 100);
-		let mut new_fund = Salp::funds(3_000).unwrap();
+		let mut new_fund = Funds::<Test>::get(3_000).unwrap();
 		assert_eq!(new_fund.first_slot, 2);
 		assert_eq!(new_fund.raised, 100);
 		let vs_bond_new = <Test as Config>::CurrencyIdConversion::convert_to_vsbond(
@@ -1292,7 +1292,7 @@ fn refund_meanwhile_issue_should_work() {
 		assert_ok!(Salp::contribute(Some(BRUCE).into(), 3_000, 100));
 		Salp::bind_query_id_and_contribution(0, 3_000, BRUCE, 100);
 		assert_ok!(Salp::confirm_contribute(Some(ALICE).into(), 0, true,));
-		new_fund = Salp::funds(3_000).unwrap();
+		new_fund = Funds::<Test>::get(3_000).unwrap();
 		assert_eq!(new_fund.raised, 200);
 		assert_eq!(Tokens::accounts(BRUCE, vs_bond_new).free, 100);
 		// refund from old failed fund should success
@@ -1472,7 +1472,7 @@ fn edit_fund_should_work() {
 		Salp::bind_query_id_and_contribution(0, 3_000, BRUCE, 100);
 		assert_ok!(Salp::confirm_contribute(Some(ALICE).into(), 0, true,));
 		assert_ok!(Salp::fund_fail(Some(ALICE).into(), 3_000));
-		let mut fund = Salp::funds(3_000).unwrap();
+		let mut fund = Funds::<Test>::get(3_000).unwrap();
 		assert_eq!(fund.raised, 100);
 
 		assert_ok!(Salp::edit(
@@ -1484,7 +1484,7 @@ fn edit_fund_should_work() {
 			SlotLength::get() + 1,
 			Some(FundStatus::Ongoing)
 		));
-		fund = Salp::funds(3_000).unwrap();
+		fund = Funds::<Test>::get(3_000).unwrap();
 		assert_eq!(fund.raised, 150);
 		assert_eq!(fund.status, FundStatus::Ongoing);
 	});

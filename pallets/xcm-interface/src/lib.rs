@@ -148,7 +148,6 @@ pub mod pallet {
 	///
 	/// XcmWeightAndFee: map: XcmOperationType => (Weight, Balance)
 	#[pallet::storage]
-	#[pallet::getter(fn xcm_dest_weight_and_fee)]
 	pub type XcmWeightAndFee<T> = StorageDoubleMap<
 		_,
 		Blake2_128Concat,
@@ -161,7 +160,6 @@ pub mod pallet {
 
 	// Tracker for the next nonce index
 	#[pallet::storage]
-	#[pallet::getter(fn current_nonce)]
 	pub(super) type CurrentNonce<T: Config> =
 		StorageMap<_, Blake2_128Concat, ChainId, Nonce, ValueQuery>;
 
@@ -238,7 +236,7 @@ pub mod pallet {
 
 			let dst_location = T::AccountIdToLocation::convert(dest.clone());
 
-			let (dest_weight, xcm_fee) = Self::xcm_dest_weight_and_fee(
+			let (dest_weight, xcm_fee) = XcmWeightAndFee::<T>::get(
 				T::RelaychainCurrencyId::get(),
 				XcmOperationType::StatemineTransfer,
 			)
@@ -298,7 +296,7 @@ pub mod pallet {
 			};
 
 			let (require_weight_at_most, xcm_fee) =
-				Self::xcm_dest_weight_and_fee(currency_id, XcmOperationType::EthereumTransfer)
+				XcmWeightAndFee::<T>::get(currency_id, XcmOperationType::EthereumTransfer)
 					.ok_or(Error::<T>::OperationWeightAndFeeNotExist)?;
 
 			let fee: Asset = Asset {
@@ -359,7 +357,7 @@ pub mod pallet {
 		) -> Result<MessageId, DispatchError> {
 			// Construct contribute call data
 			let contribute_call = Self::build_ump_crowdloan_contribute(index, amount);
-			let (dest_weight, xcm_fee) = Self::xcm_dest_weight_and_fee(
+			let (dest_weight, xcm_fee) = XcmWeightAndFee::<T>::get(
 				T::RelaychainCurrencyId::get(),
 				XcmOperationType::UmpContributeTransact,
 			)
@@ -396,7 +394,7 @@ pub mod pallet {
 			token: CurrencyIdOf<T>,
 			operation: XcmOperationType,
 		) -> Option<(Weight, BalanceOf<T>)> {
-			Self::xcm_dest_weight_and_fee(token, operation)
+			XcmWeightAndFee::<T>::get(token, operation)
 		}
 
 		fn set_xcm_dest_weight_and_fee(

@@ -23,7 +23,9 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use bifrost_asset_registry::AssetMetadata;
-use bifrost_primitives::*;
+use bifrost_primitives::{
+	Balance, CurrencyId, CurrencyIdMapping, Price, PriceDetail, TimeStampedPrice, TokenInfo,
+};
 use frame_support::{dispatch::DispatchClass, pallet_prelude::*, transactional};
 use frame_system::pallet_prelude::*;
 use log;
@@ -97,13 +99,11 @@ pub mod pallet {
 
 	/// Mapping from currency id to it's emergency price
 	#[pallet::storage]
-	#[pallet::getter(fn emergency_price)]
 	pub type EmergencyPrice<T: Config> =
 		StorageMap<_, Twox64Concat, CurrencyId, Price, OptionQuery>;
 
 	/// Mapping from foreign vault token to our's vault token
 	#[pallet::storage]
-	#[pallet::getter(fn foreign_to_native_asset)]
 	pub type ForeignToNativeAsset<T: Config> =
 		StorageMap<_, Twox64Concat, CurrencyId, CurrencyId, OptionQuery>;
 
@@ -181,7 +181,7 @@ pub mod pallet {
 impl<T: Config> Pallet<T> {
 	// get emergency price, the timestamp is zero
 	fn get_emergency_price(asset_id: &CurrencyId) -> Option<PriceDetail> {
-		Self::emergency_price(asset_id).and_then(|p| {
+		EmergencyPrice::<T>::get(asset_id).and_then(|p| {
 			let mantissa = Self::get_asset_mantissa(asset_id)?;
 			log::trace!(
 				target: "prices::get_emergency_price",
@@ -241,7 +241,7 @@ impl<T: Config> PriceFeeder for Pallet<T> {
 
 	fn get_normal_price(asset_id: &CurrencyId) -> Option<u128> {
 		let decimals = Self::get_asset_mantissa(asset_id)?;
-		Self::emergency_price(asset_id)
+		EmergencyPrice::<T>::get(asset_id)
 			.and_then(|p| Some(p.into_inner().saturating_div(decimals)))
 			.or_else(|| {
 				T::Source::get(&asset_id)

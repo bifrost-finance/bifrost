@@ -10,6 +10,7 @@ targets = ["x86_64-unknown-linux-gnu"]
 [dependencies]
 bifrost-primitives = { workspace = true }
 bifrost-slp = { workspace = true }
+bb-bnc = { workspace = true }
 bifrost-vtoken-minting = { workspace = true }
 cumulus-primitives-core = { workspace = true }
 frame-benchmarking = { workspace = true, optional = true }
@@ -27,11 +28,11 @@ sp-runtime = { workspace = true }
 sp-std = { workspace = true }
 xcm = { workspace = true }
 zenlink-protocol = { workspace = true }
-bifrost-ve-minting = { workspace = true }
 
 [dev-dependencies]
 bifrost-asset-registry = { workspace = true }
 bifrost-currencies = { workspace = true }
+bifrost-runtime-common = { workspace = true }
 orml-tokens = { workspace = true }
 orml-traits = { workspace = true }
 orml-xtokens = { workspace = true }
@@ -45,25 +46,27 @@ env_logger = { workspace = true }
 [features]
 default = ["std"]
 std = [
+	"bifrost-asset-registry/std",
+	"bifrost-primitives/std",
+	"bifrost-runtime-common/std",
+	"bifrost-slp/std",
+	"bifrost-vtoken-minting/std",
+	"frame-benchmarking/std",
+	"frame-support/std",
+	"frame-system/std",
+	"orml-traits/std",
+	"orml-xtokens/std",
 	"parity-scale-codec/std",
 	"scale-info/std",
 	"sp-runtime/std",
-	"frame-support/std",
-	"frame-system/std",
-	"frame-benchmarking/std",
-	"bifrost-primitives/std",
-	"orml-traits/std",
-	"bifrost-vtoken-minting/std",
 	"zenlink-protocol/std",
-	"bifrost-slp/std",
-	"bifrost-asset-registry/std",
-	"orml-xtokens/std",
 ]
 
 runtime-benchmarks = [
 	"frame-benchmarking/runtime-benchmarks",
-	"xcm-builder/runtime-benchmarks",
 	"pallet-xcm/runtime-benchmarks",
 	"sp-runtime/runtime-benchmarks",
+	"xcm-builder/runtime-benchmarks",
+
 ]
 try-runtime = ["frame-support/try-runtime"]

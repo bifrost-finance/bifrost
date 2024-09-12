@@ -19,10 +19,7 @@
 use crate::Currencies;
 use bifrost_primitives::{AccountFeeCurrency, Balance, CurrencyId};
 use bifrost_runtime_common::Ratio;
-use frame_support::traits::{
-	tokens::{Fortitude, Precision, Preservation},
-	Get, OnUnbalanced, TryDrop,
-};
+use frame_support::traits::{Get, OnUnbalanced, TryDrop};
 use orml_traits::MultiCurrency;
 use pallet_evm::{AddressMapping, Error, OnChargeEVMTransaction};
 use sp_core::{H160, U256};
@@ -76,15 +73,7 @@ where
 	                                       * asset to account
 	                                       * currency */
 	U256: UniqueSaturatedInto<Balance>,
-	MC: frame_support::traits::tokens::fungibles::Mutate<
-			T::AccountId,
-			AssetId = CurrencyId,
-			Balance = Balance,
-		> + frame_support::traits::tokens::fungibles::Inspect<
-			T::AccountId,
-			AssetId = CurrencyId,
-			Balance = Balance,
-		>,
+	MC: MultiCurrency<T::AccountId, CurrencyId = CurrencyId, Balance = Balance>,
 	sp_runtime::AccountId32: From<<T as frame_system::Config>::AccountId>,
 {
 	type LiquidityInfo = Option<EvmPaymentInfo>;
@@ -94,7 +83,9 @@ where
 			return Ok(None);
 		}
 		let account_id = T::AddressMapping::into_account_id(*who);
-		let fee_currency = AC::get(&account_id);
+
+		let fee_currency =
+			AC::get_fee_currency(&account_id, fee).map_err(|_| Error::<T>::BalanceLow)?;
 
 		let Some((converted, price)) =
 			C::convert((EC::get(), fee_currency, fee.unique_saturated_into()))
@@ -107,17 +98,18 @@ where
 			return Err(Error::<T>::WithdrawFailed);
 		}
 
-		let burned = MC::burn_from(
+		log::debug!(
+			target: "evm",
+			"Withdrew fee from account {:?} in currency {:?} amount {:?}",
+			account_id,
 			fee_currency,
-			&account_id,
-			converted,
-			Preservation::Expendable,
-			Precision::Exact,
-			Fortitude::Polite,
-		)
-		.map_err(|_| Error::<T>::BalanceLow)?;
+			converted
+		);
 
-		Ok(Some(EvmPaymentInfo { amount: burned, currency_id: fee_currency, price }))
+		MC::withdraw(fee_currency, &account_id, converted)
+			.map_err(|_| Error::<T>::WithdrawFailed)?;
+
+		Ok(Some(EvmPaymentInfo { amount: converted, currency_id: fee_currency, price }))
 	}
 
 	fn correct_and_deposit_fee(
@@ -144,17 +136,11 @@ where
 				// refund to the account that paid the fees. If this fails, the
 				// account might have dropped below the existential balance. In
 				// that case we don't refund anything.
-				let result = MC::mint_into(paid.currency_id, &account_id, refund_amount);
-
-				let refund_imbalance = if let Ok(amount) = result {
-					// Ensure that we minted all amount, in case of partial refund for some reason,
-					// refund the difference back to treasury
-					debug_assert_eq!(amount, refund_amount);
-					refund_amount.saturating_sub(amount)
-				} else {
-					// If error, we refund the whole amount back to treasury
-					refund_amount
-				};
+				let refund_imbalance =
+					match MC::deposit(paid.currency_id, &account_id, refund_amount) {
+						Ok(_) => 0,
+						Err(_) => refund_amount,
+					};
 				// figure out how much is left to mint back
 				// refund_amount already minted back to account, imbalance is what is left to mint
 				// if any

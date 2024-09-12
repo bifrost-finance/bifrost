@@ -217,13 +217,11 @@ pub mod pallet {
 	}
 
 	#[pallet::storage]
-	#[pallet::getter(fn order_id)]
 	pub(crate) type NextOrderId<T: Config<I>, I: 'static = ()> =
 		StorageValue<_, OrderId, ValueQuery>;
 
 	// Just store order ids that be in-trade.
 	#[pallet::storage]
-	#[pallet::getter(fn user_order_ids)]
 	pub(crate) type UserOrderIds<T: Config<I>, I: 'static = ()> = StorageDoubleMap<
 		_,
 		Blake2_128Concat,
@@ -235,13 +233,11 @@ pub mod pallet {
 	>;
 
 	#[pallet::storage]
-	#[pallet::getter(fn order_info)]
 	pub type TotalOrderInfos<T: Config<I>, I: 'static = ()> =
 		StorageMap<_, Blake2_128Concat, OrderId, OrderInfo<AccountIdOf<T>, BalanceOf<T, I>>>;
 
 	/// transaction fee rate[sellFee, buyFee]
 	#[pallet::storage]
-	#[pallet::getter(fn get_transaction_fee_rate)]
 	pub type TransactionFee<T: Config<I>, I: 'static = ()> =
 		StorageValue<_, (Permill, Permill), ValueQuery, DefaultPrice>;
 
@@ -289,7 +285,7 @@ pub mod pallet {
 			};
 
 			// Calculate the transaction fee
-			let maker_fee_rate = Self::get_transaction_fee_rate().0;
+			let maker_fee_rate = TransactionFee::<T, I>::get().0;
 			let maker_fee = maker_fee_rate.mul_floor(total_price);
 
 			match order_type {
@@ -321,7 +317,7 @@ pub mod pallet {
 				},
 			}
 
-			let order_ids_len = Self::user_order_ids(&owner, order_type).len();
+			let order_ids_len = UserOrderIds::<T, I>::get(&owner, order_type).len();
 			ensure!(
 				order_ids_len < T::MaximumOrderInTrade::get() as usize,
 				Error::<T, I>::ExceedMaximumOrderInTrade,
@@ -387,7 +383,8 @@ pub mod pallet {
 			let from = ensure_signed(origin)?;
 
 			// Check OrderInfo
-			let order_info = Self::order_info(order_id).ok_or(Error::<T, I>::NotFindOrderInfo)?;
+			let order_info =
+				TotalOrderInfos::<T, I>::get(order_id).ok_or(Error::<T, I>::NotFindOrderInfo)?;
 
 			// Check OrderOwner
 			ensure!(order_info.owner == from, Error::<T, I>::ForbidRevokeOrderWithoutOwnership);
@@ -419,7 +416,8 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			#[pallet::compact] order_id: OrderId,
 		) -> DispatchResultWithPostInfo {
-			let order_info = Self::order_info(order_id).ok_or(Error::<T, I>::NotFindOrderInfo)?;
+			let order_info =
+				TotalOrderInfos::<T, I>::get(order_id).ok_or(Error::<T, I>::NotFindOrderInfo)?;
 
 			Self::partial_clinch_order(origin, order_id, order_info.remain)?;
 
@@ -443,7 +441,8 @@ pub mod pallet {
 			let order_taker = ensure_signed(origin)?;
 
 			// Check OrderInfo
-			let order_info = Self::order_info(order_id).ok_or(Error::<T, I>::NotFindOrderInfo)?;
+			let order_info =
+				TotalOrderInfos::<T, I>::get(order_id).ok_or(Error::<T, I>::NotFindOrderInfo)?;
 
 			// Check OrderOwner
 			ensure!(
@@ -466,7 +465,7 @@ pub mod pallet {
 			};
 
 			// Calculate the transaction fee
-			let taker_fee_rate = Self::get_transaction_fee_rate().1;
+			let taker_fee_rate = TransactionFee::<T, I>::get().1;
 			let taker_fee = taker_fee_rate.mul_floor(price_to_pay);
 
 			// Check the balance of order taker
@@ -635,7 +634,8 @@ pub mod pallet {
 
 	impl<T: Config<I>, I: 'static> Pallet<T, I> {
 		pub(crate) fn next_order_id() -> OrderId {
-			let next_order_id = Self::order_id();
+			// let next_order_id = Self::order_id();
+			let next_order_id = NextOrderId::<T, I>::get();
 			NextOrderId::<T, I>::mutate(|current| *current += 1);
 			next_order_id
 		}
@@ -666,7 +666,8 @@ pub mod pallet {
 
 		pub(crate) fn do_order_revoke(order_id: OrderId) -> DispatchResultWithPostInfo {
 			// Check OrderInfo
-			let order_info = Self::order_info(order_id).ok_or(Error::<T, I>::NotFindOrderInfo)?;
+			let order_info =
+				TotalOrderInfos::<T, I>::get(order_id).ok_or(Error::<T, I>::NotFindOrderInfo)?;
 
 			let (token_to_return, amount_to_return) = match order_info.order_type {
 				OrderType::Buy => (T::InvoicingCurrency::get(), order_info.remain_price),
