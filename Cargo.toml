@@ -309,7 +309,7 @@ xcm-emulator                                  = { git = "https://github.com/pari
 xcm-simulator                                 = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.13.0" }
 
 # Other
-async-trait           = { version = "0.1.76" }
+async-trait           = { version = "0.1.82" }
 bstringify            = { version = "0.1.2" }
 clap                  = { version = "4.5.17" }
 env_logger            = { version = "0.10.2" }
