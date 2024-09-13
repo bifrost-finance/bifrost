@@ -193,6 +193,11 @@ impl<T: Config> Pallet<T> {
 		})
 	}
 
+	fn get_storage_price(asset_id: &CurrencyId) -> Option<Price> {
+		EmergencyPrice::<T>::get(asset_id)
+			.or_else(|| T::Source::get(asset_id).and_then(|price| Some(price.value)))
+	}
+
 	fn get_asset_mantissa(asset_id: &CurrencyId) -> Option<u128> {
 		10u128.checked_pow(
 			asset_id
@@ -247,6 +252,25 @@ impl<T: Config> PriceFeeder for Pallet<T> {
 				T::Source::get(&asset_id)
 					.and_then(|price| Some(price.value.into_inner().saturating_div(decimals)))
 			})
+	}
+
+	/// Get the amount of currencies according to the oracle price data.
+	fn get_oracle_amount_by_currency_and_amount_in(
+		currency_in: &CurrencyId,
+		amount_in: Balance,
+		currency_out: &CurrencyId,
+	) -> Option<Balance> {
+		let currency_in_mantissa = Self::get_asset_mantissa(currency_in)?;
+		let currency_out_mantissa = Self::get_asset_mantissa(currency_out)?;
+		let currency_in_price = Self::get_storage_price(currency_in)?;
+		let currency_out_price = Self::get_storage_price(currency_out)?;
+		let total_value = currency_in_price
+			.div(FixedU128::from_inner(currency_in_mantissa))
+			.mul(FixedU128::from_inner(amount_in));
+		let amount_out = total_value
+			.mul(FixedU128::from_inner(currency_out_mantissa))
+			.div(currency_out_price);
+		Some(amount_out.into_inner())
 	}
 }
 
