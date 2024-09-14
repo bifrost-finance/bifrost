@@ -265,8 +265,8 @@ impl<T: Config> PriceFeeder for Pallet<T> {
 		let currency_in_price = Self::get_storage_price(currency_in)?;
 		let currency_out_price = Self::get_storage_price(currency_out)?;
 		let total_value = currency_in_price
-			.div(FixedU128::from_inner(currency_in_mantissa))
-			.mul(FixedU128::from_inner(amount_in));
+			.mul(FixedU128::from_inner(amount_in))
+			.div(FixedU128::from_inner(currency_in_mantissa));
 		let amount_out = total_value
 			.mul(FixedU128::from_inner(currency_out_mantissa))
 			.div(currency_out_price);
