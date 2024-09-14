@@ -278,6 +278,14 @@ impl PriceFeeder for MockPriceFeeder {
 	fn get_normal_price(_asset_id: &CurrencyId) -> Option<u128> {
 		todo!()
 	}
+
+	fn get_oracle_amount_by_currency_and_amount_in(
+		_currency_in: &CurrencyId,
+		_amount_in: bifrost_primitives::Balance,
+		_currency_out: &CurrencyId,
+	) -> Option<bifrost_primitives::Balance> {
+		todo!()
+	}
 }
 
 pub struct ParaInfo;
