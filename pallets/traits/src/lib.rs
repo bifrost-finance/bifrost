@@ -1,6 +1,6 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use bifrost_primitives::{CurrencyId, PriceDetail};
+use bifrost_primitives::{Balance, CurrencyId, PriceDetail};
 use num_bigint::{BigUint, ToBigUint};
 
 pub mod evm;
@@ -15,6 +15,11 @@ pub trait EmergencyCallFilter<Call> {
 pub trait PriceFeeder {
 	fn get_price(asset_id: &CurrencyId) -> Option<PriceDetail>;
 	fn get_normal_price(asset_id: &CurrencyId) -> Option<u128>;
+	fn get_oracle_amount_by_currency_and_amount_in(
+		currency_in: &CurrencyId,
+		amount_in: Balance,
+		currency_out: &CurrencyId,
+	) -> Option<Balance>;
 }
 
 pub trait EmergencyPriceFeeder<CurrencyId, Price> {
