@@ -16,34 +16,56 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-use crate::{pallet, *};
+use crate::*;
 use bifrost_primitives::{CurrencyId, DerivativeIndex};
-use core::marker::PhantomData;
 use frame_support::{ensure, pallet_prelude::*};
 use xcm::v4::Location;
 
 use crate::{agents::relaychain_agent::call::*, pallet::Error, traits::*};
 
 /// VotingAgent implementation for relay chain
-pub struct RelaychainAgent<T> {
+pub struct RelaychainAgent<T: Config> {
+	vtoken: CurrencyIdOf<T>,
 	location: Location,
-	_marker: PhantomData<T>,
 }
-impl<T: pallet::Config> RelaychainAgent<T> {
+impl<T: Config> RelaychainAgent<T> {
 	pub fn new(vtoken: CurrencyId) -> Result<Self, Error<T>> {
 		let location = Pallet::<T>::convert_vtoken_to_dest_location(vtoken)?;
-		Ok(Self { location, _marker: PhantomData })
+		Ok(Self { vtoken, location })
 	}
 }
 
-impl<T: Config> VotingAgent<BalanceOf<T>, AccountIdOf<T>, Error<T>> for RelaychainAgent<T> {
+impl<T: Config> VotingAgent<BalanceOf<T>, AccountIdOf<T>, Error<T>, T> for RelaychainAgent<T> {
+	fn vtoken(&self) -> CurrencyIdOf<T> {
+		self.vtoken
+	}
+
 	fn location(&self) -> Location {
 		self.location.clone()
 	}
+	fn delegate_vote(
+		&self,
+		who: AccountIdOf<T>,
+		vtoken: CurrencyIdOf<T>,
+		poll_index: PollIndexOf<T>,
+		submitted: bool,
+		new_delegator_votes: Vec<(DerivativeIndex, AccountVote<BalanceOf<T>>)>,
+		maybe_old_vote: Option<(AccountVote<BalanceOf<T>>, BalanceOf<T>)>,
+	) -> DispatchResult {
+		Pallet::<T>::send_xcm_message(
+			who,
+			vtoken,
+			poll_index,
+			submitted,
+			new_delegator_votes,
+			maybe_old_vote,
+		)
+	}
+
 	fn vote_call_encode(
 		&self,
 		new_delegator_votes: Vec<(DerivativeIndex, AccountVote<BalanceOf<T>>)>,
-		poll_index: PollIndex,
+		poll_index: PollIndexOf<T>,
 		derivative_index: DerivativeIndex,
 	) -> Result<Vec<u8>, Error<T>> {
 		let vote_calls = new_delegator_votes
@@ -69,7 +91,7 @@ impl<T: Config> VotingAgent<BalanceOf<T>, AccountIdOf<T>, Error<T>> for Relaycha
 	fn remove_delegator_vote_call_encode(
 		&self,
 		class: PollClass,
-		poll_index: PollIndex,
+		poll_index: PollIndexOf<T>,
 		derivative_index: DerivativeIndex,
 	) -> Vec<u8> {
 		let remove_vote_call =

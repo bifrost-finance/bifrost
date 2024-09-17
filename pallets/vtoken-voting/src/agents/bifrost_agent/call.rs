@@ -37,19 +37,19 @@ mod bifrost {
 #[derive(Encode, Decode, RuntimeDebug, Clone)]
 pub(in crate::agents::bifrost_agent) enum ConvictionVoting<T: Config> {
 	#[codec(index = 0)]
-	Vote(#[codec(compact)] PollIndex, AccountVote<BalanceOf<T>>),
+	Vote(#[codec(compact)] PollIndexOf<T>, AccountVote<BalanceOf<T>>),
 	#[codec(index = 3)]
 	Unlock(PollClass, <T::Lookup as StaticLookup>::Source),
 	#[codec(index = 4)]
-	RemoveVote(Option<PollClass>, PollIndex),
+	RemoveVote(Option<PollClass>, PollIndexOf<T>),
 }
 
 impl<T: Config> ConvictionVotingCall<T> for BifrostCall<T> {
-	fn vote(poll_index: PollIndex, vote: AccountVote<BalanceOf<T>>) -> Self {
+	fn vote(poll_index: PollIndexOf<T>, vote: AccountVote<BalanceOf<T>>) -> Self {
 		Self::ConvictionVoting(ConvictionVoting::Vote(poll_index, vote))
 	}
 
-	fn remove_vote(class: Option<PollClass>, poll_index: PollIndex) -> Self {
+	fn remove_vote(class: Option<PollClass>, poll_index: PollIndexOf<T>) -> Self {
 		Self::ConvictionVoting(ConvictionVoting::RemoveVote(class, poll_index))
 	}
 }

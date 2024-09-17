@@ -2216,7 +2216,7 @@ impl<T: Config> VTokenSupplyProvider<CurrencyIdOf<T>, BalanceOf<T>> for Pallet<T
 	}
 
 	fn get_token_supply(token: CurrencyIdOf<T>) -> Option<BalanceOf<T>> {
-		if CurrencyId::is_token(&token) {
+		if CurrencyId::is_token(&token) | CurrencyId::is_native(&token) {
 			Some(TokenPool::<T>::get(token))
 		} else {
 			None

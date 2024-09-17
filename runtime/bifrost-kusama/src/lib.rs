@@ -95,7 +95,7 @@ use frame_support::{
 		fungible::HoldConsideration,
 		tokens::{PayFromAccount, UnityAssetBalanceConversion},
 		Currency, EitherOf, EitherOfDiverse, Get, Imbalance, InsideBoth, LinearStoragePrice,
-		LockIdentifier, OnUnbalanced,
+		LockIdentifier, OnUnbalanced, Polling,
 	},
 };
 use frame_system::{EnsureRoot, EnsureRootWithSuccess, EnsureSigned};
@@ -121,6 +121,10 @@ use governance::{
 
 // xcm config
 pub mod xcm_config;
+use bifrost_vtoken_voting::{BalanceOf, PollIndexOf};
+use pallet_conviction_voting::{
+	AccountVote, Call as convictionVotingCall, Conviction, UnvoteScope, Vote,
+};
 use pallet_xcm::{EnsureResponse, QueryStatus};
 use sp_runtime::traits::{IdentityLookup, Verify};
 use xcm::{v3::MultiLocation, v4::prelude::*};
@@ -130,6 +134,8 @@ pub use xcm_config::{
 	XcmConfig, XcmRouter,
 };
 use xcm_executor::{traits::QueryHandler, XcmExecutor};
+
+use bifrost_primitives::currency::{BNC, DOT, KSM, VBNC, VDOT, VKSM};
 
 impl_opaque_keys! {
 	pub struct SessionKeys {
@@ -1032,16 +1038,22 @@ impl FeeGetter<RuntimeCall> for ExtraFeeMatcher {
 				extra_fee_currency: RelayCurrencyId::get(),
 			},
 			RuntimeCall::VtokenVoting(bifrost_vtoken_voting::Call::vote { vtoken, .. }) =>
-				ExtraFeeInfo {
-					extra_fee_name: ExtraFeeName::VoteVtoken,
-					extra_fee_currency: vtoken.to_token().unwrap_or(vtoken),
+				match vtoken {
+					VBNC => ExtraFeeInfo::default(),
+					_ => ExtraFeeInfo {
+						extra_fee_name: ExtraFeeName::VoteVtoken,
+						extra_fee_currency: vtoken.to_token().unwrap_or(vtoken),
+					},
 				},
 			RuntimeCall::VtokenVoting(bifrost_vtoken_voting::Call::remove_delegator_vote {
 				vtoken,
 				..
-			}) => ExtraFeeInfo {
-				extra_fee_name: ExtraFeeName::VoteRemoveDelegatorVote,
-				extra_fee_currency: vtoken.to_token().unwrap_or(vtoken),
+			}) => match vtoken {
+				VBNC => ExtraFeeInfo::default(),
+				_ => ExtraFeeInfo {
+					extra_fee_name: ExtraFeeName::VoteRemoveDelegatorVote,
+					extra_fee_currency: vtoken.to_token().unwrap_or(vtoken),
+				},
 			},
 			_ => ExtraFeeInfo::default(),
 		}
@@ -1410,10 +1422,11 @@ impl bifrost_vtoken_voting::Config for Runtime {
 	type RelaychainBlockNumberProvider = RelaychainDataProvider<Runtime>;
 	type VTokenSupplyProvider = VtokenMinting;
 	type ParachainId = SelfParaChainId;
-	type MaxVotes = ConstU32<256>;
+	type NativeMaxVotes = ConstU32<256>;
 	type QueryTimeout = QueryTimeout;
 	type ReferendumCheckInterval = ReferendumCheckInterval;
 	type WeightInfo = weights::bifrost_vtoken_voting::BifrostWeight<Runtime>;
+	type PalletsOrigin = OriginCaller;
 }
 
 // Bifrost modules end
@@ -1849,7 +1862,7 @@ construct_runtime! {
 		PhragmenElection: pallet_elections_phragmen = 33,
 		CouncilMembership: pallet_membership::<Instance1> = 34,
 		TechnicalMembership: pallet_membership::<Instance2> = 35,
-		ConvictionVoting: pallet_conviction_voting = 36,
+		ConvictionVoting: pallet_conviction_voting::{Pallet, Call, Event<T>} = 36,
 		Referenda: pallet_referenda = 37,
 		Origins: custom_origins = 38,
 		Whitelist: pallet_whitelist = 39,
