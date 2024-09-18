@@ -22,7 +22,7 @@ use bifrost_asset_registry::AssetIdMaps;
 pub use bifrost_primitives::{
 	currency::*, Balance, CurrencyId, CurrencyIdMapping, SlpOperator, SlpxOperator, TokenSymbol,
 };
-use bifrost_primitives::{Moment, MoonbeamChainId, Price, PriceDetail, Ratio};
+use bifrost_primitives::{Moment, MoonbeamChainId, Price, PriceDetail, PriceFeeder, Ratio};
 use bifrost_runtime_common::milli;
 use frame_support::{
 	derive_impl, ord_parameter_types, parameter_types,

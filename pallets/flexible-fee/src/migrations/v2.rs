@@ -28,7 +28,7 @@ pub type UserFeeChargeOrderList<T: Config> = StorageMap<
 	Pallet<T>,
 	Twox64Concat,
 	<T as frame_system::Config>::AccountId,
-	Vec<CurrencyIdOf<T>>,
+	Vec<CurrencyId>,
 	OptionQuery,
 >;
 

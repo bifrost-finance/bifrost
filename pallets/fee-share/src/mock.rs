@@ -41,7 +41,6 @@ use orml_traits::{
 	location::RelativeReserveProvider, parameter_type_with_key, DataFeeder, DataProvider,
 	DataProviderExtended, MultiCurrency,
 };
-use pallet_traits::PriceFeeder;
 use sp_core::ConstU32;
 use sp_runtime::{
 	traits::{AccountIdConversion, IdentityLookup, UniqueSaturatedInto},
