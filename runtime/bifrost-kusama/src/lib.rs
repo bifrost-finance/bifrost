@@ -1972,15 +1972,22 @@ impl cumulus_pallet_xcmp_queue::migration::v5::V5Config for Runtime {
 /// upgrades in case governance decides to do so. THE ORDER IS IMPORTANT.
 pub type Migrations = migrations::Unreleased;
 
+parameter_types! {
+	pub const SystemMakerName: &'static str = "SystemMaker";
+}
+
 /// The runtime migrations per release.
 pub mod migrations {
 	#![allow(unused_imports)]
 	use super::*;
+	use bifrost_system_maker::migration::SystemMakerClearPalletId;
 
 	/// Unreleased migrations. Add new ones here:
 	pub type Unreleased = (
 		// permanent migration, do not remove
 		pallet_xcm::migration::MigrateToLatestXcmVersion<Runtime>,
+		SystemMakerClearPalletId<Runtime>,
+		frame_support::migrations::RemovePallet<SystemMakerName, RocksDbWeight>,
 	);
 }
 
@@ -2010,7 +2017,6 @@ mod benches {
 		[bifrost_slp, Slp]
 		[bifrost_slpx, Slpx]
 		[bifrost_stable_pool, StablePool]
-		[bifrost_system_maker, SystemMaker]
 		[bifrost_system_staking, SystemStaking]
 		[bifrost_token_issuer, TokenIssuer]
 		[bifrost_vsbond_auction, VSBondAuction]
