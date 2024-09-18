@@ -140,7 +140,19 @@ pub mod pallet {
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
+		/// Transfer to another chain
 		TransferTo { from: T::AccountId, target_chain: TargetChain, amount: BalanceOf<T> },
+		/// Set user default fee currency
+		SetDefaultFeeCurrency { who: T::AccountId, currency_id: Option<CurrencyId> },
+		/// Set universal fee currency order list
+		SetFeeCurrencyList { currency_list: BoundedVec<CurrencyId, T::MaxFeeCurrencyOrderListLen> },
+		/// Set extra fee by call
+		SetExtraFee {
+			/// The raw call name to be set as the extra fee call.
+			raw_call_name: RawCallName,
+			/// currency_id, fee_amount, receiver
+			fee_info: Option<(CurrencyId, BalanceOf<T>, T::AccountId)>,
+		},
 	}
 
 	/// Universal fee currency order list for all users
@@ -154,7 +166,7 @@ pub mod pallet {
 	pub type UserDefaultFeeCurrency<T: Config> =
 		StorageMap<_, Twox64Concat, T::AccountId, CurrencyId, OptionQuery>;
 
-	/// Methods of storing extra charges.
+	/// Extra fee by call
 	#[pallet::storage]
 	pub type ExtraFeeByCall<T: Config> = StorageMap<
 		_,
@@ -188,16 +200,16 @@ pub mod pallet {
 		#[pallet::weight(<T as Config>::WeightInfo::set_user_default_fee_currency())]
 		pub fn set_user_default_fee_currency(
 			origin: OriginFor<T>,
-			maybe_fee_currency: Option<CurrencyId>,
+			currency_id: Option<CurrencyId>,
 		) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 
-			if let Some(fee_currency) = maybe_fee_currency {
+			if let Some(fee_currency) = &currency_id {
 				UserDefaultFeeCurrency::<T>::insert(&who, fee_currency);
 			} else {
 				UserDefaultFeeCurrency::<T>::remove(&who);
 			}
-
+			Self::deposit_event(Event::<T>::SetDefaultFeeCurrency { who, currency_id });
 			Ok(())
 		}
 
@@ -209,10 +221,11 @@ pub mod pallet {
 		#[pallet::weight(<T as Config>::WeightInfo::set_default_fee_currency_list())]
 		pub fn set_default_fee_currency_list(
 			origin: OriginFor<T>,
-			default_list: BoundedVec<CurrencyId, T::MaxFeeCurrencyOrderListLen>,
+			currency_list: BoundedVec<CurrencyId, T::MaxFeeCurrencyOrderListLen>,
 		) -> DispatchResult {
 			T::ControlOrigin::ensure_origin(origin)?;
-			UniversalFeeCurrencyOrderList::<T>::put(default_list);
+			UniversalFeeCurrencyOrderList::<T>::put(currency_list.clone());
+			Self::deposit_event(Event::<T>::SetFeeCurrencyList { currency_list });
 			Ok(())
 		}
 
@@ -228,10 +241,11 @@ pub mod pallet {
 			fee_info: Option<(CurrencyId, BalanceOf<T>, T::AccountId)>,
 		) -> DispatchResult {
 			T::ControlOrigin::ensure_origin(origin)?;
-			match fee_info {
+			match fee_info.clone() {
 				Some(fee_info) => ExtraFeeByCall::<T>::insert(&raw_call_name, fee_info),
 				None => ExtraFeeByCall::<T>::remove(&raw_call_name),
 			};
+			Self::deposit_event(Event::<T>::SetExtraFee { raw_call_name, fee_info });
 			Ok(())
 		}
 	}
