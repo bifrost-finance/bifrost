@@ -35,7 +35,7 @@ impl<T: Config> RelaychainAgent<T> {
 	}
 }
 
-impl<T: Config> VotingAgent<BalanceOf<T>, AccountIdOf<T>, Error<T>, T> for RelaychainAgent<T> {
+impl<T: Config> VotingAgent<T> for RelaychainAgent<T> {
 	fn vtoken(&self) -> CurrencyIdOf<T> {
 		self.vtoken
 	}
@@ -52,7 +52,7 @@ impl<T: Config> VotingAgent<BalanceOf<T>, AccountIdOf<T>, Error<T>, T> for Relay
 		new_delegator_votes: Vec<(DerivativeIndex, AccountVote<BalanceOf<T>>)>,
 		maybe_old_vote: Option<(AccountVote<BalanceOf<T>>, BalanceOf<T>)>,
 	) -> DispatchResult {
-		Pallet::<T>::send_xcm_message(
+		Pallet::<T>::send_xcm_vote_message(
 			who,
 			vtoken,
 			poll_index,
@@ -88,18 +88,33 @@ impl<T: Config> VotingAgent<BalanceOf<T>, AccountIdOf<T>, Error<T>, T> for Relay
 		Ok(encode_call)
 	}
 
+	fn delegate_remove_delegator_vote(
+		&self,
+		vtoken: CurrencyIdOf<T>,
+		poll_index: PollIndexOf<T>,
+		class: PollClassOf<T>,
+		derivative_index: DerivativeIndex,
+	) -> DispatchResult {
+		Pallet::<T>::send_xcm_remove_delegator_vote_message(
+			vtoken,
+			poll_index,
+			class,
+			derivative_index,
+		)
+	}
+
 	fn remove_delegator_vote_call_encode(
 		&self,
-		class: PollClass,
+		class: PollClassOf<T>,
 		poll_index: PollIndexOf<T>,
 		derivative_index: DerivativeIndex,
-	) -> Vec<u8> {
+	) -> Result<Vec<u8>, Error<T>> {
 		let remove_vote_call =
 			<RelayCall<T> as ConvictionVotingCall<T>>::remove_vote(Some(class), poll_index);
-		<RelayCall<T> as UtilityCall<RelayCall<T>>>::as_derivative(
+		Ok(<RelayCall<T> as UtilityCall<RelayCall<T>>>::as_derivative(
 			derivative_index,
 			remove_vote_call,
 		)
-		.encode()
+		.encode())
 	}
 }

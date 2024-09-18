@@ -74,8 +74,9 @@ const CONVICTION_VOTING_ID: LockIdentifier = *b"vtvoting";
 pub type PollIndexOf<T> = <<T as pallet_conviction_voting::Config>::Polls as Polling<
 	pallet_conviction_voting::TallyOf<T>,
 >>::Index;
-
-type PollClass = u16;
+type PollClassOf<T> = <<T as pallet_conviction_voting::Config>::Polls as Polling<
+	pallet_conviction_voting::TallyOf<T>,
+>>::Class;
 
 pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
 
@@ -101,8 +102,7 @@ type VotingOf<T> = Voting<
 
 pub type ReferendumInfoOf<T> = ReferendumInfo<BlockNumberFor<T>, TallyOf<T>>;
 
-type VotingAgentBoxType<T> =
-	Box<dyn VotingAgent<BalanceOf<T>, AccountIdOf<T>, pallet::Error<T>, T>>;
+type VotingAgentBoxType<T> = Box<dyn VotingAgent<T>>;
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -478,7 +478,7 @@ pub mod pallet {
 		pub fn vote(
 			origin: OriginFor<T>,
 			vtoken: CurrencyIdOf<T>,
-			#[pallet::compact] poll_index: PollIndexOf<T>,
+			poll_index: PollIndexOf<T>,
 			vtoken_vote: AccountVote<BalanceOf<T>>,
 		) -> DispatchResult {
 			let who = ensure_signed(origin)?;
@@ -549,7 +549,7 @@ pub mod pallet {
 		pub fn unlock(
 			origin: OriginFor<T>,
 			vtoken: CurrencyIdOf<T>,
-			#[pallet::compact] poll_index: PollIndexOf<T>,
+			poll_index: PollIndexOf<T>,
 		) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 			Self::ensure_vtoken(&vtoken)?;
@@ -574,8 +574,8 @@ pub mod pallet {
 		pub fn remove_delegator_vote(
 			origin: OriginFor<T>,
 			vtoken: CurrencyIdOf<T>,
-			#[pallet::compact] class: PollClass,
-			#[pallet::compact] poll_index: PollIndexOf<T>,
+			class: PollClassOf<T>,
+			poll_index: PollIndexOf<T>,
 			#[pallet::compact] derivative_index: DerivativeIndex,
 		) -> DispatchResult {
 			let who = ensure_signed(origin)?;
@@ -583,33 +583,12 @@ pub mod pallet {
 			ensure!(DelegatorVotes::<T>::get(vtoken, poll_index).len() > 0, Error::<T>::NoData);
 			Self::ensure_referendum_expired(vtoken, poll_index)?;
 
-			let notify_call = Call::<T>::notify_remove_delegator_vote {
-				query_id: 0,
-				response: Default::default(),
-			};
-
 			let voting_agent = Self::get_voting_agent(&vtoken)?;
-			let encode_call =
-				voting_agent.remove_delegator_vote_call_encode(class, poll_index, derivative_index);
-
-			let (weight, extra_fee) = T::XcmDestWeightAndFee::get_operation_weight_and_fee(
-				CurrencyId::to_token(&vtoken).map_err(|_| Error::<T>::NoData)?,
-				XcmOperationType::RemoveVote,
-			)
-			.ok_or(Error::<T>::NoData)?;
-
-			Self::send_xcm_with_notify(
-				voting_agent.location(),
-				encode_call,
-				notify_call,
-				weight,
-				extra_fee,
-				|query_id| {
-					PendingRemoveDelegatorVote::<T>::insert(
-						query_id,
-						(vtoken, poll_index, derivative_index),
-					);
-				},
+			voting_agent.delegate_remove_delegator_vote(
+				vtoken,
+				poll_index,
+				class,
+				derivative_index,
 			)?;
 
 			Self::deposit_event(Event::<T>::DelegatorVoteRemoved { who, vtoken, derivative_index });
@@ -622,7 +601,7 @@ pub mod pallet {
 		pub fn kill_referendum(
 			origin: OriginFor<T>,
 			vtoken: CurrencyIdOf<T>,
-			#[pallet::compact] poll_index: PollIndexOf<T>,
+			poll_index: PollIndexOf<T>,
 		) -> DispatchResult {
 			T::ControlOrigin::ensure_origin(origin)?;
 			Self::ensure_vtoken(&vtoken)?;
@@ -673,7 +652,7 @@ pub mod pallet {
 		pub fn set_referendum_status(
 			origin: OriginFor<T>,
 			vtoken: CurrencyIdOf<T>,
-			#[pallet::compact] poll_index: PollIndexOf<T>,
+			poll_index: PollIndexOf<T>,
 			info: ReferendumInfoOf<T>,
 		) -> DispatchResult {
 			T::ControlOrigin::ensure_origin(origin)?;
@@ -730,33 +709,15 @@ pub mod pallet {
 			if let Some((vtoken, poll_index, derivative_index, who, maybe_old_vote)) =
 				PendingVotingInfo::<T>::get(query_id)
 			{
-				if !success {
-					// rollback vote
-					let _ = PendingDelegatorVotes::<T>::clear(u32::MAX, None);
-					Self::try_remove_vote(&who, vtoken, poll_index, UnvoteScope::Any)?;
-					Self::update_lock(&who, vtoken)?;
-					if let Some((old_vote, vtoken_balance)) = maybe_old_vote {
-						Self::try_vote(&who, vtoken, poll_index, old_vote, vtoken_balance)?;
-					}
-				} else {
-					if !VoteDelegatorFor::<T>::contains_key((&who, vtoken, poll_index)) {
-						VoteDelegatorFor::<T>::insert((&who, vtoken, poll_index), derivative_index);
-					}
-					DelegatorVotes::<T>::remove(vtoken, poll_index);
-					DelegatorVotes::<T>::try_mutate(
-						vtoken,
-						poll_index,
-						|item| -> DispatchResult {
-							for (derivative_index, vote) in
-								PendingDelegatorVotes::<T>::take(vtoken, poll_index).iter()
-							{
-								item.try_push((*derivative_index, *vote))
-									.map_err(|_| Error::<T>::TooMany)?;
-							}
-							Ok(())
-						},
-					)?;
-				}
+				Self::handle_vote_result(
+					success,
+					who,
+					vtoken,
+					poll_index,
+					maybe_old_vote,
+					derivative_index,
+				)?;
+
 				PendingVotingInfo::<T>::remove(query_id);
 				Self::deposit_event(Event::<T>::VoteNotified { vtoken, poll_index, success });
 			}
@@ -817,7 +778,7 @@ pub mod pallet {
 			{
 				let success = Response::DispatchResult(MaybeErrorCode::Success) == response;
 				if success {
-					DelegatorVotes::<T>::remove(vtoken, poll_index);
+					Self::handle_remove_delegator_vote_success(vtoken, poll_index);
 				}
 				PendingRemoveDelegatorVote::<T>::remove(query_id);
 				Self::deposit_event(Event::<T>::DelegatorVoteRemovedNotified {
@@ -848,7 +809,49 @@ pub mod pallet {
 	}
 
 	impl<T: Config> Pallet<T> {
-		pub(crate) fn send_xcm_message(
+		pub(crate) fn handle_remove_delegator_vote_success(
+			vtoken: CurrencyIdOf<T>,
+			poll_index: PollIndexOf<T>,
+		) {
+			DelegatorVotes::<T>::remove(vtoken, poll_index);
+		}
+
+		pub(crate) fn handle_vote_result(
+			success: bool,
+			who: AccountIdOf<T>,
+			vtoken: CurrencyIdOf<T>,
+			poll_index: PollIndexOf<T>,
+			maybe_old_vote: Option<(AccountVote<BalanceOf<T>>, BalanceOf<T>)>,
+			derivative_index: DerivativeIndex,
+		) -> DispatchResult {
+			if !success {
+				// rollback vote
+				let _ = PendingDelegatorVotes::<T>::clear(u32::MAX, None);
+				Self::try_remove_vote(&who, vtoken, poll_index, UnvoteScope::Any)?;
+				Self::update_lock(&who, vtoken)?;
+				if let Some((old_vote, vtoken_balance)) = maybe_old_vote {
+					Self::try_vote(&who, vtoken, poll_index, old_vote, vtoken_balance)?;
+				}
+			} else {
+				if !VoteDelegatorFor::<T>::contains_key((&who, vtoken, poll_index)) {
+					VoteDelegatorFor::<T>::insert((&who, vtoken, poll_index), derivative_index);
+				}
+				DelegatorVotes::<T>::remove(vtoken, poll_index);
+				DelegatorVotes::<T>::try_mutate(vtoken, poll_index, |item| -> DispatchResult {
+					for (derivative_index, vote) in
+						PendingDelegatorVotes::<T>::take(vtoken, poll_index).iter()
+					{
+						item.try_push((*derivative_index, *vote))
+							.map_err(|_| Error::<T>::TooMany)?;
+					}
+					Ok(())
+				})?;
+			}
+
+			Ok(())
+		}
+
+		pub(crate) fn send_xcm_vote_message(
 			who: AccountIdOf<T>,
 			vtoken: CurrencyIdOf<T>,
 			poll_index: PollIndexOf<T>,
@@ -887,6 +890,46 @@ pub mod pallet {
 						query_id,
 						(vtoken, poll_index, derivative_index, who.clone(), maybe_old_vote),
 					)
+				},
+			)?;
+
+			Ok(())
+		}
+
+		pub(crate) fn send_xcm_remove_delegator_vote_message(
+			vtoken: CurrencyIdOf<T>,
+			poll_index: PollIndexOf<T>,
+			class: PollClassOf<T>,
+			derivative_index: DerivativeIndex,
+		) -> DispatchResult {
+			let voting_agent = Self::get_voting_agent(&vtoken)?;
+			let encode_call = voting_agent.remove_delegator_vote_call_encode(
+				class,
+				poll_index,
+				derivative_index,
+			)?;
+			let notify_call = Call::<T>::notify_remove_delegator_vote {
+				query_id: 0,
+				response: Default::default(),
+			};
+
+			let (weight, extra_fee) = T::XcmDestWeightAndFee::get_operation_weight_and_fee(
+				CurrencyId::to_token(&vtoken).map_err(|_| Error::<T>::NoData)?,
+				XcmOperationType::RemoveVote,
+			)
+			.ok_or(Error::<T>::NoData)?;
+
+			Self::send_xcm_with_notify(
+				voting_agent.location(),
+				encode_call,
+				notify_call,
+				weight,
+				extra_fee,
+				|query_id| {
+					PendingRemoveDelegatorVote::<T>::insert(
+						query_id,
+						(vtoken, poll_index, derivative_index),
+					);
 				},
 			)?;
 

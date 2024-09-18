@@ -95,7 +95,7 @@ use frame_support::{
 		fungible::HoldConsideration,
 		tokens::{PayFromAccount, UnityAssetBalanceConversion},
 		Currency, EitherOf, EitherOfDiverse, Get, Imbalance, InsideBoth, LinearStoragePrice,
-		LockIdentifier, OnUnbalanced, Polling,
+		LockIdentifier, OnUnbalanced,
 	},
 };
 use frame_system::{EnsureRoot, EnsureRootWithSuccess, EnsureSigned};
@@ -121,10 +121,6 @@ use governance::{
 
 // xcm config
 pub mod xcm_config;
-use bifrost_vtoken_voting::{BalanceOf, PollIndexOf};
-use pallet_conviction_voting::{
-	AccountVote, Call as convictionVotingCall, Conviction, UnvoteScope, Vote,
-};
 use pallet_xcm::{EnsureResponse, QueryStatus};
 use sp_runtime::traits::{IdentityLookup, Verify};
 use xcm::{v3::MultiLocation, v4::prelude::*};
@@ -135,7 +131,7 @@ pub use xcm_config::{
 };
 use xcm_executor::{traits::QueryHandler, XcmExecutor};
 
-use bifrost_primitives::currency::{BNC, DOT, KSM, VBNC, VDOT, VKSM};
+use bifrost_primitives::currency::VBNC;
 
 impl_opaque_keys! {
 	pub struct SessionKeys {

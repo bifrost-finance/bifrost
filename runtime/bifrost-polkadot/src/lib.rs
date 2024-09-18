@@ -99,7 +99,6 @@ use frame_support::{
 		fungible::HoldConsideration,
 		tokens::{PayFromAccount, UnityAssetBalanceConversion},
 		Currency, EitherOf, EitherOfDiverse, Get, InsideBoth, LinearStoragePrice, OnFinalize,
-		Polling,
 	},
 };
 use frame_system::{EnsureRoot, EnsureRootWithSuccess, EnsureSigned};
@@ -114,9 +113,7 @@ use zenlink_protocol::{
 // xcm config
 pub mod xcm_config;
 use bifrost_primitives::VBNC;
-use bifrost_vtoken_voting::{BalanceOf, PollIndexOf};
 use orml_traits::{currency::MutationHooks, location::RelativeReserveProvider};
-use pallet_conviction_voting::{AccountVote, Vote};
 use pallet_evm::{GasWeightMapping, Runner};
 use pallet_identity::legacy::IdentityInfo;
 use pallet_xcm::{EnsureResponse, QueryStatus};

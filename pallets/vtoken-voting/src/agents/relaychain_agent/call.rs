@@ -60,9 +60,9 @@ pub(in crate::agents::relaychain_agent) enum ConvictionVoting<T: Config> {
 	#[codec(index = 0)]
 	Vote(#[codec(compact)] PollIndexOf<T>, AccountVote<BalanceOf<T>>),
 	#[codec(index = 3)]
-	Unlock(PollClass, <T::Lookup as StaticLookup>::Source),
+	Unlock(PollClassOf<T>, <T::Lookup as StaticLookup>::Source),
 	#[codec(index = 4)]
-	RemoveVote(Option<PollClass>, PollIndexOf<T>),
+	RemoveVote(Option<PollClassOf<T>>, PollIndexOf<T>),
 }
 
 impl<T: Config> ConvictionVotingCall<T> for RelayCall<T> {
@@ -70,7 +70,7 @@ impl<T: Config> ConvictionVotingCall<T> for RelayCall<T> {
 		Self::ConvictionVoting(ConvictionVoting::Vote(poll_index, vote))
 	}
 
-	fn remove_vote(class: Option<PollClass>, poll_index: PollIndexOf<T>) -> Self {
+	fn remove_vote(class: Option<PollClassOf<T>>, poll_index: PollIndexOf<T>) -> Self {
 		Self::ConvictionVoting(ConvictionVoting::RemoveVote(class, poll_index))
 	}
 }
