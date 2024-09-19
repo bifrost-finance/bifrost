@@ -1205,8 +1205,6 @@ dependencies = [
  "bifrost-asset-registry",
  "bifrost-currencies",
  "bifrost-primitives",
- "bifrost-salp",
- "bifrost-vtoken-voting",
  "bifrost-xcm-interface",
  "cumulus-primitives-core",
  "frame-benchmarking",

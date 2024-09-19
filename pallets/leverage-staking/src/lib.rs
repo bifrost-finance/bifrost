@@ -40,7 +40,7 @@ use frame_support::{
 use frame_system::{ensure_signed, pallet_prelude::*};
 pub use pallet_traits::{
 	ConvertToBigUint, LendMarket as LendMarketTrait, LendMarketMarketDataProvider,
-	LendMarketPositionDataProvider, MarketInfo, MarketStatus, PriceFeeder,
+	LendMarketPositionDataProvider, MarketInfo, MarketStatus,
 };
 pub use parity_scale_codec::{Decode, Encode};
 use sp_runtime::{

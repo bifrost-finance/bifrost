@@ -21,9 +21,9 @@
 pub use crate::pallet::*;
 use bifrost_primitives::{
 	currency::{VGLMR, VMANTA, WETH},
-	traits::{FeeGetter, XcmDestWeightAndFeeHandler},
-	AccountFeeCurrency, BalanceCmp, CurrencyId, ExtraFeeName, TryConvertFrom, XcmOperationType,
-	BNC, DOT, GLMR, MANTA, VBNC, VDOT,
+	traits::XcmDestWeightAndFeeHandler,
+	Balance, BalanceCmp, CurrencyId, DerivativeIndex, Price, PriceFeeder, TryConvertFrom,
+	XcmOperationType, BNC, DOT, GLMR, MANTA, VBNC, VDOT,
 };
 use bifrost_xcm_interface::{polkadot::RelaychainCall, traits::parachains, PolkadotXcmCall};
 use core::convert::Into;
@@ -33,8 +33,7 @@ use frame_support::{
 	traits::{
 		fungibles::Inspect,
 		tokens::{Fortitude, Preservation},
-		Currency, ExistenceRequirement, Get, Imbalance, OnUnbalanced, ReservableCurrency,
-		WithdrawReasons,
+		Get,
 	},
 	transactional,
 	weights::WeightMeter,
@@ -42,37 +41,29 @@ use frame_support::{
 };
 use frame_system::pallet_prelude::*;
 use orml_traits::MultiCurrency;
-use pallet_transaction_payment::OnChargeTransaction;
 use polkadot_parachain_primitives::primitives::Sibling;
-use sp_arithmetic::traits::{CheckedAdd, SaturatedConversion, UniqueSaturatedInto};
-use sp_core::U256;
+use sp_arithmetic::traits::UniqueSaturatedInto;
 use sp_runtime::{
-	traits::{AccountIdConversion, DispatchInfoOf, PostDispatchInfoOf, Saturating, Zero},
-	transaction_validity::TransactionValidityError,
+	traits::{AccountIdConversion, One},
 	BoundedVec,
 };
 use sp_std::{boxed::Box, cmp::Ordering, vec, vec::Vec};
 pub use weights::WeightInfo;
 use xcm::{prelude::Unlimited, v4::prelude::*};
-use zenlink_protocol::{AssetBalance, AssetId, ExportZenlink};
+use zenlink_protocol::{AssetId, ExportZenlink};
 
 #[cfg(feature = "runtime-benchmarks")]
 mod benchmarking;
+pub mod impls;
 pub mod migrations;
 mod mock;
+mod mock_price;
 mod tests;
 pub mod weights;
 
 pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
-pub type CurrencyIdOf<T> =
-	<<T as Config>::MultiCurrency as MultiCurrency<AccountIdOf<T>>>::CurrencyId;
 pub type BalanceOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<AccountIdOf<T>>>::Balance;
-pub type PalletBalanceOf<T> = <<T as Config>::Currency as Currency<AccountIdOf<T>>>::Balance;
-pub type NegativeImbalanceOf<T> =
-	<<T as Config>::Currency as Currency<AccountIdOf<T>>>::NegativeImbalance;
-pub type PositiveImbalanceOf<T> =
-	<<T as Config>::Currency as Currency<AccountIdOf<T>>>::PositiveImbalance;
-pub type CallOf<T> = <T as frame_system::Config>::RuntimeCall;
+pub type RawCallName = BoundedVec<u8, ConstU32<32>>;
 
 #[derive(Encode, Decode, Copy, Clone, Eq, PartialEq, RuntimeDebug, TypeInfo, MaxEncodedLen)]
 pub enum TargetChain {
@@ -83,7 +74,7 @@ pub enum TargetChain {
 #[frame_support::pallet]
 pub mod pallet {
 	use super::*;
-	use bifrost_primitives::Balance;
+	use bifrost_primitives::{Balance, PriceFeeder};
 	use frame_support::traits::fungibles::Inspect;
 
 	#[pallet::config]
@@ -93,43 +84,35 @@ pub mod pallet {
 		/// Weight information for the extrinsics in this module.
 		type WeightInfo: WeightInfo;
 		/// Handler for both NativeCurrency and MultiCurrency
-		type MultiCurrency: MultiCurrency<Self::AccountId, CurrencyId = CurrencyId, Balance = PalletBalanceOf<Self>>
+		type MultiCurrency: MultiCurrency<Self::AccountId, CurrencyId = CurrencyId, Balance = Balance>
 			+ Inspect<Self::AccountId, AssetId = CurrencyId, Balance = Balance>;
-		/// The currency type in which fees will be paid.
-		type Currency: Currency<Self::AccountId> + ReservableCurrency<Self::AccountId>;
-		/// Handler for the unbalanced decrease
-		type OnUnbalanced: OnUnbalanced<NegativeImbalanceOf<Self>>;
 		/// xcm transfer interface
 		type XcmRouter: SendXcm;
-
+		/// Zenlink interface
 		type DexOperator: ExportZenlink<Self::AccountId, AssetId>;
-		/// Filter if this transaction needs to be deducted extra fee besides basic transaction fee,
-		/// and get the name of the fee
-		type ExtraFeeMatcher: FeeGetter<CallOf<Self>>;
-
-		#[pallet::constant]
-		type TreasuryAccount: Get<Self::AccountId>;
-
-		#[pallet::constant]
-		type MaxFeeCurrencyOrderListLen: Get<u32>;
-
-		#[pallet::constant]
-		type MinAssetHubExecutionFee: Get<BalanceOf<Self>>;
-
-		#[pallet::constant]
-		type MinRelaychainExecutionFee: Get<BalanceOf<Self>>;
-
-		/// The currency id of the RelayChain
-		#[pallet::constant]
-		type RelaychainCurrencyId: Get<CurrencyIdOf<Self>>;
-
-		type ParachainId: Get<ParaId>;
-
+		/// The oracle price feeder
+		type PriceFeeder: PriceFeeder;
 		/// The only origin that can set universal fee currency order list
 		type ControlOrigin: EnsureOrigin<Self::RuntimeOrigin>;
-
-		type XcmWeightAndFeeHandler: XcmDestWeightAndFeeHandler<CurrencyId, PalletBalanceOf<Self>>;
-
+		/// Get the weight and fee for executing Xcm.
+		type XcmWeightAndFeeHandler: XcmDestWeightAndFeeHandler<CurrencyId, Balance>;
+		/// Get TreasuryAccount
+		#[pallet::constant]
+		type TreasuryAccount: Get<Self::AccountId>;
+		/// Maximum number of CurrencyId's to support handling fees.
+		#[pallet::constant]
+		type MaxFeeCurrencyOrderListLen: Get<u32>;
+		/// When this number is reached, the DOT is sent to AssetHub
+		#[pallet::constant]
+		type MinAssetHubExecutionFee: Get<BalanceOf<Self>>;
+		/// When this number is reached, the DOT is sent to Relaychain
+		#[pallet::constant]
+		type MinRelaychainExecutionFee: Get<BalanceOf<Self>>;
+		/// The currency id of the RelayChain
+		#[pallet::constant]
+		type RelaychainCurrencyId: Get<CurrencyId>;
+		#[pallet::constant]
+		type ParachainId: Get<ParaId>;
 		#[pallet::constant]
 		type PalletId: Get<PalletId>;
 	}
@@ -160,95 +143,112 @@ pub mod pallet {
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
-		TransferTo {
-			from: T::AccountId,
-			target_chain: TargetChain,
-			amount: BalanceOf<T>,
-		},
-		FlexibleFeeExchanged {
-			transaction_fee_currency: CurrencyIdOf<T>,
-			transaction_fee_amount: PalletBalanceOf<T>,
-		}, // token and amount
-		FixedRateFeeExchanged(CurrencyIdOf<T>, PalletBalanceOf<T>),
-		// [extra_fee_name, currency_id, amount_in, BNC_amount_out]
-		ExtraFeeDeducted {
-			operation: ExtraFeeName,
-			transaction_extra_fee_currency: CurrencyIdOf<T>,
-			transaction_extra_fee_amount: PalletBalanceOf<T>,
-			transaction_extra_fee_bnc_amount: PalletBalanceOf<T>,
-			transaction_extra_fee_receiver: T::AccountId,
+		/// Transfer to another chain
+		TransferTo { from: T::AccountId, target_chain: TargetChain, amount: BalanceOf<T> },
+		/// Set user default fee currency
+		SetDefaultFeeCurrency { who: T::AccountId, currency_id: Option<CurrencyId> },
+		/// Set universal fee currency order list
+		SetFeeCurrencyList { currency_list: BoundedVec<CurrencyId, T::MaxFeeCurrencyOrderListLen> },
+		/// Set extra fee by call
+		SetExtraFee {
+			/// The raw call name to be set as the extra fee call.
+			raw_call_name: RawCallName,
+			/// currency_id, fee_amount, receiver
+			fee_info: Option<(CurrencyId, BalanceOf<T>, T::AccountId)>,
 		},
 	}
-
-	/// The current storage version, we set to 2 our new version(after migrate stroage from vec t
-	/// boundedVec).
-	#[allow(unused)]
-	const STORAGE_VERSION: StorageVersion = StorageVersion::new(2);
 
 	/// Universal fee currency order list for all users
 	#[pallet::storage]
 	pub type UniversalFeeCurrencyOrderList<T: Config> =
-		StorageValue<_, BoundedVec<CurrencyIdOf<T>, T::MaxFeeCurrencyOrderListLen>, ValueQuery>;
+		StorageValue<_, BoundedVec<CurrencyId, T::MaxFeeCurrencyOrderListLen>, ValueQuery>;
 
 	/// User default fee currency, if set, will be used as the first fee currency, and then use the
 	/// universal fee currency order list
 	#[pallet::storage]
 	pub type UserDefaultFeeCurrency<T: Config> =
-		StorageMap<_, Twox64Concat, T::AccountId, CurrencyIdOf<T>, OptionQuery>;
+		StorageMap<_, Twox64Concat, T::AccountId, CurrencyId, OptionQuery>;
+
+	/// Extra fee by call
+	#[pallet::storage]
+	pub type ExtraFeeByCall<T: Config> = StorageMap<
+		_,
+		Twox64Concat,
+		RawCallName,
+		(CurrencyId, BalanceOf<T>, T::AccountId),
+		OptionQuery,
+	>;
 
 	#[pallet::pallet]
-	#[pallet::without_storage_info]
-	#[pallet::storage_version(STORAGE_VERSION)]
-	pub struct Pallet<T>(PhantomData<T>);
+	pub struct Pallet<T>(_);
 
 	#[pallet::error]
 	pub enum Error<T> {
 		NotEnoughBalance,
-		Overflow,
 		ConversionError,
-		WrongListLength,
 		WeightAndFeeNotExist,
-		DexFailedToGetAmountInByPath,
 		UnweighableMessage,
 		XcmExecutionFailed,
-		/// Maximum number of currencies reached.
-		MaxCurrenciesReached,
 		CurrencyNotSupport,
+		MaxCurrenciesReached,
 	}
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
 		/// Set user default fee currency
+		/// Parameters:
+		/// - `maybe_fee_currency`: The currency id to be set as the default fee currency.
+		///  If `None`, the user default fee currency will be removed.
 		#[pallet::call_index(0)]
 		#[pallet::weight(<T as Config>::WeightInfo::set_user_default_fee_currency())]
 		pub fn set_user_default_fee_currency(
 			origin: OriginFor<T>,
-			maybe_fee_currency: Option<CurrencyIdOf<T>>,
+			currency_id: Option<CurrencyId>,
 		) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 
-			if let Some(fee_currency) = maybe_fee_currency {
+			if let Some(fee_currency) = &currency_id {
 				UserDefaultFeeCurrency::<T>::insert(&who, fee_currency);
 			} else {
 				UserDefaultFeeCurrency::<T>::remove(&who);
 			}
-
+			Self::deposit_event(Event::<T>::SetDefaultFeeCurrency { who, currency_id });
 			Ok(())
 		}
 
 		/// Set universal fee currency order list
+		/// Parameters:
+		/// - `default_list`: The currency id list to be set as the universal fee currency order
+		///   list.
 		#[pallet::call_index(1)]
-		#[pallet::weight(<T as Config>::WeightInfo::set_universal_fee_currency_order_list())]
-		pub fn set_universal_fee_currency_order_list(
+		#[pallet::weight(<T as Config>::WeightInfo::set_default_fee_currency_list())]
+		pub fn set_default_fee_currency_list(
 			origin: OriginFor<T>,
-			default_list: BoundedVec<CurrencyIdOf<T>, T::MaxFeeCurrencyOrderListLen>,
+			currency_list: BoundedVec<CurrencyId, T::MaxFeeCurrencyOrderListLen>,
 		) -> DispatchResult {
 			T::ControlOrigin::ensure_origin(origin)?;
+			UniversalFeeCurrencyOrderList::<T>::put(currency_list.clone());
+			Self::deposit_event(Event::<T>::SetFeeCurrencyList { currency_list });
+			Ok(())
+		}
 
-			ensure!(default_list.len() > 0 as usize, Error::<T>::WrongListLength);
-
-			UniversalFeeCurrencyOrderList::<T>::set(default_list);
-
+		/// Set universal fee currency order list
+		/// Parameters:
+		/// - `raw_call_name`: The raw call name to be set as the extra fee call.
+		/// - `fee_info`: The currency id, fee amount and receiver to be set as the extra fee.
+		#[pallet::call_index(2)]
+		#[pallet::weight(<T as Config>::WeightInfo::set_user_default_fee_currency())]
+		pub fn set_extra_fee(
+			origin: OriginFor<T>,
+			raw_call_name: RawCallName,
+			fee_info: Option<(CurrencyId, BalanceOf<T>, T::AccountId)>,
+		) -> DispatchResult {
+			T::ControlOrigin::ensure_origin(origin)?;
+			match fee_info.clone() {
+				Some(fee_info) => ExtraFeeByCall::<T>::insert(&raw_call_name, fee_info),
+				None => ExtraFeeByCall::<T>::remove(&raw_call_name),
+			};
+			Self::deposit_event(Event::<T>::SetExtraFee { raw_call_name, fee_info });
 			Ok(())
 		}
 	}
@@ -257,7 +257,7 @@ pub mod pallet {
 impl<T: Config> Pallet<T> {
 	#[transactional]
 	fn handle_fee() -> DispatchResult {
-		let fee_receiver = Self::get_fee_receiver(ExtraFeeName::StatemineTransfer);
+		let fee_receiver = Self::get_fee_receiver(1);
 		let fee_receiver_balance =
 			T::MultiCurrency::free_balance(T::RelaychainCurrencyId::get(), &fee_receiver);
 		if fee_receiver_balance >= T::MinAssetHubExecutionFee::get() {
@@ -304,10 +304,7 @@ impl<T: Config> Pallet<T> {
 				)
 				.ok_or(Error::<T>::WeightAndFeeNotExist)?;
 
-			let fee: Asset = Asset {
-				id: AssetId(Location::here()),
-				fun: Fungible(UniqueSaturatedInto::<u128>::unique_saturated_into(xcm_fee)),
-			};
+			let fee: Asset = Asset { id: AssetId(Location::here()), fun: Fungible(xcm_fee) };
 
 			let remote_xcm = Xcm(vec![
 				WithdrawAsset(fee.clone().into()),
@@ -334,7 +331,7 @@ impl<T: Config> Pallet<T> {
 			});
 		}
 
-		let fee_receiver = Self::get_fee_receiver(ExtraFeeName::VoteVtoken);
+		let fee_receiver = Self::get_fee_receiver(0);
 		let fee_receiver_balance =
 			T::MultiCurrency::free_balance(T::RelaychainCurrencyId::get(), &fee_receiver);
 		if fee_receiver_balance >= T::MinRelaychainExecutionFee::get() {
@@ -354,369 +351,156 @@ impl<T: Config> Pallet<T> {
 		Ok(())
 	}
 
-	fn get_fee_receiver(extra_fee_name: ExtraFeeName) -> T::AccountId {
-		match extra_fee_name {
-			ExtraFeeName::SalpContribute |
-			ExtraFeeName::VoteVtoken |
-			ExtraFeeName::VoteRemoveDelegatorVote => T::PalletId::get().into_sub_account_truncating(0u64),
-			ExtraFeeName::StatemineTransfer | ExtraFeeName::EthereumTransfer =>
-				T::PalletId::get().into_sub_account_truncating(1u64),
-			ExtraFeeName::NoExtraFee => T::TreasuryAccount::get(),
-		}
+	fn get_fee_receiver(index: DerivativeIndex) -> T::AccountId {
+		T::PalletId::get().into_sub_account_truncating(index)
 	}
 
 	/// Get user fee charge assets order
-	fn inner_get_user_fee_charge_order_list(account_id: &T::AccountId) -> Vec<CurrencyIdOf<T>> {
-		let mut order_list: Vec<CurrencyIdOf<T>> = Vec::new();
-		// Get user default fee currency
-		if let Some(user_default_fee_currency) = UserDefaultFeeCurrency::<T>::get(&account_id) {
-			order_list.push(user_default_fee_currency);
-		};
-
+	fn get_fee_currency_list(account_id: &T::AccountId) -> Vec<CurrencyId> {
 		// Get universal fee currency order list
-		let mut universal_fee_currency_order_list: Vec<CurrencyIdOf<T>> =
+		let mut fee_currency_list: Vec<CurrencyId> =
 			UniversalFeeCurrencyOrderList::<T>::get().into_iter().collect();
 
-		// Concat user default fee currency and universal fee currency order list
-		order_list.append(&mut universal_fee_currency_order_list);
+		// Get user default fee currency
+		if let Some(default_fee_currency) = UserDefaultFeeCurrency::<T>::get(&account_id) {
+			if let Some(index) = fee_currency_list.iter().position(|&c| c == default_fee_currency) {
+				fee_currency_list.remove(index);
+			}
+			let first_fee_currency_index = 0;
+			fee_currency_list.insert(first_fee_currency_index, default_fee_currency);
+		};
 
-		order_list
+		fee_currency_list
 	}
 
-	fn find_out_fee_currency_and_amount(
+	fn get_fee_currency_and_fee_amount(
 		who: &T::AccountId,
-		fee: PalletBalanceOf<T>,
-	) -> Result<Option<(CurrencyIdOf<T>, PalletBalanceOf<T>, PalletBalanceOf<T>)>, Error<T>> {
-		// get the user defined fee charge order list.
-		let user_fee_charge_order_list = Self::inner_get_user_fee_charge_order_list(who);
-
+		fee_amount: Balance,
+	) -> Result<(CurrencyId, Balance, Price, Price), Error<T>> {
+		let fee_currency_list = Self::get_fee_currency_list(who);
 		// charge the fee by the order of the above order list.
 		// first to check whether the user has the asset. If no, pass it. If yes, try to make
 		// transaction in the DEX in exchange for BNC
-		for currency_id in user_fee_charge_order_list {
+		for currency_id in fee_currency_list {
 			// If it is mainnet currency
 			if currency_id == BNC {
-				// check native balance if is enough
-				if T::MultiCurrency::ensure_can_withdraw(currency_id, who, fee).is_ok() {
-					// currency, amount_in, amount_out
-					return Ok(Some((currency_id, fee, fee)));
+				if T::MultiCurrency::ensure_can_withdraw(currency_id, who, fee_amount).is_ok() {
+					return Ok((currency_id, fee_amount, Price::one(), Price::one()));
 				}
 			} else {
-				// If it is other assets, go to exchange fee amount.
-				let native_asset_id =
-					Self::get_currency_asset_id(BNC).map_err(|_| Error::<T>::ConversionError)?;
-
-				let amount_out: AssetBalance = fee.saturated_into();
-
-				let asset_id = Self::get_currency_asset_id(currency_id)
-					.map_err(|_| Error::<T>::ConversionError)?;
-
-				let path = vec![asset_id, native_asset_id];
-				// see if path exists, if not, continue.
-				// query for amount in
-				if let Ok(amounts) = T::DexOperator::get_amount_in_by_path(amount_out, &path) {
-					// make sure the user has enough free token balance that can be charged.
-					let amount_in = PalletBalanceOf::<T>::saturated_from(amounts[0]);
-					if T::MultiCurrency::ensure_can_withdraw(currency_id, who, amount_in).is_ok() {
-						// currency, amount_in, amount_out
-						return Ok(Some((
-							currency_id,
-							amount_in,
-							PalletBalanceOf::<T>::saturated_from(amount_out),
-						)));
-					}
+				let (fee_amount, price_in, price_out) =
+					T::PriceFeeder::get_oracle_amount_by_currency_and_amount_in(
+						&BNC,
+						fee_amount,
+						&currency_id,
+					)
+					.ok_or(Error::<T>::ConversionError)?;
+				if T::MultiCurrency::ensure_can_withdraw(currency_id, who, fee_amount).is_ok() {
+					return Ok((currency_id, fee_amount, price_in, price_out));
 				}
 			}
 		}
-		Ok(None)
+		Err(Error::<T>::NotEnoughBalance)
 	}
 
-	/// Make sure there are enough BNC to be deducted if the user has assets in other form of tokens
-	/// rather than BNC.
-	fn ensure_can_charge_fee(
+	fn charge_extra_fee(
 		who: &T::AccountId,
-		fee: PalletBalanceOf<T>,
-		_reason: WithdrawReasons,
-	) -> Result<PalletBalanceOf<T>, DispatchError> {
-		let result_option = Self::find_out_fee_currency_and_amount(who, fee)
-			.map_err(|_| DispatchError::Other("Fee calculation Error."))?;
-
-		if let Some((currency_id, amount_in, amount_out)) = result_option {
-			if currency_id != BNC {
-				let native_asset_id = Self::get_currency_asset_id(BNC)?;
-				let asset_id = Self::get_currency_asset_id(currency_id)?;
-				let path = vec![asset_id, native_asset_id];
-
-				T::DexOperator::inner_swap_assets_for_exact_assets(
-					who,
-					amount_out.saturated_into(),
-					amount_in.saturated_into(),
-					&path,
-					who,
-				)?;
-
-				Self::deposit_event(Event::FlexibleFeeExchanged {
-					transaction_fee_currency: currency_id,
-					transaction_fee_amount: PalletBalanceOf::<T>::saturated_from(amount_in),
-				});
+		extra_fee_currency: CurrencyId,
+		extra_fee_amount: Balance,
+		extra_fee_receiver: &T::AccountId,
+	) -> Result<(), Error<T>> {
+		let fee_currency_list = Self::get_fee_currency_list(who);
+		// charge the fee by the order of the above order list.
+		// first to check whether the user has the asset. If no, pass it. If yes, try to make
+		// transaction in the DEX in exchange for BNC
+		let mut fee_info = None;
+		for currency_id in fee_currency_list {
+			// If it is mainnet currency
+			if currency_id == extra_fee_currency {
+				if T::MultiCurrency::ensure_can_withdraw(extra_fee_currency, who, extra_fee_amount)
+					.is_ok()
+				{
+					fee_info = Some((currency_id, extra_fee_amount));
+					break;
+				}
+			} else {
+				match Self::ensure_can_swap(who, currency_id, extra_fee_currency, extra_fee_amount)
+				{
+					Ok(amount_in) => {
+						fee_info = Some((currency_id, amount_in));
+						break;
+					},
+					Err(_) => {},
+				}
 			}
 		}
 
-		Ok(fee)
+		match fee_info {
+			Some((fee_currency, fee_amount)) =>
+				if fee_currency == extra_fee_currency {
+					T::MultiCurrency::transfer(fee_currency, who, extra_fee_receiver, fee_amount)
+						.map_err(|_| Error::<T>::NotEnoughBalance)?;
+					Ok(())
+				} else {
+					let from_asset_id = Self::get_currency_asset_id(fee_currency)?;
+					let to_asset_id = Self::get_currency_asset_id(extra_fee_currency)?;
+					let path = vec![from_asset_id, to_asset_id];
+
+					T::DexOperator::inner_swap_assets_for_exact_assets(
+						who,
+						extra_fee_amount,
+						fee_amount,
+						&path,
+						extra_fee_receiver,
+					)
+					.map_err(|_| Error::<T>::NotEnoughBalance)?;
+					Ok(())
+				},
+			None => Err(Error::<T>::ConversionError),
+		}
 	}
 
 	/// This function is for runtime-api to call
 	pub fn cal_fee_token_and_amount(
 		who: &T::AccountId,
-		fee: PalletBalanceOf<T>,
-		utx: &CallOf<T>,
-	) -> Result<(CurrencyIdOf<T>, PalletBalanceOf<T>), Error<T>> {
-		let total_fee_info = Self::get_extrinsic_and_extra_fee_total(utx, fee)?;
-		let (currency_id, amount_in, _amount_out) =
-			Self::find_out_fee_currency_and_amount(who, total_fee_info.0)
-				.map_err(|_| Error::<T>::DexFailedToGetAmountInByPath)?
-				.ok_or(Error::<T>::DexFailedToGetAmountInByPath)?;
-
-		Ok((currency_id, amount_in))
+		fee: Balance,
+		_utx: &<T as frame_system::Config>::RuntimeCall,
+	) -> Result<(CurrencyId, Balance), Error<T>> {
+		let (fee_currency, fee_amount, _, _) = Self::get_fee_currency_and_fee_amount(who, fee)
+			.map_err(|_| Error::<T>::NotEnoughBalance)?;
+		Ok((fee_currency, fee_amount))
 	}
 
-	pub fn get_extrinsic_and_extra_fee_total(
-		call: &CallOf<T>,
-		fee: PalletBalanceOf<T>,
-	) -> Result<(PalletBalanceOf<T>, PalletBalanceOf<T>, PalletBalanceOf<T>, Vec<AssetId>), Error<T>>
-	{
-		let mut total_fee = fee;
-
-		let native_asset_id = Self::get_currency_asset_id(BNC)?;
-		let mut path = vec![native_asset_id, native_asset_id];
-
-		// See if the this RuntimeCall needs to pay extra fee
-		let fee_info = T::ExtraFeeMatcher::get_fee_info(call);
-		if fee_info.extra_fee_name != ExtraFeeName::NoExtraFee {
-			// if the fee_info.extra_fee_name is not NoExtraFee, it means this RuntimeCall needs to
-			// pay extra fee
-			let operation = match fee_info.extra_fee_name {
-				ExtraFeeName::SalpContribute => XcmOperationType::UmpContributeTransact,
-				ExtraFeeName::StatemineTransfer => XcmOperationType::StatemineTransfer,
-				ExtraFeeName::EthereumTransfer => XcmOperationType::EthereumTransfer,
-				ExtraFeeName::VoteVtoken => XcmOperationType::Vote,
-				ExtraFeeName::VoteRemoveDelegatorVote => XcmOperationType::RemoveVote,
-				ExtraFeeName::NoExtraFee => XcmOperationType::Any,
-			};
-
-			let (_, fee_value) = T::XcmWeightAndFeeHandler::get_operation_weight_and_fee(
-				fee_info.extra_fee_currency,
-				operation,
-			)
-			.ok_or(Error::<T>::WeightAndFeeNotExist)?;
-
-			let asset_id = Self::get_currency_asset_id(fee_info.extra_fee_currency)?;
-			path = vec![native_asset_id, asset_id];
-
-			// get the fee currency value in BNC
-			let extra_fee_vec =
-				T::DexOperator::get_amount_in_by_path(fee_value.saturated_into(), &path)
-					.map_err(|_| Error::<T>::DexFailedToGetAmountInByPath)?;
-
-			let extra_bnc_fee = PalletBalanceOf::<T>::saturated_from(extra_fee_vec[0]);
-			total_fee = total_fee.checked_add(&extra_bnc_fee).ok_or(Error::<T>::Overflow)?;
-
-			return Ok((total_fee, extra_bnc_fee, fee_value, path));
-		} else {
-			return Ok((total_fee, Zero::zero(), Zero::zero(), path));
-		}
-	}
-
-	fn get_currency_asset_id(currency_id: CurrencyIdOf<T>) -> Result<AssetId, Error<T>> {
+	fn get_currency_asset_id(currency_id: CurrencyId) -> Result<AssetId, Error<T>> {
 		let asset_id: AssetId =
 			AssetId::try_convert_from(currency_id, T::ParachainId::get().into())
 				.map_err(|_| Error::<T>::ConversionError)?;
 		Ok(asset_id)
 	}
-}
 
-/// Default implementation for a Currency and an OnUnbalanced handler.
-impl<T> OnChargeTransaction<T> for Pallet<T>
-where
-	T: Config,
-	T::Currency: Currency<<T as frame_system::Config>::AccountId>,
-	PositiveImbalanceOf<T>: Imbalance<PalletBalanceOf<T>, Opposite = NegativeImbalanceOf<T>>,
-	NegativeImbalanceOf<T>: Imbalance<PalletBalanceOf<T>, Opposite = PositiveImbalanceOf<T>>,
-{
-	type Balance = PalletBalanceOf<T>;
-	type LiquidityInfo = Option<NegativeImbalanceOf<T>>;
-
-	/// Withdraw the predicted fee from the transaction origin.
-	///
-	/// Note: The `fee` already includes the `tip`.
-	fn withdraw_fee(
+	fn ensure_can_swap(
 		who: &T::AccountId,
-		call: &T::RuntimeCall,
-		_info: &DispatchInfoOf<T::RuntimeCall>,
-		fee: Self::Balance,
-		tip: Self::Balance,
-	) -> Result<Self::LiquidityInfo, TransactionValidityError> {
-		if fee.is_zero() {
-			return Ok(None);
+		from_currency: CurrencyId,
+		to_currency: CurrencyId,
+		amount_out: Balance,
+	) -> Result<Balance, Error<T>> {
+		// If it is other assets, go to exchange fee amount.
+		let from_asset_id =
+			Self::get_currency_asset_id(from_currency).map_err(|_| Error::<T>::ConversionError)?;
+
+		let to_asset_id =
+			Self::get_currency_asset_id(to_currency).map_err(|_| Error::<T>::ConversionError)?;
+
+		let path = vec![from_asset_id, to_asset_id];
+		match T::DexOperator::get_amount_in_by_path(amount_out, &path) {
+			Ok(amounts) => {
+				let amount_in = amounts[0];
+				T::MultiCurrency::ensure_can_withdraw(from_currency, who, amount_in)
+					.map_err(|_| Error::<T>::NotEnoughBalance)?;
+				Ok(amount_in)
+			},
+			Err(_) => Err(Error::<T>::NotEnoughBalance)?,
 		}
-
-		let withdraw_reason = if tip.is_zero() {
-			WithdrawReasons::TRANSACTION_PAYMENT
-		} else {
-			WithdrawReasons::TRANSACTION_PAYMENT | WithdrawReasons::TIP
-		};
-
-		// See if the this RuntimeCall needs to pay extra fee
-		let fee_info = T::ExtraFeeMatcher::get_fee_info(&call);
-		let (total_fee, extra_bnc_fee, fee_value, path) =
-			Self::get_extrinsic_and_extra_fee_total(call, fee)
-				.map_err(|_| TransactionValidityError::Invalid(InvalidTransaction::Custom(55)))?;
-
-		// Make sure there are enough BNC(extrinsic fee + extra fee) to be deducted if the user has
-		// assets in other form of tokens rather than BNC.
-		Self::ensure_can_charge_fee(who, total_fee, withdraw_reason)
-			.map_err(|_| TransactionValidityError::Invalid(InvalidTransaction::Payment))?;
-
-		if fee_info.extra_fee_name != ExtraFeeName::NoExtraFee {
-			// swap BNC for fee_currency
-			T::DexOperator::inner_swap_assets_for_exact_assets(
-				who,
-				fee_value.saturated_into(),
-				extra_bnc_fee.saturated_into(),
-				&path,
-				who,
-			)
-			.map_err(|_| TransactionValidityError::Invalid(InvalidTransaction::Custom(44)))?;
-
-			let transaction_extra_fee_receiver = Self::get_fee_receiver(fee_info.extra_fee_name);
-
-			T::MultiCurrency::transfer(
-				fee_info.extra_fee_currency,
-				who,
-				&transaction_extra_fee_receiver,
-				fee_value,
-			)
-			.map_err(|_| TransactionValidityError::Invalid(InvalidTransaction::Payment))?;
-
-			// deposit extra fee deducted event
-			Self::deposit_event(Event::ExtraFeeDeducted {
-				operation: fee_info.extra_fee_name,
-				transaction_extra_fee_currency: fee_info.extra_fee_currency,
-				transaction_extra_fee_amount: fee_value,
-				transaction_extra_fee_bnc_amount: extra_bnc_fee,
-				transaction_extra_fee_receiver,
-			});
-		}
-
-		// withdraw normal extrinsic fee
-		match T::Currency::withdraw(who, fee, withdraw_reason, ExistenceRequirement::AllowDeath) {
-			Ok(imbalance) => Ok(Some(imbalance)),
-			Err(_) => Err(InvalidTransaction::Payment.into()),
-		}
-	}
-
-	/// Hand the fee and the tip over to the `[OnUnbalanced]` implementation.
-	/// Since the predicted fee might have been too high, parts of the fee may
-	/// be refunded.
-	///
-	/// Note: The `fee` already includes the `tip`.
-	fn correct_and_deposit_fee(
-		who: &T::AccountId,
-		_dispatch_info: &DispatchInfoOf<T::RuntimeCall>,
-		_post_info: &PostDispatchInfoOf<T::RuntimeCall>,
-		corrected_fee: Self::Balance,
-		tip: Self::Balance,
-		already_withdrawn: Self::LiquidityInfo,
-	) -> Result<(), TransactionValidityError> {
-		if let Some(paid) = already_withdrawn {
-			// Calculate how much refund we should return
-			let refund_amount = paid.peek().saturating_sub(corrected_fee);
-
-			// refund to the the account that paid the fees. If this fails, the
-			// account might have dropped below the existential balance. In
-			// that case we don't refund anything.
-			let refund_imbalance = T::Currency::deposit_into_existing(who, refund_amount)
-				.unwrap_or_else(|_| PositiveImbalanceOf::<T>::zero());
-			// merge the imbalance caused by paying the fees and refunding parts of it again.
-			let adjusted_paid = paid
-				.offset(refund_imbalance)
-				.same()
-				.map_err(|_| TransactionValidityError::Invalid(InvalidTransaction::Payment))?;
-			// RuntimeCall someone else to handle the imbalance (fee and tip separately)
-			let imbalances = adjusted_paid.split(tip);
-			T::OnUnbalanced::on_unbalanceds(
-				Some(imbalances.0).into_iter().chain(Some(imbalances.1)),
-			);
-		}
-		Ok(())
-	}
-}
-
-/// Provides account's fee payment asset or default fee asset ( Native asset )
-impl<T: Config> AccountFeeCurrency<T::AccountId> for Pallet<T> {
-	type Error = Error<T>;
-
-	/// Determines the appropriate currency to be used for paying transaction fees based on a
-	/// prioritized order:
-	/// 1. User's default fee currency (`UserDefaultFeeCurrency`)
-	/// 2. WETH
-	/// 3. Currencies in the `UniversalFeeCurrencyOrderList`
-	///
-	/// The method first checks if the balance of the highest-priority currency is sufficient to
-	/// cover the fee.If the balance is insufficient, it iterates through the list of currencies in
-	/// priority order.If no currency has a sufficient balance, it returns the currency with the
-	/// highest balance.
-	fn get_fee_currency(account: &T::AccountId, fee: U256) -> Result<CurrencyId, Error<T>> {
-		let fee: u128 = fee.unique_saturated_into();
-		let priority_currency = UserDefaultFeeCurrency::<T>::get(account);
-		let mut currency_list = UniversalFeeCurrencyOrderList::<T>::get();
-
-		let first_item_index = 0;
-		currency_list
-			.try_insert(first_item_index, WETH)
-			.map_err(|_| Error::<T>::MaxCurrenciesReached)?;
-
-		// When all currency balances are insufficient, return the one with the highest balance
-		let mut hopeless_currency = WETH;
-
-		if let Some(currency) = priority_currency {
-			currency_list
-				.try_insert(first_item_index, currency)
-				.map_err(|_| Error::<T>::MaxCurrenciesReached)?;
-			hopeless_currency = currency;
-		}
-
-		for maybe_currency in currency_list.iter() {
-			let comp_res = Self::cmp_with_precision(account, maybe_currency, fee, 18)?;
-
-			match comp_res {
-				Ordering::Less => {
-					// Get the currency with the highest balance
-					let hopeless_currency_balance = T::MultiCurrency::reducible_balance(
-						hopeless_currency,
-						account,
-						Preservation::Preserve,
-						Fortitude::Polite,
-					);
-					let maybe_currency_balance = T::MultiCurrency::reducible_balance(
-						*maybe_currency,
-						account,
-						Preservation::Preserve,
-						Fortitude::Polite,
-					);
-					hopeless_currency = match hopeless_currency_balance.cmp(&maybe_currency_balance)
-					{
-						Ordering::Less => *maybe_currency,
-						_ => hopeless_currency,
-					};
-					continue;
-				},
-				Ordering::Equal => return Ok(*maybe_currency),
-				Ordering::Greater => return Ok(*maybe_currency),
-			};
-		}
-
-		return Ok(hopeless_currency);
 	}
 }
 

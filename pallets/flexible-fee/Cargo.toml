@@ -32,13 +32,11 @@ bifrost-currencies = { workspace = true }
 sp-core = { workspace = true }
 sp-io = { workspace = true }
 cumulus-primitives-core = { workspace = true }
-bifrost-salp = { workspace = true }
 bifrost-asset-registry = { workspace = true }
 bifrost-xcm-interface = { workspace = true }
 xcm-executor = { workspace = true }
 xcm-builder = { workspace = true }
 pallet-xcm = { workspace = true }
-bifrost-vtoken-voting = { workspace = true, features = ["kusama"] }
 
 [features]
 default = ["std"]
