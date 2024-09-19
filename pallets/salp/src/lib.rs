@@ -98,7 +98,7 @@ pub struct ReserveInfo<Balance> {
 pub mod pallet {
 	// Import various types used to declare pallet in scope.
 	use bifrost_primitives::{
-		BancorHandler, CurrencyId, CurrencyId::VSBond, LeasePeriod, MessageId, Nonce, ParaId,
+		CurrencyId, CurrencyId::VSBond, LeasePeriod, MessageId, Nonce, ParaId,
 	};
 	use bifrost_xcm_interface::traits::XcmHelper;
 	use frame_support::{
@@ -165,8 +165,6 @@ pub mod pallet {
 			+ MultiCurrency<AccountIdOf<Self>, CurrencyId = CurrencyId>
 			+ MultiReservableCurrency<AccountIdOf<Self>, CurrencyId = CurrencyId>
 			+ MultiLockableCurrency<AccountIdOf<Self>>;
-
-		type BancorPool: BancorHandler<BalanceOf<Self>>;
 
 		type EnsureConfirmAsGovernance: EnsureOrigin<<Self as frame_system::Config>::RuntimeOrigin>;
 
@@ -1495,16 +1493,7 @@ pub mod pallet {
 					let release_amount = T::ReleaseRatio::get() * rp_balance;
 
 					// Must be ok
-					if let Ok(release_amount) = TryInto::<BalanceOf<T>>::try_into(release_amount) {
-						// Increase the balance of bancor-pool by release-amount
-						if let Ok(()) =
-							T::BancorPool::add_token(T::RelayChainToken::get(), release_amount)
-						{
-							RedeemPool::<T>::set(
-								RedeemPool::<T>::get().saturating_sub(release_amount),
-							);
-						}
-					} else {
+					if let Err(_) = TryInto::<BalanceOf<T>>::try_into(release_amount) {
 						log::warn!("Overflow: The balance of redeem-pool exceeds u128.");
 					}
 				}

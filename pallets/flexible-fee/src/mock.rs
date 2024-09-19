@@ -386,7 +386,6 @@ parameter_types! {
 }
 
 impl bifrost_salp::Config for Test {
-	type BancorPool = ();
 	type RuntimeEvent = RuntimeEvent;
 	type LeasePeriod = LeasePeriod;
 	type MinContribution = MinContribution;

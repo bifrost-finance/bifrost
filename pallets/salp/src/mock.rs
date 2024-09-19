@@ -446,7 +446,6 @@ parameter_types! {
 }
 
 impl salp::Config for Test {
-	type BancorPool = ();
 	type RuntimeEvent = RuntimeEvent;
 	type RuntimeCall = RuntimeCall;
 	type RuntimeOrigin = RuntimeOrigin;
