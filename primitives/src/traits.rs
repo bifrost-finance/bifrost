@@ -31,7 +31,7 @@ use sp_runtime::{
 	traits::{
 		AccountIdConversion, AtLeast32BitUnsigned, ConstU32, MaybeSerializeDeserialize, Zero,
 	},
-	BoundedVec, DispatchError, DispatchResult, TokenError, TypeId,
+	BoundedVec, DispatchError, DispatchResult, TypeId,
 };
 use sp_std::{cmp::Ordering, fmt::Debug, vec::Vec};
 
