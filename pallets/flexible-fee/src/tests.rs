@@ -34,6 +34,7 @@ use frame_support::{
 };
 use orml_traits::MultiCurrency;
 use pallet_transaction_payment::OnChargeTransaction;
+use sp_arithmetic::FixedU128;
 use sp_runtime::AccountId32;
 use std::cmp::Ordering::{Greater, Less};
 use zenlink_protocol::AssetId;
@@ -216,7 +217,12 @@ fn withdraw_fee() {
 				0
 			)
 			.unwrap(),
-			Some(PaymentInfo::NonNative(4 * 10u128.pow(10), DOT))
+			Some(PaymentInfo::NonNative(
+				4 * 10u128.pow(10),
+				DOT,
+				FixedU128::from_inner(200_000_000_000_000_000),
+				FixedU128::from(5)
+			))
 		);
 		assert_eq!(Currencies::free_balance(DOT, &ALICE), 996 * 10u128.pow(10));
 	})
@@ -242,7 +248,12 @@ fn withdraw_fee_with_universal_fee_currency() {
 		Currencies::set_balance(BNC, &ALICE, 0u128);
 		assert_eq!(
 			FlexibleFee::withdraw_fee(&ALICE, &BALANCE_TRANSFER_CALL, &info, fee, 0).unwrap(),
-			Some(PaymentInfo::NonNative(4 * 10u128.pow(10), DOT))
+			Some(PaymentInfo::NonNative(
+				4 * 10u128.pow(10),
+				DOT,
+				FixedU128::from_inner(200_000_000_000_000_000),
+				FixedU128::from(5)
+			))
 		);
 		assert_eq!(Currencies::free_balance(DOT, &ALICE), 996 * 10u128.pow(10));
 	})
@@ -298,7 +309,12 @@ fn correct_and_deposit_fee_should_work() {
 		let tip = 0;
 		assert_eq!(Currencies::free_balance(DOT, &ALICE), 1000 * 10u128.pow(10));
 
-		let already_withdrawn = Some(PaymentInfo::NonNative(1 * 10u128.pow(10), DOT));
+		let already_withdrawn = Some(PaymentInfo::NonNative(
+			1 * 10u128.pow(10),
+			DOT,
+			FixedU128::from_inner(200_000_000_000_000_000),
+			FixedU128::from(5),
+		));
 		assert_ok!(FlexibleFee::correct_and_deposit_fee(
 			&ALICE,
 			&info(),
@@ -336,7 +352,12 @@ fn correct_and_deposit_fee_with_tip() {
 		let tip = 10 * 10u128.pow(12);
 		assert_eq!(Currencies::free_balance(DOT, &ALICE), 1000 * 10u128.pow(10));
 
-		let already_withdrawn = Some(PaymentInfo::NonNative(1 * 10u128.pow(10), DOT));
+		let already_withdrawn = Some(PaymentInfo::NonNative(
+			1 * 10u128.pow(10),
+			DOT,
+			FixedU128::from_inner(200_000_000_000_000_000),
+			FixedU128::from(5),
+		));
 		assert_ok!(FlexibleFee::correct_and_deposit_fee(
 			&ALICE,
 			&info(),

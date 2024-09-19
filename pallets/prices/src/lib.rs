@@ -255,23 +255,50 @@ impl<T: Config> PriceFeeder for Pallet<T> {
 			})
 	}
 
+	/// Get the amount of currencies according to the input price data.
+	/// Parameters:
+	/// - `currency_in`: The currency to be converted.
+	/// - `amount_in`: The amount of currency to be converted.
+	/// - `price_in`: The price of currency_in.
+	/// - `currency_out`: The currency to be converted to.
+	/// - `price_out`: The price of currency_out.
+	/// Returns:
+	/// - The amount of currency_out.
+	fn get_amount_by_prices(
+		currency_in: &CurrencyId,
+		amount_in: Balance,
+		price_in: Price,
+		currency_out: &CurrencyId,
+		price_out: Price,
+	) -> Option<Balance> {
+		let currency_in_mantissa = Self::get_asset_mantissa(currency_in)?;
+		let currency_out_mantissa = Self::get_asset_mantissa(currency_out)?;
+		let total_value = price_in
+			.mul(FixedU128::from_inner(amount_in))
+			.div(FixedU128::from_inner(currency_in_mantissa));
+		let amount_out =
+			total_value.mul(FixedU128::from_inner(currency_out_mantissa)).div(price_out);
+		Some(amount_out.into_inner())
+	}
+
 	/// Get the amount of currencies according to the oracle price data.
+	/// Parameters:
+	/// - `currency_in`: The currency to be converted.
+	/// - `amount_in`: The amount of currency to be converted.
+	/// - `currency_out`: The currency to be converted to.
+	/// Returns:
+	/// - The amount of currency_out.
+	/// - The price of currency_in.
+	/// - The price of currency_out.
 	fn get_oracle_amount_by_currency_and_amount_in(
 		currency_in: &CurrencyId,
 		amount_in: Balance,
 		currency_out: &CurrencyId,
-	) -> Option<Balance> {
-		let currency_in_mantissa = Self::get_asset_mantissa(currency_in)?;
-		let currency_out_mantissa = Self::get_asset_mantissa(currency_out)?;
-		let currency_in_price = Self::get_storage_price(currency_in)?;
-		let currency_out_price = Self::get_storage_price(currency_out)?;
-		let total_value = currency_in_price
-			.mul(FixedU128::from_inner(amount_in))
-			.div(FixedU128::from_inner(currency_in_mantissa));
-		let amount_out = total_value
-			.mul(FixedU128::from_inner(currency_out_mantissa))
-			.div(currency_out_price);
-		Some(amount_out.into_inner())
+	) -> Option<(Balance, Price, Price)> {
+		let price_in = Self::get_storage_price(currency_in)?;
+		let price_out = Self::get_storage_price(currency_out)?;
+		Self::get_amount_by_prices(currency_in, amount_in, price_in, currency_out, price_out)
+			.map(|amount_out| (amount_out, price_in, price_out))
 	}
 }
 

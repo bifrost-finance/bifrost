@@ -16,14 +16,21 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-use crate::{Balance, CurrencyId, PriceDetail};
+use crate::{Balance, CurrencyId, Price, PriceDetail};
 
 pub trait PriceFeeder {
 	fn get_price(asset_id: &CurrencyId) -> Option<PriceDetail>;
 	fn get_normal_price(asset_id: &CurrencyId) -> Option<u128>;
+	fn get_amount_by_prices(
+		currency_in: &CurrencyId,
+		amount_in: Balance,
+		currency_in_price: Price,
+		currency_out: &CurrencyId,
+		currency_out_price: Price,
+	) -> Option<Balance>;
 	fn get_oracle_amount_by_currency_and_amount_in(
 		currency_in: &CurrencyId,
 		amount_in: Balance,
 		currency_out: &CurrencyId,
-	) -> Option<Balance>;
+	) -> Option<(Balance, Price, Price)>;
 }

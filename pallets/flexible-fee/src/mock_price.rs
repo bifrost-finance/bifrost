@@ -67,11 +67,32 @@ impl PriceFeeder for MockPriceFeeder {
 		todo!()
 	}
 
+	fn get_amount_by_prices(
+		currency_in: &CurrencyId,
+		amount_in: Balance,
+		currency_in_price: Price,
+		currency_out: &CurrencyId,
+		currency_out_price: Price,
+	) -> Option<Balance> {
+		if let Some((_, currency_in_mantissa)) = StoragePrice::get().get(&currency_in) {
+			if let Some((_, currency_out_mantissa)) = StoragePrice::get().get(&currency_out) {
+				let total_value = currency_in_price
+					.mul(FixedU128::from_inner(amount_in))
+					.div(FixedU128::from_inner(*currency_in_mantissa));
+				let amount_out = total_value
+					.mul(FixedU128::from_inner(*currency_out_mantissa))
+					.div(currency_out_price);
+				return Some(amount_out.into_inner());
+			}
+		}
+		None
+	}
+
 	fn get_oracle_amount_by_currency_and_amount_in(
 		currency_in: &CurrencyId,
 		amount_in: Balance,
 		currency_out: &CurrencyId,
-	) -> Option<Balance> {
+	) -> Option<(Balance, Price, Price)> {
 		if let Some((currency_in_price, currency_in_mantissa)) =
 			StoragePrice::get().get(&currency_in)
 		{
@@ -84,7 +105,7 @@ impl PriceFeeder for MockPriceFeeder {
 				let amount_out = total_value
 					.mul(FixedU128::from_inner(*currency_out_mantissa))
 					.div(*currency_out_price);
-				return Some(amount_out.into_inner());
+				return Some((amount_out.into_inner(), *currency_in_price, *currency_out_price));
 			}
 		}
 		None
@@ -117,27 +138,31 @@ mod test {
 		let manta_amount = 25 * 10u128.pow(18);
 		assert_eq!(
 			MockPriceFeeder::get_oracle_amount_by_currency_and_amount_in(&BNC, bnc_amount, &DOT),
-			Some(dot_amount)
+			Some((dot_amount, FixedU128::from_inner(200_000_000_000_000_000), FixedU128::from(5)))
 		);
 		assert_eq!(
 			MockPriceFeeder::get_oracle_amount_by_currency_and_amount_in(&BNC, bnc_amount, &DOT_U),
-			Some(usdt_amount)
+			Some((usdt_amount, FixedU128::from_inner(200_000_000_000_000_000), FixedU128::from(1)))
 		);
 		assert_eq!(
 			MockPriceFeeder::get_oracle_amount_by_currency_and_amount_in(&BNC, bnc_amount, &KSM),
-			Some(ksm_amount)
+			Some((ksm_amount, FixedU128::from_inner(200_000_000_000_000_000), FixedU128::from(20)))
 		);
 		assert_eq!(
 			MockPriceFeeder::get_oracle_amount_by_currency_and_amount_in(&BNC, bnc_amount, &MANTA),
-			Some(manta_amount)
+			Some((
+				manta_amount,
+				FixedU128::from_inner(200_000_000_000_000_000),
+				FixedU128::from_inner(800_000_000_000_000_000)
+			))
 		);
 		assert_eq!(
 			MockPriceFeeder::get_oracle_amount_by_currency_and_amount_in(&DOT, dot_amount, &DOT_U),
-			Some(usdt_amount)
+			Some((usdt_amount, FixedU128::from(5), FixedU128::from(1)))
 		);
 		assert_eq!(
 			MockPriceFeeder::get_oracle_amount_by_currency_and_amount_in(&DOT, dot_amount, &KSM),
-			Some(ksm_amount)
+			Some((ksm_amount, FixedU128::from(5), FixedU128::from(20)))
 		);
 	}
 }

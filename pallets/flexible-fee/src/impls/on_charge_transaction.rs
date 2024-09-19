@@ -17,7 +17,7 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 use crate::{Config, ExtraFeeByCall, Pallet};
-use bifrost_primitives::{Balance, CurrencyId, PriceFeeder, BNC};
+use bifrost_primitives::{Balance, CurrencyId, Price, PriceFeeder, BNC};
 use orml_traits::MultiCurrency;
 use pallet_transaction_payment::OnChargeTransaction;
 use parity_scale_codec::Encode;
@@ -30,7 +30,7 @@ use sp_runtime::{
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum PaymentInfo {
 	Native(Balance),
-	NonNative(Balance, CurrencyId),
+	NonNative(Balance, CurrencyId, Price, Price),
 }
 
 /// Default implementation for a Currency and an OnUnbalanced handler.
@@ -56,8 +56,9 @@ where
 			return Ok(None);
 		}
 
-		let (fee_currency, fee_amount) = Self::get_fee_currency_and_fee_amount(who, fee)
-			.map_err(|_| TransactionValidityError::Invalid(InvalidTransaction::Payment))?;
+		let (fee_currency, fee_amount, bnc_price, fee_currency_price) =
+			Self::get_fee_currency_and_fee_amount(who, fee)
+				.map_err(|_| TransactionValidityError::Invalid(InvalidTransaction::Payment))?;
 
 		// withdraw normal extrinsic fee
 		T::MultiCurrency::withdraw(fee_currency, who, fee_amount)
@@ -66,25 +67,36 @@ where
 		for (call_name, (extra_fee_currency, extra_fee_amount, extra_fee_receiver)) in
 			ExtraFeeByCall::<T>::iter()
 		{
-			if call.encode()[0..2].to_vec().eq(&call_name.to_vec()) {
-				match Self::charge_extra_fee(
-					who,
-					extra_fee_currency,
-					extra_fee_amount,
-					&extra_fee_receiver,
-				) {
-					Ok(_) => {},
-					Err(_) => {
-						return Err(TransactionValidityError::Invalid(InvalidTransaction::Payment));
-					},
-				}
-			};
+			let raw_call_name = call_name.to_vec();
+			let raw_call_name_len = raw_call_name.len();
+			if call.encode().len() >= raw_call_name_len {
+				if call.encode()[0..raw_call_name_len].eq(&raw_call_name) {
+					match Self::charge_extra_fee(
+						who,
+						extra_fee_currency,
+						extra_fee_amount,
+						&extra_fee_receiver,
+					) {
+						Ok(_) => {},
+						Err(_) => {
+							return Err(TransactionValidityError::Invalid(
+								InvalidTransaction::Payment,
+							));
+						},
+					}
+				};
+			}
 		}
 
 		if fee_currency == BNC {
 			Ok(Some(PaymentInfo::Native(fee_amount)))
 		} else {
-			Ok(Some(PaymentInfo::NonNative(fee_amount, fee_currency)))
+			Ok(Some(PaymentInfo::NonNative(
+				fee_amount,
+				fee_currency,
+				bnc_price,
+				fee_currency_price,
+			)))
 		}
 	}
 
@@ -110,23 +122,27 @@ where
 					corrected_fee.saturating_sub(tip),
 					tip,
 				),
-				PaymentInfo::NonNative(paid_fee, currency) => {
+				PaymentInfo::NonNative(paid_fee, fee_currency, bnc_price, fee_currency_price) => {
 					// calculate corrected_fee in the non-native currency
-					let converted_corrected_fee =
-						T::PriceFeeder::get_oracle_amount_by_currency_and_amount_in(
-							&BNC,
-							corrected_fee,
-							&currency,
-						)
-						.ok_or(TransactionValidityError::Invalid(InvalidTransaction::Payment))?;
+					let converted_corrected_fee = T::PriceFeeder::get_amount_by_prices(
+						&BNC,
+						corrected_fee,
+						bnc_price,
+						&fee_currency,
+						fee_currency_price,
+					)
+					.ok_or(TransactionValidityError::Invalid(InvalidTransaction::Payment))?;
 					let refund = paid_fee.saturating_sub(converted_corrected_fee);
-					let converted_tip =
-						T::PriceFeeder::get_oracle_amount_by_currency_and_amount_in(
-							&BNC, tip, &currency,
-						)
-						.ok_or(TransactionValidityError::Invalid(InvalidTransaction::Payment))?;
+					let converted_tip = T::PriceFeeder::get_amount_by_prices(
+						&BNC,
+						tip,
+						bnc_price,
+						&fee_currency,
+						fee_currency_price,
+					)
+					.ok_or(TransactionValidityError::Invalid(InvalidTransaction::Payment))?;
 					(
-						currency,
+						fee_currency,
 						refund,
 						converted_corrected_fee.saturating_sub(converted_tip),
 						converted_tip,

@@ -236,17 +236,29 @@ fn get_oracle_amount_by_currency_and_amount_in() {
 		let bnc_amount = 100 * 10u128.pow(12);
 		// 0.2 DOT
 		assert_eq!(
-			Some(2_000_000_000),
+			Some((
+				2_000_000_000,
+				Price::from_inner(200_000_000_000_000_000),
+				Price::saturating_from_integer(100)
+			)),
 			Prices::get_oracle_amount_by_currency_and_amount_in(&BNC, bnc_amount, &DOT)
 		);
 		// 0.04 KSM
 		assert_eq!(
-			Some(40_000_000_000),
+			Some((
+				40_000_000_000,
+				Price::from_inner(200_000_000_000_000_000),
+				Price::saturating_from_integer(500)
+			)),
 			Prices::get_oracle_amount_by_currency_and_amount_in(&BNC, bnc_amount, &KSM)
 		);
 		// 33.33333333333333333333
 		assert_eq!(
-			Some(33_333_333_333_333_333_333),
+			Some((
+				33_333_333_333_333_333_333,
+				Price::from_inner(200_000_000_000_000_000),
+				Price::from_inner(600_000_000_000_000_000)
+			)),
 			Prices::get_oracle_amount_by_currency_and_amount_in(&BNC, bnc_amount, &MANTA)
 		);
 
@@ -254,17 +266,29 @@ fn get_oracle_amount_by_currency_and_amount_in() {
 		let bnc_amount = 10u128.pow(10);
 		// 0.00002 DOT * 100 =  0.002 U
 		assert_eq!(
-			Some(200_000),
+			Some((
+				200_000,
+				Price::from_inner(200_000_000_000_000_000),
+				Price::saturating_from_integer(100)
+			)),
 			Prices::get_oracle_amount_by_currency_and_amount_in(&BNC, bnc_amount, &DOT)
 		);
 		// 0.000004 KSM * 500 = 0.002 U
 		assert_eq!(
-			Some(4_000_000),
+			Some((
+				4_000_000,
+				Price::from_inner(200_000_000_000_000_000),
+				Price::saturating_from_integer(500)
+			)),
 			Prices::get_oracle_amount_by_currency_and_amount_in(&BNC, bnc_amount, &KSM)
 		);
 		// 0.003333333333333333333333 MANTA
 		assert_eq!(
-			Some(3_333_333_333_333_333),
+			Some((
+				3_333_333_333_333_333,
+				Price::from_inner(200_000_000_000_000_000),
+				Price::from_inner(600_000_000_000_000_000)
+			)),
 			Prices::get_oracle_amount_by_currency_and_amount_in(&BNC, bnc_amount, &MANTA)
 		);
 	});

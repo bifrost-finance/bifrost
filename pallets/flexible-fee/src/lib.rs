@@ -22,7 +22,7 @@ pub use crate::pallet::*;
 use bifrost_primitives::{
 	currency::{VGLMR, VMANTA, WETH},
 	traits::XcmDestWeightAndFeeHandler,
-	Balance, BalanceCmp, CurrencyId, DerivativeIndex, PriceFeeder, TryConvertFrom,
+	Balance, BalanceCmp, CurrencyId, DerivativeIndex, Price, PriceFeeder, TryConvertFrom,
 	XcmOperationType, BNC, DOT, GLMR, MANTA, VBNC, VDOT,
 };
 use bifrost_xcm_interface::{polkadot::RelaychainCall, traits::parachains, PolkadotXcmCall};
@@ -43,7 +43,10 @@ use frame_system::pallet_prelude::*;
 use orml_traits::MultiCurrency;
 use polkadot_parachain_primitives::primitives::Sibling;
 use sp_arithmetic::traits::UniqueSaturatedInto;
-use sp_runtime::{traits::AccountIdConversion, BoundedVec};
+use sp_runtime::{
+	traits::{AccountIdConversion, One},
+	BoundedVec,
+};
 use sp_std::{boxed::Box, cmp::Ordering, vec, vec::Vec};
 pub use weights::WeightInfo;
 use xcm::{prelude::Unlimited, v4::prelude::*};
@@ -60,7 +63,7 @@ pub mod weights;
 
 pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
 pub type BalanceOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<AccountIdOf<T>>>::Balance;
-pub type RawCallName = BoundedVec<u8, ConstU32<2>>;
+pub type RawCallName = BoundedVec<u8, ConstU32<32>>;
 
 #[derive(Encode, Decode, Copy, Clone, Eq, PartialEq, RuntimeDebug, TypeInfo, MaxEncodedLen)]
 pub enum TargetChain {
@@ -373,7 +376,7 @@ impl<T: Config> Pallet<T> {
 	fn get_fee_currency_and_fee_amount(
 		who: &T::AccountId,
 		fee_amount: Balance,
-	) -> Result<(CurrencyId, Balance), Error<T>> {
+	) -> Result<(CurrencyId, Balance, Price, Price), Error<T>> {
 		let fee_currency_list = Self::get_fee_currency_list(who);
 		// charge the fee by the order of the above order list.
 		// first to check whether the user has the asset. If no, pass it. If yes, try to make
@@ -382,17 +385,18 @@ impl<T: Config> Pallet<T> {
 			// If it is mainnet currency
 			if currency_id == BNC {
 				if T::MultiCurrency::ensure_can_withdraw(currency_id, who, fee_amount).is_ok() {
-					return Ok((currency_id, fee_amount));
+					return Ok((currency_id, fee_amount, Price::one(), Price::one()));
 				}
 			} else {
-				let fee_amount = T::PriceFeeder::get_oracle_amount_by_currency_and_amount_in(
-					&BNC,
-					fee_amount,
-					&currency_id,
-				)
-				.ok_or(Error::<T>::ConversionError)?;
+				let (fee_amount, price_in, price_out) =
+					T::PriceFeeder::get_oracle_amount_by_currency_and_amount_in(
+						&BNC,
+						fee_amount,
+						&currency_id,
+					)
+					.ok_or(Error::<T>::ConversionError)?;
 				if T::MultiCurrency::ensure_can_withdraw(currency_id, who, fee_amount).is_ok() {
-					return Ok((currency_id, fee_amount));
+					return Ok((currency_id, fee_amount, price_in, price_out));
 				}
 			}
 		}
@@ -462,7 +466,7 @@ impl<T: Config> Pallet<T> {
 		fee: Balance,
 		_utx: &<T as frame_system::Config>::RuntimeCall,
 	) -> Result<(CurrencyId, Balance), Error<T>> {
-		let (fee_currency, fee_amount) = Self::get_fee_currency_and_fee_amount(who, fee)
+		let (fee_currency, fee_amount, _, _) = Self::get_fee_currency_and_fee_amount(who, fee)
 			.map_err(|_| Error::<T>::NotEnoughBalance)?;
 		Ok((fee_currency, fee_amount))
 	}
