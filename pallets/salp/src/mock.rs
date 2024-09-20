@@ -20,7 +20,6 @@
 
 #![cfg(test)]
 
-use crate::*;
 use bifrost_asset_registry::AssetIdMaps;
 use bifrost_primitives::{
 	Amount, Balance, CurrencyId, CurrencyId::*, MessageId, MockXcmExecutor, ParaId, SlpOperator,
@@ -31,7 +30,7 @@ use cumulus_primitives_core::ParaId as Pid;
 use frame_support::{
 	construct_runtime, derive_impl, ord_parameter_types, parameter_types,
 	sp_runtime::{DispatchError, DispatchResult, SaturatedConversion},
-	traits::{ConstU128, ConstU64, EnsureOrigin, Everything, Get, Nothing},
+	traits::{ConstU128, ConstU64, EnsureOrigin, Everything, Get, LockIdentifier, Nothing},
 	weights::Weight,
 	PalletId,
 };
@@ -464,14 +463,10 @@ impl salp::Config for Test {
 	type XcmInterface = MockSalpXcmExecutor;
 	type TreasuryAccount = TreasuryAccount;
 	type BuybackPalletId = BuybackPalletId;
-	type DexOperator = ZenlinkProtocol;
 	type CurrencyIdConversion = AssetIdMaps<Test>;
 	type CurrencyIdRegister = AssetIdMaps<Test>;
-	type ParachainId = ParaInfo;
 	type StablePool = StablePool;
 	type VtokenMinting = VtokenMinting;
-	type LockId = SalpLockId;
-	type BatchLimit = BatchLimit;
 }
 
 parameter_types! {

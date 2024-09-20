@@ -395,16 +395,12 @@ impl bifrost_salp::Config for Test {
 	type XcmInterface = MockXcmExecutor;
 	type TreasuryAccount = TreasuryAccount;
 	type BuybackPalletId = BuybackPalletId;
-	type DexOperator = ZenlinkProtocol;
 	type CurrencyIdConversion = AssetIdMaps<Test>;
 	type CurrencyIdRegister = AssetIdMaps<Test>;
-	type ParachainId = ParaInfo;
 	type RuntimeOrigin = RuntimeOrigin;
 	type RuntimeCall = RuntimeCall;
 	type StablePool = ();
 	type VtokenMinting = ();
-	type LockId = SalpLockId;
-	type BatchLimit = BatchLimit;
 }
 
 parameter_types! {

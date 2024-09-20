@@ -19,7 +19,7 @@
 // Ensure we're `no_std` when compiling for Wasm.
 
 use crate::{mock::*, Error, FundStatus, *};
-use bifrost_primitives::{CurrencyId, TokenSymbol, KSM, VKSM, VSKSM};
+use bifrost_primitives::{CurrencyId, TokenSymbol, TryConvertFrom, KSM, VKSM, VSKSM};
 use bifrost_xcm_interface::SalpHelper;
 use frame_support::{assert_noop, assert_ok};
 use frame_system::pallet_prelude::BlockNumberFor;
@@ -895,15 +895,6 @@ fn refund_meanwhile_issue_should_work() {
 			1,
 			deadline
 		));
-		assert_noop!(
-			Salp::buyback(Some(ALICE).into(), 80),
-			orml_tokens::Error::<Test>::BalanceTooLow
-		);
-		assert_ok!(Salp::buyback(Some(ALICE).into(), 70));
-		assert_noop!(
-			Salp::buyback(Some(ALICE).into(), 10),
-			zenlink_protocol::Error::<Test>::InsufficientTargetAmount
-		);
 
 		let amounts = vec![1_000u128, 1_000u128];
 		assert_ok!(StablePool::create_pool(

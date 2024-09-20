@@ -30,19 +30,17 @@ pub use weights::WeightInfo;
 
 // Re-export pallet items so that they can be accessed from the crate namespace.
 use bifrost_primitives::{
-	ContributionStatus, CurrencyIdConversion, CurrencyIdRegister, TrieIndex, TryConvertFrom,
-	VtokenMintingInterface,
+	ContributionStatus, CurrencyIdConversion, CurrencyIdRegister, TrieIndex, VtokenMintingInterface,
 };
 use bifrost_stable_pool::{traits::StablePoolHandler, StableAssetPoolId};
 use bifrost_xcm_interface::ChainId;
 use cumulus_primitives_core::{QueryId, Response};
-use frame_support::{pallet_prelude::*, sp_runtime::SaturatedConversion, traits::LockIdentifier};
+use frame_support::{pallet_prelude::*, sp_runtime::SaturatedConversion};
 use orml_traits::MultiCurrency;
 pub use pallet::*;
 use pallet_xcm::ensure_response;
 use scale_info::TypeInfo;
 use sp_runtime::traits::One;
-use zenlink_protocol::{AssetId, ExportZenlink};
 
 pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
 
@@ -177,23 +175,13 @@ pub mod pallet {
 		#[pallet::constant]
 		type BuybackPalletId: Get<PalletId>;
 
-		type DexOperator: ExportZenlink<Self::AccountId, AssetId>;
-
 		type CurrencyIdConversion: CurrencyIdConversion<CurrencyId>;
 
 		type CurrencyIdRegister: CurrencyIdRegister<CurrencyId>;
 
-		type ParachainId: Get<cumulus_primitives_core::ParaId>;
-
 		type StablePool: StablePoolHandler<Balance = BalanceOf<Self>, AccountId = Self::AccountId>;
 
 		type VtokenMinting: VtokenMintingInterface<Self::AccountId, CurrencyId, BalanceOf<Self>>;
-
-		#[pallet::constant]
-		type LockId: Get<LockIdentifier>;
-
-		#[pallet::constant]
-		type BatchLimit: Get<u32>;
 	}
 
 	#[pallet::pallet]
@@ -837,9 +825,10 @@ pub mod pallet {
 		}
 	}
 
-	// These methods are no longer in use and are now only called for testing and benchmarking purposes.
+	// These methods are no longer in use and are now only called for testing and benchmarking
+	// purposes.
 	impl<T: Config> Pallet<T> {
-		pub fn fund_success(origin: OriginFor<T>, index: ParaId) -> DispatchResult {
+		pub(crate) fn fund_success(origin: OriginFor<T>, index: ParaId) -> DispatchResult {
 			T::EnsureConfirmAsGovernance::ensure_origin(origin)?;
 
 			let fund = Funds::<T>::get(index).ok_or(Error::<T>::InvalidParaId)?;
@@ -852,7 +841,7 @@ pub mod pallet {
 			Ok(())
 		}
 
-		pub fn fund_fail(origin: OriginFor<T>, index: ParaId) -> DispatchResult {
+		pub(crate) fn fund_fail(origin: OriginFor<T>, index: ParaId) -> DispatchResult {
 			T::EnsureConfirmAsGovernance::ensure_origin(origin)?;
 
 			// crownload is failed, so enable the withdrawal function of vsToken/vsBond
@@ -867,7 +856,7 @@ pub mod pallet {
 			Ok(())
 		}
 
-		pub fn continue_fund(
+		pub(crate) fn continue_fund(
 			origin: OriginFor<T>,
 			index: ParaId,
 			first_slot: LeasePeriod,
@@ -928,7 +917,7 @@ pub mod pallet {
 		}
 
 		/// Create a new crowdloaning campaign for a parachain slot deposit for the current auction.
-		pub fn create(
+		pub(crate) fn create(
 			origin: OriginFor<T>,
 			index: ParaId,
 			cap: BalanceOf<T>,
@@ -993,7 +982,7 @@ pub mod pallet {
 		/// Contribute to a crowd sale. This will transfer some balance over to fund a parachain
 		/// slot. It will be withdrawable in two instances: the parachain becomes retired; or the
 		/// slot is unable to be purchased and the timeout expires.
-		pub fn contribute(
+		pub(crate) fn contribute(
 			origin: OriginFor<T>,
 			index: ParaId,
 			value: BalanceOf<T>,
@@ -1038,7 +1027,7 @@ pub mod pallet {
 		}
 
 		/// Confirm contribute
-		pub fn confirm_contribute(
+		pub(crate) fn confirm_contribute(
 			origin: OriginFor<T>,
 			query_id: QueryId,
 			is_success: bool,
@@ -1116,7 +1105,11 @@ pub mod pallet {
 		}
 
 		/// Unlock the reserved vsToken/vsBond after fund success
-		pub fn unlock(origin: OriginFor<T>, who: AccountIdOf<T>, index: ParaId) -> DispatchResult {
+		pub(crate) fn unlock(
+			origin: OriginFor<T>,
+			who: AccountIdOf<T>,
+			index: ParaId,
+		) -> DispatchResult {
 			ensure_signed(origin)?;
 			let fund = Funds::<T>::get(index).ok_or(Error::<T>::InvalidParaId)?;
 
@@ -1139,40 +1132,9 @@ pub mod pallet {
 
 			Ok(())
 		}
-
-		pub fn buyback(origin: OriginFor<T>, value: crate::BalanceOf<T>) -> DispatchResult {
-			let _who = ensure_signed(origin.clone())?;
-
-			let relay_currency_id = T::RelayChainToken::get();
-			let relay_vstoken_id = T::CurrencyIdConversion::convert_to_vstoken(relay_currency_id)
-				.map_err(|_| crate::pallet::Error::<T>::NotSupportTokenType)?;
-			let relay_asset_id: AssetId =
-				AssetId::try_convert_from(relay_currency_id, T::ParachainId::get().into())
-					.map_err(|_| DispatchError::Other("Conversion Error."))?;
-			let relay_vstoken_asset_id: AssetId =
-				AssetId::try_convert_from(relay_vstoken_id, T::ParachainId::get().into())
-					.map_err(|_| DispatchError::Other("Conversion Error."))?;
-			let path = vec![relay_asset_id, relay_vstoken_asset_id];
-
-			T::DexOperator::inner_swap_exact_assets_for_assets(
-				&T::BuybackPalletId::get().into_account_truncating(),
-				value.saturated_into(),
-				Percent::from_percent(50).saturating_reciprocal_mul(value).saturated_into(),
-				&path,
-				&T::TreasuryAccount::get(),
-			)?;
-
-			Self::deposit_event(crate::pallet::Event::<T>::Buyback(value));
-
-			Ok(())
-		}
 	}
 
 	impl<T: Config> Pallet<T> {
-		/// set multisig account
-		pub fn set_multisig_account(account: AccountIdOf<T>) {
-			MultisigConfirmAccount::<T>::put(account);
-		}
 		/// Check if the vsBond is `past` the redeemable date
 		pub(crate) fn is_expired(
 			block: BlockNumberFor<T>,
@@ -1182,18 +1144,6 @@ pub mod pallet {
 			let block_end_redeem = block_begin_redeem.saturating_add(T::VSBondValidPeriod::get());
 
 			Ok(block >= block_end_redeem)
-		}
-
-		/// Check if the vsBond is `in` the redeemable date
-		#[allow(dead_code)]
-		pub(crate) fn can_redeem(
-			block: BlockNumberFor<T>,
-			last_slot: LeasePeriod,
-		) -> Result<bool, Error<T>> {
-			let block_begin_redeem = Self::block_end_of_lease_period_index(last_slot);
-			let block_end_redeem = block_begin_redeem.saturating_add(T::VSBondValidPeriod::get());
-
-			Ok(block >= block_begin_redeem && block < block_end_redeem)
 		}
 
 		pub(crate) fn block_end_of_lease_period_index(slot: LeasePeriod) -> BlockNumberFor<T> {
@@ -1280,113 +1230,8 @@ pub mod pallet {
 			who.using_encoded(|b| child::kill(&Self::id_from_index(index), b));
 		}
 
-		#[allow(dead_code)]
 		pub(crate) fn set_balance(who: &AccountIdOf<T>, value: BalanceOf<T>) -> DispatchResult {
 			T::MultiCurrency::deposit(T::RelayChainToken::get(), who, value)
-		}
-
-		pub fn redeem_for_reserve(
-			who: AccountIdOf<T>,
-			index: ParaId,
-			value: BalanceOf<T>,
-			fund: &mut FundInfo<BalanceOf<T>, LeasePeriod>,
-			vs_token: CurrencyId,
-			vs_bond: CurrencyId,
-		) -> DispatchResult {
-			ensure!(fund.raised >= value, Error::<T>::NotEnoughBalanceInRedeemPool);
-
-			ensure!(RedeemPool::<T>::get() >= value, Error::<T>::NotEnoughBalanceInRedeemPool);
-			let cur_block = <frame_system::Pallet<T>>::block_number();
-			let expired = Self::is_expired(cur_block, fund.last_slot)?;
-			ensure!(!expired, Error::<T>::VSBondExpired);
-			T::MultiCurrency::ensure_can_withdraw(vs_token, &who, value)
-				.map_err(|_e| Error::<T>::NotEnoughFreeAssetsToRedeem)?;
-			T::MultiCurrency::ensure_can_withdraw(vs_bond, &who, value)
-				.map_err(|_e| Error::<T>::NotEnoughFreeAssetsToRedeem)?;
-
-			T::MultiCurrency::withdraw(vs_token, &who, value)?;
-			T::MultiCurrency::withdraw(vs_bond, &who, value)?;
-			RedeemPool::<T>::set(RedeemPool::<T>::get().saturating_sub(value));
-
-			fund.raised = fund.raised.saturating_sub(value);
-			Funds::<T>::insert(index, Some(fund.clone()));
-
-			T::MultiCurrency::transfer(
-				T::RelayChainToken::get(),
-				&Self::fund_account_id(index),
-				&who,
-				value,
-			)?;
-			Self::deposit_event(Event::Redeemed(
-				who,
-				index,
-				fund.first_slot,
-				fund.last_slot,
-				value,
-			));
-
-			Ok(())
-		}
-
-		pub fn refund_for_reserve(
-			who: AccountIdOf<T>,
-			index: ParaId,
-			first_slot: LeasePeriod,
-			last_slot: LeasePeriod,
-			value: BalanceOf<T>,
-			vs_token: CurrencyId,
-			vs_bond: CurrencyId,
-		) -> DispatchResult {
-			let mut fund = Self::find_fund(index, first_slot, last_slot)
-				.map_err(|_| Error::<T>::InvalidFundNotExist)?;
-			ensure!(
-				fund.status == FundStatus::FailedToContinue ||
-					fund.status == FundStatus::RefundWithdrew,
-				Error::<T>::InvalidRefund
-			);
-			ensure!(
-				fund.first_slot == first_slot && fund.last_slot == last_slot,
-				Error::<T>::InvalidRefund
-			);
-			ensure!(fund.raised >= value, Error::<T>::NotEnoughBalanceInFund);
-			ensure!(RedeemPool::<T>::get() >= value, Error::<T>::NotEnoughBalanceInRefundPool);
-
-			T::MultiCurrency::ensure_can_withdraw(vs_token, &who, value)
-				.map_err(|_e| Error::<T>::NotEnoughFreeAssetsToRedeem)?;
-			T::MultiCurrency::ensure_can_withdraw(vs_bond, &who, value)
-				.map_err(|_e| Error::<T>::NotEnoughFreeAssetsToRedeem)?;
-
-			T::MultiCurrency::withdraw(vs_token, &who, value)?;
-			T::MultiCurrency::withdraw(vs_bond, &who, value)?;
-
-			RedeemPool::<T>::set(RedeemPool::<T>::get().saturating_sub(value));
-			let mut fund_new = Funds::<T>::get(index).ok_or(Error::<T>::InvalidParaId)?;
-			fund_new.raised = fund_new.raised.saturating_sub(value);
-			Funds::<T>::insert(index, Some(fund_new));
-			if fund.status == FundStatus::FailedToContinue {
-				fund.raised = fund.raised.saturating_sub(value);
-				FailedFundsToRefund::<T>::insert(
-					(index, first_slot, last_slot),
-					Some(fund.clone()),
-				);
-			}
-
-			T::MultiCurrency::transfer(
-				T::RelayChainToken::get(),
-				&Self::fund_account_id(index),
-				&who,
-				value,
-			)?;
-
-			Self::deposit_event(Event::Refunded(
-				who,
-				index,
-				fund.first_slot,
-				fund.last_slot,
-				value,
-			));
-
-			Ok(())
 		}
 	}
 }
