@@ -22,7 +22,7 @@ use bifrost_asset_registry::AssetIdMaps;
 pub use bifrost_primitives::{
 	currency::*, Balance, CurrencyId, CurrencyIdMapping, SlpOperator, SlpxOperator, TokenSymbol,
 };
-use bifrost_primitives::{Moment, MoonbeamChainId, Price, PriceDetail, Ratio};
+use bifrost_primitives::{Moment, MoonbeamChainId, Price, PriceDetail, PriceFeeder, Ratio};
 use bifrost_runtime_common::milli;
 use frame_support::{
 	derive_impl, ord_parameter_types, parameter_types,
@@ -423,11 +423,21 @@ impl PriceFeeder for MockPriceFeeder {
 		todo!()
 	}
 
+	fn get_amount_by_prices(
+		_currency_in: &CurrencyId,
+		_amount_in: Balance,
+		_currency_in_price: Price,
+		_currency_out: &CurrencyId,
+		_currency_out_price: Price,
+	) -> Option<Balance> {
+		todo!()
+	}
+
 	fn get_oracle_amount_by_currency_and_amount_in(
 		_currency_in: &CurrencyId,
 		_amount_in: Balance,
 		_currency_out: &CurrencyId,
-	) -> Option<Balance> {
+	) -> Option<(Balance, Price, Price)> {
 		todo!()
 	}
 }

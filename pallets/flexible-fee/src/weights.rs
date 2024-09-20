@@ -54,7 +54,7 @@ use sp_std::marker::PhantomData;
 /// Weight functions needed for bifrost_flexible_fee.
 pub trait WeightInfo {
 	fn set_user_default_fee_currency() -> Weight;
-	fn set_universal_fee_currency_order_list() -> Weight;
+	fn set_default_fee_currency_list() -> Weight;
 }
 
 // For backwards compatibility and tests
@@ -71,7 +71,7 @@ impl WeightInfo for () {
 	}
 	/// Storage: FlexibleFee UniversalFeeCurrencyOrderList (r:0 w:1)
 	/// Proof Skipped: FlexibleFee UniversalFeeCurrencyOrderList (max_values: Some(1), max_size: None, mode: Measured)
-	fn set_universal_fee_currency_order_list() -> Weight {
+	fn set_default_fee_currency_list() -> Weight {
 		// Proof Size summary in bytes:
 		//  Measured:  `0`
 		//  Estimated: `0`

@@ -26,7 +26,7 @@ use core::cmp::max;
 
 pub use crate::rate_model::*;
 use bifrost_primitives::{
-	Balance, CurrencyId, Liquidity, Price, Rate, Ratio, Shortfall, Timestamp,
+	Balance, CurrencyId, Liquidity, Price, PriceFeeder, Rate, Ratio, Shortfall, Timestamp,
 };
 use frame_support::{
 	pallet_prelude::*,
@@ -43,7 +43,7 @@ use num_traits::cast::ToPrimitive;
 pub use pallet::*;
 use pallet_traits::{
 	ConvertToBigUint, LendMarket as LendMarketTrait, LendMarketMarketDataProvider,
-	LendMarketPositionDataProvider, MarketInfo, MarketStatus, PriceFeeder,
+	LendMarketPositionDataProvider, MarketInfo, MarketStatus,
 };
 use sp_runtime::{
 	traits::{
