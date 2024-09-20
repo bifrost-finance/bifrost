@@ -911,10 +911,6 @@ pub struct ExtraFeeMatcher;
 impl FeeGetter<RuntimeCall> for ExtraFeeMatcher {
 	fn get_fee_info(c: &RuntimeCall) -> ExtraFeeInfo {
 		match *c {
-			RuntimeCall::Salp(bifrost_salp::Call::contribute { .. }) => ExtraFeeInfo {
-				extra_fee_name: ExtraFeeName::SalpContribute,
-				extra_fee_currency: RelayCurrencyId::get(),
-			},
 			RuntimeCall::XcmInterface(bifrost_xcm_interface::Call::transfer_statemine_assets {
 				..
 			}) => ExtraFeeInfo {
