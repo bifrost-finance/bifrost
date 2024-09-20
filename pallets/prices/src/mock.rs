@@ -25,7 +25,7 @@ use sp_runtime::{traits::IdentityLookup, FixedPointNumber};
 use bifrost_asset_registry::AssetIdMaps;
 pub use bifrost_primitives::{
 	currency::{FIL, VFIL},
-	DOT, KSM, VDOT,
+	DOT, KSM, MANTA, VDOT,
 };
 use bifrost_primitives::{Moment, ASTR, BNC, DOT_U, GLMR};
 use sp_runtime::BuildStorage;
@@ -54,10 +54,18 @@ pub struct MockDataProvider;
 impl DataProvider<CurrencyId, TimeStampedPrice> for MockDataProvider {
 	fn get(asset_id: &CurrencyId) -> Option<TimeStampedPrice> {
 		match *asset_id {
+			BNC => Some(TimeStampedPrice {
+				value: Price::from_inner(200_000_000_000_000_000),
+				timestamp: 0,
+			}),
 			DOT =>
 				Some(TimeStampedPrice { value: Price::saturating_from_integer(100), timestamp: 0 }),
 			KSM =>
 				Some(TimeStampedPrice { value: Price::saturating_from_integer(500), timestamp: 0 }),
+			MANTA => Some(TimeStampedPrice {
+				value: Price::from_inner(600_000_000_000_000_000),
+				timestamp: 0,
+			}),
 			VDOT => Some(TimeStampedPrice {
 				value: Price::from_inner(15000000000_0000000000),
 				timestamp: 0,

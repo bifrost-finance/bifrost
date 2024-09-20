@@ -37,6 +37,9 @@ pub mod xcm;
 pub use crate::xcm::*;
 pub mod mock_xcm;
 pub use crate::mock_xcm::*;
+
+pub mod price;
+pub use crate::price::*;
 pub mod salp;
 pub use salp::*;
 pub mod traits;
@@ -272,18 +275,4 @@ pub enum XcmOperationType {
 	SupplementaryFee,
 	EthereumTransfer,
 	TeleportAssets,
-}
-
-pub struct ExtraFeeInfo {
-	pub extra_fee_name: ExtraFeeName,
-	pub extra_fee_currency: CurrencyId,
-}
-
-impl Default for ExtraFeeInfo {
-	fn default() -> Self {
-		Self {
-			extra_fee_name: ExtraFeeName::NoExtraFee,
-			extra_fee_currency: CurrencyId::Native(TokenSymbol::BNC),
-		}
-	}
 }

@@ -16,28 +16,21 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-#![cfg(feature = "runtime-benchmarks")]
+use crate::{Balance, CurrencyId, Price, PriceDetail};
 
-use frame_benchmarking::v1::{benchmarks, whitelisted_caller};
-use frame_support::BoundedVec;
-
-use bifrost_primitives::{CurrencyId, TokenSymbol};
-use frame_system::RawOrigin;
-use sp_std::vec;
-
-use crate::{Call, Config, Pallet};
-
-benchmarks! {
-	set_user_default_fee_currency {
-		let caller = whitelisted_caller();
-	}: _(RawOrigin::Signed(caller),Some(CurrencyId::Token(TokenSymbol::DOT)))
-
-	set_default_fee_currency_list {
-		let default_list = BoundedVec::try_from(vec![CurrencyId::Token(TokenSymbol::DOT)]).unwrap();
-	}: _(RawOrigin::Root,default_list)
-
-	impl_benchmark_test_suite!(
-	Pallet,
-	crate::mock::new_test_ext(),
-	crate::mock::Test)
+pub trait PriceFeeder {
+	fn get_price(asset_id: &CurrencyId) -> Option<PriceDetail>;
+	fn get_normal_price(asset_id: &CurrencyId) -> Option<u128>;
+	fn get_amount_by_prices(
+		currency_in: &CurrencyId,
+		amount_in: Balance,
+		currency_in_price: Price,
+		currency_out: &CurrencyId,
+		currency_out_price: Price,
+	) -> Option<Balance>;
+	fn get_oracle_amount_by_currency_and_amount_in(
+		currency_in: &CurrencyId,
+		amount_in: Balance,
+		currency_out: &CurrencyId,
+	) -> Option<(Balance, Price, Price)>;
 }
