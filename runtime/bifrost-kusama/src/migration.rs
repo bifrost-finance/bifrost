@@ -370,3 +370,64 @@ pub mod opengov {
 		}
 	}
 }
+
+pub mod system_maker {
+	use super::*;
+	pub use bifrost_primitives::currency::{KSM, VKSM};
+	use frame_support::{pallet_prelude::PhantomData, traits::OnRuntimeUpgrade};
+	use sp_core::Get;
+	use sp_runtime::traits::Zero;
+	pub struct SystemMakerClearPalletId<T>(PhantomData<T>);
+	impl<T: bifrost_vtoken_minting::Config> OnRuntimeUpgrade for SystemMakerClearPalletId<T> {
+		#[cfg(feature = "try-runtime")]
+		fn pre_upgrade() -> Result<sp_std::prelude::Vec<u8>, sp_runtime::DispatchError> {
+			#[allow(unused_imports)]
+			use frame_support::PalletId;
+			log::info!("Bifrost `pre_upgrade`...");
+
+			Ok(vec![])
+		}
+
+		fn on_runtime_upgrade() -> Weight {
+			log::info!("Bifrost `on_runtime_upgrade`...");
+
+			let account_id = SystemMakerPalletId::get().into_account_truncating();
+			let ksm_balance = T::MultiCurrency::free_balance(KSM, &account_id);
+			T::MultiCurrency::transfer(
+				KSM,
+				&account_id,
+				&TreasuryPalletId::get().into_account_truncating(),
+				ksm_balance,
+			)
+			.ok();
+			let vksm_balance = T::MultiCurrency::free_balance(VKSM, &account_id);
+			T::MultiCurrency::transfer(
+				VKSM,
+				&account_id,
+				&TreasuryPalletId::get().into_account_truncating(),
+				vksm_balance,
+			)
+			.ok();
+			log::info!("KSM balance: {:?}", ksm_balance);
+			log::info!("VKSM balance: {:?}", vksm_balance);
+
+			log::info!("Bifrost `on_runtime_upgrade finished`");
+
+			Weight::from(T::DbWeight::get().reads_writes(1, 1))
+		}
+
+		#[cfg(feature = "try-runtime")]
+		fn post_upgrade(_: sp_std::prelude::Vec<u8>) -> Result<(), sp_runtime::DispatchError> {
+			#[allow(unused_imports)]
+			use frame_support::PalletId;
+			log::info!("Bifrost `post_upgrade`...");
+			let account_id = SystemMakerPalletId::get().into_account_truncating();
+			let ksm_balance = T::MultiCurrency::free_balance(KSM, &account_id);
+			assert_eq!(ksm_balance, Zero::zero());
+			let vksm_balance = T::MultiCurrency::free_balance(VKSM, &account_id);
+			assert_eq!(vksm_balance, Zero::zero());
+
+			Ok(())
+		}
+	}
+}
