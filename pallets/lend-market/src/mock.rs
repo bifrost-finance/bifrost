@@ -205,7 +205,7 @@ impl SortedMembers<AccountId> for AliceCreatePoolOrigin {
 	}
 }
 
-pub struct MockPriceFeeder;
+pub struct MockOraclePriceProvider;
 #[derive(Encode, Decode, Clone, Copy, RuntimeDebug)]
 pub struct CurrencyIdWrap(CurrencyId);
 
@@ -223,7 +223,7 @@ impl PartialEq for CurrencyIdWrap {
 
 impl Eq for CurrencyIdWrap {}
 
-impl MockPriceFeeder {
+impl MockOraclePriceProvider {
 	thread_local! {
 		pub static PRICES: RefCell<HashMap<CurrencyIdWrap, Option<PriceDetail>>> = {
 			RefCell::new(
@@ -250,13 +250,9 @@ impl MockPriceFeeder {
 	}
 }
 
-impl PriceFeeder for MockPriceFeeder {
+impl OraclePriceProvider for MockOraclePriceProvider {
 	fn get_price(asset_id: &CurrencyId) -> Option<PriceDetail> {
 		Self::PRICES.with(|prices| *prices.borrow().get(&CurrencyIdWrap(*asset_id)).unwrap())
-	}
-
-	fn get_normal_price(_asset_id: &CurrencyId) -> Option<u128> {
-		todo!()
 	}
 
 	fn get_amount_by_prices(
@@ -327,7 +323,7 @@ parameter_types! {
 
 impl Config for Test {
 	type RuntimeEvent = RuntimeEvent;
-	type PriceFeeder = MockPriceFeeder;
+	type OraclePriceProvider = MockOraclePriceProvider;
 	type PalletId = LendMarketPalletId;
 	type ReserveOrigin = EnsureRoot<AccountId>;
 	type UpdateOrigin = EnsureRoot<AccountId>;

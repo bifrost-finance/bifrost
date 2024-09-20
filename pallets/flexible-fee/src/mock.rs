@@ -19,7 +19,7 @@
 #![cfg(test)]
 
 use super::*;
-use crate::{self as flexible_fee, mock_price::MockPriceFeeder};
+use crate::{self as flexible_fee, mock_price::MockOraclePriceProvider};
 use bifrost_currencies::BasicCurrencyAdapter;
 use bifrost_primitives::{Balance, CurrencyId, TokenSymbol};
 use cumulus_primitives_core::ParaId as Pid;
@@ -167,7 +167,7 @@ impl crate::Config for Test {
 	type RelaychainCurrencyId = RelayCurrencyId;
 	type XcmRouter = ();
 	type PalletId = FlexibleFeePalletId;
-	type PriceFeeder = MockPriceFeeder;
+	type OraclePriceProvider = MockOraclePriceProvider;
 }
 
 pub struct XcmDestWeightAndFee;

@@ -182,7 +182,7 @@ impl bifrost_fee_share::Config for Runtime {
 	type ControlOrigin = EnsureSignedBy<One, AccountId>;
 	type WeightInfo = ();
 	type FeeSharePalletId = FeeSharePalletId;
-	type PriceFeeder = MockPriceFeeder;
+	type OraclePriceProvider = MockOraclePriceProvider;
 }
 
 impl pallet_prices::Config for Runtime {
@@ -224,7 +224,7 @@ impl DataFeeder<CurrencyId, TimeStampedPrice, AccountId> for MockDataProvider {
 		Ok(())
 	}
 }
-pub struct MockPriceFeeder;
+pub struct MockOraclePriceProvider;
 #[derive(Encode, Decode, Clone, Copy, RuntimeDebug)]
 pub struct CurrencyIdWrap(CurrencyId);
 
@@ -242,7 +242,7 @@ impl PartialEq for CurrencyIdWrap {
 
 impl Eq for CurrencyIdWrap {}
 
-impl MockPriceFeeder {
+impl MockOraclePriceProvider {
 	thread_local! {
 		pub static PRICES: RefCell<HashMap<CurrencyIdWrap, Option<PriceDetail>>> = {
 			RefCell::new(
@@ -269,13 +269,9 @@ impl MockPriceFeeder {
 	}
 }
 
-impl PriceFeeder for MockPriceFeeder {
+impl OraclePriceProvider for MockOraclePriceProvider {
 	fn get_price(asset_id: &CurrencyId) -> Option<PriceDetail> {
 		Self::PRICES.with(|prices| *prices.borrow().get(&CurrencyIdWrap(*asset_id)).unwrap())
-	}
-
-	fn get_normal_price(_asset_id: &CurrencyId) -> Option<u128> {
-		todo!()
 	}
 
 	fn get_amount_by_prices(

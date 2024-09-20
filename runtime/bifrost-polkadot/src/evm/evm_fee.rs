@@ -17,39 +17,38 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 use crate::Currencies;
-use bifrost_primitives::{AccountFeeCurrency, Balance, CurrencyId};
-use bifrost_runtime_common::Ratio;
-use frame_support::traits::{Get, OnUnbalanced, TryDrop};
+use bifrost_primitives::{
+	AccountFeeCurrency, Balance, CurrencyId, OraclePriceProvider, Price, WETH,
+};
+use frame_support::traits::TryDrop;
 use orml_traits::MultiCurrency;
 use pallet_evm::{AddressMapping, Error, OnChargeEVMTransaction};
 use sp_core::{H160, U256};
-use sp_runtime::{
-	helpers_128bit::multiply_by_rational_with_rounding,
-	traits::{Convert, UniqueSaturatedInto},
-	Rounding,
-};
+use sp_runtime::traits::UniqueSaturatedInto;
 use sp_std::marker::PhantomData;
 
-#[derive(Copy, Clone, Default)]
+#[derive(Copy, Debug, Clone, Default, PartialEq)]
 pub struct EvmPaymentInfo {
-	amount: Balance,
-	currency_id: CurrencyId,
-	price: Ratio,
+	fee_amount: Balance,
+	fee_currency: CurrencyId,
+	fee_currency_price: Price,
+	gas_fee_price: Price,
 }
 
 impl EvmPaymentInfo {
 	pub fn merge(self, other: Self) -> Self {
 		EvmPaymentInfo {
-			amount: self.amount.saturating_add(other.amount),
-			currency_id: self.currency_id,
-			price: self.price,
+			fee_amount: self.fee_amount.saturating_add(other.fee_amount),
+			fee_currency: self.fee_currency,
+			fee_currency_price: self.fee_currency_price,
+			gas_fee_price: self.gas_fee_price,
 		}
 	}
 }
 
 impl TryDrop for EvmPaymentInfo {
 	fn try_drop(self) -> Result<(), Self> {
-		if self.amount == 0 {
+		if self.fee_amount == 0 {
 			Ok(())
 		} else {
 			Err(self)
@@ -58,27 +57,21 @@ impl TryDrop for EvmPaymentInfo {
 }
 
 /// Implements the transaction payment for EVM transactions.
-/// Supports multi-currency fees based on what is provided by AC - account currency.
-pub struct TransferEvmFees<OU, AC, EC, C, MC>(PhantomData<(OU, AC, EC, C, MC)>);
+/// Supports multi-currency fees based on what is provided by AccountFeeCurrency - account currency.
+pub struct TransferEvmFees<AC, MC, Price>(PhantomData<(AC, MC, Price)>);
 
-impl<T, OU, AC, EC, C, MC> OnChargeEVMTransaction<T> for TransferEvmFees<OU, AC, EC, C, MC>
+impl<T, AC, MC, Price> OnChargeEVMTransaction<T> for TransferEvmFees<AC, MC, Price>
 where
 	T: pallet_evm::Config,
-	OU: OnUnbalanced<EvmPaymentInfo>,
-	U256: UniqueSaturatedInto<Balance>,
 	AC: AccountFeeCurrency<T::AccountId>, // AccountCurrency
-	EC: Get<CurrencyId>,                  // Evm default fee asset
-	C: Convert<(CurrencyId, CurrencyId, Balance), Option<(Balance, Ratio)>>, /* Conversion from
-	                                       * default fee
-	                                       * asset to account
-	                                       * currency */
-	U256: UniqueSaturatedInto<Balance>,
+	Price: OraclePriceProvider,           // PriceProvider
 	MC: MultiCurrency<T::AccountId, CurrencyId = CurrencyId, Balance = Balance>,
+	U256: UniqueSaturatedInto<Balance>,
 	sp_runtime::AccountId32: From<<T as frame_system::Config>::AccountId>,
 {
 	type LiquidityInfo = Option<EvmPaymentInfo>;
 
-	fn withdraw_fee(who: &H160, fee: U256) -> Result<Self::LiquidityInfo, pallet_evm::Error<T>> {
+	fn withdraw_fee(who: &H160, fee: U256) -> Result<Self::LiquidityInfo, Error<T>> {
 		if fee.is_zero() {
 			return Ok(None);
 		}
@@ -87,14 +80,18 @@ where
 		let fee_currency =
 			AC::get_fee_currency(&account_id, fee).map_err(|_| Error::<T>::BalanceLow)?;
 
-		let Some((converted, price)) =
-			C::convert((EC::get(), fee_currency, fee.unique_saturated_into()))
+		let Some((fee_amount, gas_fee_price, fee_currency_price)) =
+			Price::get_oracle_amount_by_currency_and_amount_in(
+				&WETH,
+				fee.unique_saturated_into(),
+				&fee_currency,
+			)
 		else {
 			return Err(Error::<T>::WithdrawFailed);
 		};
 
 		// Ensure that converted fee is not zero
-		if converted == 0 {
+		if fee_amount == 0 {
 			return Err(Error::<T>::WithdrawFailed);
 		}
 
@@ -103,13 +100,13 @@ where
 			"Withdrew fee from account {:?} in currency {:?} amount {:?}",
 			account_id,
 			fee_currency,
-			converted
+			fee_amount
 		);
 
-		MC::withdraw(fee_currency, &account_id, converted)
+		MC::withdraw(fee_currency, &account_id, fee_amount)
 			.map_err(|_| Error::<T>::WithdrawFailed)?;
 
-		Ok(Some(EvmPaymentInfo { amount: converted, currency_id: fee_currency, price }))
+		Ok(Some(EvmPaymentInfo { fee_amount, fee_currency, fee_currency_price, gas_fee_price }))
 	}
 
 	fn correct_and_deposit_fee(
@@ -118,71 +115,51 @@ where
 		_base_fee: U256,
 		already_withdrawn: Self::LiquidityInfo,
 	) -> Self::LiquidityInfo {
-		if let Some(paid) = already_withdrawn {
+		if let Some(payment_info) = already_withdrawn {
 			let account_id = T::AddressMapping::into_account_id(*who);
 
-			// fee / weth = amounts[1] / amounts[0]
-			// fee =  weth * amounts[1] / amounts[0]
-			let adjusted_paid = if let Some(converted_corrected_fee) =
-				multiply_by_rational_with_rounding(
-					corrected_fee.unique_saturated_into(),
-					paid.price.n,
-					paid.price.d,
-					Rounding::Up,
-				) {
+			let adjusted_paid = if let Some(converted_corrected_fee) = Price::get_amount_by_prices(
+				&WETH,
+				corrected_fee.unique_saturated_into(),
+				payment_info.gas_fee_price,
+				&payment_info.fee_currency,
+				payment_info.fee_currency_price,
+			) {
 				// Calculate how much refund we should return
-				let refund_amount = paid.amount.saturating_sub(converted_corrected_fee);
+				let refund_amount = payment_info.fee_amount.saturating_sub(converted_corrected_fee);
 
 				// refund to the account that paid the fees. If this fails, the
 				// account might have dropped below the existential balance. In
 				// that case we don't refund anything.
 				let refund_imbalance =
-					match MC::deposit(paid.currency_id, &account_id, refund_amount) {
+					match MC::deposit(payment_info.fee_currency, &account_id, refund_amount) {
 						Ok(_) => 0,
 						Err(_) => refund_amount,
 					};
 				// figure out how much is left to mint back
 				// refund_amount already minted back to account, imbalance is what is left to mint
 				// if any
-				paid.amount.saturating_sub(refund_amount).saturating_add(refund_imbalance)
+				payment_info
+					.fee_amount
+					.saturating_sub(refund_amount)
+					.saturating_add(refund_imbalance)
 			} else {
 				// if conversion failed for some reason, we refund the whole amount back to treasury
-				paid.amount
+				payment_info.fee_amount
 			};
 
 			// We can simply refund all the remaining amount back to treasury
-			OU::on_unbalanced(EvmPaymentInfo {
-				amount: adjusted_paid,
-				currency_id: paid.currency_id,
-				price: paid.price,
-			});
-			return None;
+			let result = Currencies::deposit(
+				payment_info.fee_currency,
+				&crate::BifrostTreasuryAccount::get(),
+				adjusted_paid,
+			);
+			debug_assert_eq!(result, Ok(()));
 		}
 		None
 	}
 
 	fn pay_priority_fee(tip: Self::LiquidityInfo) {
-		if let Some(tip) = tip {
-			OU::on_unbalanced(tip);
-		}
-	}
-}
-
-pub struct DepositEvmFeeToTreasury;
-impl OnUnbalanced<EvmPaymentInfo> for DepositEvmFeeToTreasury {
-	// this is called for substrate-based transactions
-	fn on_unbalanceds<B>(amounts: impl Iterator<Item = EvmPaymentInfo>) {
-		Self::on_unbalanced(amounts.fold(EvmPaymentInfo::default(), |i, x| x.merge(i)))
-	}
-
-	// this is called from pallet_evm for Ethereum-based transactions
-	// (technically, it calls on_unbalanced, which calls this when non-zero)
-	fn on_nonzero_unbalanced(payment_info: EvmPaymentInfo) {
-		let result = Currencies::deposit(
-			payment_info.currency_id,
-			&crate::BifrostTreasuryAccount::get(),
-			payment_info.amount,
-		);
-		debug_assert_eq!(result, Ok(()));
+		debug_assert_eq!(tip, None);
 	}
 }
