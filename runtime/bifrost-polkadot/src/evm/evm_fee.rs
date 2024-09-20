@@ -32,7 +32,7 @@ pub struct EvmPaymentInfo {
 	fee_amount: Balance,
 	fee_currency: CurrencyId,
 	fee_currency_price: Price,
-	gas_fee_price: Price,
+	weth_price: Price,
 }
 
 impl EvmPaymentInfo {
@@ -41,7 +41,7 @@ impl EvmPaymentInfo {
 			fee_amount: self.fee_amount.saturating_add(other.fee_amount),
 			fee_currency: self.fee_currency,
 			fee_currency_price: self.fee_currency_price,
-			gas_fee_price: self.gas_fee_price,
+			weth_price: self.weth_price,
 		}
 	}
 }
@@ -80,7 +80,7 @@ where
 		let fee_currency =
 			AC::get_fee_currency(&account_id, fee).map_err(|_| Error::<T>::BalanceLow)?;
 
-		let Some((fee_amount, gas_fee_price, fee_currency_price)) =
+		let Some((fee_amount, weth_price, fee_currency_price)) =
 			Price::get_oracle_amount_by_currency_and_amount_in(
 				&WETH,
 				fee.unique_saturated_into(),
@@ -106,7 +106,7 @@ where
 		MC::withdraw(fee_currency, &account_id, fee_amount)
 			.map_err(|_| Error::<T>::WithdrawFailed)?;
 
-		Ok(Some(EvmPaymentInfo { fee_amount, fee_currency, fee_currency_price, gas_fee_price }))
+		Ok(Some(EvmPaymentInfo { fee_amount, fee_currency, fee_currency_price, weth_price }))
 	}
 
 	fn correct_and_deposit_fee(
@@ -121,7 +121,7 @@ where
 			let adjusted_paid = if let Some(converted_corrected_fee) = Price::get_amount_by_prices(
 				&WETH,
 				corrected_fee.unique_saturated_into(),
-				payment_info.gas_fee_price,
+				payment_info.weth_price,
 				&payment_info.fee_currency,
 				payment_info.fee_currency_price,
 			) {
