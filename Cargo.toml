@@ -24,7 +24,7 @@ members = [
 	"pallets/vtoken-minting",
 	"pallets/vtoken-voting",
 	"pallets/system-staking",
-	"pallets/system-maker",
+	"pallets/deprecated/system-maker",
 	"pallets/fee-share",
 	"pallets/parachain-staking",
 	"pallets/bb-bnc",
@@ -85,7 +85,7 @@ bifrost-slpx                           = { path = "pallets/slpx", default-featur
 bifrost-stable-asset                   = { path = "pallets/stable-asset", default-features = false }
 bifrost-stable-pool                    = { path = "pallets/stable-pool", default-features = false }
 bifrost-stable-pool-rpc-runtime-api    = { path = "pallets/stable-pool/rpc/runtime-api", default-features = false }
-bifrost-system-maker                   = { path = "pallets/system-maker", default-features = false }
+bifrost-system-maker                   = { path = "pallets/deprecated/system-maker", default-features = false }
 bifrost-system-staking                 = { path = "pallets/system-staking", default-features = false }
 bifrost-token-issuer                   = { path = "pallets/token-issuer", default-features = false }
 bifrost-vbnc-convert                   = { path = "pallets/vbnc-convert", default-features = false }
