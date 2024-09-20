@@ -80,6 +80,7 @@ where T: Config + bifrost_stable_pool::Config + bifrost_stable_asset::Config + o
 )]
 mod benchmarks {
 	use super::*;
+	use scale_info::prelude::vec;
 
 	#[benchmark]
 	fn refund() {
@@ -189,15 +190,6 @@ mod benchmarks {
 			8u32.into(),
 			None,
 		);
-	}
-
-	#[benchmark]
-	fn confirm_contribute() {
-		let fund_index = create_fund::<T>(1);
-		let (caller, _) = contribute_fund::<T>(fund_index);
-
-		#[extrinsic_call]
-		_(RawOrigin::Signed(caller), 0, true)
 	}
 
 	#[benchmark]

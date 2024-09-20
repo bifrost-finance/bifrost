@@ -84,9 +84,6 @@ frame_support::construct_runtime!(
 pub(crate) const BALANCE_TRANSFER_CALL: <Test as frame_system::Config>::RuntimeCall =
 	RuntimeCall::Balances(BalancesCall::transfer_allow_death { dest: ALICE, value: 69 });
 
-pub(crate) const SALP_CONTRIBUTE_CALL: <Test as frame_system::Config>::RuntimeCall =
-	RuntimeCall::Salp(bifrost_salp::Call::contribute { index: 2001, value: 1_000_000_000_000 });
-
 pub(crate) const VTOKENVOTING_VOTE_CALL: <Test as frame_system::Config>::RuntimeCall =
 	RuntimeCall::VtokenVoting(bifrost_vtoken_voting::Call::vote {
 		vtoken: VKSM,
@@ -224,10 +221,6 @@ pub struct ExtraFeeMatcher;
 impl FeeGetter<RuntimeCall> for ExtraFeeMatcher {
 	fn get_fee_info(c: &RuntimeCall) -> ExtraFeeInfo {
 		match *c {
-			RuntimeCall::Salp(bifrost_salp::Call::contribute { .. }) => ExtraFeeInfo {
-				extra_fee_name: ExtraFeeName::SalpContribute,
-				extra_fee_currency: RelayCurrencyId::get(),
-			},
 			RuntimeCall::VtokenVoting(bifrost_vtoken_voting::Call::vote { vtoken, .. }) =>
 				ExtraFeeInfo {
 					extra_fee_name: ExtraFeeName::VoteVtoken,

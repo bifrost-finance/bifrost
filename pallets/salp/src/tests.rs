@@ -19,11 +19,11 @@
 // Ensure we're `no_std` when compiling for Wasm.
 
 use crate::{mock::*, Error, FundStatus, *};
-use bifrost_primitives::{ContributionStatus, CurrencyId, TokenSymbol, KSM, VKSM, VSKSM};
+use bifrost_primitives::{CurrencyId, TokenSymbol, KSM, VKSM, VSKSM};
 use bifrost_xcm_interface::SalpHelper;
 use frame_support::{assert_noop, assert_ok};
 use frame_system::pallet_prelude::BlockNumberFor;
-use orml_traits::{MultiCurrency, MultiReservableCurrency};
+use orml_traits::MultiCurrency;
 use sp_runtime::{traits::AccountIdConversion, DispatchError};
 use zenlink_protocol::AssetId;
 
@@ -1022,29 +1022,4 @@ fn edit_fund_should_work() {
 		assert_eq!(fund.raised, 150);
 		assert_eq!(fund.status, FundStatus::Ongoing);
 	});
-}
-
-fn reserve_init() -> (CurrencyId, CurrencyId) {
-	assert_ok!(Salp::create(Some(ALICE).into(), 3_000, 1_000, 1, SlotLength::get()));
-	assert_ok!(Salp::contribute(Some(BRUCE).into(), 3_000, 100));
-	Salp::bind_query_id_and_contribution(0, 3_000, BRUCE, 100);
-	assert_ok!(Salp::confirm_contribute(Some(ALICE).into(), 0, true,));
-
-	assert_ok!(Salp::fund_success(Some(ALICE).into(), 3_000));
-	assert_ok!(Salp::unlock(Some(BRUCE).into(), BRUCE, 3_000));
-
-	// Mock the BlockNumber
-	let block_begin_redeem = (SlotLength::get() + 1) * LeasePeriod::get();
-	System::set_block_number(block_begin_redeem.into());
-
-	let vs_token =
-		<Test as Config>::CurrencyIdConversion::convert_to_vstoken(RelayCurrencyId::get()).unwrap();
-	let vs_bond = <Test as Config>::CurrencyIdConversion::convert_to_vsbond(
-		RelayCurrencyId::get(),
-		3_000,
-		1,
-		SlotLength::get(),
-	)
-	.unwrap();
-	(vs_token, vs_bond)
 }

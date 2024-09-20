@@ -837,6 +837,7 @@ pub mod pallet {
 		}
 	}
 
+	// These methods are no longer in use and are now only called for testing and benchmarking purposes.
 	impl<T: Config> Pallet<T> {
 		pub fn fund_success(origin: OriginFor<T>, index: ParaId) -> DispatchResult {
 			T::EnsureConfirmAsGovernance::ensure_origin(origin)?;

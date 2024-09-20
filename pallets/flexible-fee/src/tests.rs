@@ -380,15 +380,6 @@ fn get_extrinsic_and_extra_fee_total_should_work() {
 		assert_eq!(fee_value, 0);
 		assert_eq!(path, path_vec);
 
-		//  salp contribuite call with extra fee
-		let path_vec = vec![native_asset_id, asset_id];
-		let (total_fee, extra_bnc_fee, fee_value, path) =
-			FlexibleFee::get_extrinsic_and_extra_fee_total(&SALP_CONTRIBUTE_CALL, 88).unwrap();
-		assert_eq!(total_fee, 200);
-		assert_eq!(extra_bnc_fee, 112);
-		assert_eq!(fee_value, 100);
-		assert_eq!(path, path_vec);
-
 		// vtoken-voting vote call with extra fee
 		let path_vec = vec![native_asset_id, asset_id];
 		let (total_fee, extra_bnc_fee, fee_value, path) =
@@ -439,12 +430,6 @@ fn cal_fee_token_and_amount_should_work() {
 			FlexibleFee::cal_fee_token_and_amount(&ALICE, 20, &BALANCE_TRANSFER_CALL).unwrap();
 		assert_eq!(currency_id, CURRENCY_ID_0);
 		assert_eq!(amount_in, 20);
-
-		// alice originally only have 50 CURRENCY_ID_0. Should use Currency 4 to pay fee.
-		let (currency_id, amount_in) =
-			FlexibleFee::cal_fee_token_and_amount(&ALICE, 88, &SALP_CONTRIBUTE_CALL).unwrap();
-		assert_eq!(currency_id, CURRENCY_ID_4);
-		assert_eq!(amount_in, 251);
 	});
 }
 
@@ -504,43 +489,6 @@ fn correct_and_deposit_fee_should_work() {
 		));
 
 		assert_eq!(<Test as crate::Config>::Currency::free_balance(&CHARLIE), 120);
-	});
-}
-
-#[test]
-fn deduct_salp_fee_should_work() {
-	new_test_ext().execute_with(|| {
-		basic_setup();
-
-		// prepare info variable
-		let extra = ();
-		let xt = TestXt::new(SALP_CONTRIBUTE_CALL.clone(), Some((0u64, extra)));
-		let info = xt.get_dispatch_info();
-
-		// 80 inclusion fee and a tip of 8
-		assert_ok!(FlexibleFee::withdraw_fee(&CHARLIE, &SALP_CONTRIBUTE_CALL, &info, 80, 8));
-
-		// originally Charlie has 200 currency 0(Native currency)
-		// 200 - 88 = 112. extra fee cost 104. 112 - 104 = 8
-		assert_eq!(<Test as crate::Config>::Currency::free_balance(&CHARLIE), 8);
-
-		// Other currencies should not be affected
-		assert_eq!(
-			<Test as crate::Config>::MultiCurrency::free_balance(CURRENCY_ID_1, &CHARLIE),
-			20
-		);
-		assert_eq!(
-			<Test as crate::Config>::MultiCurrency::free_balance(CURRENCY_ID_2, &CHARLIE),
-			30
-		);
-		assert_eq!(
-			<Test as crate::Config>::MultiCurrency::free_balance(CURRENCY_ID_3, &CHARLIE),
-			40
-		);
-		assert_eq!(
-			<Test as crate::Config>::MultiCurrency::free_balance(CURRENCY_ID_4, &CHARLIE),
-			50
-		);
 	});
 }
 
