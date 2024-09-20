@@ -208,18 +208,6 @@ parameter_types! {
 	pub const VeMintingTokenType: CurrencyId = CurrencyId::VToken(TokenSymbol::BNC);
 }
 
-#[derive(
-	Encode, Decode, Eq, PartialEq, Copy, Clone, RuntimeDebug, PartialOrd, Ord, scale_info::TypeInfo,
-)]
-pub enum ExtraFeeName {
-	SalpContribute,
-	StatemineTransfer,
-	VoteVtoken,
-	VoteRemoveDelegatorVote,
-	NoExtraFee,
-	EthereumTransfer,
-}
-
 // For vtoken-minting
 #[derive(
 	PartialEq, Eq, Clone, Encode, Decode, MaxEncodedLen, RuntimeDebug, scale_info::TypeInfo,
