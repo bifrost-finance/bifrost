@@ -19,6 +19,7 @@
 #![allow(non_upper_case_globals)]
 
 use bifrost_asset_registry::AssetIdMaps;
+use bifrost_primitives::MoonbeamChainId;
 pub use bifrost_primitives::{currency::*, CurrencyId, SlpxOperator, TokenSymbol};
 use bifrost_slp::{QueryId, QueryResponseManager};
 pub use cumulus_primitives_core::ParaId;
@@ -197,15 +198,11 @@ impl bifrost_vtoken_minting::Config for Runtime {
 	type WeightInfo = ();
 	type OnRedeemSuccess = ();
 	type XcmTransfer = XTokens;
-	type AstarParachainId = ConstU32<2007>;
-	type MoonbeamParachainId = ConstU32<2023>;
-	type HydradxParachainId = ConstU32<2034>;
-	type MantaParachainId = ConstU32<2104>;
-	type InterlayParachainId = ConstU32<2032>;
+	type MoonbeamChainId = MoonbeamChainId;
 	type ChannelCommission = ();
 	type MaxLockRecords = ConstU32<100>;
 	type IncentivePoolAccount = IncentivePoolAccount;
-	type VeMinting = ();
+	type BbBNC = ();
 	type AssetIdMaps = AssetIdMaps<Runtime>;
 }
 
@@ -301,7 +298,7 @@ impl bifrost_farming::Config for Runtime {
 	type RewardIssuer = FarmingRewardIssuerPalletId;
 	type FarmingBoost = FarmingBoostPalletId;
 	type WeightInfo = ();
-	type VeMinting = ();
+	type BbBNC = ();
 	type BlockNumberToBalance = ConvertInto;
 	type WhitelistMaximumLimit = WhitelistMaximumLimit;
 	type GaugeRewardIssuer = FarmingGaugeRewardIssuerPalletId;

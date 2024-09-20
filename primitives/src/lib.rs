@@ -28,24 +28,25 @@ use sp_runtime::{
 	traits::{BlakeTwo256, IdentifyAccount, Verify},
 	FixedU128, MultiSignature, OpaqueExtrinsic, Permill,
 };
-use xcm::v4::{prelude::*, Asset, Location};
-use xcm_executor::traits::{AssetTransferError, TransferType, XcmAssetTransfers};
 
 pub mod currency;
-mod salp;
-pub mod traits;
+pub use currency::*;
+pub mod xcm;
+pub use crate::xcm::*;
+pub mod mock_xcm;
+pub use crate::mock_xcm::*;
+
+pub mod price;
+pub use crate::price::*;
+pub mod salp;
 pub use salp::*;
+pub mod traits;
+pub use crate::traits::*;
+pub mod time_unit;
+pub use crate::time_unit::*;
 
 #[cfg(test)]
 mod tests;
-
-pub use crate::{
-	currency::{
-		AssetIds, CurrencyId, ForeignAssetId, TokenId, TokenSymbol, ASTR, ASTR_TOKEN_ID, BNC, DOT,
-		DOT_TOKEN_ID, DOT_U, FIL, GLMR, GLMR_TOKEN_ID, KSM, MANTA, VBNC, VDOT, VKSM, VSKSM,
-	},
-	traits::*,
-};
 
 /// An index to a block.
 pub type BlockNumber = u32;
@@ -155,78 +156,6 @@ pub type DerivativeIndex = u16;
 
 pub type TimeStampedPrice = orml_oracle::TimestampedValue<Price, Moment>;
 
-#[derive(
-	Encode, Decode, Eq, PartialEq, Copy, Clone, RuntimeDebug, PartialOrd, Ord, scale_info::TypeInfo,
-)]
-pub enum ExtraFeeName {
-	SalpContribute,
-	StatemineTransfer,
-	VoteVtoken,
-	VoteRemoveDelegatorVote,
-	NoExtraFee,
-	EthereumTransfer,
-}
-
-// For vtoken-minting and slp modules
-#[derive(Encode, Decode, Clone, RuntimeDebug, Eq, TypeInfo, MaxEncodedLen)]
-pub enum TimeUnit {
-	// Kusama staking time unit
-	Era(#[codec(compact)] u32),
-	SlashingSpan(#[codec(compact)] u32),
-	// Moonriver staking time unit
-	Round(#[codec(compact)] u32),
-	// 1000 blocks. Can be used by Filecoin.
-	// 30 seconds per block. Kblock means 8.33 hours.
-	Kblock(#[codec(compact)] u32),
-	// 1 hour. Should be Unix Timstamp in seconds / 3600
-	Hour(#[codec(compact)] u32),
-}
-
-impl Default for TimeUnit {
-	fn default() -> Self {
-		TimeUnit::Era(0u32)
-	}
-}
-
-impl PartialEq for TimeUnit {
-	fn eq(&self, other: &Self) -> bool {
-		match (&self, other) {
-			(Self::Era(a), Self::Era(b)) => a.eq(b),
-			(Self::SlashingSpan(a), Self::SlashingSpan(b)) => a.eq(b),
-			(Self::Round(a), Self::Round(b)) => a.eq(b),
-			(Self::Kblock(a), Self::Kblock(b)) => a.eq(b),
-			(Self::Hour(a), Self::Hour(b)) => a.eq(b),
-			_ => false,
-		}
-	}
-}
-
-impl Ord for TimeUnit {
-	fn cmp(&self, other: &Self) -> sp_std::cmp::Ordering {
-		match (&self, other) {
-			(Self::Era(a), Self::Era(b)) => a.cmp(b),
-			(Self::SlashingSpan(a), Self::SlashingSpan(b)) => a.cmp(b),
-			(Self::Round(a), Self::Round(b)) => a.cmp(b),
-			(Self::Kblock(a), Self::Kblock(b)) => a.cmp(b),
-			(Self::Hour(a), Self::Hour(b)) => a.cmp(b),
-			_ => sp_std::cmp::Ordering::Less,
-		}
-	}
-}
-
-impl PartialOrd for TimeUnit {
-	fn partial_cmp(&self, other: &Self) -> Option<sp_std::cmp::Ordering> {
-		match (&self, other) {
-			(Self::Era(a), Self::Era(b)) => Some(a.cmp(b)),
-			(Self::SlashingSpan(a), Self::SlashingSpan(b)) => Some(a.cmp(b)),
-			(Self::Round(a), Self::Round(b)) => Some(a.cmp(b)),
-			(Self::Kblock(a), Self::Kblock(b)) => Some(a.cmp(b)),
-			(Self::Hour(a), Self::Hour(b)) => Some(a.cmp(b)),
-			_ => None,
-		}
-	}
-}
-
 // For vtoken-minting
 #[derive(
 	PartialEq, Eq, Clone, Encode, Decode, MaxEncodedLen, RuntimeDebug, scale_info::TypeInfo,
@@ -249,56 +178,6 @@ pub enum RedeemType<AccountId> {
 impl<AccountId> Default for RedeemType<AccountId> {
 	fn default() -> Self {
 		Self::Native
-	}
-}
-
-pub struct DoNothingRouter;
-impl SendXcm for DoNothingRouter {
-	type Ticket = ();
-	fn validate(_dest: &mut Option<Location>, _msg: &mut Option<Xcm<()>>) -> SendResult<()> {
-		Ok(((), Assets::new()))
-	}
-	fn deliver(_: ()) -> Result<XcmHash, SendError> {
-		Ok([0; 32])
-	}
-}
-
-pub struct Weightless;
-impl PreparedMessage for Weightless {
-	fn weight_of(&self) -> Weight {
-		Weight::default()
-	}
-}
-
-pub struct DoNothingExecuteXcm;
-impl<Call> ExecuteXcm<Call> for DoNothingExecuteXcm {
-	type Prepared = Weightless;
-
-	fn prepare(_message: Xcm<Call>) -> Result<Self::Prepared, Xcm<Call>> {
-		Ok(Weightless)
-	}
-
-	fn execute(
-		_origin: impl Into<Location>,
-		_pre: Self::Prepared,
-		_hash: &mut XcmHash,
-		_weight_credit: Weight,
-	) -> Outcome {
-		Outcome::Complete { used: Weight::default() }
-	}
-
-	fn charge_fees(_location: impl Into<Location>, _fees: Assets) -> XcmResult {
-		Ok(())
-	}
-}
-
-impl XcmAssetTransfers for DoNothingExecuteXcm {
-	type IsReserve = ();
-	type IsTeleporter = ();
-	type AssetTransactor = ();
-
-	fn determine_for(_asset: &Asset, _dest: &Location) -> Result<TransferType, AssetTransferError> {
-		Ok(TransferType::DestinationReserve)
 	}
 }
 
@@ -332,18 +211,4 @@ pub enum XcmOperationType {
 	SupplementaryFee,
 	EthereumTransfer,
 	TeleportAssets,
-}
-
-pub struct ExtraFeeInfo {
-	pub extra_fee_name: ExtraFeeName,
-	pub extra_fee_currency: CurrencyId,
-}
-
-impl Default for ExtraFeeInfo {
-	fn default() -> Self {
-		Self {
-			extra_fee_name: ExtraFeeName::NoExtraFee,
-			extra_fee_currency: CurrencyId::Native(TokenSymbol::BNC),
-		}
-	}
 }

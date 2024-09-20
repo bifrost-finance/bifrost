@@ -50,7 +50,7 @@ fn add_to_issue_whitelist_should_work() {
 		));
 
 		let bounded_list = BoundedVec::try_from(vec![CHARLIE]).unwrap();
-		assert_eq!(TokenIssuer::get_issue_whitelist(ZLK), Some(bounded_list));
+		assert_eq!(IssueWhiteList::<Runtime>::get(ZLK), Some(bounded_list));
 		// Charlie succuessfully issue 800 unit of ZLK to Alice account
 		assert_ok!(TokenIssuer::issue(RuntimeOrigin::signed(CHARLIE), ALICE, ZLK, 800));
 		assert_eq!(Tokens::free_balance(ZLK, &ALICE), 800);
@@ -112,7 +112,7 @@ fn add_to_transfer_whitelist_should_work() {
 		));
 
 		let bounded_list = BoundedVec::try_from(vec![CHARLIE]).unwrap();
-		assert_eq!(TokenIssuer::get_transfer_whitelist(ZLK), Some(bounded_list));
+		assert_eq!(TransferWhiteList::<Runtime>::get(ZLK), Some(bounded_list));
 		// Charlie succuessfully transfer 800 unit of ZLK to Alice account
 		assert_ok!(TokenIssuer::transfer(RuntimeOrigin::signed(CHARLIE), ALICE, ZLK, 800));
 		assert_eq!(Tokens::free_balance(ZLK, &ALICE), 800);

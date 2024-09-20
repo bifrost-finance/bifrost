@@ -21,8 +21,8 @@
 #![allow(clippy::unnecessary_cast)]
 
 use crate::{
-	AssetIds, CurrencyId, DerivativeIndex, ExtraFeeInfo, LeasePeriod, ParaId, PoolId, RedeemType,
-	TokenId, TokenSymbol, XcmOperationType,
+	AssetIds, CurrencyId, DerivativeIndex, LeasePeriod, ParaId, PoolId, RedeemType, TokenId,
+	TokenSymbol, XcmOperationType,
 };
 use frame_support::pallet_prelude::{DispatchResultWithPostInfo, Weight};
 use parity_scale_codec::{Decode, Encode, FullCodec};
@@ -146,11 +146,7 @@ pub trait VtokenMintingOperator<CurrencyId, Balance, AccountId, TimeUnit> {
 		currency_id: CurrencyId,
 		index: u32,
 	) -> Option<(AccountId, Balance, TimeUnit, RedeemType<AccountId>)>;
-	fn get_astar_parachain_id() -> u32;
 	fn get_moonbeam_parachain_id() -> u32;
-	fn get_hydradx_parachain_id() -> u32;
-	fn get_interlay_parachain_id() -> u32;
-	fn get_manta_parachain_id() -> u32;
 }
 
 /// Trait for Vtoken-Minting module to check whether accept redeeming or not.
@@ -348,11 +344,7 @@ pub trait VtokenMintingInterface<AccountId, CurrencyId, Balance> {
 	fn token_id(vtoken_id: CurrencyId) -> Option<CurrencyId>;
 	fn get_token_pool(currency_id: CurrencyId) -> Balance;
 	fn get_minimums_redeem(vtoken_id: CurrencyId) -> Balance;
-	fn get_astar_parachain_id() -> u32;
 	fn get_moonbeam_parachain_id() -> u32;
-	fn get_hydradx_parachain_id() -> u32;
-	fn get_interlay_parachain_id() -> u32;
-	fn get_manta_parachain_id() -> u32;
 }
 
 impl<AccountId, CurrencyId, Balance: Zero> VtokenMintingInterface<AccountId, CurrencyId, Balance>
@@ -417,19 +409,7 @@ impl<AccountId, CurrencyId, Balance: Zero> VtokenMintingInterface<AccountId, Cur
 		Zero::zero()
 	}
 
-	fn get_astar_parachain_id() -> u32 {
-		0
-	}
 	fn get_moonbeam_parachain_id() -> u32 {
-		0
-	}
-	fn get_hydradx_parachain_id() -> u32 {
-		0
-	}
-	fn get_interlay_parachain_id() -> u32 {
-		0
-	}
-	fn get_manta_parachain_id() -> u32 {
 		0
 	}
 }
@@ -477,11 +457,7 @@ where
 	}
 }
 
-pub trait FeeGetter<RuntimeCall> {
-	fn get_fee_info(call: &RuntimeCall) -> ExtraFeeInfo;
-}
-
-pub trait DerivativeAccountHandler<CurrencyId, Balance, AccountId> {
+pub trait DerivativeAccountHandler<CurrencyId, Balance> {
 	fn check_derivative_index_exists(token: CurrencyId, derivative_index: DerivativeIndex) -> bool;
 
 	fn get_multilocation(

@@ -15,6 +15,8 @@
 //! Unit tests for the prices pallet.
 
 use super::*;
+use bifrost_asset_registry::AssetMetadata;
+use bifrost_primitives::{BNC, MANTA, VKSM};
 use frame_support::{assert_noop, assert_ok};
 use mock::{RuntimeEvent, *};
 use sp_runtime::{traits::BadOrigin, FixedPointNumber};
@@ -191,5 +193,103 @@ fn get_foreign_token_price_work() {
 		);
 
 		assert_eq!(Prices::get_price(&FIL), Prices::get_price(&VFIL));
+	});
+}
+
+#[test]
+fn fixed_u128() {
+	new_test_ext().execute_with(|| {
+		let bnc_decimal = 10u128.pow(12);
+		let bnc_amount = 100 * 10u128.pow(12);
+		let bnc_price = FixedU128::from_inner(200_000_000_000_000_000);
+		// 100 * 0.2 = 20 U
+		let dot_decimal = 10u128.pow(10);
+		let dot_amount = 5 * 10u128.pow(10);
+		let dot_price = FixedU128::from(4);
+
+		let bnc_total_value =
+			bnc_price / FixedU128::from_inner(bnc_decimal) * FixedU128::from_inner(bnc_amount);
+		let dot_total_value =
+			dot_price / FixedU128::from_inner(dot_decimal) * FixedU128::from_inner(dot_amount);
+		let dot_amount_fixed_u128 =
+			dot_total_value * FixedU128::from_inner(dot_decimal) / dot_price;
+		assert_eq!(bnc_total_value, dot_total_value);
+		println!("{:?}", bnc_total_value);
+		println!("{:?}", dot_amount_fixed_u128);
+		assert_eq!(dot_amount, dot_amount_fixed_u128.into_inner());
+	})
+}
+
+#[test]
+fn get_oracle_amount_by_currency_and_amount_in() {
+	new_test_ext().execute_with(|| {
+		assert_ok!(AssetRegistry::do_register_metadata(
+			MANTA,
+			&AssetMetadata {
+				name: b"Manta".to_vec(),
+				symbol: b"Manta".to_vec(),
+				decimals: 18,
+				minimal_balance: 1_000_000_000_000_000u128,
+			}
+		));
+		// 100 * 0.2 = 20u
+		let bnc_amount = 100 * 10u128.pow(12);
+		// 0.2 DOT
+		assert_eq!(
+			Some((
+				2_000_000_000,
+				Price::from_inner(200_000_000_000_000_000),
+				Price::saturating_from_integer(100)
+			)),
+			Prices::get_oracle_amount_by_currency_and_amount_in(&BNC, bnc_amount, &DOT)
+		);
+		// 0.04 KSM
+		assert_eq!(
+			Some((
+				40_000_000_000,
+				Price::from_inner(200_000_000_000_000_000),
+				Price::saturating_from_integer(500)
+			)),
+			Prices::get_oracle_amount_by_currency_and_amount_in(&BNC, bnc_amount, &KSM)
+		);
+		// 33.33333333333333333333
+		assert_eq!(
+			Some((
+				33_333_333_333_333_333_333,
+				Price::from_inner(200_000_000_000_000_000),
+				Price::from_inner(600_000_000_000_000_000)
+			)),
+			Prices::get_oracle_amount_by_currency_and_amount_in(&BNC, bnc_amount, &MANTA)
+		);
+
+		// 0.01 * 0.2 = 0.002 U
+		let bnc_amount = 10u128.pow(10);
+		// 0.00002 DOT * 100 =  0.002 U
+		assert_eq!(
+			Some((
+				200_000,
+				Price::from_inner(200_000_000_000_000_000),
+				Price::saturating_from_integer(100)
+			)),
+			Prices::get_oracle_amount_by_currency_and_amount_in(&BNC, bnc_amount, &DOT)
+		);
+		// 0.000004 KSM * 500 = 0.002 U
+		assert_eq!(
+			Some((
+				4_000_000,
+				Price::from_inner(200_000_000_000_000_000),
+				Price::saturating_from_integer(500)
+			)),
+			Prices::get_oracle_amount_by_currency_and_amount_in(&BNC, bnc_amount, &KSM)
+		);
+		// 0.003333333333333333333333 MANTA
+		assert_eq!(
+			Some((
+				3_333_333_333_333_333,
+				Price::from_inner(200_000_000_000_000_000),
+				Price::from_inner(600_000_000_000_000_000)
+			)),
+			Prices::get_oracle_amount_by_currency_and_amount_in(&BNC, bnc_amount, &MANTA)
+		);
 	});
 }

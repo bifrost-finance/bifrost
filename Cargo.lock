@@ -862,6 +862,67 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8c3c1a368f70d6cf7302d78f8f7093da241fb8e8807c05cc9e51a125895a6d5b"
 
 [[package]]
+name = "bb-bnc"
+version = "0.8.0"
+dependencies = [
+ "bifrost-asset-registry",
+ "bifrost-currencies",
+ "bifrost-primitives",
+ "bifrost-runtime-common",
+ "bifrost-slp",
+ "bifrost-vtoken-minting",
+ "cumulus-primitives-core",
+ "env_logger",
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "hex-literal 0.4.1",
+ "log",
+ "orml-tokens",
+ "orml-traits",
+ "orml-xtokens",
+ "pallet-balances",
+ "pallet-collective",
+ "pallet-xcm",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std 14.0.0 (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.13.0)",
+ "staging-xcm",
+ "staging-xcm-builder",
+ "staging-xcm-executor",
+]
+
+[[package]]
+name = "bb-bnc-rpc"
+version = "0.8.0"
+dependencies = [
+ "bb-bnc-rpc-runtime-api",
+ "bifrost-primitives",
+ "jsonrpsee",
+ "parity-scale-codec",
+ "serde",
+ "sp-api",
+ "sp-blockchain",
+ "sp-core",
+ "sp-rpc",
+ "sp-runtime",
+]
+
+[[package]]
+name = "bb-bnc-rpc-runtime-api"
+version = "0.8.0"
+dependencies = [
+ "bifrost-primitives",
+ "parity-scale-codec",
+ "sp-api",
+ "sp-core",
+ "sp-std 14.0.0 (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.13.0)",
+]
+
+[[package]]
 name = "beef"
 version = "0.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -895,12 +956,12 @@ dependencies = [
 name = "bifrost-buy-back"
 version = "0.8.0"
 dependencies = [
+ "bb-bnc",
  "bifrost-asset-registry",
  "bifrost-currencies",
  "bifrost-primitives",
  "bifrost-runtime-common",
  "bifrost-slp",
- "bifrost-ve-minting",
  "bifrost-vtoken-minting",
  "cumulus-primitives-core",
  "env_logger",
@@ -950,7 +1011,7 @@ dependencies = [
 
 [[package]]
 name = "bifrost-cli"
-version = "0.13.0"
+version = "0.14.0"
 dependencies = [
  "bifrost-primitives",
  "bifrost-service",
@@ -984,10 +1045,10 @@ dependencies = [
 name = "bifrost-clouds-convert"
 version = "0.8.0"
 dependencies = [
+ "bb-bnc",
  "bifrost-asset-registry",
  "bifrost-currencies",
  "bifrost-primitives",
- "bifrost-ve-minting",
  "frame-benchmarking",
  "frame-support",
  "frame-system",
@@ -1047,11 +1108,11 @@ dependencies = [
 name = "bifrost-farming"
 version = "0.8.0"
 dependencies = [
+ "bb-bnc",
  "bifrost-asset-registry",
  "bifrost-currencies",
  "bifrost-primitives",
  "bifrost-runtime-common",
- "bifrost-ve-minting",
  "env_logger",
  "frame-benchmarking",
  "frame-support",
@@ -1144,8 +1205,6 @@ dependencies = [
  "bifrost-asset-registry",
  "bifrost-currencies",
  "bifrost-primitives",
- "bifrost-salp",
- "bifrost-vtoken-voting",
  "bifrost-xcm-interface",
  "cumulus-primitives-core",
  "frame-benchmarking",
@@ -1272,6 +1331,7 @@ dependencies = [
  "bifrost-system-maker",
  "bifrost-system-staking",
  "bifrost-token-issuer",
+ "bifrost-vbnc-convert",
  "bifrost-vesting",
  "bifrost-vsbond-auction",
  "bifrost-vstoken-conversion",
@@ -1404,6 +1464,8 @@ dependencies = [
 name = "bifrost-polkadot-runtime"
 version = "0.8.0"
 dependencies = [
+ "bb-bnc",
+ "bb-bnc-rpc-runtime-api",
  "bifrost-asset-registry",
  "bifrost-buy-back",
  "bifrost-channel-commission",
@@ -1420,14 +1482,13 @@ dependencies = [
  "bifrost-salp",
  "bifrost-salp-rpc-runtime-api",
  "bifrost-slp",
+ "bifrost-slp-v2",
  "bifrost-slpx",
  "bifrost-stable-asset",
  "bifrost-stable-pool",
  "bifrost-stable-pool-rpc-runtime-api",
  "bifrost-system-maker",
  "bifrost-system-staking",
- "bifrost-ve-minting",
- "bifrost-ve-minting-rpc-runtime-api",
  "bifrost-vesting",
  "bifrost-vstoken-conversion",
  "bifrost-vtoken-minting",
@@ -1560,6 +1621,7 @@ dependencies = [
  "bstringify",
  "frame-support",
  "orml-oracle",
+ "orml-traits",
  "parity-scale-codec",
  "scale-info",
  "serde",
@@ -1575,6 +1637,8 @@ dependencies = [
 name = "bifrost-rpc"
 version = "0.8.0"
 dependencies = [
+ "bb-bnc-rpc",
+ "bb-bnc-rpc-runtime-api",
  "bifrost-farming-rpc",
  "bifrost-farming-rpc-runtime-api",
  "bifrost-flexible-fee-rpc",
@@ -1586,8 +1650,6 @@ dependencies = [
  "bifrost-salp-rpc-runtime-api",
  "bifrost-stable-pool-rpc",
  "bifrost-stable-pool-rpc-runtime-api",
- "bifrost-ve-minting-rpc",
- "bifrost-ve-minting-rpc-runtime-api",
  "bifrost-vtoken-minting-rpc",
  "bifrost-vtoken-minting-rpc-runtime-api",
  "cumulus-primitives-core",
@@ -1756,6 +1818,7 @@ name = "bifrost-service"
 version = "0.8.0"
 dependencies = [
  "async-trait",
+ "bb-bnc-rpc-runtime-api",
  "bifrost-farming-rpc-runtime-api",
  "bifrost-flexible-fee-rpc-runtime-api",
  "bifrost-kusama-runtime",
@@ -1765,7 +1828,6 @@ dependencies = [
  "bifrost-rpc",
  "bifrost-runtime-common",
  "bifrost-salp-rpc-runtime-api",
- "bifrost-ve-minting-rpc-runtime-api",
  "clap",
  "cumulus-client-cli",
  "cumulus-client-collator",
@@ -1883,6 +1945,36 @@ dependencies = [
  "polkadot-parachain-primitives",
  "scale-info",
  "sp-arithmetic",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std 14.0.0 (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.13.0)",
+ "staging-xcm",
+ "staging-xcm-builder",
+ "staging-xcm-executor",
+]
+
+[[package]]
+name = "bifrost-slp-v2"
+version = "0.0.0"
+dependencies = [
+ "bifrost-asset-registry",
+ "bifrost-currencies",
+ "bifrost-primitives",
+ "bifrost-vtoken-minting",
+ "cumulus-primitives-core",
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "hex-literal 0.4.1",
+ "orml-tokens",
+ "orml-traits",
+ "pallet-balances",
+ "pallet-utility",
+ "pallet-xcm",
+ "parity-scale-codec",
+ "polkadot-parachain-primitives",
+ "scale-info",
  "sp-core",
  "sp-io",
  "sp-runtime",
@@ -2106,64 +2198,25 @@ dependencies = [
 ]
 
 [[package]]
-name = "bifrost-ve-minting"
+name = "bifrost-vbnc-convert"
 version = "0.8.0"
 dependencies = [
  "bifrost-asset-registry",
  "bifrost-currencies",
  "bifrost-primitives",
- "bifrost-runtime-common",
- "bifrost-slp",
- "bifrost-vtoken-minting",
- "cumulus-primitives-core",
- "env_logger",
  "frame-benchmarking",
  "frame-support",
  "frame-system",
- "hex-literal 0.4.1",
- "log",
  "orml-tokens",
  "orml-traits",
- "orml-xtokens",
  "pallet-balances",
- "pallet-collective",
- "pallet-xcm",
  "parity-scale-codec",
  "scale-info",
  "sp-core",
  "sp-io",
  "sp-runtime",
  "sp-std 14.0.0 (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.13.0)",
- "staging-xcm",
  "staging-xcm-builder",
- "staging-xcm-executor",
-]
-
-[[package]]
-name = "bifrost-ve-minting-rpc"
-version = "0.8.0"
-dependencies = [
- "bifrost-primitives",
- "bifrost-ve-minting-rpc-runtime-api",
- "jsonrpsee",
- "parity-scale-codec",
- "serde",
- "sp-api",
- "sp-blockchain",
- "sp-core",
- "sp-rpc",
- "sp-runtime",
-]
-
-[[package]]
-name = "bifrost-ve-minting-rpc-runtime-api"
-version = "0.8.0"
-dependencies = [
- "bifrost-primitives",
- "parity-scale-codec",
- "sp-api",
- "sp-core",
- "sp-std 14.0.0 (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.13.0)",
 ]
 
 [[package]]
@@ -2231,12 +2284,12 @@ dependencies = [
 name = "bifrost-vtoken-minting"
 version = "0.8.0"
 dependencies = [
+ "bb-bnc",
  "bifrost-asset-registry",
  "bifrost-currencies",
  "bifrost-primitives",
  "bifrost-runtime-common",
  "bifrost-slp",
- "bifrost-ve-minting",
  "cumulus-primitives-core",
  "env_logger",
  "frame-benchmarking",
@@ -2840,9 +2893,9 @@ dependencies = [
 
 [[package]]
 name = "clap"
-version = "4.5.14"
+version = "4.5.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c937d4061031a6d0c8da4b9a4f98a172fc2976dfb1c19213a9cf7d0d3c837e36"
+checksum = "3e5a21b8495e732f1b3c364c9949b201ca7bae518c502c80256c96ad79eaf6ac"
 dependencies = [
  "clap_builder",
  "clap_derive",
@@ -2850,9 +2903,9 @@ dependencies = [
 
 [[package]]
 name = "clap_builder"
-version = "4.5.14"
+version = "4.5.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "85379ba512b21a328adf887e85f7742d12e96eb31f3ef077df4ffc26b506ffed"
+checksum = "8cf2dd12af7a047ad9d6da2b6b249759a22a7abc0f474c1dae1777afa4b21a73"
 dependencies = [
  "anstream",
  "anstyle",
@@ -11923,9 +11976,9 @@ dependencies = [
 
 [[package]]
 name = "quote"
-version = "1.0.36"
+version = "1.0.37"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0fa76aaf39101c457836aec0ce2316dbdc3ab723cdda1c6bd4e6ad4208acaca7"
+checksum = "b5b9d34b8991d19d98081b46eacdd8eb58c6f2b201139f7c5f643cc155a633af"
 dependencies = [
  "proc-macro2",
 ]
@@ -14181,9 +14234,9 @@ checksum = "388a1df253eca08550bef6c72392cfe7c30914bf41df5269b68cbd6ff8f570a3"
 
 [[package]]
 name = "serde"
-version = "1.0.205"
+version = "1.0.210"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e33aedb1a7135da52b7c21791455563facbbcc43d0f0f66165b42c21b3dfb150"
+checksum = "c8e3592472072e6e22e0a54d5904d9febf8508f65fb8552499a1abc7d1078c3a"
 dependencies = [
  "serde_derive",
 ]
@@ -14199,9 +14252,9 @@ dependencies = [
 
 [[package]]
 name = "serde_derive"
-version = "1.0.205"
+version = "1.0.210"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "692d6f5ac90220161d6774db30c662202721e64aed9058d2c394f451261420c1"
+checksum = "243902eda00fad750862fc144cea25caca5e20d615af0a81bee94ca738f1df1f"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -14889,7 +14942,7 @@ dependencies = [
 [[package]]
 name = "sp-crypto-ec-utils"
 version = "0.10.0"
-source = "git+https://github.com/paritytech/polkadot-sdk#604f56f03db847a90aa4fdb13be6b80482a4dcd6"
+source = "git+https://github.com/paritytech/polkadot-sdk#016421ac71574333da92a56ef7bcbef8621ccc14"
 dependencies = [
  "ark-bls12-377",
  "ark-bls12-377-ext",
@@ -14951,7 +15004,7 @@ dependencies = [
 [[package]]
 name = "sp-debug-derive"
 version = "14.0.0"
-source = "git+https://github.com/paritytech/polkadot-sdk#604f56f03db847a90aa4fdb13be6b80482a4dcd6"
+source = "git+https://github.com/paritytech/polkadot-sdk#016421ac71574333da92a56ef7bcbef8621ccc14"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -14971,7 +15024,7 @@ dependencies = [
 [[package]]
 name = "sp-externalities"
 version = "0.25.0"
-source = "git+https://github.com/paritytech/polkadot-sdk#604f56f03db847a90aa4fdb13be6b80482a4dcd6"
+source = "git+https://github.com/paritytech/polkadot-sdk#016421ac71574333da92a56ef7bcbef8621ccc14"
 dependencies = [
  "environmental",
  "parity-scale-codec",
@@ -15187,7 +15240,7 @@ dependencies = [
 [[package]]
 name = "sp-runtime-interface"
 version = "24.0.0"
-source = "git+https://github.com/paritytech/polkadot-sdk#604f56f03db847a90aa4fdb13be6b80482a4dcd6"
+source = "git+https://github.com/paritytech/polkadot-sdk#016421ac71574333da92a56ef7bcbef8621ccc14"
 dependencies = [
  "bytes",
  "impl-trait-for-tuples",
@@ -15219,7 +15272,7 @@ dependencies = [
 [[package]]
 name = "sp-runtime-interface-proc-macro"
 version = "17.0.0"
-source = "git+https://github.com/paritytech/polkadot-sdk#604f56f03db847a90aa4fdb13be6b80482a4dcd6"
+source = "git+https://github.com/paritytech/polkadot-sdk#016421ac71574333da92a56ef7bcbef8621ccc14"
 dependencies = [
  "Inflector",
  "expander",
@@ -15308,7 +15361,7 @@ source = "git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot
 [[package]]
 name = "sp-std"
 version = "14.0.0"
-source = "git+https://github.com/paritytech/polkadot-sdk#604f56f03db847a90aa4fdb13be6b80482a4dcd6"
+source = "git+https://github.com/paritytech/polkadot-sdk#016421ac71574333da92a56ef7bcbef8621ccc14"
 
 [[package]]
 name = "sp-storage"
@@ -15325,7 +15378,7 @@ dependencies = [
 [[package]]
 name = "sp-storage"
 version = "19.0.0"
-source = "git+https://github.com/paritytech/polkadot-sdk#604f56f03db847a90aa4fdb13be6b80482a4dcd6"
+source = "git+https://github.com/paritytech/polkadot-sdk#016421ac71574333da92a56ef7bcbef8621ccc14"
 dependencies = [
  "impl-serde",
  "parity-scale-codec",
@@ -15360,7 +15413,7 @@ dependencies = [
 [[package]]
 name = "sp-tracing"
 version = "16.0.0"
-source = "git+https://github.com/paritytech/polkadot-sdk#604f56f03db847a90aa4fdb13be6b80482a4dcd6"
+source = "git+https://github.com/paritytech/polkadot-sdk#016421ac71574333da92a56ef7bcbef8621ccc14"
 dependencies = [
  "parity-scale-codec",
  "tracing",
@@ -15457,8 +15510,9 @@ dependencies = [
 [[package]]
 name = "sp-wasm-interface"
 version = "20.0.0"
-source = "git+https://github.com/paritytech/polkadot-sdk#604f56f03db847a90aa4fdb13be6b80482a4dcd6"
+source = "git+https://github.com/paritytech/polkadot-sdk#016421ac71574333da92a56ef7bcbef8621ccc14"
 dependencies = [
+ "anyhow",
  "impl-trait-for-tuples",
  "log",
  "parity-scale-codec",
@@ -16567,6 +16621,7 @@ dependencies = [
  "sharded-slab",
  "smallvec",
  "thread_local",
+ "time",
  "tracing",
  "tracing-core",
  "tracing-log",

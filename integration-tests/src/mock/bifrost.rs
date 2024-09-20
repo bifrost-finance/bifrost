@@ -29,15 +29,14 @@ use sp_std::prelude::*;
 use crate::mock::{mock_message_queue, Amount};
 use bifrost_asset_registry::AssetIdMaps;
 use bifrost_polkadot_runtime::{
-	xcm_config::{
-		BaseXcmWeight, BifrostAccountIdToLocation, BifrostAssetTransactor, MaxAssetsForTransfer,
-		ParachainMinFee, SelfRelativeLocation, UniversalLocation,
-	},
-	BifrostCurrencyIdConvert, BifrostTreasuryAccount, MaxLengthLimit, MaxRefundPerBlock,
-	MaxTypeEntryPerBlock, NativeCurrencyId, SelfParaChainId, SubAccountIndexMultiLocationConvertor,
-	VtokenMinting, XcmInterface,
+	xcm_config::{BaseXcmWeight, BifrostAssetTransactor, MaxAssetsForTransfer, ParachainMinFee},
+	BifrostTreasuryAccount, MaxLengthLimit, MaxRefundPerBlock, MaxTypeEntryPerBlock,
+	NativeCurrencyId, SubAccountIndexMultiLocationConvertor, VtokenMinting, XcmInterface,
 };
-use bifrost_primitives::CurrencyId;
+use bifrost_primitives::{
+	AccountIdToLocation, CurrencyId, PolkadotUniversalLocation, SelfLocation,
+};
+use bifrost_runtime_common::currency_converter::CurrencyIdConvert;
 use bifrost_slp::QueryResponseManager;
 use pallet_xcm::{QueryStatus, XcmPassthrough};
 use polkadot_parachain_primitives::primitives::Sibling;
@@ -118,15 +117,15 @@ impl orml_xtokens::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type Balance = Balance;
 	type CurrencyId = CurrencyId;
-	type CurrencyIdConvert = BifrostCurrencyIdConvert<ParachainInfo>;
-	type AccountIdToLocation = BifrostAccountIdToLocation;
-	type SelfLocation = SelfRelativeLocation;
+	type CurrencyIdConvert = CurrencyIdConvert<ParachainInfo, Runtime>;
+	type AccountIdToLocation = AccountIdToLocation;
+	type SelfLocation = SelfLocation;
 	type LocationsFilter = Everything;
 	type MinXcmFee = ParachainMinFee;
 	type XcmExecutor = XcmExecutor<XcmConfig>;
 	type Weigher = FixedWeightBounds<UnitWeightCost, RuntimeCall, MaxInstructions>;
 	type BaseXcmWeight = BaseXcmWeight;
-	type UniversalLocation = UniversalLocation;
+	type UniversalLocation = PolkadotUniversalLocation;
 	type MaxAssetsForTransfer = MaxAssetsForTransfer;
 	type ReserveProvider = RelativeReserveProvider;
 	type RateLimiter = ();
@@ -173,7 +172,7 @@ impl Config for XcmConfig {
 	type OriginConverter = XcmOriginToCallOrigin;
 	type IsReserve = NativeAsset;
 	type IsTeleporter = ();
-	type UniversalLocation = UniversalLocation;
+	type UniversalLocation = PolkadotUniversalLocation;
 	type Barrier = Barrier;
 	type Weigher = FixedWeightBounds<UnitWeightCost, RuntimeCall, MaxInstructions>;
 	type Trader = FixedRateOfFungible<KsmPerSecondPerByte, ()>;
@@ -215,7 +214,7 @@ impl pallet_xcm::Config for Runtime {
 	type XcmTeleportFilter = Nothing;
 	type XcmReserveTransferFilter = Everything;
 	type Weigher = FixedWeightBounds<UnitWeightCost, RuntimeCall, MaxInstructions>;
-	type UniversalLocation = UniversalLocation;
+	type UniversalLocation = PolkadotUniversalLocation;
 	type RuntimeOrigin = RuntimeOrigin;
 	type RuntimeCall = RuntimeCall;
 	const VERSION_DISCOVERY_QUEUE_SIZE: u32 = 100;
@@ -298,7 +297,7 @@ impl bifrost_slp::Config for Runtime {
 	type WeightInfo = ();
 	type VtokenMinting = VtokenMinting;
 	type AccountConverter = SubAccountIndexMultiLocationConvertor;
-	type ParachainId = SelfParaChainId;
+	type ParachainId = ParachainInfo;
 	type SubstrateResponseManager = SubstrateResponseManager;
 	type MaxTypeEntryPerBlock = MaxTypeEntryPerBlock;
 	type MaxRefundPerBlock = MaxRefundPerBlock;

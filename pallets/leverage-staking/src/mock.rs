@@ -20,8 +20,9 @@ pub use super::*;
 use crate as leverage_staking;
 use bifrost_asset_registry::AssetIdMaps;
 pub use bifrost_primitives::{
-	currency::*, Balance, CurrencyId, CurrencyIdMapping, SlpOperator, SlpxOperator, TokenSymbol, *,
+	currency::*, Balance, CurrencyId, CurrencyIdMapping, SlpOperator, SlpxOperator, TokenSymbol,
 };
+use bifrost_primitives::{Moment, MoonbeamChainId, Price, PriceDetail, PriceFeeder, Ratio};
 use bifrost_runtime_common::milli;
 use frame_support::{
 	derive_impl, ord_parameter_types, parameter_types,
@@ -311,16 +312,12 @@ impl bifrost_vtoken_minting::Config for Test {
 	type WeightInfo = ();
 	type OnRedeemSuccess = ();
 	type XcmTransfer = XTokens;
-	type AstarParachainId = ConstU32<2007>;
-	type MoonbeamParachainId = ConstU32<2023>;
+	type MoonbeamChainId = MoonbeamChainId;
 	type BifrostSlpx = SlpxInterface;
-	type HydradxParachainId = ConstU32<2034>;
-	type MantaParachainId = ConstU32<2104>;
-	type InterlayParachainId = ConstU32<2032>;
 	type ChannelCommission = ();
 	type MaxLockRecords = ConstU32<100>;
 	type IncentivePoolAccount = IncentivePoolAccount;
-	type VeMinting = ();
+	type BbBNC = ();
 	type AssetIdMaps = AssetIdMaps<Test>;
 }
 
@@ -423,6 +420,24 @@ impl PriceFeeder for MockPriceFeeder {
 	}
 
 	fn get_normal_price(_asset_id: &CurrencyId) -> Option<u128> {
+		todo!()
+	}
+
+	fn get_amount_by_prices(
+		_currency_in: &CurrencyId,
+		_amount_in: Balance,
+		_currency_in_price: Price,
+		_currency_out: &CurrencyId,
+		_currency_out_price: Price,
+	) -> Option<Balance> {
+		todo!()
+	}
+
+	fn get_oracle_amount_by_currency_and_amount_in(
+		_currency_in: &CurrencyId,
+		_amount_in: Balance,
+		_currency_out: &CurrencyId,
+	) -> Option<(Balance, Price, Price)> {
 		todo!()
 	}
 }

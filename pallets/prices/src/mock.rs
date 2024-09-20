@@ -25,8 +25,9 @@ use sp_runtime::{traits::IdentityLookup, FixedPointNumber};
 use bifrost_asset_registry::AssetIdMaps;
 pub use bifrost_primitives::{
 	currency::{FIL, VFIL},
-	DOT, KSM, VDOT,
+	DOT, KSM, MANTA, VDOT,
 };
+use bifrost_primitives::{Moment, ASTR, BNC, DOT_U, GLMR};
 use sp_runtime::BuildStorage;
 
 pub type AccountId = u128;
@@ -53,10 +54,18 @@ pub struct MockDataProvider;
 impl DataProvider<CurrencyId, TimeStampedPrice> for MockDataProvider {
 	fn get(asset_id: &CurrencyId) -> Option<TimeStampedPrice> {
 		match *asset_id {
+			BNC => Some(TimeStampedPrice {
+				value: Price::from_inner(200_000_000_000_000_000),
+				timestamp: 0,
+			}),
 			DOT =>
 				Some(TimeStampedPrice { value: Price::saturating_from_integer(100), timestamp: 0 }),
 			KSM =>
 				Some(TimeStampedPrice { value: Price::saturating_from_integer(500), timestamp: 0 }),
+			MANTA => Some(TimeStampedPrice {
+				value: Price::from_inner(600_000_000_000_000_000),
+				timestamp: 0,
+			}),
 			VDOT => Some(TimeStampedPrice {
 				value: Price::from_inner(15000000000_0000000000),
 				timestamp: 0,
@@ -192,17 +201,8 @@ impl bifrost_asset_registry::Config for Test {
 }
 
 orml_traits::parameter_type_with_key! {
-	pub ExistentialDeposits: |currency_id: CurrencyId| -> Balance {
-		match currency_id {
-			&CurrencyId::Native(TokenSymbol::BNC) => 0,
-			&CurrencyId::Token(TokenSymbol::KSM) => 0,
-			&CurrencyId::VToken(TokenSymbol::KSM) => 0,
-			&DOT => 0,
-			&VDOT => 0,
-			&VBNC => 0,
-			&CurrencyId::BLP(_) => 0,
-			_ => 0
-		}
+	pub ExistentialDeposits: |_currency_id: CurrencyId| -> Balance {
+		0
 	};
 }
 
@@ -239,8 +239,8 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
 
 	bifrost_asset_registry::GenesisConfig::<Test> {
 		currency: vec![
-			(CurrencyId::Token(TokenSymbol::KSM), 1, None),
-			(CurrencyId::Native(TokenSymbol::BNC), 1, None),
+			(KSM, 1, None),
+			(BNC, 1, None),
 			(DOT, 1, Some(("_".to_string(), "_".to_string(), 10))),
 			(ASTR, 1, None),
 			(GLMR, 1, None),

@@ -295,7 +295,7 @@ impl<T: Config> Pallet<T> {
 			let pool_info = PoolInfos::<T>::get(pool).ok_or(Error::<T>::PoolDoesNotExist)?;
 			let share_info = SharesAndWithdrawnRewards::<T>::get(pool, who)
 				.ok_or(Error::<T>::ShareInfoNotExists)?;
-			T::VeMinting::get_rewards(pool, who, Some((share_info.share, pool_info.total_shares)))?;
+			T::BbBNC::get_rewards(pool, who, Some((share_info.share, pool_info.total_shares)))?;
 		}
 		SharesAndWithdrawnRewards::<T>::mutate_exists(
 			pool,

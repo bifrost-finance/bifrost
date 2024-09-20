@@ -258,6 +258,24 @@ impl PriceFeeder for MockPriceFeeder {
 	fn get_normal_price(_asset_id: &CurrencyId) -> Option<u128> {
 		todo!()
 	}
+
+	fn get_amount_by_prices(
+		_currency_in: &CurrencyId,
+		_amount_in: Balance,
+		_currency_in_price: Price,
+		_currency_out: &CurrencyId,
+		_currency_out_price: Price,
+	) -> Option<Balance> {
+		todo!()
+	}
+
+	fn get_oracle_amount_by_currency_and_amount_in(
+		_currency_in: &CurrencyId,
+		_amount_in: Balance,
+		_currency_out: &CurrencyId,
+	) -> Option<(Balance, Price, Price)> {
+		todo!()
+	}
 }
 
 parameter_types! {

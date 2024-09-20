@@ -19,6 +19,7 @@ members = [
 	"pallets/evm-accounts",
 	"pallets/xcm-interface",
 	"pallets/slp",
+	"pallets/slp-v2",
 	"pallets/vstoken-conversion",
 	"pallets/vtoken-minting",
 	"pallets/vtoken-voting",
@@ -26,13 +27,14 @@ members = [
 	"pallets/system-maker",
 	"pallets/fee-share",
 	"pallets/parachain-staking",
-	"pallets/ve-minting",
+	"pallets/bb-bnc",
 	"pallets/stable-pool",
 	"pallets/lend-market",
 	"pallets/prices",
 	"pallets/leverage-staking",
 	"pallets/channel-commission",
 	"pallets/clouds-convert",
+	"pallets/vbnc-convert",
 
 	"runtime/bifrost-kusama",
 	"runtime/bifrost-polkadot/src/evm/evm-utility/macro",
@@ -51,7 +53,7 @@ bifrost-flexible-fee-rpc = { path = "pallets/flexible-fee/rpc" }
 bifrost-rpc              = { path = "node/rpc" }
 bifrost-salp-rpc         = { path = "pallets/salp/rpc" }
 bifrost-stable-pool-rpc  = { path = "pallets/stable-pool/rpc" }
-bifrost-ve-minting-rpc   = { path = "pallets/ve-minting/rpc" }
+bb-bnc-rpc               = { path = "pallets/bb-bnc/rpc" }
 lend-market-rpc          = { path = "pallets/lend-market/rpc" }
 bifrost-vtoken-minting-rpc = { path = "pallets/vtoken-minting/rpc" }
 
@@ -78,6 +80,7 @@ bifrost-salp                           = { path = "pallets/salp", default-featur
 bifrost-salp-rpc-runtime-api           = { path = "pallets/salp/rpc/runtime-api", default-features = false }
 bifrost-service                        = { path = "node/service", default-features = false }
 bifrost-slp                            = { path = "pallets/slp", default-features = false }
+bifrost-slp-v2                         = { path = "pallets/slp-v2", default-features = false }
 bifrost-slpx                           = { path = "pallets/slpx", default-features = false }
 bifrost-stable-asset                   = { path = "pallets/stable-asset", default-features = false }
 bifrost-stable-pool                    = { path = "pallets/stable-pool", default-features = false }
@@ -85,8 +88,9 @@ bifrost-stable-pool-rpc-runtime-api    = { path = "pallets/stable-pool/rpc/runti
 bifrost-system-maker                   = { path = "pallets/system-maker", default-features = false }
 bifrost-system-staking                 = { path = "pallets/system-staking", default-features = false }
 bifrost-token-issuer                   = { path = "pallets/token-issuer", default-features = false }
-bifrost-ve-minting                     = { path = "pallets/ve-minting", default-features = false }
-bifrost-ve-minting-rpc-runtime-api     = { path = "pallets/ve-minting/rpc/runtime-api", default-features = false }
+bifrost-vbnc-convert                   = { path = "pallets/vbnc-convert", default-features = false }
+bb-bnc                                 = { path = "pallets/bb-bnc", default-features = false }
+bb-bnc-rpc-runtime-api                 = { path = "pallets/bb-bnc/rpc/runtime-api", default-features = false }
 bifrost-vesting                        = { path = "pallets/vesting", default-features = false }
 bifrost-vsbond-auction                 = { path = "pallets/vsbond-auction", default-features = false }
 bifrost-vstoken-conversion             = { path = "pallets/vstoken-conversion", default-features = false }
@@ -307,7 +311,7 @@ xcm-simulator                                 = { git = "https://github.com/pari
 # Other
 async-trait           = { version = "0.1.76" }
 bstringify            = { version = "0.1.2" }
-clap                  = { version = "4.5.14" }
+clap                  = { version = "4.5.17" }
 env_logger            = { version = "0.10.2" }
 ethabi                = { version = "18.0.0", default-features = false }
 ethereum              = { version = "0.14.0", default-features = false, features = ["with-codec"] }

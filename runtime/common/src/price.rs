@@ -28,9 +28,9 @@ use sp_std::marker::PhantomData;
 use xcm::latest::Weight;
 
 use bifrost_primitives::{
-	AccountFeeCurrency, AccountFeeCurrencyBalanceInCurrency, Balance, CurrencyId, PriceProvider,
+	AccountFeeCurrency, AccountFeeCurrencyBalanceInCurrency, Balance, CurrencyId, PriceFeeder,
+	PriceProvider,
 };
-use pallet_traits::PriceFeeder;
 
 use crate::Ratio;
 

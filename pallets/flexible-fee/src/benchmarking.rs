@@ -32,7 +32,7 @@ benchmarks! {
 		let caller = whitelisted_caller();
 	}: _(RawOrigin::Signed(caller),Some(CurrencyId::Token(TokenSymbol::DOT)))
 
-	set_universal_fee_currency_order_list {
+	set_default_fee_currency_list {
 		let default_list = BoundedVec::try_from(vec![CurrencyId::Token(TokenSymbol::DOT)]).unwrap();
 	}: _(RawOrigin::Root,default_list)
 

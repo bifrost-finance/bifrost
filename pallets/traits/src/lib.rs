@@ -1,6 +1,5 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use bifrost_primitives::{CurrencyId, PriceDetail};
 use num_bigint::{BigUint, ToBigUint};
 
 pub mod evm;
@@ -10,11 +9,6 @@ pub use lend_market::*;
 
 pub trait EmergencyCallFilter<Call> {
 	fn contains(call: &Call) -> bool;
-}
-
-pub trait PriceFeeder {
-	fn get_price(asset_id: &CurrencyId) -> Option<PriceDetail>;
-	fn get_normal_price(asset_id: &CurrencyId) -> Option<u128>;
 }
 
 pub trait EmergencyPriceFeeder<CurrencyId, Price> {

@@ -150,13 +150,14 @@ bifrost-runtime-common = { workspace = true }
 bifrost-salp = { workspace = true }
 bifrost-salp-rpc-runtime-api = { workspace = true }
 bifrost-slp = { workspace = true }
+bifrost-slp-v2 = { workspace = true, features = ["polkadot"] }
 bifrost-slpx = { workspace = true }
 bifrost-stable-pool = { workspace = true }
 bifrost-stable-pool-rpc-runtime-api = { workspace = true }
 bifrost-system-maker = { workspace = true }
 bifrost-system-staking = { workspace = true }
-bifrost-ve-minting = { workspace = true }
-bifrost-ve-minting-rpc-runtime-api = { workspace = true }
+bb-bnc = { workspace = true }
+bb-bnc-rpc-runtime-api = { workspace = true }
 bifrost-vesting = { workspace = true }
 bifrost-vstoken-conversion = { workspace = true }
 bifrost-vtoken-minting = { workspace = true }
@@ -267,13 +268,14 @@ std = [
 	"bifrost-salp-rpc-runtime-api/std",
 	"bifrost-salp/std",
 	"bifrost-slp/std",
+	"bifrost-slp-v2/std",
 	"bifrost-slpx/std",
 	"bifrost-stable-pool-rpc-runtime-api/std",
 	"bifrost-stable-pool/std",
 	"bifrost-system-maker/std",
 	"bifrost-system-staking/std",
-	"bifrost-ve-minting-rpc-runtime-api/std",
-	"bifrost-ve-minting/std",
+	"bb-bnc-rpc-runtime-api/std",
+	"bb-bnc/std",
 	"bifrost-vesting/std",
 	"bifrost-vtoken-minting/std",
 	"bifrost-vtoken-voting/std",
@@ -333,9 +335,10 @@ runtime-benchmarks = [
 	"sp-runtime/runtime-benchmarks",
 	"xcm-builder/runtime-benchmarks",
 	"bifrost-slp/runtime-benchmarks",
+	"bifrost-slp-v2/runtime-benchmarks",
 	"bifrost-salp/runtime-benchmarks",
 	"bifrost-vtoken-minting/runtime-benchmarks",
-	"bifrost-ve-minting/runtime-benchmarks",
+	"bb-bnc/runtime-benchmarks",
 	"bifrost-cross-in-out/runtime-benchmarks",
 	"bifrost-slpx/runtime-benchmarks",
 	"bifrost-stable-pool/runtime-benchmarks",
@@ -359,12 +362,13 @@ try-runtime = [
 	"bifrost-flexible-fee/try-runtime",
 	"bifrost-salp/try-runtime",
 	"bifrost-slp/try-runtime",
+	"bifrost-slp-v2/try-runtime",
 	"bifrost-slpx/try-runtime",
 	"bifrost-stable-asset/try-runtime",
 	"bifrost-stable-pool/try-runtime",
 	"bifrost-system-maker/try-runtime",
 	"bifrost-system-staking/try-runtime",
-	"bifrost-ve-minting/try-runtime",
+	"bb-bnc/try-runtime",
 	"bifrost-vesting/try-runtime",
 	"bifrost-vstoken-conversion/try-runtime",
 	"bifrost-vtoken-minting/try-runtime",

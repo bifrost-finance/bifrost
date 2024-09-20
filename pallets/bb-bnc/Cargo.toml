@@ -1,0 +1,68 @@
+[package]
+name = "bb-bnc"
+version = "0.8.0"
+authors = ["Kadokura <ymlll0508@gmail.com>"]
+edition = "2021"
+
+[package.metadata.docs.rs]
+targets = ["x86_64-unknown-linux-gnu"]
+
+[dependencies]
+parity-scale-codec = { workspace = true, features = ["derive"] }
+scale-info = { workspace = true, features = ["derive"] }
+log = { workspace = true }
+frame-support = { workspace = true }
+frame-system = { workspace = true }
+frame-benchmarking = { workspace = true, optional = true }
+bifrost-primitives = { workspace = true }
+orml-traits = { workspace = true }
+sp-std = { workspace = true }
+hex-literal = { workspace = true }
+pallet-balances = { workspace = true }
+xcm = { workspace = true }
+cumulus-primitives-core = { workspace = true }
+sp-core = { workspace = true }
+sp-runtime = { workspace = true }
+
+[dev-dependencies]
+orml-tokens = { workspace = true }
+bifrost-currencies = { workspace = true }
+orml-xtokens = { workspace = true }
+xcm-executor = { workspace = true }
+xcm-builder = { workspace = true }
+pallet-xcm = { workspace = true }
+xcm = { workspace = true }
+sp-io = { workspace = true }
+pallet-collective = { workspace = true }
+bifrost-slp = { workspace = true }
+bifrost-vtoken-minting = { workspace = true }
+bifrost-asset-registry = { workspace = true }
+bifrost-runtime-common = { workspace = true }
+env_logger = { workspace = true }
+
+[features]
+default = ["std"]
+std = [
+	"parity-scale-codec/std",
+	"scale-info/std",
+	"sp-runtime/std",
+	"frame-support/std",
+	"frame-system/std",
+	"frame-benchmarking/std",
+	"bifrost-primitives/std",
+	"bifrost-slp/std",
+	"bifrost-asset-registry/std",
+	"bifrost-runtime-common/std",
+	"orml-traits/std",
+	"orml-xtokens/std",
+]
+
+runtime-benchmarks = [
+	"frame-benchmarking/runtime-benchmarks",
+	"pallet-collective/runtime-benchmarks",
+	"frame-support/runtime-benchmarks",
+	"frame-system/runtime-benchmarks",
+	"xcm-builder/runtime-benchmarks",
+	"pallet-xcm/runtime-benchmarks",
+]
+try-runtime = ["frame-support/try-runtime"]

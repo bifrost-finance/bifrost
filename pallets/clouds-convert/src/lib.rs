@@ -22,11 +22,11 @@
 extern crate alloc;
 
 use alloc::vec;
+use bb_bnc::BbBNCInterface;
 use bifrost_primitives::{
 	currency::{CLOUD, VBNC},
 	CurrencyId,
 };
-use bifrost_ve_minting::VeMintingInterface;
 use frame_support::{
 	ensure,
 	pallet_prelude::*,
@@ -70,8 +70,8 @@ pub mod pallet {
 		/// Clouds Pallet Id
 		type CloudsPalletId: Get<PalletId>;
 
-		// veMinting interface
-		type VeMinting: VeMintingInterface<
+		// bbBNC interface
+		type BbBNC: BbBNCInterface<
 			AccountIdOf<Self>,
 			CurrencyIdOf<Self>,
 			BalanceOf<Self>,
@@ -138,7 +138,7 @@ pub mod pallet {
 			T::MultiCurrency::transfer(VBNC, &vbnc_pool_account, &who, can_get_vbnc)?;
 
 			// mint veBNC for user
-			T::VeMinting::create_lock_inner(&who, can_get_vbnc, T::LockedBlocks::get())?;
+			T::BbBNC::create_lock_inner(&who, can_get_vbnc, T::LockedBlocks::get())?;
 
 			// deposit event
 			Self::deposit_event(Event::CloudsConverted { clouds: value, vebnc: can_get_vbnc });

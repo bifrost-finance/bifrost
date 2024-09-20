@@ -2254,8 +2254,7 @@ pub mod pallet {
 pub struct DerivativeAccountProvider<T, F>(PhantomData<(T, F)>);
 
 impl<T: Config, F: Contains<CurrencyIdOf<T>>>
-	DerivativeAccountHandler<CurrencyIdOf<T>, BalanceOf<T>, AccountIdOf<T>>
-	for DerivativeAccountProvider<T, F>
+	DerivativeAccountHandler<CurrencyIdOf<T>, BalanceOf<T>> for DerivativeAccountProvider<T, F>
 {
 	fn check_derivative_index_exists(
 		token: CurrencyIdOf<T>,
@@ -2269,18 +2268,6 @@ impl<T: Config, F: Contains<CurrencyIdOf<T>>>
 		derivative_index: DerivativeIndex,
 	) -> Option<MultiLocation> {
 		DelegatorsIndex2Multilocation::<T>::get(token, derivative_index)
-	}
-
-	fn get_account_id(
-		token: CurrencyIdOf<T>,
-		derivative_index: DerivativeIndex,
-	) -> Option<AccountIdOf<T>> {
-		Self::get_multilocation(token, derivative_index).and_then(|location| {
-			if let Some(AccountId32 { id, .. }) = location.interior.last() {
-				return T::AccountId::decode(&mut &id[..]).ok();
-			}
-			None
-		})
 	}
 
 	fn get_stake_info(

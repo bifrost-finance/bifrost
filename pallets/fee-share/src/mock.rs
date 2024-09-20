@@ -23,8 +23,8 @@
 pub use super::*;
 
 use bifrost_asset_registry::AssetIdMaps;
-use bifrost_primitives::PriceDetail;
 pub use bifrost_primitives::{currency::*, CurrencyId, Moment, SlpxOperator, TokenSymbol};
+use bifrost_primitives::{MoonbeamChainId, PriceDetail};
 use bifrost_slp::{QueryId, QueryResponseManager};
 pub use cumulus_primitives_core::ParaId;
 use frame_support::{
@@ -41,7 +41,6 @@ use orml_traits::{
 	location::RelativeReserveProvider, parameter_type_with_key, DataFeeder, DataProvider,
 	DataProviderExtended, MultiCurrency,
 };
-use pallet_traits::PriceFeeder;
 use sp_core::ConstU32;
 use sp_runtime::{
 	traits::{AccountIdConversion, IdentityLookup, UniqueSaturatedInto},
@@ -278,6 +277,24 @@ impl PriceFeeder for MockPriceFeeder {
 	fn get_normal_price(_asset_id: &CurrencyId) -> Option<u128> {
 		todo!()
 	}
+
+	fn get_amount_by_prices(
+		_currency_in: &CurrencyId,
+		_amount_in: bifrost_primitives::Balance,
+		_currency_in_price: Price,
+		_currency_out: &CurrencyId,
+		_currency_out_price: Price,
+	) -> Option<bifrost_primitives::Balance> {
+		todo!()
+	}
+
+	fn get_oracle_amount_by_currency_and_amount_in(
+		_currency_in: &CurrencyId,
+		_amount_in: bifrost_primitives::Balance,
+		_currency_out: &CurrencyId,
+	) -> Option<(bifrost_primitives::Balance, Price, Price)> {
+		todo!()
+	}
 }
 
 pub struct ParaInfo;
@@ -405,15 +422,11 @@ impl bifrost_vtoken_minting::Config for Runtime {
 	type WeightInfo = ();
 	type OnRedeemSuccess = ();
 	type XcmTransfer = XTokens;
-	type AstarParachainId = ConstU32<2007>;
-	type MoonbeamParachainId = ConstU32<2023>;
-	type HydradxParachainId = ConstU32<2034>;
-	type MantaParachainId = ConstU32<2104>;
-	type InterlayParachainId = ConstU32<2032>;
+	type MoonbeamChainId = MoonbeamChainId;
 	type ChannelCommission = ();
 	type MaxLockRecords = ConstU32<100>;
 	type IncentivePoolAccount = IncentivePoolAccount;
-	type VeMinting = ();
+	type BbBNC = ();
 	type AssetIdMaps = AssetIdMaps<Runtime>;
 }
 

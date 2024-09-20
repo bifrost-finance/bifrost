@@ -35,12 +35,12 @@ fn create_sell_order_should_work() {
 			OrderType::Sell
 		));
 
-		assert_eq!(Auction::order_id(), 1);
+		assert_eq!(NextOrderId::<Test>::get(), 1);
 
-		let user_order_ids = Auction::user_order_ids(ALICE, OrderType::Sell);
+		let user_order_ids = UserOrderIds::<Test>::get(ALICE, OrderType::Sell);
 		assert!(user_order_ids.contains(&0));
 
-		assert!(Auction::order_info(&0).is_some());
+		assert!(TotalOrderInfos::<Test>::get(&0).is_some());
 
 		assert_eq!(Tokens::accounts(ALICE, VSBOND).free, 0);
 		assert_eq!(Tokens::accounts(ALICE, VSBOND).frozen, 0);
@@ -65,15 +65,15 @@ fn create_buy_order_should_work() {
 			OrderType::Buy
 		));
 
-		assert_eq!(Auction::order_id(), 1);
+		assert_eq!(NextOrderId::<Test>::get(), 1);
 
-		let user_order_ids = Auction::user_order_ids(ALICE, OrderType::Buy);
+		let user_order_ids = UserOrderIds::<Test>::get(ALICE, OrderType::Buy);
 		assert!(user_order_ids.contains(&0));
 
 		let module_account: u64 =
 			<Test as crate::Config>::PalletId::get().into_account_truncating();
 
-		assert!(Auction::order_info(&0).is_some());
+		assert!(TotalOrderInfos::<Test>::get(&0).is_some());
 
 		assert_eq!(Tokens::accounts(ALICE, TOKEN).free, 0);
 		assert_eq!(Tokens::accounts(ALICE, TOKEN).frozen, 0);
@@ -105,15 +105,15 @@ fn double_create_order_should_work() {
 			OrderType::Buy
 		));
 
-		assert_eq!(Auction::order_id(), 2);
+		assert_eq!(NextOrderId::<Test>::get(), 2);
 
-		let user_sell_order_ids = Auction::user_order_ids(ALICE, OrderType::Sell);
-		let user_buy_order_ids = Auction::user_order_ids(ALICE, OrderType::Buy);
+		let user_sell_order_ids = UserOrderIds::<Test>::get(ALICE, OrderType::Sell);
+		let user_buy_order_ids = UserOrderIds::<Test>::get(ALICE, OrderType::Buy);
 		assert!(user_sell_order_ids.contains(&0));
 		assert!(user_buy_order_ids.contains(&1));
 
-		assert!(Auction::order_info(&0).is_some());
-		assert!(Auction::order_info(&1).is_some());
+		assert!(TotalOrderInfos::<Test>::get(&0).is_some());
+		assert!(TotalOrderInfos::<Test>::get(&1).is_some());
 
 		let module_account: u64 =
 			<Test as crate::Config>::PalletId::get().into_account_truncating();
@@ -339,16 +339,16 @@ fn revoke_order_should_work() {
 		));
 		assert_ok!(Auction::revoke_order(Some(ALICE).into(), 1));
 
-		assert_eq!(Auction::order_id(), 2);
+		assert_eq!(NextOrderId::<Test>::get(), 2);
 
-		let user_sell_order_ids = Auction::user_order_ids(ALICE, OrderType::Sell);
-		let user_buy_order_ids = Auction::user_order_ids(ALICE, OrderType::Buy);
+		let user_sell_order_ids = UserOrderIds::<Test>::get(ALICE, OrderType::Sell);
+		let user_buy_order_ids = UserOrderIds::<Test>::get(ALICE, OrderType::Buy);
 
 		assert_eq!(user_sell_order_ids.len(), 0);
 		assert_eq!(user_buy_order_ids.len(), 0);
 
-		assert!(Auction::order_info(0).is_none());
-		assert!(Auction::order_info(1).is_none());
+		assert!(TotalOrderInfos::<Test>::get(0).is_none());
+		assert!(TotalOrderInfos::<Test>::get(1).is_none());
 
 		assert_eq!(Tokens::accounts(ALICE, VSBOND).free, 100);
 		assert_eq!(Tokens::accounts(ALICE, VSBOND).frozen, 0);
@@ -410,12 +410,12 @@ fn revoke_sell_order_which_be_partial_clinchd_should_work() {
 		assert_ok!(Auction::partial_clinch_order(Some(BRUCE).into(), 0, 33));
 		assert_ok!(Auction::revoke_order(Some(ALICE).into(), 0));
 
-		assert_eq!(Auction::order_id(), 1);
+		assert_eq!(NextOrderId::<Test>::get(), 1);
 
-		let user_sell_order_ids = Auction::user_order_ids(ALICE, OrderType::Sell);
+		let user_sell_order_ids = UserOrderIds::<Test>::get(ALICE, OrderType::Sell);
 		assert_eq!(user_sell_order_ids.len(), 0);
 
-		assert!(Auction::order_info(0).is_none());
+		assert!(TotalOrderInfos::<Test>::get(0).is_none());
 
 		assert_eq!(Tokens::accounts(ALICE, VSBOND).free, 67);
 		assert_eq!(Tokens::accounts(ALICE, VSBOND).frozen, 0);
@@ -451,12 +451,12 @@ fn revoke_buy_order_which_be_partial_clinchd_should_work() {
 		assert_ok!(Auction::partial_clinch_order(Some(BRUCE).into(), 0, 33));
 		assert_ok!(Auction::revoke_order(Some(ALICE).into(), 0));
 
-		assert_eq!(Auction::order_id(), 1);
+		assert_eq!(NextOrderId::<Test>::get(), 1);
 
-		let user_buy_order_ids = Auction::user_order_ids(ALICE, OrderType::Buy);
+		let user_buy_order_ids = UserOrderIds::<Test>::get(ALICE, OrderType::Buy);
 		assert_eq!(user_buy_order_ids.len(), 0);
 
-		assert!(Auction::order_info(0).is_none());
+		assert!(TotalOrderInfos::<Test>::get(0).is_none());
 
 		assert_eq!(Tokens::accounts(ALICE, VSBOND).free, 133);
 		assert_eq!(Tokens::accounts(ALICE, VSBOND).frozen, 0);
@@ -539,7 +539,7 @@ fn partial_clinch_sell_order_should_work_with_ed_limits() {
 		));
 		assert_ok!(Auction::partial_clinch_order(Some(CHARLIE).into(), 0, 4));
 
-		let order_info = Auction::order_info(0).unwrap();
+		let order_info = TotalOrderInfos::<Test>::get(0).unwrap();
 		assert_eq!(order_info.remain, 96);
 
 		let module_account: u64 =
@@ -575,12 +575,12 @@ fn partial_clinch_sell_order_should_work() {
 		));
 		assert_ok!(Auction::partial_clinch_order(Some(BRUCE).into(), 0, 33));
 
-		assert_eq!(Auction::order_id(), 1);
+		assert_eq!(NextOrderId::<Test>::get(), 1);
 
-		let user_sell_order_ids = Auction::user_order_ids(ALICE, OrderType::Sell);
+		let user_sell_order_ids = UserOrderIds::<Test>::get(ALICE, OrderType::Sell);
 		assert_eq!(user_sell_order_ids.len(), 1);
 
-		let order_info = Auction::order_info(0).unwrap();
+		let order_info = TotalOrderInfos::<Test>::get(0).unwrap();
 		assert_eq!(order_info.remain, 67);
 
 		let module_account: u64 =
@@ -604,10 +604,10 @@ fn partial_clinch_sell_order_should_work() {
 
 		assert_ok!(Auction::partial_clinch_order(Some(BRUCE).into(), 0, 9999999));
 
-		let user_sell_order_ids = Auction::user_order_ids(ALICE, OrderType::Buy);
+		let user_sell_order_ids = UserOrderIds::<Test>::get(ALICE, OrderType::Buy);
 		assert_eq!(user_sell_order_ids.len(), 0);
 
-		assert!(Auction::order_info(0).is_none());
+		assert!(TotalOrderInfos::<Test>::get(0).is_none());
 
 		assert_eq!(Tokens::accounts(ALICE, VSBOND).free, 0);
 		assert_eq!(Tokens::accounts(ALICE, VSBOND).frozen, 0);
@@ -642,12 +642,12 @@ fn partial_clinch_buy_order_should_work() {
 		));
 		assert_ok!(Auction::partial_clinch_order(Some(BRUCE).into(), 0, 33));
 
-		assert_eq!(Auction::order_id(), 1);
+		assert_eq!(NextOrderId::<Test>::get(), 1);
 
-		let user_buy_order_ids = Auction::user_order_ids(ALICE, OrderType::Buy);
+		let user_buy_order_ids = UserOrderIds::<Test>::get(ALICE, OrderType::Buy);
 		assert_eq!(user_buy_order_ids.len(), 1);
 
-		let order_info = Auction::order_info(0).unwrap();
+		let order_info = TotalOrderInfos::<Test>::get(0).unwrap();
 		assert_eq!(order_info.remain, 67);
 
 		let module_account: u64 =
@@ -671,10 +671,10 @@ fn partial_clinch_buy_order_should_work() {
 
 		assert_ok!(Auction::partial_clinch_order(Some(BRUCE).into(), 0, 9999999));
 
-		let user_buy_order_ids = Auction::user_order_ids(ALICE, OrderType::Buy);
+		let user_buy_order_ids = UserOrderIds::<Test>::get(ALICE, OrderType::Buy);
 		assert_eq!(user_buy_order_ids.len(), 0);
 
-		assert!(Auction::order_info(0).is_none());
+		assert!(TotalOrderInfos::<Test>::get(0).is_none());
 
 		assert_eq!(Tokens::accounts(ALICE, VSBOND).free, 200);
 		assert_eq!(Tokens::accounts(ALICE, VSBOND).frozen, 0);
@@ -774,12 +774,12 @@ fn handle_special_vsbond_sell_order_should_work() {
 		));
 		assert_ok!(Auction::partial_clinch_order(Some(BRUCE).into(), 0, 33));
 
-		assert_eq!(Auction::order_id(), 1);
+		assert_eq!(NextOrderId::<Test>::get(), 1);
 
-		let user_sell_order_ids = Auction::user_order_ids(ALICE, OrderType::Sell);
+		let user_sell_order_ids = UserOrderIds::<Test>::get(ALICE, OrderType::Sell);
 		assert_eq!(user_sell_order_ids.len(), 1);
 
-		let order_info = Auction::order_info(0).unwrap();
+		let order_info = TotalOrderInfos::<Test>::get(0).unwrap();
 		assert_eq!(order_info.remain, 67);
 
 		let module_account: u64 =
@@ -803,10 +803,10 @@ fn handle_special_vsbond_sell_order_should_work() {
 
 		assert_ok!(Auction::partial_clinch_order(Some(BRUCE).into(), 0, 9999999));
 
-		let user_sell_order_ids = Auction::user_order_ids(ALICE, OrderType::Buy);
+		let user_sell_order_ids = UserOrderIds::<Test>::get(ALICE, OrderType::Buy);
 		assert_eq!(user_sell_order_ids.len(), 0);
 
-		assert!(Auction::order_info(0).is_none());
+		assert!(TotalOrderInfos::<Test>::get(0).is_none());
 
 		assert_eq!(Tokens::accounts(ALICE, SPECIAL_VSBOND).free, 0);
 		assert_eq!(Tokens::accounts(ALICE, SPECIAL_VSBOND).frozen, 0);
@@ -841,12 +841,12 @@ fn handle_special_vsbond_buy_order_should_work() {
 		));
 		assert_ok!(Auction::partial_clinch_order(Some(BRUCE).into(), 0, 33));
 
-		assert_eq!(Auction::order_id(), 1);
+		assert_eq!(NextOrderId::<Test>::get(), 1);
 
-		let user_buy_order_ids = Auction::user_order_ids(ALICE, OrderType::Buy);
+		let user_buy_order_ids = UserOrderIds::<Test>::get(ALICE, OrderType::Buy);
 		assert_eq!(user_buy_order_ids.len(), 1);
 
-		let order_info = Auction::order_info(0).unwrap();
+		let order_info = TotalOrderInfos::<Test>::get(0).unwrap();
 		assert_eq!(order_info.remain, 67);
 
 		let module_account: u64 =
@@ -870,10 +870,10 @@ fn handle_special_vsbond_buy_order_should_work() {
 
 		assert_ok!(Auction::partial_clinch_order(Some(BRUCE).into(), 0, 9999999));
 
-		let user_buy_order_ids = Auction::user_order_ids(ALICE, OrderType::Buy);
+		let user_buy_order_ids = UserOrderIds::<Test>::get(ALICE, OrderType::Buy);
 		assert_eq!(user_buy_order_ids.len(), 0);
 
-		assert!(Auction::order_info(0).is_none());
+		assert!(TotalOrderInfos::<Test>::get(0).is_none());
 
 		assert_eq!(Tokens::accounts(ALICE, SPECIAL_VSBOND).free, 200);
 		assert_eq!(Tokens::accounts(ALICE, SPECIAL_VSBOND).frozen, 0);
@@ -900,7 +900,7 @@ fn set_buy_and_sell_transaction_fee_rate_should_work() {
 		assert_ok!(Auction::set_buy_and_sell_transaction_fee_rate(Some(ALICE).into(), 1000, 1000));
 
 		assert_eq!(
-			Auction::get_transaction_fee_rate(),
+			TransactionFee::<Test>::get(),
 			(Permill::from_percent(10), Permill::from_percent(10))
 		);
 

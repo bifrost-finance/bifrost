@@ -23,8 +23,8 @@
 use crate::*;
 use bifrost_asset_registry::AssetIdMaps;
 use bifrost_primitives::{
-	Amount, Balance, CurrencyId, CurrencyId::*, DoNothingExecuteXcm, MessageId, ParaId,
-	SlpOperator, SlpxOperator, TokenSymbol, TokenSymbol::*, VKSM,
+	Amount, Balance, CurrencyId, CurrencyId::*, MessageId, MockXcmExecutor, ParaId, SlpOperator,
+	SlpxOperator, TokenSymbol, TokenSymbol::*, VKSM,
 };
 use bifrost_xcm_interface::traits::XcmHelper;
 use cumulus_primitives_core::ParaId as Pid;
@@ -53,6 +53,7 @@ use zenlink_protocol::{
 };
 
 use crate as salp;
+use bifrost_primitives::MoonbeamChainId;
 
 pub(crate) type AccountId = <<Signature as sp_runtime::traits::Verify>::Signer as sp_runtime::traits::IdentifyAccount>::AccountId;
 pub(crate) type Block = frame_system::mocking::MockBlock<Test>;
@@ -307,9 +308,9 @@ impl EnsureOrigin<RuntimeOrigin> for EnsureConfirmAsGovernance {
 pub(crate) static mut MOCK_XCM_RESULT: (bool, bool) = (true, true);
 
 // Mock XcmExecutor
-pub struct MockXcmExecutor;
+pub struct MockSalpXcmExecutor;
 
-impl XcmHelper<crate::AccountIdOf<Test>, crate::BalanceOf<Test>> for MockXcmExecutor {
+impl XcmHelper<crate::AccountIdOf<Test>, crate::BalanceOf<Test>> for MockSalpXcmExecutor {
 	fn contribute(
 		_contributer: AccountId,
 		_index: ParaId,
@@ -431,16 +432,12 @@ impl bifrost_vtoken_minting::Config for Test {
 	type WeightInfo = ();
 	type OnRedeemSuccess = ();
 	type XcmTransfer = XTokens;
-	type AstarParachainId = ConstU32<2007>;
-	type MoonbeamParachainId = ConstU32<2023>;
+	type MoonbeamChainId = MoonbeamChainId;
 	type BifrostSlpx = SlpxInterface;
-	type HydradxParachainId = ConstU32<2034>;
-	type MantaParachainId = ConstU32<2104>;
-	type InterlayParachainId = ConstU32<2032>;
 	type ChannelCommission = ();
 	type MaxLockRecords = ConstU32<100>;
 	type IncentivePoolAccount = IncentivePoolAccount;
-	type VeMinting = ();
+	type BbBNC = ();
 	type AssetIdMaps = AssetIdMaps<Test>;
 }
 
@@ -465,7 +462,7 @@ impl salp::Config for Test {
 	type VSBondValidPeriod = VSBondValidPeriod;
 	type EnsureConfirmAsGovernance = EnsureConfirmAsGovernance;
 	type WeightInfo = ();
-	type XcmInterface = MockXcmExecutor;
+	type XcmInterface = MockSalpXcmExecutor;
 	type TreasuryAccount = TreasuryAccount;
 	type BuybackPalletId = BuybackPalletId;
 	type DexOperator = ZenlinkProtocol;
@@ -564,7 +561,7 @@ impl bifrost_xcm_interface::Config for Test {
 	type RelayNetwork = RelayNetwork;
 	type RelaychainCurrencyId = RelayCurrencyId;
 	type ParachainSovereignAccount = TreasuryAccount;
-	type XcmExecutor = DoNothingExecuteXcm;
+	type XcmExecutor = MockXcmExecutor;
 	type AccountIdToLocation = BifrostAccountIdToMultiLocation;
 	type SalpHelper = Salp;
 	type ParachainId = ParaInfo;
