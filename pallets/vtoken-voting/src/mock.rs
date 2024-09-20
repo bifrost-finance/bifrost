@@ -30,14 +30,16 @@ use frame_support::{
 	derive_impl, ord_parameter_types,
 	pallet_prelude::Weight,
 	parameter_types,
-	traits::{Everything, Get, Nothing},
+	traits::{ConstU64, Everything, Get, Nothing, PollStatus, Polling},
 	weights::RuntimeDbWeight,
 };
 use frame_system::EnsureRoot;
+use pallet_conviction_voting::{Tally, TallyOf};
 use pallet_xcm::EnsureResponse;
+use sp_core::serde::__private::de::Content::Some;
 use sp_runtime::{
 	traits::{BlockNumberProvider, ConstU32, IdentityLookup},
-	BuildStorage, Perbill,
+	BuildStorage, DispatchError, Perbill,
 };
 use xcm::{prelude::*, v3::MultiLocation};
 use xcm_builder::{FixedWeightBounds, FrameTransactionalProcessor};
@@ -63,6 +65,7 @@ frame_support::construct_runtime!(
 		Currencies: bifrost_currencies,
 		PolkadotXcm: pallet_xcm,
 		VtokenVoting: vtoken_voting,
+		ConvictionVoting: pallet_conviction_voting,
 	}
 );
 
@@ -239,7 +242,7 @@ impl XcmDestWeightAndFeeHandler<CurrencyId, BalanceOf<Runtime>> for XcmDestWeigh
 }
 
 pub struct DerivativeAccount;
-impl DerivativeAccountHandler<CurrencyId, Balance> for DerivativeAccount {
+impl DerivativeAccountHandler<CurrencyId, Balance, AccountId> for DerivativeAccount {
 	fn check_derivative_index_exists(
 		_token: CurrencyId,
 		_derivative_index: DerivativeIndex,
@@ -252,6 +255,10 @@ impl DerivativeAccountHandler<CurrencyId, Balance> for DerivativeAccount {
 		_derivative_index: DerivativeIndex,
 	) -> Option<MultiLocation> {
 		Some(xcm::v3::Parent.into())
+	}
+
+	fn get_account_id(_token: CurrencyId, _derivative_index: DerivativeIndex) -> Option<AccountId> {
+		Some(CHARLIE)
 	}
 
 	fn get_stake_info(
@@ -332,11 +339,109 @@ impl vtoken_voting::Config for Runtime {
 	type DerivativeAccount = DerivativeAccount;
 	type RelaychainBlockNumberProvider = RelaychainDataProvider;
 	type VTokenSupplyProvider = SimpleVTokenSupplyProvider;
-	type MaxVotes = ConstU32<256>;
+	type NativeMaxVotes = ConstU32<256>;
 	type ParachainId = ParachainId;
 	type QueryTimeout = QueryTimeout;
 	type ReferendumCheckInterval = ReferendumCheckInterval;
 	type WeightInfo = ();
+	type PalletsOrigin = OriginCaller;
+}
+//
+// #[derive(Clone, PartialEq, Eq, Debug)]
+// pub enum TestPollState {
+// 	Ongoing(TallyOf<Test>, u8),
+// 	Completed(u64, bool),
+// }
+// use TestPollState::*;
+//
+// parameter_types! {
+// 	pub static Polls: BTreeMap<u8, TestPollState> = vec![
+// 		(1, Completed(1, true)),
+// 		(2, Completed(2, false)),
+// 		(3, Ongoing(Tally::from_parts(0, 0, 0), 0)),
+// 	].into_iter().collect();
+// }
+//
+// pub struct TestPolls;
+// impl Polling<TallyOf<Test>> for TestPolls {
+// 	type Index = u8;
+// 	type Votes = u64;
+// 	type Moment = u64;
+// 	type Class = u8;
+// 	fn classes() -> Vec<u8> {
+// 		vec![0, 1, 2]
+// 	}
+// 	fn as_ongoing(index: u8) -> Option<(TallyOf<Test>, Self::Class)> {
+// 		Polls::get().remove(&index).and_then(|x| {
+// 			if let TestPollState::Ongoing(t, c) = x {
+// 				Some((t, c))
+// 			} else {
+// 				None
+// 			}
+// 		})
+// 	}
+// 	fn access_poll<R>(
+// 		index: Self::Index,
+// 		f: impl FnOnce(PollStatus<&mut TallyOf<Test>, u64, u8>) -> R,
+// 	) -> R {
+// 		let mut polls = Polls::get();
+// 		let entry = polls.get_mut(&index);
+// 		let r = match entry {
+// 			Some(Ongoing(ref mut tally_mut_ref, class)) =>
+// 				f(PollStatus::Ongoing(tally_mut_ref, *class)),
+// 			Some(Completed(when, succeeded)) => f(PollStatus::Completed(*when, *succeeded)),
+// 			None => f(PollStatus::None),
+// 		};
+// 		Polls::set(polls);
+// 		r
+// 	}
+// 	fn try_access_poll<R>(
+// 		index: Self::Index,
+// 		f: impl FnOnce(PollStatus<&mut TallyOf<Test>, u64, u8>) -> Result<R, DispatchError>,
+// 	) -> Result<R, DispatchError> {
+// 		let mut polls = Polls::get();
+// 		let entry = polls.get_mut(&index);
+// 		let r = match entry {
+// 			Some(Ongoing(ref mut tally_mut_ref, class)) =>
+// 				f(PollStatus::Ongoing(tally_mut_ref, *class)),
+// 			Some(Completed(when, succeeded)) => f(PollStatus::Completed(*when, *succeeded)),
+// 			None => f(PollStatus::None),
+// 		}?;
+// 		Polls::set(polls);
+// 		Ok(r)
+// 	}
+//
+// 	#[cfg(feature = "runtime-benchmarks")]
+// 	fn create_ongoing(class: Self::Class) -> Result<Self::Index, ()> {
+// 		let mut polls = Polls::get();
+// 		let i = polls.keys().rev().next().map_or(0, |x| x + 1);
+// 		polls.insert(i, Ongoing(Tally::new(0), class));
+// 		Polls::set(polls);
+// 		Ok(i)
+// 	}
+//
+// 	#[cfg(feature = "runtime-benchmarks")]
+// 	fn end_ongoing(index: Self::Index, approved: bool) -> Result<(), ()> {
+// 		let mut polls = Polls::get();
+// 		match polls.get(&index) {
+// 			Some(Ongoing(..)) => {},
+// 			_ => return Err(()),
+// 		}
+// 		let now = frame_system::Pallet::<Test>::block_number();
+// 		polls.insert(index, Completed(now, approved));
+// 		Polls::set(polls);
+// 		Ok(())
+// 	}
+// }
+
+impl pallet_conviction_voting::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type Currency = Balances;
+	type VoteLockingPeriod = ConstU64<3>;
+	type MaxVotes = ConstU32<3>;
+	type WeightInfo = ();
+	type MaxTurnout = ();
+	type Polls = ();
 }
 
 pub fn new_test_ext() -> sp_io::TestExternalities {
