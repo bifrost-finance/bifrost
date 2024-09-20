@@ -21,8 +21,8 @@
 #![allow(clippy::unnecessary_cast)]
 
 use crate::{
-	AssetIds, CurrencyId, DerivativeIndex, ExtraFeeInfo, LeasePeriod, ParaId, PoolId, RedeemType,
-	TokenId, TokenSymbol, XcmOperationType,
+	AssetIds, CurrencyId, DerivativeIndex, LeasePeriod, ParaId, PoolId, RedeemType, TokenId,
+	TokenSymbol, XcmOperationType,
 };
 use frame_support::pallet_prelude::{DispatchResultWithPostInfo, Weight};
 use parity_scale_codec::{Decode, Encode, FullCodec};
@@ -445,10 +445,6 @@ where
 	) -> DispatchResult {
 		Ok(())
 	}
-}
-
-pub trait FeeGetter<RuntimeCall> {
-	fn get_fee_info(call: &RuntimeCall) -> ExtraFeeInfo;
 }
 
 pub trait DerivativeAccountHandler<CurrencyId, Balance> {

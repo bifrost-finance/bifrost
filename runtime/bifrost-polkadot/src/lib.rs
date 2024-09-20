@@ -73,13 +73,12 @@ use bb_bnc::traits::BbBNCInterface;
 use bifrost_asset_registry::{AssetIdMaps, FixedRateOfAsset};
 pub use bifrost_primitives::{
 	traits::{
-		CheckSubAccount, FarmingInfo, FeeGetter, VtokenMintingInterface, VtokenMintingOperator,
+		CheckSubAccount, FarmingInfo, VtokenMintingInterface, VtokenMintingOperator,
 		XcmDestWeightAndFeeHandler,
 	},
 	AccountId, Amount, AssetIds, Balance, BlockNumber, CurrencyId, CurrencyIdMapping,
-	DistributionId, ExtraFeeInfo, ExtraFeeName, Liquidity, Moment, Nonce, ParaId, PoolId, Price,
-	Rate, Ratio, RpcContributionStatus, Shortfall, TimeUnit, TokenSymbol, DOT_TOKEN_ID,
-	GLMR_TOKEN_ID,
+	DistributionId, Liquidity, Moment, Nonce, ParaId, PoolId, Price, Rate, Ratio,
+	RpcContributionStatus, Shortfall, TimeUnit, TokenSymbol, DOT_TOKEN_ID, GLMR_TOKEN_ID,
 };
 use bifrost_runtime_common::{
 	constants::time::*, dollar, micro, milli, AuraId, CouncilCollective,
@@ -907,53 +906,17 @@ impl bifrost_vesting::Config for Runtime {
 
 // Bifrost modules start
 
-pub struct ExtraFeeMatcher;
-impl FeeGetter<RuntimeCall> for ExtraFeeMatcher {
-	fn get_fee_info(c: &RuntimeCall) -> ExtraFeeInfo {
-		match *c {
-			RuntimeCall::XcmInterface(bifrost_xcm_interface::Call::transfer_statemine_assets {
-				..
-			}) => ExtraFeeInfo {
-				extra_fee_name: ExtraFeeName::StatemineTransfer,
-				extra_fee_currency: RelayCurrencyId::get(),
-			},
-			RuntimeCall::XcmInterface(bifrost_xcm_interface::Call::transfer_ethereum_assets {
-				..
-			}) => ExtraFeeInfo {
-				extra_fee_name: ExtraFeeName::EthereumTransfer,
-				extra_fee_currency: RelayCurrencyId::get(),
-			},
-			RuntimeCall::VtokenVoting(bifrost_vtoken_voting::Call::vote { vtoken, .. }) =>
-				ExtraFeeInfo {
-					extra_fee_name: ExtraFeeName::VoteVtoken,
-					extra_fee_currency: vtoken.to_token().unwrap_or(vtoken),
-				},
-			RuntimeCall::VtokenVoting(bifrost_vtoken_voting::Call::remove_delegator_vote {
-				vtoken,
-				..
-			}) => ExtraFeeInfo {
-				extra_fee_name: ExtraFeeName::VoteRemoveDelegatorVote,
-				extra_fee_currency: vtoken.to_token().unwrap_or(vtoken),
-			},
-			_ => ExtraFeeInfo::default(),
-		}
-	}
-}
-
 parameter_types! {
 	pub MaxFeeCurrencyOrderListLen: u32 = 50;
 }
 
 impl bifrost_flexible_fee::Config for Runtime {
-	type Currency = Balances;
 	type DexOperator = ZenlinkProtocol;
 	type RuntimeEvent = RuntimeEvent;
 	type MultiCurrency = Currencies;
 	type TreasuryAccount = BifrostTreasuryAccount;
 	type MaxFeeCurrencyOrderListLen = MaxFeeCurrencyOrderListLen;
-	type OnUnbalanced = Treasury;
 	type WeightInfo = weights::bifrost_flexible_fee::BifrostWeight<Runtime>;
-	type ExtraFeeMatcher = ExtraFeeMatcher;
 	type ParachainId = ParachainInfo;
 	type ControlOrigin = TechAdminOrCouncil;
 	type XcmWeightAndFeeHandler = XcmInterface;
@@ -962,6 +925,7 @@ impl bifrost_flexible_fee::Config for Runtime {
 	type RelaychainCurrencyId = RelayCurrencyId;
 	type XcmRouter = XcmRouter;
 	type PalletId = FlexibleFeePalletId;
+	type PriceFeeder = Prices;
 }
 
 parameter_types! {
@@ -1067,6 +1031,7 @@ parameter_types! {
 }
 
 impl bifrost_salp::Config for Runtime {
+	type BancorPool = ();
 	type RuntimeEvent = RuntimeEvent;
 	type RuntimeOrigin = RuntimeOrigin;
 	type RuntimeCall = RuntimeCall;
@@ -1085,10 +1050,14 @@ impl bifrost_salp::Config for Runtime {
 	type XcmInterface = XcmInterface;
 	type TreasuryAccount = BifrostTreasuryAccount;
 	type BuybackPalletId = BuybackPalletId;
+	type DexOperator = ZenlinkProtocol;
 	type CurrencyIdConversion = AssetIdMaps<Runtime>;
 	type CurrencyIdRegister = AssetIdMaps<Runtime>;
+	type ParachainId = ParachainInfo;
 	type StablePool = StablePool;
 	type VtokenMinting = VtokenMinting;
+	type LockId = SalpLockId;
+	type BatchLimit = BatchLimit;
 }
 
 impl bifrost_asset_registry::Config for Runtime {

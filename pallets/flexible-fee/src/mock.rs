@@ -19,40 +19,28 @@
 #![cfg(test)]
 
 use super::*;
-use crate::{self as flexible_fee, tests::CHARLIE};
-use bifrost_asset_registry::AssetIdMaps;
-use bifrost_primitives::{
-	Balance, CurrencyId, DerivativeAccountHandler, DerivativeIndex, ExtraFeeInfo, MessageId,
-	ParaId, TokenSymbol, VTokenSupplyProvider, VKSM,
-};
-use bifrost_vtoken_voting::AccountVote;
-use bifrost_xcm_interface::traits::XcmHelper;
+use crate::{self as flexible_fee, mock_price::MockPriceFeeder};
+use bifrost_currencies::BasicCurrencyAdapter;
+use bifrost_primitives::{Balance, CurrencyId, TokenSymbol};
 use cumulus_primitives_core::ParaId as Pid;
 use frame_support::{
-	derive_impl, ord_parameter_types, parameter_types,
+	derive_impl, parameter_types,
 	sp_runtime::{DispatchError, DispatchResult},
-	traits::{ConstU128, Everything, Get, LockIdentifier, Nothing},
+	traits::{ConstU128, Get, Nothing},
 	weights::{ConstantMultiplier, IdentityFee},
 	PalletId,
 };
-use frame_system as system;
-use frame_system::{EnsureRoot, EnsureSignedBy};
+use frame_system::{self, EnsureRoot};
 use orml_traits::MultiCurrency;
 use pallet_balances::Call as BalancesCall;
-use pallet_xcm::EnsureResponse;
-use sp_arithmetic::Percent;
 use sp_runtime::{
-	testing::Header,
-	traits::{AccountIdConversion, BlockNumberProvider, IdentityLookup, UniqueSaturatedInto},
+	traits::{AccountIdConversion, IdentityLookup, UniqueSaturatedInto},
 	AccountId32, BuildStorage, SaturatedConversion,
 };
 use sp_std::marker::PhantomData;
 use std::convert::TryInto;
-use xcm::v3::MultiLocation;
-use xcm_builder::{FixedWeightBounds, FrameTransactionalProcessor};
-use xcm_executor::XcmExecutor;
 use zenlink_protocol::{
-	AssetId as ZenlinkAssetId, LocalAssetHandler, PairLpGenerate, ZenlinkMultiAssets,
+	AssetBalance, AssetId as ZenlinkAssetId, LocalAssetHandler, PairLpGenerate, ZenlinkMultiAssets,
 };
 
 pub type AccountId = AccountId32;
@@ -61,40 +49,29 @@ pub type Amount = i128;
 
 pub const TREASURY_ACCOUNT: AccountId32 = AccountId32::new([9u8; 32]);
 
-pub type Block = sp_runtime::generic::Block<Header, UncheckedExtrinsic>;
-pub type UncheckedExtrinsic = sp_runtime::generic::UncheckedExtrinsic<u32, u128, RuntimeCall, ()>;
+type Block = frame_system::mocking::MockBlock<Test>;
 
 // Configure a mock runtime to test the pallet.
 frame_support::construct_runtime!(
 	pub enum Test {
-		System: system,
+		System: frame_system,
+		Balances: pallet_balances = 10,
 		Tokens: orml_tokens,
-		Balances: pallet_balances,
 		TransactionPayment: pallet_transaction_payment,
 		FlexibleFee: flexible_fee,
 		ZenlinkProtocol: zenlink_protocol,
 		Currencies: bifrost_currencies,
-		Salp: bifrost_salp,
 		AssetRegistry: bifrost_asset_registry,
-		PolkadotXcm: pallet_xcm,
-		VtokenVoting: bifrost_vtoken_voting,
 	}
 );
 
 pub(crate) const BALANCE_TRANSFER_CALL: <Test as frame_system::Config>::RuntimeCall =
 	RuntimeCall::Balances(BalancesCall::transfer_allow_death { dest: ALICE, value: 69 });
 
-pub(crate) const VTOKENVOTING_VOTE_CALL: <Test as frame_system::Config>::RuntimeCall =
-	RuntimeCall::VtokenVoting(bifrost_vtoken_voting::Call::vote {
-		vtoken: VKSM,
-		poll_index: 1u32,
-		vtoken_vote: AccountVote::Split { aye: 1, nay: 1 },
-	});
-
 impl bifrost_asset_registry::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
 	type Currency = Balances;
-	type RegisterOrigin = EnsureSignedBy<One, AccountId>;
+	type RegisterOrigin = EnsureRoot<AccountId>;
 	type WeightInfo = ();
 }
 
@@ -102,12 +79,12 @@ parameter_types! {
 	pub const BlockHashCount: u32 = 250;
 }
 
-#[derive_impl(frame_system::config_preludes::TestDefaultConfig as frame_system::DefaultConfig)]
-impl system::Config for Test {
-	type AccountData = pallet_balances::AccountData<u128>;
-	type AccountId = AccountId;
+#[derive_impl(frame_system::config_preludes::TestDefaultConfig)]
+impl frame_system::Config for Test {
 	type Block = Block;
+	type AccountId = AccountId;
 	type Lookup = IdentityLookup<Self::AccountId>;
+	type AccountData = pallet_balances::AccountData<Balance>;
 }
 
 parameter_types! {
@@ -175,20 +152,13 @@ parameter_types! {
 	pub const FlexibleFeePalletId: PalletId = PalletId(*b"bf/flexi");
 }
 
-ord_parameter_types! {
-	pub const One: AccountId = CHARLIE;
-}
-
 impl crate::Config for Test {
-	type Currency = Balances;
 	type DexOperator = ZenlinkProtocol;
 	type RuntimeEvent = RuntimeEvent;
 	type MultiCurrency = Currencies;
 	type TreasuryAccount = TreasuryAccount;
 	type MaxFeeCurrencyOrderListLen = MaxFeeCurrencyOrderListLen;
-	type OnUnbalanced = ();
 	type WeightInfo = ();
-	type ExtraFeeMatcher = ExtraFeeMatcher;
 	type ParachainId = ParaInfo;
 	type ControlOrigin = EnsureRoot<AccountId>;
 	type XcmWeightAndFeeHandler = XcmDestWeightAndFee;
@@ -197,6 +167,7 @@ impl crate::Config for Test {
 	type RelaychainCurrencyId = RelayCurrencyId;
 	type XcmRouter = ();
 	type PalletId = FlexibleFeePalletId;
+	type PriceFeeder = MockPriceFeeder;
 }
 
 pub struct XcmDestWeightAndFee;
@@ -217,20 +188,6 @@ impl XcmDestWeightAndFeeHandler<CurrencyId, Balance> for XcmDestWeightAndFee {
 	}
 }
 
-pub struct ExtraFeeMatcher;
-impl FeeGetter<RuntimeCall> for ExtraFeeMatcher {
-	fn get_fee_info(c: &RuntimeCall) -> ExtraFeeInfo {
-		match *c {
-			RuntimeCall::VtokenVoting(bifrost_vtoken_voting::Call::vote { vtoken, .. }) =>
-				ExtraFeeInfo {
-					extra_fee_name: ExtraFeeName::VoteVtoken,
-					extra_fee_currency: vtoken.to_token().unwrap_or(vtoken),
-				},
-			_ => ExtraFeeInfo::default(),
-		}
-	}
-}
-
 pub struct ParaInfo;
 impl Get<Pid> for ParaInfo {
 	fn get() -> Pid {
@@ -242,13 +199,10 @@ parameter_types! {
 	pub const GetNativeCurrencyId: CurrencyId = CurrencyId::Native(TokenSymbol::BNC);
 }
 
-pub type AdaptedBasicCurrency =
-	bifrost_currencies::BasicCurrencyAdapter<Test, Balances, Amount, BlockNumber>;
-
 impl bifrost_currencies::Config for Test {
 	type GetNativeCurrencyId = GetNativeCurrencyId;
 	type MultiCurrency = Tokens;
-	type NativeCurrency = AdaptedBasicCurrency;
+	type NativeCurrency = BasicCurrencyAdapter<Test, Balances, Amount, BlockNumber>;
 	type WeightInfo = ();
 }
 
@@ -332,191 +286,18 @@ where
 
 // Build genesis storage according to the mock runtime.
 pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
-	system::GenesisConfig::<Test>::default().build_storage().unwrap().into()
-}
-
-//************** Salp mock start *****************
-
-// To control the result returned by `MockXcmExecutor`
-pub(crate) static mut MOCK_XCM_RESULT: (bool, bool) = (true, true);
-
-pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
-
-// Mock XcmExecutor
-pub struct MockXcmExecutor;
-
-impl XcmHelper<AccountIdOf<Test>, PalletBalanceOf<Test>> for MockXcmExecutor {
-	fn contribute(
-		_contributer: AccountId,
-		_index: ParaId,
-		_value: Balance,
-	) -> Result<MessageId, DispatchError> {
-		let result = unsafe { MOCK_XCM_RESULT.0 };
-
-		match result {
-			true => Ok([0; 32]),
-			false => Err(DispatchError::BadOrigin),
-		}
-	}
+	let mut t = frame_system::GenesisConfig::<Test>::default().build_storage().unwrap();
+	// We use default for brevity, but you can configure as desired if needed.
+	pallet_balances::GenesisConfig::<Test>::default()
+		.assimilate_storage(&mut t)
+		.unwrap();
+	t.into()
 }
 
 pub const ALICE: AccountId = AccountId::new([0u8; 32]);
 
 parameter_types! {
-	pub const MinContribution: Balance = 10;
-	pub const BifrostCrowdloanId: PalletId = PalletId(*b"bf/salp#");
-	pub const RemoveKeysLimit: u32 = 50;
-	pub const SlotLength: BlockNumber = 8u32 as BlockNumber;
-	pub const LeasePeriod: BlockNumber = 8u32 as BlockNumber;
-	pub const VSBondValidPeriod: BlockNumber = 8u32 as BlockNumber;
-	pub const ReleaseCycle: BlockNumber = 8u32 as BlockNumber;
-	pub const ReleaseRatio: Percent = Percent::from_percent(50);
-	pub ConfirmMuitiSigAccount: AccountId = ALICE;
 	pub const RelayCurrencyId: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
-	pub const BuybackPalletId: PalletId = PalletId(*b"bf/salpc");
-	pub const SalpLockId: LockIdentifier = *b"salplock";
-	pub const BatchLimit: u32 = 50;
-}
-
-impl bifrost_salp::Config for Test {
-	type RuntimeEvent = RuntimeEvent;
-	type LeasePeriod = LeasePeriod;
-	type MinContribution = MinContribution;
-	type MultiCurrency = Currencies;
-	type PalletId = BifrostCrowdloanId;
-	type RelayChainToken = RelayCurrencyId;
-	type ReleaseCycle = ReleaseCycle;
-	type ReleaseRatio = ReleaseRatio;
-	type RemoveKeysLimit = RemoveKeysLimit;
-	type SlotLength = SlotLength;
-	type VSBondValidPeriod = VSBondValidPeriod;
-	type WeightInfo = ();
-	type EnsureConfirmAsGovernance = EnsureRoot<AccountId>;
-	type XcmInterface = MockXcmExecutor;
-	type TreasuryAccount = TreasuryAccount;
-	type BuybackPalletId = BuybackPalletId;
-	type CurrencyIdConversion = AssetIdMaps<Test>;
-	type CurrencyIdRegister = AssetIdMaps<Test>;
-	type RuntimeOrigin = RuntimeOrigin;
-	type RuntimeCall = RuntimeCall;
-	type StablePool = ();
-	type VtokenMinting = ();
-}
-
-parameter_types! {
-	// One XCM operation is 200_000_000 XcmWeight, cross-chain transfer ~= 2x of transfer = 3_000_000_000
-	pub UnitWeightCost: Weight = Weight::from_parts(200_000_000, 0);
-	pub const MaxInstructions: u32 = 100;
-	pub UniversalLocation: InteriorLocation = Parachain(2001).into();
-}
-
-pub struct XcmConfig;
-impl xcm_executor::Config for XcmConfig {
-	type AssetClaims = PolkadotXcm;
-	type AssetTransactor = ();
-	type AssetTrap = PolkadotXcm;
-	type Barrier = ();
-	type RuntimeCall = RuntimeCall;
-	type IsReserve = ();
-	type IsTeleporter = ();
-	type UniversalLocation = UniversalLocation;
-	type OriginConverter = ();
-	type ResponseHandler = PolkadotXcm;
-	type SubscriptionService = PolkadotXcm;
-	type Trader = ();
-	type Weigher = FixedWeightBounds<UnitWeightCost, RuntimeCall, MaxInstructions>;
-	type XcmSender = ();
-	type PalletInstancesInfo = AllPalletsWithSystem;
-	type MaxAssetsIntoHolding = ConstU32<64>;
-	type FeeManager = ();
-	type MessageExporter = ();
-	type UniversalAliases = Nothing;
-	type CallDispatcher = RuntimeCall;
-	type SafeCallFilter = Everything;
-	type AssetLocker = ();
-	type AssetExchanger = ();
-	type Aliasers = Nothing;
-	type TransactionalProcessor = FrameTransactionalProcessor;
-	type HrmpNewChannelOpenRequestHandler = ();
-	type HrmpChannelAcceptedHandler = ();
-	type HrmpChannelClosingHandler = ();
-	type XcmRecorder = ();
-}
-
-#[cfg(feature = "runtime-benchmarks")]
-parameter_types! {
-	pub ReachableDest: Option<Location> = Some(Parent.into());
-}
-
-impl pallet_xcm::Config for Test {
-	type RuntimeEvent = RuntimeEvent;
-	type ExecuteXcmOrigin = xcm_builder::EnsureXcmOrigin<RuntimeOrigin, ()>;
-	type UniversalLocation = UniversalLocation;
-	type SendXcmOrigin = xcm_builder::EnsureXcmOrigin<RuntimeOrigin, ()>;
-	type Weigher = FixedWeightBounds<UnitWeightCost, RuntimeCall, MaxInstructions>;
-	type XcmExecuteFilter = Nothing;
-	type XcmExecutor = XcmExecutor<XcmConfig>;
-	type XcmReserveTransferFilter = Everything;
-	type XcmRouter = ();
-	type XcmTeleportFilter = Nothing;
-	type RuntimeOrigin = RuntimeOrigin;
-	type RuntimeCall = RuntimeCall;
-	const VERSION_DISCOVERY_QUEUE_SIZE: u32 = 100;
-	type AdvertisedXcmVersion = ConstU32<2>;
-	type Currency = Balances;
-	type CurrencyMatcher = ();
-	type TrustedLockers = ();
-	type SovereignAccountOf = ();
-	type MaxLockers = ConstU32<8>;
-	type WeightInfo = pallet_xcm::TestWeightInfo;
-	type AdminOrigin = EnsureRoot<AccountId>;
-	type MaxRemoteLockConsumers = ConstU32<0>;
-	type RemoteLockConsumerIdentifier = ();
-}
-
-//************** Salp mock end *****************
-
-// ************** VtokenVoting mock start *****************
-pub struct SimpleVTokenSupplyProvider;
-
-impl VTokenSupplyProvider<CurrencyId, Balance> for SimpleVTokenSupplyProvider {
-	fn get_vtoken_supply(_: CurrencyId) -> Option<Balance> {
-		Some(u64::MAX.into())
-	}
-
-	fn get_token_supply(_: CurrencyId) -> Option<Balance> {
-		Some(u64::MAX.into())
-	}
-}
-
-parameter_types! {
-	pub const ReferendumCheckInterval: BlockNumber = 300;
-}
-
-impl bifrost_vtoken_voting::Config for Test {
-	type RuntimeEvent = RuntimeEvent;
-	type RuntimeOrigin = RuntimeOrigin;
-	type RuntimeCall = RuntimeCall;
-	type MultiCurrency = Currencies;
-	type ControlOrigin = EnsureSignedBy<One, AccountId>;
-	type ResponseOrigin = EnsureResponse<Everything>;
-	type XcmDestWeightAndFee = XcmDestWeightAndFee;
-	type DerivativeAccount = DerivativeAccount;
-	type RelaychainBlockNumberProvider = RelaychainDataProvider;
-	type VTokenSupplyProvider = SimpleVTokenSupplyProvider;
-	type MaxVotes = ConstU32<256>;
-	type ParachainId = ParaInfo;
-	type QueryTimeout = QueryTimeout;
-	type ReferendumCheckInterval = ReferendumCheckInterval;
-	type WeightInfo = ();
-}
-
-impl AccountFeeCurrency<AccountId> for Test {
-	type Error = Error<Test>;
-
-	fn get_fee_currency(account: &AccountId32, fee: U256) -> Result<CurrencyId, Self::Error> {
-		Pallet::<Test>::get_fee_currency(account, fee)
-	}
 }
 
 impl BalanceCmp<AccountId> for Test {
@@ -531,63 +312,3 @@ impl BalanceCmp<AccountId> for Test {
 		Pallet::<Test>::cmp_with_precision(account, currency, amount, amount_precision)
 	}
 }
-
-pub struct DerivativeAccount;
-impl DerivativeAccountHandler<CurrencyId, Balance> for DerivativeAccount {
-	fn check_derivative_index_exists(
-		_token: CurrencyId,
-		_derivative_index: DerivativeIndex,
-	) -> bool {
-		true
-	}
-
-	fn get_multilocation(
-		_token: CurrencyId,
-		_derivative_index: DerivativeIndex,
-	) -> Option<MultiLocation> {
-		Some(xcm::v3::Parent.into())
-	}
-
-	fn get_stake_info(
-		token: CurrencyId,
-		derivative_index: DerivativeIndex,
-	) -> Option<(Balance, Balance)> {
-		Self::get_multilocation(token, derivative_index)
-			.and_then(|_location| Some((u32::MAX.into(), u32::MAX.into())))
-	}
-
-	#[cfg(feature = "runtime-benchmarks")]
-	fn init_minimums_and_maximums(_token: CurrencyId) {}
-
-	#[cfg(feature = "runtime-benchmarks")]
-	fn new_delegator_ledger(_token: CurrencyId, _who: MultiLocation) {}
-
-	#[cfg(feature = "runtime-benchmarks")]
-	fn add_delegator(_token: CurrencyId, _index: DerivativeIndex, _who: MultiLocation) {}
-}
-
-parameter_types! {
-	pub static RelaychainBlockNumber: BlockNumber = 1;
-}
-
-pub struct RelaychainDataProvider;
-
-impl RelaychainDataProvider {
-	pub fn set_block_number(block: BlockNumber) {
-		RelaychainBlockNumber::set(block);
-	}
-}
-
-impl BlockNumberProvider for RelaychainDataProvider {
-	type BlockNumber = BlockNumberFor<Test>;
-
-	fn current_block_number() -> Self::BlockNumber {
-		RelaychainBlockNumber::get().into()
-	}
-}
-
-ord_parameter_types! {
-	pub const QueryTimeout: BlockNumber = 100;
-}
-
-// ************** VtokenVoting mock end *****************

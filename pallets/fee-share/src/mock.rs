@@ -41,7 +41,6 @@ use orml_traits::{
 	location::RelativeReserveProvider, parameter_type_with_key, DataFeeder, DataProvider,
 	DataProviderExtended, MultiCurrency,
 };
-use pallet_traits::PriceFeeder;
 use sp_core::ConstU32;
 use sp_runtime::{
 	traits::{AccountIdConversion, IdentityLookup, UniqueSaturatedInto},
@@ -279,11 +278,21 @@ impl PriceFeeder for MockPriceFeeder {
 		todo!()
 	}
 
+	fn get_amount_by_prices(
+		_currency_in: &CurrencyId,
+		_amount_in: bifrost_primitives::Balance,
+		_currency_in_price: Price,
+		_currency_out: &CurrencyId,
+		_currency_out_price: Price,
+	) -> Option<bifrost_primitives::Balance> {
+		todo!()
+	}
+
 	fn get_oracle_amount_by_currency_and_amount_in(
 		_currency_in: &CurrencyId,
 		_amount_in: bifrost_primitives::Balance,
 		_currency_out: &CurrencyId,
-	) -> Option<bifrost_primitives::Balance> {
+	) -> Option<(bifrost_primitives::Balance, Price, Price)> {
 		todo!()
 	}
 }
