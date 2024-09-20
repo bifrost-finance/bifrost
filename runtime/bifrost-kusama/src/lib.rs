@@ -1358,20 +1358,6 @@ impl bifrost_system_staking::Config for Runtime {
 	type MaxFarmingPoolIdLen = MaxFarmingPoolIdLen;
 }
 
-impl bifrost_system_maker::Config for Runtime {
-	type RuntimeEvent = RuntimeEvent;
-	type MultiCurrency = Currencies;
-	type ControlOrigin = TechAdminOrCouncil;
-	type WeightInfo = weights::bifrost_system_maker::BifrostWeight<Runtime>;
-	type DexOperator = ZenlinkProtocol;
-	type CurrencyIdConversion = AssetIdMaps<Runtime>;
-	type TreasuryAccount = BifrostTreasuryAccount;
-	type RelayChainToken = RelayCurrencyId;
-	type SystemMakerPalletId = SystemMakerPalletId;
-	type ParachainId = ParachainInfo;
-	type VtokenMintingInterface = VtokenMinting;
-}
-
 impl bifrost_fee_share::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type MultiCurrency = Currencies;
@@ -1904,7 +1890,6 @@ construct_runtime! {
 		VstokenConversion: bifrost_vstoken_conversion = 118,
 		Farming: bifrost_farming = 119,
 		SystemStaking: bifrost_system_staking = 120,
-		SystemMaker: bifrost_system_maker = 121,
 		FeeShare: bifrost_fee_share = 122,
 		CrossInOut: bifrost_cross_in_out = 123,
 		Slpx: bifrost_slpx = 125,
@@ -1980,7 +1965,7 @@ parameter_types! {
 pub mod migrations {
 	#![allow(unused_imports)]
 	use super::*;
-	use bifrost_system_maker::migration::SystemMakerClearPalletId;
+	use migration::system_maker::SystemMakerClearPalletId;
 
 	/// Unreleased migrations. Add new ones here:
 	pub type Unreleased = (

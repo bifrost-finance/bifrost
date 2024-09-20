@@ -30,8 +30,6 @@ mod benchmarking;
 
 pub mod weights;
 
-pub mod migration;
-
 use bifrost_primitives::{
 	CurrencyId, CurrencyIdConversion, TryConvertFrom, VtokenMintingInterface,
 };
