@@ -371,7 +371,7 @@ fn accrue_interest_works_after_liquidate_borrow() {
 		assert_eq!(BorrowIndex::<Test>::get(KSM), Rate::one());
 		TimestampPallet::set_timestamp(12000);
 		// Adjust KSM price to make shortfall
-		MockPriceFeeder::set_price(KSM, 2.into());
+		MockOraclePriceProvider::set_price(KSM, 2.into());
 		// BOB repay the KSM loan and get DOT callateral from ALICE
 		assert_ok!(LendMarket::liquidate_borrow(
 			RuntimeOrigin::signed(BOB),

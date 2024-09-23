@@ -11,7 +11,7 @@ pub trait EmergencyCallFilter<Call> {
 	fn contains(call: &Call) -> bool;
 }
 
-pub trait EmergencyPriceFeeder<CurrencyId, Price> {
+pub trait EmergencyOraclePriceProvider<CurrencyId, Price> {
 	fn set_emergency_price(asset_id: CurrencyId, price: Price);
 	fn reset_emergency_price(asset_id: CurrencyId);
 }

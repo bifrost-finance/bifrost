@@ -26,7 +26,7 @@ use core::cmp::max;
 
 pub use crate::rate_model::*;
 use bifrost_primitives::{
-	Balance, CurrencyId, Liquidity, Price, PriceFeeder, Rate, Ratio, Shortfall, Timestamp,
+	Balance, CurrencyId, Liquidity, OraclePriceProvider, Price, Rate, Ratio, Shortfall, Timestamp,
 };
 use frame_support::{
 	pallet_prelude::*,
@@ -103,7 +103,7 @@ pub mod pallet {
 		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 
 		/// The oracle price feeder
-		type PriceFeeder: PriceFeeder;
+		type OraclePriceProvider: OraclePriceProvider;
 
 		/// The loan's module id, keep all collaterals of CDPs.
 		#[pallet::constant]
@@ -1959,7 +1959,7 @@ impl<T: Config> Pallet<T> {
 	// Returns `Err` if the oracle price not ready
 	pub fn get_price(asset_id: AssetIdOf<T>) -> Result<Price, DispatchError> {
 		let (price, _) =
-			T::PriceFeeder::get_price(&asset_id).ok_or(Error::<T>::PriceOracleNotReady)?;
+			T::OraclePriceProvider::get_price(&asset_id).ok_or(Error::<T>::PriceOracleNotReady)?;
 		if price.is_zero() {
 			return Err(Error::<T>::PriceIsZero.into());
 		}
