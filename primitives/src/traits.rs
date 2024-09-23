@@ -31,7 +31,7 @@ use sp_runtime::{
 	traits::{
 		AccountIdConversion, AtLeast32BitUnsigned, ConstU32, MaybeSerializeDeserialize, Zero,
 	},
-	BoundedVec, DispatchError, DispatchResult, TokenError, TypeId,
+	BoundedVec, DispatchError, DispatchResult, TypeId,
 };
 use sp_std::{cmp::Ordering, fmt::Debug, vec::Vec};
 
@@ -79,16 +79,6 @@ pub trait MultiCurrencyExt<AccountId> {
 		currency_id: Self::CurrencyId,
 		amount: Self::Balance,
 	) -> DispatchResult;
-}
-
-pub trait BancorHandler<Balance> {
-	fn add_token(currency_id: super::CurrencyId, amount: Balance) -> DispatchResult;
-}
-
-impl<Balance> BancorHandler<Balance> for () {
-	fn add_token(_currency_id: super::CurrencyId, _amount: Balance) -> DispatchResult {
-		DispatchResult::from(DispatchError::Token(TokenError::FundsUnavailable))
-	}
 }
 
 pub trait CheckSubAccount<T: Encode + Decode> {
