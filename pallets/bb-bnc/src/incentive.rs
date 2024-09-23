@@ -210,7 +210,7 @@ impl<T: Config> Pallet<T> {
 			.try_for_each(|&pool_id| -> DispatchResult {
 				Self::update_reward(pool_id, Some(addr), None)
 			})?;
-		Self::update_reward(VE_MINTING_SYSTEM_POOL_ID, Some(addr), None)?;
+		Self::update_reward(BB_BNC_SYSTEM_POOL_ID, Some(addr), None)?;
 		Ok(())
 	}
 

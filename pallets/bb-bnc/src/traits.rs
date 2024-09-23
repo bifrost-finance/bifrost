@@ -91,8 +91,8 @@ impl<T: Config> BbBNCInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>, Bl
 		UserPositions::<T>::insert(who, user_positions);
 		Position::<T>::set(new_position + 1);
 
-		let ve_config = VeConfigs::<T>::get();
-		ensure!(_value >= ve_config.min_mint, Error::<T>::BelowMinimumMint);
+		let bb_config = BbConfigs::<T>::get();
+		ensure!(_value >= bb_config.min_mint, Error::<T>::BelowMinimumMint);
 
 		let current_block_number: BlockNumberFor<T> = frame_system::Pallet::<T>::block_number();
 		let _locked: LockedBalance<BalanceOf<T>, BlockNumberFor<T>> =
@@ -106,7 +106,7 @@ impl<T: Config> BbBNCInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>, Bl
 			.ok_or(ArithmeticError::Overflow)?;
 
 		ensure!(
-			unlock_time >= ve_config.min_block.saturating_add(current_block_number),
+			unlock_time >= bb_config.min_block.saturating_add(current_block_number),
 			Error::<T>::ArgumentsError
 		);
 		let max_block = T::MaxBlock::get()
@@ -133,7 +133,7 @@ impl<T: Config> BbBNCInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>, Bl
 		position: u128,
 		_unlock_time: BlockNumberFor<T>,
 	) -> DispatchResult {
-		let ve_config = VeConfigs::<T>::get();
+		let bb_config = BbConfigs::<T>::get();
 		let _locked: LockedBalance<BalanceOf<T>, BlockNumberFor<T>> = Locked::<T>::get(position);
 		let current_block_number: BlockNumberFor<T> = frame_system::Pallet::<T>::block_number();
 
@@ -146,7 +146,7 @@ impl<T: Config> BbBNCInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>, Bl
 			.ok_or(ArithmeticError::Overflow)?;
 
 		ensure!(
-			unlock_time >= ve_config.min_block.saturating_add(current_block_number),
+			unlock_time >= bb_config.min_block.saturating_add(current_block_number),
 			Error::<T>::ArgumentsError
 		);
 		let max_block = T::MaxBlock::get()
@@ -162,7 +162,8 @@ impl<T: Config> BbBNCInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>, Bl
 
 		Self::_deposit_for(who, position, BalanceOf::<T>::zero(), unlock_time, _locked)?;
 		Self::deposit_event(Event::UnlockTimeIncreased {
-			addr: position.to_owned(),
+			who: who.to_owned(),
+			position,
 			unlock_time: _unlock_time,
 		});
 		Ok(())
@@ -173,8 +174,8 @@ impl<T: Config> BbBNCInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>, Bl
 		position: u128,
 		value: BalanceOf<T>,
 	) -> DispatchResult {
-		let ve_config = VeConfigs::<T>::get();
-		ensure!(value >= ve_config.min_mint, Error::<T>::BelowMinimumMint);
+		let bb_config = BbConfigs::<T>::get();
+		ensure!(value >= bb_config.min_mint, Error::<T>::BelowMinimumMint);
 		let _locked: LockedBalance<BalanceOf<T>, BlockNumberFor<T>> = Locked::<T>::get(position);
 		ensure!(_locked.amount > BalanceOf::<T>::zero(), Error::<T>::LockNotExist); // Need to be executed after create_lock
 		let current_block_number: BlockNumberFor<T> = frame_system::Pallet::<T>::block_number();
@@ -492,7 +493,7 @@ pub struct UserMarkupInfo {
 
 #[derive(Encode, Decode, Clone, PartialEq, Eq, RuntimeDebug, MaxEncodedLen, TypeInfo)]
 pub struct LockedToken<Balance, BlockNumber> {
-	// pub asset_id: CurrencyId,
+	// pub currency_id: CurrencyId,
 	pub amount: Balance,
 	pub markup_coefficient: FixedU128,
 	pub refresh_block: BlockNumber,
