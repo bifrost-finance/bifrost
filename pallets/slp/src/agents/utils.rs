@@ -21,8 +21,7 @@ use crate::{
 	ValidatorsByDelegatorUpdateEntry, ValidatorsByDelegatorXcmUpdateQueue, ASTR, DOT, GLMR, H160,
 	KSM, MANTA, MOVR, PHA,
 };
-use bifrost_primitives::CurrencyId;
-use bifrost_xcm_interface::traits::parachains;
+use bifrost_primitives::{AstarChainId, CurrencyId, MantaChainId, MoonbeamChainId, MoonriverChainId, PhalaChainId};
 use frame_support::ensure;
 use parity_scale_codec::Encode;
 use sp_core::Get;
@@ -323,18 +322,18 @@ impl<T: Config> Pallet<T> {
 			KSM | DOT => Ok(xcm::v4::Location::parent()),
 			MOVR => Ok(xcm::v4::Location::new(
 				1,
-				[xcm::v4::prelude::Parachain(parachains::moonriver::ID)],
+				[xcm::v4::prelude::Parachain(MoonriverChainId::get())],
 			)),
 			GLMR => Ok(xcm::v4::Location::new(
 				1,
-				[xcm::v4::prelude::Parachain(parachains::moonbeam::ID)],
+				[xcm::v4::prelude::Parachain(MoonbeamChainId::get())],
 			)),
 			ASTR =>
-				Ok(xcm::v4::Location::new(1, [xcm::v4::prelude::Parachain(parachains::astar::ID)])),
+				Ok(xcm::v4::Location::new(1, [xcm::v4::prelude::Parachain(AstarChainId::get())])),
 			MANTA =>
-				Ok(xcm::v4::Location::new(1, [xcm::v4::prelude::Parachain(parachains::manta::ID)])),
+				Ok(xcm::v4::Location::new(1, [xcm::v4::prelude::Parachain(MantaChainId::get())])),
 			PHA =>
-				Ok(xcm::v4::Location::new(1, [xcm::v4::prelude::Parachain(parachains::phala::ID)])),
+				Ok(xcm::v4::Location::new(1, [xcm::v4::prelude::Parachain(PhalaChainId::get())])),
 			_ => Err(Error::<T>::NotSupportedCurrencyId),
 		}
 	}
@@ -346,19 +345,19 @@ impl<T: Config> Pallet<T> {
 			MOVR => Ok(MultiLocation {
 				parents: 1,
 				interior: X2(
-					Parachain(parachains::moonriver::ID),
-					PalletInstance(parachains::moonriver::PALLET_ID),
+					Parachain(MoonriverChainId::get()),
+					PalletInstance(10),
 				),
 			}),
 			GLMR => Ok(MultiLocation {
 				parents: 1,
 				interior: X2(
-					Parachain(parachains::moonbeam::ID),
-					PalletInstance(parachains::moonbeam::PALLET_ID),
+					Parachain(MoonbeamChainId::get()),
+					PalletInstance(10),
 				),
 			}),
 			MANTA =>
-				Ok(MultiLocation { parents: 1, interior: X1(Parachain(parachains::manta::ID)) }),
+				Ok(MultiLocation { parents: 1, interior: X1(Parachain(MantaChainId::get())) }),
 			_ => Err(Error::<T>::NotSupportedCurrencyId),
 		}
 	}
@@ -367,11 +366,11 @@ impl<T: Config> Pallet<T> {
 		match currency_id {
 			MOVR => xcm::v4::Location::new(
 				0,
-				[xcm::v4::prelude::PalletInstance(parachains::moonriver::PALLET_ID)],
+				[xcm::v4::prelude::PalletInstance(10)],
 			),
 			GLMR => xcm::v4::Location::new(
 				0,
-				[xcm::v4::prelude::PalletInstance(parachains::moonbeam::PALLET_ID)],
+				[xcm::v4::prelude::PalletInstance(10)],
 			),
 			_ => xcm::v4::Location::here(),
 		}
