@@ -1926,6 +1926,7 @@ mod benches {
 		[bb_bnc, BbBNC]
 		[bifrost_buy_back, BuyBack]
 		[bifrost_slp_v2, SlpV2]
+		[bifrost_xcm_interface, XcmInterface]
 	);
 }
 

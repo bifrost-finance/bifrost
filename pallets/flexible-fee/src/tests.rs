@@ -328,6 +328,49 @@ fn correct_and_deposit_fee_should_work() {
 }
 
 #[test]
+fn correct_and_deposit_fee_with_tip() {
+	new_test_ext().execute_with(|| {
+		basic_setup();
+
+		let corrected_fee = 5 * 10u128.pow(12);
+		let tip = 5 * 10u128.pow(12);
+
+		assert_eq!(Currencies::free_balance(BNC, &ALICE), 1000 * 10u128.pow(12));
+
+		let already_withdrawn = Some(PaymentInfo::Native(10 * 10u128.pow(12)));
+		assert_ok!(FlexibleFee::correct_and_deposit_fee(
+			&ALICE,
+			&info(),
+			&post_info(),
+			corrected_fee,
+			tip,
+			already_withdrawn
+		));
+		assert_eq!(Currencies::free_balance(BNC, &ALICE), 1005 * 10u128.pow(12));
+
+		let corrected_fee = 10 * 10u128.pow(12);
+		let tip = 10 * 10u128.pow(12);
+		assert_eq!(Currencies::free_balance(DOT, &ALICE), 1000 * 10u128.pow(10));
+
+		let already_withdrawn = Some(PaymentInfo::NonNative(
+			1 * 10u128.pow(10),
+			DOT,
+			FixedU128::from_inner(200_000_000_000_000_000),
+			FixedU128::from(5),
+		));
+		assert_ok!(FlexibleFee::correct_and_deposit_fee(
+			&ALICE,
+			&info(),
+			&post_info(),
+			corrected_fee,
+			tip,
+			already_withdrawn
+		));
+		assert_eq!(Currencies::free_balance(DOT, &ALICE), 10006 * 10u128.pow(9));
+	});
+}
+
+#[test]
 fn get_currency_asset_id_should_work() {
 	new_test_ext().execute_with(|| {
 		// BNC
