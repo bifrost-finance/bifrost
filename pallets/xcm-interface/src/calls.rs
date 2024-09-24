@@ -49,6 +49,12 @@ pub enum PolkadotXcmCall {
 }
 
 #[derive(Encode, Decode, RuntimeDebug)]
+pub enum RelaychainCall {
+	#[codec(index = 99)]
+	XcmPallet(PolkadotXcmCall),
+}
+
+#[derive(Encode, Decode, RuntimeDebug)]
 pub enum AssetHubCall {
 	#[codec(index = 31)]
 	PolkadotXcm(PolkadotXcmCall),

@@ -19,8 +19,8 @@
 // Ensure we're `no_std` when compiling for Wasm.
 #![cfg_attr(not(feature = "std"), no_std)]
 
-#[cfg(feature = "runtime-benchmarks")]
-pub mod benchmarking;
+// #[cfg(feature = "runtime-benchmarks")]
+// pub mod benchmarking;
 #[cfg(test)]
 pub mod mock;
 #[cfg(test)]
@@ -33,7 +33,6 @@ use bifrost_primitives::{
 	ContributionStatus, CurrencyIdConversion, CurrencyIdRegister, TrieIndex, VtokenMintingInterface,
 };
 use bifrost_stable_pool::{traits::StablePoolHandler, StableAssetPoolId};
-use bifrost_xcm_interface::ChainId;
 use cumulus_primitives_core::{QueryId, Response};
 use frame_support::{pallet_prelude::*, sp_runtime::SaturatedConversion};
 use orml_traits::MultiCurrency;
@@ -96,7 +95,6 @@ pub struct ReserveInfo<Balance> {
 pub mod pallet {
 	// Import various types used to declare pallet in scope.
 	use bifrost_primitives::{CurrencyId, LeasePeriod, MessageId, Nonce, ParaId};
-	use bifrost_xcm_interface::traits::XcmHelper;
 	use frame_support::{
 		pallet_prelude::{storage::child, *},
 		sp_runtime::traits::{AccountIdConversion, CheckedAdd, Hash, Saturating, Zero},
@@ -165,9 +163,6 @@ pub mod pallet {
 		type EnsureConfirmAsGovernance: EnsureOrigin<<Self as frame_system::Config>::RuntimeOrigin>;
 
 		type WeightInfo: WeightInfo;
-
-		/// The XcmInterface to manage the staking of sub-account on relaychain.
-		type XcmInterface: XcmHelper<AccountIdOf<Self>, BalanceOf<Self>>;
 
 		#[pallet::constant]
 		type TreasuryAccount: Get<Self::AccountId>;
@@ -979,131 +974,6 @@ pub mod pallet {
 			Ok(())
 		}
 
-		/// Contribute to a crowd sale. This will transfer some balance over to fund a parachain
-		/// slot. It will be withdrawable in two instances: the parachain becomes retired; or the
-		/// slot is unable to be purchased and the timeout expires.
-		pub(crate) fn contribute(
-			origin: OriginFor<T>,
-			index: ParaId,
-			value: BalanceOf<T>,
-		) -> DispatchResult {
-			let who = ensure_signed(origin.clone())?;
-
-			let fund = Funds::<T>::get(index).ok_or(Error::<T>::InvalidParaId)?;
-			ensure!(fund.status == FundStatus::Ongoing, Error::<T>::InvalidFundStatus);
-
-			ensure!(value >= T::MinContribution::get(), Error::<T>::ContributionTooSmall);
-
-			let raised = fund.raised.checked_add(&value).ok_or(Error::<T>::Overflow)?;
-			ensure!(raised <= fund.cap, Error::<T>::CapExceeded);
-
-			let (contributed, status) = Self::contribution(fund.trie_index, &who);
-			ensure!(
-				status == ContributionStatus::Idle ||
-					status == ContributionStatus::Refunded ||
-					status == ContributionStatus::Redeemed ||
-					status == ContributionStatus::Unlocked,
-				Error::<T>::InvalidContributionStatus
-			);
-
-			ensure!(
-				T::MultiCurrency::can_reserve(T::RelayChainToken::get(), &who, value),
-				Error::<T>::NotEnoughBalanceToContribute
-			);
-
-			T::MultiCurrency::reserve(T::RelayChainToken::get(), &who, value)?;
-
-			Self::put_contribution(
-				fund.trie_index,
-				&who,
-				contributed,
-				ContributionStatus::Contributing(value),
-			);
-
-			let message_id = T::XcmInterface::contribute(who.clone(), index, value)?;
-
-			Self::deposit_event(Event::Contributing(who, index, value, message_id));
-			Ok(())
-		}
-
-		/// Confirm contribute
-		pub(crate) fn confirm_contribute(
-			origin: OriginFor<T>,
-			query_id: QueryId,
-			is_success: bool,
-		) -> DispatchResult {
-			let confirmor = ensure_signed(origin.clone())?;
-			if Some(confirmor) != MultisigConfirmAccount::<T>::get() {
-				return Err(DispatchError::BadOrigin.into());
-			}
-
-			let (index, contributer, _amount) = QueryIdContributionInfo::<T>::get(query_id)
-				.ok_or(Error::<T>::NotFindContributionValue)?;
-
-			let fund = Funds::<T>::get(index).ok_or(Error::<T>::InvalidParaId)?;
-			let can_confirm = fund.status == FundStatus::Ongoing ||
-				fund.status == FundStatus::Failed ||
-				fund.status == FundStatus::Success;
-			ensure!(can_confirm, Error::<T>::InvalidFundStatus);
-
-			let (contributed, status) = Self::contribution(fund.trie_index, &contributer);
-			ensure!(status.is_contributing(), Error::<T>::InvalidContributionStatus);
-			let contributing = status.contributing();
-
-			let vs_token = T::CurrencyIdConversion::convert_to_vstoken(T::RelayChainToken::get())
-				.map_err(|_| Error::<T>::NotSupportTokenType)?;
-			let vs_bond = T::CurrencyIdConversion::convert_to_vsbond(
-				T::RelayChainToken::get(),
-				index,
-				fund.first_slot,
-				fund.last_slot,
-			)
-			.map_err(|_| Error::<T>::NotSupportTokenType)?;
-
-			if is_success {
-				// Issue reserved vsToken/vsBond to contributor
-				T::MultiCurrency::deposit(vs_token, &contributer, contributing)?;
-				T::MultiCurrency::deposit(vs_bond, &contributer, contributing)?;
-
-				// Update the raised of fund
-				let fund_new =
-					FundInfo { raised: fund.raised.saturating_add(contributing), ..fund };
-				Funds::<T>::insert(index, Some(fund_new));
-
-				T::MultiCurrency::unreserve(T::RelayChainToken::get(), &contributer, contributing);
-				T::MultiCurrency::transfer(
-					T::RelayChainToken::get(),
-					&contributer,
-					&Self::fund_account_id(index),
-					contributing,
-				)?;
-
-				// Update the contribution of contributer
-				let contributed_new = contributed.saturating_add(contributing);
-				Self::put_contribution(
-					fund.trie_index,
-					&contributer,
-					contributed_new,
-					ContributionStatus::Idle,
-				);
-				Self::deposit_event(Event::Contributed(contributer, index, contributing));
-			} else {
-				// Update the contribution of contributer
-				Self::put_contribution(
-					fund.trie_index,
-					&contributer,
-					contributed,
-					ContributionStatus::Idle,
-				);
-				T::MultiCurrency::unreserve(T::RelayChainToken::get(), &contributer, contributing);
-				Self::deposit_event(Event::ContributeFailed(contributer, index, contributing));
-			}
-
-			QueryIdContributionInfo::<T>::remove(query_id);
-
-			Ok(())
-		}
-
 		/// Unlock the reserved vsToken/vsBond after fund success
 		pub(crate) fn unlock(
 			origin: OriginFor<T>,
@@ -1233,24 +1103,5 @@ pub mod pallet {
 		pub(crate) fn set_balance(who: &AccountIdOf<T>, value: BalanceOf<T>) -> DispatchResult {
 			T::MultiCurrency::deposit(T::RelayChainToken::get(), who, value)
 		}
-	}
-}
-
-impl<T: Config>
-	bifrost_xcm_interface::SalpHelper<AccountIdOf<T>, <T as Config>::RuntimeCall, BalanceOf<T>>
-	for Pallet<T>
-{
-	fn confirm_contribute_call() -> <T as Config>::RuntimeCall {
-		let call = Call::<T>::confirm_contribution { query_id: 0, response: Default::default() };
-		<T as Config>::RuntimeCall::from(call)
-	}
-
-	fn bind_query_id_and_contribution(
-		query_id: QueryId,
-		index: ChainId,
-		contributer: AccountIdOf<T>,
-		amount: BalanceOf<T>,
-	) {
-		QueryIdContributionInfo::<T>::insert(query_id, (index, contributer, amount));
 	}
 }

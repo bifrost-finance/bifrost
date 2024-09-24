@@ -19,13 +19,9 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 pub use crate::pallet::*;
-use bifrost_primitives::{
-	currency::{VGLMR, VMANTA, WETH},
-	traits::XcmDestWeightAndFeeHandler,
-	Balance, BalanceCmp, CurrencyId, DerivativeIndex, OraclePriceProvider, Price, TryConvertFrom,
-	XcmOperationType, BNC, DOT, GLMR, MANTA, VBNC, VDOT,
-};
-use bifrost_xcm_interface::{polkadot::RelaychainCall, traits::parachains, PolkadotXcmCall};
+use bifrost_primitives::{currency::{VGLMR, VMANTA, WETH}, traits::XcmDestWeightAndFeeHandler, AssetHubChainId, Balance, BalanceCmp, CurrencyId, DerivativeIndex, OraclePriceProvider, Price, TryConvertFrom, XcmOperationType, BNC, DOT, GLMR, MANTA, VBNC, VDOT};
+use bifrost_xcm_interface::calls::PolkadotXcmCall;
+use bifrost_xcm_interface::calls::RelaychainCall;
 use core::convert::Into;
 use cumulus_primitives_core::ParaId;
 use frame_support::{
@@ -275,9 +271,9 @@ impl<T: Config> Pallet<T> {
 			};
 
 			let remote_call =
-				RelaychainCall::<BalanceOf<T>, AccountIdOf<T>, BlockNumberFor<T>>::XcmPallet(
+				RelaychainCall::XcmPallet(
 					PolkadotXcmCall::LimitedTeleportAssets(
-						Box::new(Location::new(0, [Parachain(parachains::Statemine::ID)]).into()),
+						Box::new(Location::new(0, [Parachain(AssetHubChainId::get())]).into()),
 						Box::new(
 							Location::new(
 								0,

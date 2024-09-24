@@ -2374,11 +2374,13 @@ name = "bifrost-xcm-interface"
 version = "0.8.0"
 dependencies = [
  "bifrost-asset-registry",
+ "bifrost-currencies",
  "bifrost-primitives",
  "cumulus-primitives-core",
  "frame-benchmarking",
  "frame-support",
  "frame-system",
+ "orml-tokens",
  "orml-traits",
  "pallet-balances",
  "pallet-xcm",

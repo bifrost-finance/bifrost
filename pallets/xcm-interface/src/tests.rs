@@ -16,29 +16,30 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-#![cfg(feature = "runtime-benchmarks")]
-use super::*;
+#![cfg(test)]
+
+use frame_support::assert_ok;
+use xcm::v4::Weight;
 use bifrost_primitives::{XcmOperationType, BNC};
-use frame_benchmarking::v2::*;
-use frame_system::RawOrigin;
-use crate::Pallet as XcmInterface;
+use crate::mock::{new_test_ext, RuntimeOrigin, Test};
+use crate::{Pallet as XcmInterface, XcmWeightAndFee};
 
-#[benchmarks]
-mod benchmarks {
-	use super::*;
-
-	#[benchmark]
-	fn update_xcm_dest_weight_and_fee() {
+#[test]
+fn update_xcm_dest_weight_and_fee() {
+	new_test_ext().execute_with(|| {
 		let updates = vec![
-			(BNC, XcmOperationType::Bond, Weight::zero(), 0u32.into()),
-			(BNC, XcmOperationType::Bond, Weight::zero(), 0u32.into()),
-			(BNC, XcmOperationType::Bond, Weight::zero(), 0u32.into()),
-			(BNC, XcmOperationType::Bond, Weight::zero(), 0u32.into()),
-			(BNC, XcmOperationType::Bond, Weight::zero(), 0u32.into()),
+			(BNC, XcmOperationType::Bond, Weight::zero(), 0u128),
+			(BNC, XcmOperationType::Bond, Weight::zero(), 0u128),
+			(BNC, XcmOperationType::Bond, Weight::zero(), 0u128),
+			(BNC, XcmOperationType::Bond, Weight::zero(), 0u128),
+			(BNC, XcmOperationType::Bond, Weight::zero(), 0u128),
 		];
-		#[extrinsic_call]
-		_(RawOrigin::Root, updates);
-	}
 
-	impl_benchmark_test_suite!(XcmInterface, mock::new_test_ext(), mock::Test);
+		assert_ok!(XcmInterface::<Test>::update_xcm_dest_weight_and_fee(RuntimeOrigin::root(), updates));
+
+		assert_eq!(
+			XcmWeightAndFee::<Test>::get(BNC, XcmOperationType::Bond),
+			Some((Weight::zero(), 0u128))
+		);
+	})
 }

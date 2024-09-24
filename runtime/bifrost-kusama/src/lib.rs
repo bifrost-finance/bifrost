@@ -128,7 +128,7 @@ use pallet_xcm::{EnsureResponse, QueryStatus};
 use sp_runtime::traits::{IdentityLookup, Verify};
 use xcm::{v3::MultiLocation, v4::prelude::*};
 pub use xcm_config::{
-	parachains, AccountId32Aliases, BifrostTreasuryAccount, ExistentialDeposits, MultiCurrency,
+	AccountId32Aliases, BifrostTreasuryAccount, ExistentialDeposits, MultiCurrency,
 	Sibling, SiblingParachainConvertsVia, XcmConfig, XcmRouter,
 };
 use xcm_executor::{traits::QueryHandler, XcmExecutor};
@@ -1053,7 +1053,7 @@ pub fn create_x2_multilocation(index: u16, currency_id: CurrencyId) -> xcm::v3::
 		CurrencyId::Token(TokenSymbol::MOVR) => xcm::v3::Location::new(
 			1,
 			xcm::v3::Junctions::X2(
-				xcm::v3::Junction::Parachain(parachains::moonriver::ID.into()),
+				xcm::v3::Junction::Parachain(MoonriverChainId::get()),
 				xcm::v3::Junction::AccountKey20 {
 					network: None,
 					key: Slp::derivative_account_id_20(
@@ -1162,7 +1162,6 @@ impl bifrost_salp::Config for Runtime {
 	type VSBondValidPeriod = VSBondValidPeriod;
 	type WeightInfo = weights::bifrost_salp::BifrostWeight<Runtime>;
 	type EnsureConfirmAsGovernance = EitherOfDiverse<TechAdminOrCouncil, SALPAdmin>;
-	type XcmInterface = XcmInterface;
 	type TreasuryAccount = BifrostTreasuryAccount;
 	type BuybackPalletId = BuybackPalletId;
 	type CurrencyIdConversion = AssetIdMaps<Runtime>;
@@ -1960,7 +1959,7 @@ mod benches {
 		[bifrost_farming, Farming]
 		[bifrost_fee_share, FeeShare]
 		[bifrost_flexible_fee, FlexibleFee]
-		[bifrost_salp, Salp]
+		// [bifrost_salp, Salp]
 		[bifrost_slp, Slp]
 		[bifrost_slpx, Slpx]
 		[bifrost_stable_pool, StablePool]
@@ -1973,6 +1972,7 @@ mod benches {
 		[lend_market, LendMarket]
 		[leverage_staking, LeverageStaking]
 		[bifrost_vbnc_convert, VBNCConvert]
+		[bifrost_xcm_interface, XcmInterface]
 		// [bifrost_channel_commission, ChannelCommission]
 	);
 }

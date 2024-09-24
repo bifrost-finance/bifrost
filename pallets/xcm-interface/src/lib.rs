@@ -18,8 +18,12 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
+#[cfg(feature = "runtime-benchmarks")]
 mod benchmarking;
-mod calls;
+
+mod mock;
+mod tests;
+pub mod calls;
 
 use crate::calls::{AssetHubCall, PolkadotXcmCall};
 use bifrost_asset_registry::AssetMetadata;
@@ -70,7 +74,7 @@ pub mod pallet {
 		/// Convert Location to `T::CurrencyId`.
 		type CurrencyIdConvert: CurrencyIdMapping<
 			CurrencyId,
-			Location,
+			xcm::v3::MultiLocation,
 			AssetMetadata<BalanceOf<Self>>,
 		>;
 
