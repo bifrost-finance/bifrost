@@ -22,16 +22,68 @@
 //! asset.
 //!
 //! Shamelessly copied from pallet-evm and modified to support multi-currency fees.
+
 use crate::{evm::WethAssetId, Weight};
-use bifrost_primitives::{AccountFeeCurrencyBalanceInCurrency, Balance};
+use bifrost_primitives::{
+	AccountFeeCurrency, AccountFeeCurrencyBalanceInCurrency, Balance, CurrencyId,
+	OraclePriceProvider,
+};
 use fp_evm::{Account, TransactionValidationError};
-use frame_support::traits::Get;
+use frame_support::traits::{
+	tokens::{Fortitude, Preservation},
+	Get,
+};
 use pallet_evm::{
 	runner::Runner, AddressMapping, CallInfo, Config, CreateInfo, FeeCalculator, RunnerError,
 };
 use primitive_types::{H160, H256, U256};
-use sp_runtime::traits::UniqueSaturatedInto;
-use sp_std::vec::Vec;
+use sp_runtime::{traits::UniqueSaturatedInto, DispatchError};
+use sp_std::{marker::PhantomData, vec::Vec};
+
+/// AccountFeeCurrencyBalanceInCurrency implementation for the FeeAssetBalanceInCurrency.
+/// Provides account's balance of fee asset currency in a given currency
+pub struct FeeAssetBalanceInCurrency<T, Price, AC, I>(PhantomData<(T, Price, AC, I)>);
+
+impl<T, Price, AC, I> AccountFeeCurrencyBalanceInCurrency<T::AccountId>
+	for FeeAssetBalanceInCurrency<T, Price, AC, I>
+where
+	T: frame_system::Config,
+	Price: OraclePriceProvider,
+	AC: AccountFeeCurrency<T::AccountId>,
+	I: frame_support::traits::fungibles::Inspect<
+		T::AccountId,
+		AssetId = CurrencyId,
+		Balance = Balance,
+	>,
+{
+	type Output = (Balance, Weight);
+	type Error = DispatchError;
+
+	fn get_balance_in_currency(
+		to_currency: CurrencyId,
+		account: &T::AccountId,
+		fee: U256,
+	) -> Result<Self::Output, DispatchError> {
+		let from_currency = AC::get_fee_currency(account, fee)
+			.map_err(|_| DispatchError::Other("Get Currency Error."))?;
+		let account_balance =
+			I::reducible_balance(from_currency, account, Preservation::Preserve, Fortitude::Polite);
+		let price_weight = T::DbWeight::get().reads(2); // 1 read to get currency and 1 read to get balance
+
+		if from_currency == to_currency {
+			return Ok((account_balance, price_weight));
+		}
+
+		let Some((converted, _, _)) = Price::get_oracle_amount_by_currency_and_amount_in(
+			&from_currency,
+			account_balance,
+			&to_currency,
+		) else {
+			return Ok((0, price_weight));
+		};
+		Ok((converted, price_weight))
+	}
+}
 
 pub struct WrapRunner<T, R, B>(sp_std::marker::PhantomData<(T, R, B)>);
 

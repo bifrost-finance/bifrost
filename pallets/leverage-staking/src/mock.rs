@@ -24,7 +24,7 @@ pub use bifrost_primitives::{
 };
 use bifrost_primitives::{
 	BifrostEntranceAccount, BifrostExitAccount, IncentivePoolAccount, LendMarketPalletId, Moment,
-	MoonbeamChainId, Price, PriceDetail, PriceFeeder, Ratio, StableAssetPalletId,
+	MoonbeamChainId, OraclePriceProvider, Price, PriceDetail, Ratio, StableAssetPalletId,
 };
 use bifrost_runtime_common::milli;
 use frame_support::{
@@ -336,7 +336,7 @@ impl pallet_timestamp::Config for Test {
 	type WeightInfo = ();
 }
 
-pub struct MockPriceFeeder;
+pub struct MockOraclePriceProvider;
 #[derive(Encode, Decode, Clone, Copy, RuntimeDebug)]
 pub struct CurrencyIdWrap(CurrencyId);
 
@@ -383,7 +383,7 @@ impl DataFeeder<CurrencyId, TimeStampedPrice, u128> for MockDataProvider {
 	}
 }
 
-impl MockPriceFeeder {
+impl MockOraclePriceProvider {
 	thread_local! {
 		pub static PRICES: RefCell<HashMap<CurrencyIdWrap, Option<PriceDetail>>> = {
 			RefCell::new(
@@ -410,13 +410,9 @@ impl MockPriceFeeder {
 	}
 }
 
-impl PriceFeeder for MockPriceFeeder {
+impl OraclePriceProvider for MockOraclePriceProvider {
 	fn get_price(asset_id: &CurrencyId) -> Option<PriceDetail> {
 		Self::PRICES.with(|prices| *prices.borrow().get(&CurrencyIdWrap(*asset_id)).unwrap())
-	}
-
-	fn get_normal_price(_asset_id: &CurrencyId) -> Option<u128> {
-		todo!()
 	}
 
 	fn get_amount_by_prices(
@@ -445,7 +441,7 @@ parameter_types! {
 
 impl lend_market::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
-	type PriceFeeder = MockPriceFeeder;
+	type OraclePriceProvider = MockOraclePriceProvider;
 	type PalletId = LendMarketPalletId;
 	type ReserveOrigin = EnsureRoot<u128>;
 	type UpdateOrigin = EnsureRoot<u128>;

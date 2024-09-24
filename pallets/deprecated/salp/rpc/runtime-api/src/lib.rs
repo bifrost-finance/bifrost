@@ -16,20 +16,20 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-use crate::{Balance, CurrencyId, Price, PriceDetail};
+#![cfg_attr(not(feature = "std"), no_std)]
 
-pub trait OraclePriceProvider {
-	fn get_price(asset_id: &CurrencyId) -> Option<PriceDetail>;
-	fn get_amount_by_prices(
-		currency_in: &CurrencyId,
-		amount_in: Balance,
-		currency_in_price: Price,
-		currency_out: &CurrencyId,
-		currency_out_price: Price,
-	) -> Option<Balance>;
-	fn get_oracle_amount_by_currency_and_amount_in(
-		currency_in: &CurrencyId,
-		amount_in: Balance,
-		currency_out: &CurrencyId,
-	) -> Option<(Balance, Price, Price)>;
+use bifrost_primitives::{Balance, RpcContributionStatus};
+use parity_scale_codec::Codec;
+use sp_api::decl_runtime_apis;
+
+decl_runtime_apis! {
+	pub trait SalpRuntimeApi<ParaId,AccountId> where
+		ParaId: Codec,
+		AccountId: Codec,
+	{
+		fn get_contribution(
+			index: ParaId,
+			who: AccountId
+		) -> (Balance,RpcContributionStatus);
+	}
 }

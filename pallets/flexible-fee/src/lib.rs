@@ -22,7 +22,7 @@ pub use crate::pallet::*;
 use bifrost_primitives::{
 	currency::{VGLMR, VMANTA, WETH},
 	traits::XcmDestWeightAndFeeHandler,
-	Balance, BalanceCmp, CurrencyId, DerivativeIndex, Price, PriceFeeder, TryConvertFrom,
+	Balance, BalanceCmp, CurrencyId, DerivativeIndex, OraclePriceProvider, Price, TryConvertFrom,
 	XcmOperationType, BNC, DOT, GLMR, MANTA, VBNC, VDOT,
 };
 use bifrost_xcm_interface::{polkadot::RelaychainCall, traits::parachains, PolkadotXcmCall};
@@ -74,7 +74,7 @@ pub enum TargetChain {
 #[frame_support::pallet]
 pub mod pallet {
 	use super::*;
-	use bifrost_primitives::{Balance, PriceFeeder};
+	use bifrost_primitives::{Balance, OraclePriceProvider};
 	use frame_support::traits::fungibles::Inspect;
 
 	#[pallet::config]
@@ -91,7 +91,7 @@ pub mod pallet {
 		/// Zenlink interface
 		type DexOperator: ExportZenlink<Self::AccountId, AssetId>;
 		/// The oracle price feeder
-		type PriceFeeder: PriceFeeder;
+		type OraclePriceProvider: OraclePriceProvider;
 		/// The only origin that can set universal fee currency order list
 		type ControlOrigin: EnsureOrigin<Self::RuntimeOrigin>;
 		/// Get the weight and fee for executing Xcm.
@@ -389,7 +389,7 @@ impl<T: Config> Pallet<T> {
 				}
 			} else {
 				let (fee_amount, price_in, price_out) =
-					T::PriceFeeder::get_oracle_amount_by_currency_and_amount_in(
+					T::OraclePriceProvider::get_oracle_amount_by_currency_and_amount_in(
 						&BNC,
 						fee_amount,
 						&currency_id,

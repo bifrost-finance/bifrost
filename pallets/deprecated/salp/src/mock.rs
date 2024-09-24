@@ -20,23 +20,20 @@
 
 #![cfg(test)]
 
+use crate::*;
 use bifrost_asset_registry::AssetIdMaps;
 use bifrost_primitives::{
-	Amount, Balance, BifrostCrowdloanId, BifrostEntranceAccount, BifrostExitAccount,
-	BuybackPalletId,
-	CurrencyId::{self, *},
-	IncentivePoolAccount, MessageId, MockXcmExecutor, ParaId, SlpOperator, SlpxOperator,
-	StableAssetPalletId,
-	TokenSymbol::{self, *},
-	ZenlinkPalletId, ASG, KSM, KUSD, VKSM,
+	Amount, Balance, CurrencyId, CurrencyId::*, MessageId, MockXcmExecutor, ParaId, SlpOperator,
+	SlpxOperator, TokenSymbol, TokenSymbol::*, VKSM,
 };
 use bifrost_xcm_interface::traits::XcmHelper;
 use cumulus_primitives_core::ParaId as Pid;
 use frame_support::{
 	construct_runtime, derive_impl, ord_parameter_types, parameter_types,
 	sp_runtime::{DispatchError, DispatchResult, SaturatedConversion},
-	traits::{ConstU128, ConstU64, EnsureOrigin, Everything, Get, LockIdentifier, Nothing},
+	traits::{ConstU128, ConstU64, EnsureOrigin, Everything, Get, Nothing},
 	weights::Weight,
+	PalletId,
 };
 use frame_system::{EnsureRoot, EnsureSignedBy, RawOrigin};
 use orml_traits::{location::RelativeReserveProvider, parameter_type_with_key, MultiCurrency};
@@ -84,9 +81,9 @@ construct_runtime!(
 );
 
 parameter_types! {
-	pub const NativeCurrencyId: CurrencyId = ASG;
-	pub const RelayCurrencyId: CurrencyId = KSM;
-	pub const StableCurrencyId: CurrencyId = KUSD;
+	pub const NativeCurrencyId: CurrencyId = CurrencyId::Native(TokenSymbol::ASG);
+	pub const RelayCurrencyId: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
+	pub const StableCurrencyId: CurrencyId = CurrencyId::Stable(TokenSymbol::KUSD);
 }
 
 parameter_types! {
@@ -181,6 +178,7 @@ impl bifrost_currencies::Config for Test {
 }
 
 parameter_types! {
+	pub const ZenlinkPalletId: PalletId = PalletId(*b"/zenlink");
 	pub const GetExchangeFee: (u32, u32) = (3, 1000);   // 0.3%
 	pub const SelfParaId: u32 = 2001;
 }
@@ -271,6 +269,7 @@ pub const TREASURY_ACCOUNT: AccountId = AccountId::new([9u8; 32]);
 
 parameter_types! {
 	pub const MinContribution: Balance = 10;
+	pub const BifrostCrowdloanId: PalletId = PalletId(*b"bf/salp#");
 	pub const RemoveKeysLimit: u32 = 50;
 	pub const SlotLength: BlockNumber = 8u32 as BlockNumber;
 	pub const LeasePeriod: BlockNumber = 6 * WEEKS;
@@ -283,6 +282,7 @@ parameter_types! {
 		CATHI
 	],2);
 	pub const TreasuryAccount: AccountId = TREASURY_ACCOUNT;
+	pub const BuybackPalletId: PalletId = PalletId(*b"bf/salpc");
 	pub const BatchLimit: u32 = 50;
 }
 
@@ -331,6 +331,9 @@ impl bifrost_stable_asset::traits::ValidateAssetId<CurrencyId> for EnsurePoolAss
 		true
 	}
 }
+parameter_types! {
+	pub const StableAssetPalletId: PalletId = PalletId(*b"nuts/sta");
+}
 
 impl bifrost_stable_asset::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
@@ -362,6 +365,9 @@ impl bifrost_stable_pool::Config for Test {
 parameter_types! {
 	pub const MaximumUnlockIdOfUser: u32 = 1_000;
 	pub const MaximumUnlockIdOfTimeUnit: u32 = 1_000;
+	pub BifrostEntranceAccount: PalletId = PalletId(*b"bf/vtkin");
+	pub BifrostExitAccount: PalletId = PalletId(*b"bf/vtout");
+	pub IncentivePoolAccount: PalletId = PalletId(*b"bf/inpoo");
 }
 
 pub struct SlpxInterface;
@@ -440,6 +446,7 @@ parameter_types! {
 }
 
 impl salp::Config for Test {
+	type BancorPool = ();
 	type RuntimeEvent = RuntimeEvent;
 	type RuntimeCall = RuntimeCall;
 	type RuntimeOrigin = RuntimeOrigin;
@@ -458,10 +465,14 @@ impl salp::Config for Test {
 	type XcmInterface = MockSalpXcmExecutor;
 	type TreasuryAccount = TreasuryAccount;
 	type BuybackPalletId = BuybackPalletId;
+	type DexOperator = ZenlinkProtocol;
 	type CurrencyIdConversion = AssetIdMaps<Test>;
 	type CurrencyIdRegister = AssetIdMaps<Test>;
+	type ParachainId = ParaInfo;
 	type StablePool = StablePool;
 	type VtokenMinting = VtokenMinting;
+	type LockId = SalpLockId;
+	type BatchLimit = BatchLimit;
 }
 
 parameter_types! {
@@ -571,8 +582,8 @@ pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
 
 	let currency = vec![
 		(Native(BNC), DOLLARS / 100, None),
-		(Stable(TokenSymbol::KUSD), DOLLARS / 10_000, None),
-		(Token(TokenSymbol::KSM), DOLLARS / 10_000, None),
+		(Stable(KUSD), DOLLARS / 10_000, None),
+		(Token(KSM), DOLLARS / 10_000, None),
 		(Token(ZLK), DOLLARS / 1000_000, None),
 		(Token(KAR), DOLLARS / 10_000, None),
 		(Token(RMRK), DOLLARS / 1000_000, None),
@@ -580,7 +591,7 @@ pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
 		(Token(MOVR), DOLLARS / 1000_000, None),
 		(Token(DOT), DOLLARS / 1000_000, None),
 	];
-	let vcurrency = vec![Native(BNC), Token(TokenSymbol::KSM), Token(MOVR)];
+	let vcurrency = vec![Native(BNC), Token(KSM), Token(MOVR)];
 	let vsbond = vec![];
 	bifrost_asset_registry::GenesisConfig::<Test> {
 		currency,

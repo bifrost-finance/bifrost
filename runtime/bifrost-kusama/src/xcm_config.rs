@@ -351,12 +351,7 @@ impl Contains<RuntimeCall> for SafeCallFilter {
 				bifrost_farming::Call::withdraw_claim { .. }
 			) |
 			RuntimeCall::Salp(
-				bifrost_salp::Call::contribute { .. } |
-				bifrost_salp::Call::batch_unlock { .. } |
-				bifrost_salp::Call::redeem { .. } |
-				bifrost_salp::Call::unlock { .. } |
-				bifrost_salp::Call::unlock_by_vsbond { .. } |
-				bifrost_salp::Call::unlock_vstoken { .. }
+				bifrost_salp::Call::redeem { .. }
 			) |
 			RuntimeCall::VSBondAuction(
 				bifrost_vsbond_auction::Call::clinch_order { .. } |
