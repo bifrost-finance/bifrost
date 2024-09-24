@@ -39,6 +39,7 @@ use xcm::{
 	v4::{prelude::*, Asset, Location},
 	DoubleEncoded,
 };
+use frame_system::WeightInfo;
 
 type BalanceOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<
 	<T as frame_system::Config>::AccountId,
@@ -53,6 +54,9 @@ pub mod pallet {
 		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 
 		type MultiCurrency: MultiCurrency<Self::AccountId, CurrencyId = CurrencyId>;
+
+		// Weight information for extrinsics in this pallet.
+		type WeightInfo: WeightInfo;
 
 		/// Origin represented Governance
 		type UpdateOrigin: EnsureOrigin<<Self as frame_system::Config>::RuntimeOrigin>;

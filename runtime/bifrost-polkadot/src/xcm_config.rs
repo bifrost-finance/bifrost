@@ -27,7 +27,6 @@ use bifrost_primitives::{
 use bifrost_runtime_common::currency_adapter::{
 	BifrostDropAssets, DepositToAlternative, MultiCurrencyAdapter,
 };
-pub use bifrost_xcm_interface::traits::{parachains, XcmBaseWeight};
 use cumulus_primitives_core::AggregateMessageOrigin;
 pub use cumulus_primitives_core::ParaId;
 use frame_support::{
@@ -275,9 +274,6 @@ impl Contains<RuntimeCall> for SafeCallFilter {
 				bifrost_vtoken_minting::Call::rebond { .. } |
 				bifrost_vtoken_minting::Call::rebond_by_unlock_id { .. } |
 				bifrost_vtoken_minting::Call::redeem { .. }
-			) |
-			RuntimeCall::XcmInterface(
-				bifrost_xcm_interface::Call::transfer_statemine_assets { .. }
 			) |
 			RuntimeCall::Slpx(..) |
 			RuntimeCall::ZenlinkProtocol(
@@ -536,13 +532,9 @@ impl bifrost_xcm_interface::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type UpdateOrigin = TechAdminOrCouncil;
 	type MultiCurrency = Currencies;
-	type RelayNetwork = PolkadotNetwork;
-	type RelaychainCurrencyId = RelayCurrencyId;
-	type ParachainSovereignAccount = ParachainAccount;
-	type XcmExecutor = XcmExecutor<XcmConfig>;
 	type AccountIdToLocation = AccountIdToLocation;
-	type SalpHelper = Salp;
 	type ParachainId = ParachainInfo;
-	type CallBackTimeOut = ConstU32<10>;
 	type CurrencyIdConvert = AssetIdMaps<Runtime>;
+	type XcmRouter = XcmRouter;
+	type WeightInfo = ();
 }
