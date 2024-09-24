@@ -195,14 +195,16 @@ pub mod pallet {
 	#[pallet::storage]
 	pub type Supply<T: Config> = StorageValue<_, BalanceOf<T>, ValueQuery>;
 
-	/// The total amount of locked tokens for a given account.
+	/// Configurations
 	#[pallet::storage]
 	pub type BbConfigs<T: Config> =
 		StorageValue<_, BbConfig<BalanceOf<T>, BlockNumberFor<T>>, ValueQuery>;
 
+	/// Global epoch
 	#[pallet::storage]
 	pub type Epoch<T: Config> = StorageValue<_, U256, ValueQuery>;
 
+	/// Locked tokens. [position => LockedBalance]
 	#[pallet::storage]
 	pub type Locked<T: Config> = StorageMap<
 		_,
@@ -212,15 +214,17 @@ pub mod pallet {
 		ValueQuery,
 	>;
 
+	/// User locked tokens. [who => value]
 	#[pallet::storage]
 	pub type UserLocked<T: Config> =
 		StorageMap<_, Blake2_128Concat, AccountIdOf<T>, BalanceOf<T>, ValueQuery>;
 
-	// Each week has a Point struct stored in PointHistory.
+	/// Each week has a Point struct stored in PointHistory.
 	#[pallet::storage]
 	pub type PointHistory<T: Config> =
 		StorageMap<_, Twox64Concat, U256, Point<BalanceOf<T>, BlockNumberFor<T>>, ValueQuery>;
 
+	/// User point history. [(who, epoch) => Point]
 	#[pallet::storage]
 	pub type UserPointHistory<T: Config> = StorageDoubleMap<
 		_,
@@ -232,14 +236,16 @@ pub mod pallet {
 		ValueQuery,
 	>;
 
+	/// User point epoch. [who => epoch]
 	#[pallet::storage]
 	pub type UserPointEpoch<T: Config> = StorageMap<_, Blake2_128Concat, u128, U256, ValueQuery>;
 
+	/// Slope changes. [block => slope]
 	#[pallet::storage]
 	pub type SlopeChanges<T: Config> =
 		StorageMap<_, Twox64Concat, BlockNumberFor<T>, i128, ValueQuery>;
 
-	// Incentive
+	/// Farming pool incentive configurations.[pool_id => IncentiveConfig]
 	#[pallet::storage]
 	pub type IncentiveConfigs<T: Config> = StorageMap<
 		_,
@@ -249,6 +255,7 @@ pub mod pallet {
 		ValueQuery,
 	>;
 
+	/// User reward per token paid. [who => reward per token]
 	#[pallet::storage]
 	pub type UserRewardPerTokenPaid<T: Config> = StorageMap<
 		_,
@@ -258,14 +265,17 @@ pub mod pallet {
 		ValueQuery,
 	>;
 
+	/// User rewards. [who => rewards]
 	#[pallet::storage]
 	pub type Rewards<T: Config> =
 		StorageMap<_, Blake2_128Concat, AccountIdOf<T>, BTreeMap<CurrencyIdOf<T>, BalanceOf<T>>>;
 
+	/// User markup infos. [who => UserMarkupInfo]
 	#[pallet::storage]
 	pub type UserMarkupInfos<T: Config> =
 		StorageMap<_, Blake2_128Concat, AccountIdOf<T>, UserMarkupInfo>;
 
+	/// Locked tokens for markup. [(token, who) => value]
 	#[pallet::storage]
 	pub type LockedTokens<T: Config> = StorageDoubleMap<
 		_,
@@ -276,17 +286,21 @@ pub mod pallet {
 		LockedToken<BalanceOf<T>, BlockNumberFor<T>>,
 	>;
 
+	/// Total locked tokens for markup. [token => value]
 	#[pallet::storage]
 	pub type TotalLock<T: Config> =
 		StorageMap<_, Twox64Concat, CurrencyIdOf<T>, BalanceOf<T>, ValueQuery>;
 
+	/// Markup coefficient. [token => MarkupCoefficientInfo]
 	#[pallet::storage]
 	pub type MarkupCoefficient<T: Config> =
 		StorageMap<_, Twox64Concat, CurrencyIdOf<T>, MarkupCoefficientInfo<BlockNumberFor<T>>>;
 
+	/// The last position of all.
 	#[pallet::storage]
 	pub type Position<T: Config> = StorageValue<_, u128, ValueQuery>;
 
+	/// Positions owned by the user. [who => positions]
 	#[pallet::storage]
 	pub type UserPositions<T: Config> = StorageMap<
 		_,
@@ -333,6 +347,10 @@ pub mod pallet {
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
+		/// Set configuration.
+		///
+		/// - `min_mint`: The minimum mint balance
+		/// - `min_block`: The minimum lockup time
 		#[pallet::call_index(0)]
 		#[pallet::weight(T::WeightInfo::set_config())]
 		pub fn set_config(
@@ -355,6 +373,10 @@ pub mod pallet {
 			Ok(())
 		}
 
+		/// Create a lock.
+		///
+		/// - `value`: The amount of tokens to lock
+		/// - `unlock_time`: The lockup time
 		#[pallet::call_index(1)]
 		#[pallet::weight(T::WeightInfo::create_lock())]
 		pub fn create_lock(
@@ -366,6 +388,10 @@ pub mod pallet {
 			Self::create_lock_inner(&exchanger, value, unlock_time)
 		}
 
+		/// Increase the lock amount.
+		///
+		/// - `position`: The lock position
+		/// - `value`: The amount of tokens to increase
 		#[pallet::call_index(2)]
 		#[pallet::weight(T::WeightInfo::increase_amount())]
 		pub fn increase_amount(
@@ -380,6 +406,10 @@ pub mod pallet {
 			Self::increase_amount_inner(&exchanger, position, value)
 		}
 
+		/// Increase the unlock time.
+		///
+		/// - `position`: The lock position
+		/// - `time`: Additional lock time
 		#[pallet::call_index(3)]
 		#[pallet::weight(T::WeightInfo::increase_unlock_time())]
 		pub fn increase_unlock_time(
@@ -393,6 +423,9 @@ pub mod pallet {
 			Self::increase_unlock_time_inner(&exchanger, position, time)
 		}
 
+		/// Withdraw the locked tokens after unlock time.
+		///
+		/// - `position`: The lock position
 		#[pallet::call_index(4)]
 		#[pallet::weight(T::WeightInfo::withdraw())]
 		pub fn withdraw(origin: OriginFor<T>, position: u128) -> DispatchResult {
@@ -402,6 +435,11 @@ pub mod pallet {
 			Self::withdraw_inner(&exchanger, position)
 		}
 
+		/// Notify rewards.
+		///
+		/// - `incentive_from`: The incentive controller
+		/// - `rewards_duration`: The rewards duration
+		/// - `rewards`: The rewards
 		#[pallet::call_index(5)]
 		#[pallet::weight(T::WeightInfo::notify_rewards())]
 		pub fn notify_rewards(
@@ -419,6 +457,7 @@ pub mod pallet {
 			Self::notify_reward_amount(BB_BNC_SYSTEM_POOL_ID, &Some(incentive_from), rewards)
 		}
 
+		/// Get rewards.
 		#[pallet::call_index(6)]
 		#[pallet::weight(T::WeightInfo::get_rewards())]
 		pub fn get_rewards(origin: OriginFor<T>) -> DispatchResult {
@@ -426,6 +465,9 @@ pub mod pallet {
 			Self::get_rewards_inner(BB_BNC_SYSTEM_POOL_ID, &exchanger, None)
 		}
 
+		/// Fast unlocking, handling fee applies
+		///
+		/// - `position`: The lock position
 		#[pallet::call_index(7)]
 		#[pallet::weight(T::WeightInfo::redeem_unlock())]
 		pub fn redeem_unlock(origin: OriginFor<T>, position: u128) -> DispatchResult {
@@ -433,6 +475,11 @@ pub mod pallet {
 			Self::redeem_unlock_inner(&exchanger, position)
 		}
 
+		/// Set markup configurations.
+		///
+		/// - `currency_id`: The token type
+		/// - `markup`: The markup coefficient
+		/// - `hardcap`: The markup hardcap
 		#[pallet::call_index(8)]
 		#[pallet::weight(T::WeightInfo::set_markup_coefficient())]
 		pub fn set_markup_coefficient(
@@ -458,6 +505,10 @@ pub mod pallet {
 			Ok(())
 		}
 
+		/// Deposit markup.
+		///
+		/// - `currency_id`: The token type
+		/// - `value`: The amount of tokens to deposit
 		#[pallet::call_index(9)]
 		#[pallet::weight(T::WeightInfo::deposit_markup())]
 		pub fn deposit_markup(
@@ -469,6 +520,9 @@ pub mod pallet {
 			Self::deposit_markup_inner(&exchanger, currency_id, value)
 		}
 
+		/// Withdraw markup.
+		///
+		/// - `currency_id`: The token type
 		#[pallet::call_index(10)]
 		#[pallet::weight(T::WeightInfo::withdraw_markup())]
 		pub fn withdraw_markup(
@@ -479,6 +533,9 @@ pub mod pallet {
 			Self::withdraw_markup_inner(&exchanger, currency_id)
 		}
 
+		/// Refresh the markup.
+		///
+		/// - `currency_id`: The token type
 		#[pallet::call_index(11)]
 		#[pallet::weight(T::WeightInfo::refresh())]
 		pub fn refresh(origin: OriginFor<T>, currency_id: CurrencyIdOf<T>) -> DispatchResult {
