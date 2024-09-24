@@ -21,9 +21,7 @@
 use super::*;
 use crate::{self as flexible_fee, mock_price::MockPriceFeeder};
 use bifrost_currencies::BasicCurrencyAdapter;
-use bifrost_primitives::{
-	Balance, CurrencyId, FlexibleFeePalletId, GetNativeCurrencyId, TokenSymbol, ZenlinkPalletId,
-};
+use bifrost_primitives::{Balance, CurrencyId, FlexibleFeePalletId, TokenSymbol, ZenlinkPalletId};
 use cumulus_primitives_core::ParaId as Pid;
 use frame_support::{
 	derive_impl, parameter_types,
@@ -194,6 +192,10 @@ impl Get<Pid> for ParaInfo {
 	fn get() -> Pid {
 		Pid::from(2001)
 	}
+}
+
+parameter_types! {
+	pub const GetNativeCurrencyId: CurrencyId = BNC;
 }
 
 impl bifrost_currencies::Config for Test {

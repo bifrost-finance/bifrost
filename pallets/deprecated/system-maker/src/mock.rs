@@ -24,8 +24,8 @@
 use bifrost_asset_registry::AssetIdMaps;
 pub use bifrost_primitives::{currency::*, CurrencyId, SlpxOperator};
 use bifrost_primitives::{
-	BifrostEntranceAccount, BifrostExitAccount, BifrostFeeAccount, GetNativeCurrencyId,
-	IncentivePoolAccount, MoonbeamChainId, RelayCurrencyId, SystemMakerPalletId, ZenlinkPalletId,
+	BifrostEntranceAccount, BifrostExitAccount, BifrostFeeAccount, IncentivePoolAccount,
+	MoonbeamChainId, SystemMakerPalletId, ZenlinkPalletId,
 };
 use bifrost_slp::{QueryId, QueryResponseManager};
 pub use cumulus_primitives_core::ParaId;
@@ -103,6 +103,10 @@ impl frame_system::Config for Runtime {
 	type Lookup = IdentityLookup<Self::AccountId>;
 }
 
+parameter_types! {
+	pub const GetNativeCurrencyId: CurrencyId = ASG;
+}
+
 pub type AdaptedBasicCurrency =
 	bifrost_currencies::BasicCurrencyAdapter<Runtime, Balances, Amount, BlockNumber>;
 
@@ -158,7 +162,7 @@ parameter_types! {
 
 ord_parameter_types! {
 	pub const One: AccountId = ALICE;
-	// pub const RelayChainTokenSymbolKSM: TokenSymbol = TokenSymbol::KSM;
+	pub const RelayCurrencyId: CurrencyId = KSM;
 }
 
 impl bifrost_system_maker::Config for Runtime {

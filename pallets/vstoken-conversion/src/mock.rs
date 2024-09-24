@@ -22,7 +22,10 @@
 #![allow(non_upper_case_globals)]
 
 pub use bifrost_primitives::{currency::*, CurrencyId};
-use bifrost_primitives::{BifrostVsbondAccount, GetNativeCurrencyId, RelayCurrencyId};
+use bifrost_primitives::{
+	currency::{ASG, KSM},
+	BifrostVsbondAccount,
+};
 use frame_support::{derive_impl, ord_parameter_types, parameter_types, traits::Nothing};
 use frame_system::EnsureSignedBy;
 use sp_core::ConstU32;
@@ -64,6 +67,10 @@ impl frame_system::Config for Runtime {
 	type AccountId = AccountId;
 	type Block = Block;
 	type Lookup = IdentityLookup<Self::AccountId>;
+}
+
+parameter_types! {
+	pub const GetNativeCurrencyId: CurrencyId = ASG;
 }
 
 pub type AdaptedBasicCurrency =
@@ -121,6 +128,7 @@ parameter_types! {
 
 ord_parameter_types! {
 	pub const One: AccountId = ALICE;
+	pub const RelayCurrencyId: CurrencyId = KSM;
 }
 
 impl bifrost_vstoken_conversion::Config for Runtime {

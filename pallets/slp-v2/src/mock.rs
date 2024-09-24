@@ -19,9 +19,9 @@
 use crate as slp_v2;
 use bifrost_asset_registry::AssetIdMaps;
 use bifrost_primitives::{
-	Amount, Balance, BifrostEntranceAccount, BifrostExitAccount, BifrostFeeAccount, BlockNumber,
-	CommissionPalletId, CurrencyId, IncentivePoolAccount, MockXcmRouter, MockXcmTransfer,
-	RelayCurrencyId, SlpOperator, SlpxOperator, BNC,
+	currency::DOT, Amount, Balance, BifrostEntranceAccount, BifrostExitAccount, BifrostFeeAccount,
+	BlockNumber, CommissionPalletId, CurrencyId, IncentivePoolAccount, MockXcmRouter,
+	MockXcmTransfer, SlpOperator, SlpxOperator, BNC,
 };
 use frame_support::{
 	derive_impl,
@@ -213,6 +213,7 @@ impl Get<ParaId> for ParachainId {
 parameter_types! {
 	pub const MaximumUnlockIdOfUser: u32 = 10;
 	pub const MaximumUnlockIdOfTimeUnit: u32 = 50;
+	pub const RelayCurrencyId: CurrencyId = DOT;
 }
 
 pub struct SlpxInterface;

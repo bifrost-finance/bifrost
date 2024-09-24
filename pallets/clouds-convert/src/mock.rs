@@ -24,8 +24,7 @@
 use bifrost_asset_registry::AssetIdMaps;
 use bifrost_primitives::{
 	currency::{BNC, CLOUD, KSM, VBNC, VKSM},
-	BbBNCTokenType, BuyBackAccount, CloudsPalletId, CurrencyId, CurrencyIdMapping,
-	IncentivePalletId, NativeCurrencyId,
+	BuyBackAccount, CloudsPalletId, CurrencyId, CurrencyIdMapping, IncentivePalletId,
 };
 use frame_support::{ord_parameter_types, parameter_types, traits::Nothing};
 use frame_system::EnsureSignedBy;
@@ -93,6 +92,10 @@ impl frame_system::Config for Runtime {
 	type PreInherents = ();
 	type PostInherents = ();
 	type PostTransactions = ();
+}
+
+parameter_types! {
+	pub const NativeCurrencyId: CurrencyId = BNC;
 }
 
 pub type AdaptedBasicCurrency =
@@ -173,6 +176,7 @@ impl bifrost_clouds_convert::Config for Runtime {
 }
 
 parameter_types! {
+	pub const BbBNCTokenType: CurrencyId = VBNC;
 	pub const Week: BlockNumber = 50400; // a week
 	pub const MaxBlock: BlockNumber = 10512000; // four years
 	pub const Multiplier: Balance = 10_u128.pow(12);

@@ -23,7 +23,7 @@ pub use bifrost_primitives::{currency::*, CurrencyId, SlpxOperator};
 use bifrost_primitives::{
 	BifrostEntranceAccount, BifrostExitAccount, BifrostFeeAccount, FarmingBoostPalletId,
 	FarmingGaugeRewardIssuerPalletId, FarmingKeeperPalletId, FarmingRewardIssuerPalletId,
-	GetNativeCurrencyId, IncentivePoolAccount, MoonbeamChainId, SystemStakingPalletId,
+	IncentivePoolAccount, MoonbeamChainId, SystemStakingPalletId,
 };
 use bifrost_slp::{QueryId, QueryResponseManager};
 pub use cumulus_primitives_core::ParaId;
@@ -86,6 +86,10 @@ impl frame_system::Config for Runtime {
 	type AccountId = AccountId;
 	type Block = Block;
 	type Lookup = IdentityLookup<Self::AccountId>;
+}
+
+parameter_types! {
+	pub const GetNativeCurrencyId: CurrencyId = ASG;
 }
 
 pub type AdaptedBasicCurrency =

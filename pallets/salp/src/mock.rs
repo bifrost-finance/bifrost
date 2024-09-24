@@ -26,10 +26,10 @@ use bifrost_primitives::{
 	Amount, Balance, BifrostCrowdloanId, BifrostEntranceAccount, BifrostExitAccount,
 	BuybackPalletId,
 	CurrencyId::{self, *},
-	IncentivePoolAccount, MessageId, MockXcmExecutor, NativeCurrencyId, ParaId, RelayCurrencyId,
-	SlpOperator, SlpxOperator, StableAssetPalletId,
+	IncentivePoolAccount, MessageId, MockXcmExecutor, ParaId, SlpOperator, SlpxOperator,
+	StableAssetPalletId,
 	TokenSymbol::{self, *},
-	ZenlinkPalletId, VKSM,
+	ZenlinkPalletId, ASG, KSM, KUSD, VKSM,
 };
 use bifrost_xcm_interface::traits::XcmHelper;
 use cumulus_primitives_core::ParaId as Pid;
@@ -83,6 +83,12 @@ construct_runtime!(
 		XcmInterface: bifrost_xcm_interface,
 	}
 );
+
+parameter_types! {
+	pub const NativeCurrencyId: CurrencyId = ASG;
+	pub const RelayCurrencyId: CurrencyId = KSM;
+	pub const StableCurrencyId: CurrencyId = KUSD;
+}
 
 parameter_types! {
 	pub const BlockHashCount: BlockNumber = 250;
@@ -571,8 +577,8 @@ pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
 
 	let currency = vec![
 		(Native(BNC), DOLLARS / 100, None),
-		(Stable(KUSD), DOLLARS / 10_000, None),
-		(Token(KSM), DOLLARS / 10_000, None),
+		(Stable(TokenSymbol::KUSD), DOLLARS / 10_000, None),
+		(Token(TokenSymbol::KSM), DOLLARS / 10_000, None),
 		(Token(ZLK), DOLLARS / 1000_000, None),
 		(Token(KAR), DOLLARS / 10_000, None),
 		(Token(RMRK), DOLLARS / 1000_000, None),
@@ -580,7 +586,7 @@ pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
 		(Token(MOVR), DOLLARS / 1000_000, None),
 		(Token(DOT), DOLLARS / 1000_000, None),
 	];
-	let vcurrency = vec![Native(BNC), Token(KSM), Token(MOVR)];
+	let vcurrency = vec![Native(BNC), Token(TokenSymbol::KSM), Token(MOVR)];
 	let vsbond = vec![];
 	bifrost_asset_registry::GenesisConfig::<Test> {
 		currency,
