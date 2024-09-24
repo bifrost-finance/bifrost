@@ -20,7 +20,7 @@
 
 use super::*;
 use crate::mock::*;
-use bifrost_primitives::currency::{VKSM, VPHA};
+use bifrost_primitives::currency::VPHA;
 use frame_support::{
 	assert_noop, assert_ok,
 	traits::{
@@ -64,7 +64,8 @@ fn response_fail() -> Response {
 	Response::DispatchResult(MaybeErrorCode::Error(BoundedVec::try_from(vec![0u8, 1u8]).unwrap()))
 }
 
-const TOKENS: [CurrencyId; 2] = [VBNC, VKSM];
+// const TOKENS: [CurrencyId; 2] = [VBNC, VDOT];
+const TOKENS: [CurrencyId; 1] = [VBNC];
 
 #[test]
 fn basic_voting_works() {

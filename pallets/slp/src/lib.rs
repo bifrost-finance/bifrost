@@ -2254,7 +2254,8 @@ pub mod pallet {
 pub struct DerivativeAccountProvider<T, F>(PhantomData<(T, F)>);
 
 impl<T: Config, F: Contains<CurrencyIdOf<T>>>
-	DerivativeAccountHandler<CurrencyIdOf<T>, BalanceOf<T>, AccountIdOf<T>> for DerivativeAccountProvider<T, F>
+	DerivativeAccountHandler<CurrencyIdOf<T>, BalanceOf<T>, AccountIdOf<T>>
+	for DerivativeAccountProvider<T, F>
 {
 	fn check_derivative_index_exists(
 		token: CurrencyIdOf<T>,

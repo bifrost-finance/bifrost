@@ -16,7 +16,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-use crate::{AccountVote, PollClassOf, PollIndexOf, *};
+use crate::{AccountVote, PollClass, PollIndex, *};
 use bifrost_primitives::DerivativeIndex;
 use sp_std::vec::Vec;
 
@@ -28,7 +28,7 @@ pub trait VotingAgent<T: Config> {
 		&self,
 		who: AccountIdOf<T>,
 		vtoken: CurrencyIdOf<T>,
-		poll_index: PollIndexOf<T>,
+		poll_index: PollIndex,
 		submitted: bool,
 		new_delegator_votes: Vec<(DerivativeIndex, AccountVote<BalanceOf<T>>)>,
 		maybe_old_vote: Option<(AccountVote<BalanceOf<T>>, BalanceOf<T>)>,
@@ -36,28 +36,28 @@ pub trait VotingAgent<T: Config> {
 	fn vote_call_encode(
 		&self,
 		new_delegator_votes: Vec<(DerivativeIndex, AccountVote<BalanceOf<T>>)>,
-		poll_index: PollIndexOf<T>,
+		poll_index: PollIndex,
 		derivative_index: DerivativeIndex,
 	) -> Result<Vec<u8>, Error<T>>;
 	fn delegate_remove_delegator_vote(
 		&self,
 		vtoken: CurrencyIdOf<T>,
-		poll_index: PollIndexOf<T>,
-		class: PollClassOf<T>,
+		poll_index: PollIndex,
+		class: PollClass,
 		derivative_index: DerivativeIndex,
 	) -> DispatchResult;
 	fn remove_delegator_vote_call_encode(
 		&self,
-		class: PollClassOf<T>,
-		poll_index: PollIndexOf<T>,
+		class: PollClass,
+		poll_index: PollIndex,
 		derivative_index: DerivativeIndex,
 	) -> Result<Vec<u8>, Error<T>>;
 }
 
 pub trait ConvictionVotingCall<T: Config> {
-	fn vote(poll_index: PollIndexOf<T>, vote: AccountVote<BalanceOf<T>>) -> Self;
+	fn vote(poll_index: PollIndex, vote: AccountVote<BalanceOf<T>>) -> Self;
 
-	fn remove_vote(class: Option<PollClassOf<T>>, poll_index: PollIndexOf<T>) -> Self;
+	fn remove_vote(class: Option<PollClass>, poll_index: PollIndex) -> Self;
 }
 
 pub trait UtilityCall<Call> {

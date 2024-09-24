@@ -1381,7 +1381,7 @@ impl bifrost_vtoken_voting::Config for Runtime {
 	type RelaychainBlockNumberProvider = RelaychainDataProvider<Runtime>;
 	type VTokenSupplyProvider = VtokenMinting;
 	type ParachainId = ParachainInfo;
-	type NativeMaxVotes = ConstU32<256>;
+	type MaxVotes = ConstU32<256>;
 	type QueryTimeout = QueryTimeout;
 	type ReferendumCheckInterval = ReferendumCheckInterval;
 	type WeightInfo = weights::bifrost_vtoken_voting::BifrostWeight<Runtime>;

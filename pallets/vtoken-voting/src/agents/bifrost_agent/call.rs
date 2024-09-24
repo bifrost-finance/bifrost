@@ -15,48 +15,27 @@
 
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
-#![allow(ambiguous_glob_imports)]
-#![allow(ambiguous_glob_reexports)]
-#![allow(unused_imports)]
 
 use crate::{traits::*, *};
 use parity_scale_codec::{Decode, Encode};
 use sp_runtime::{traits::StaticLookup, RuntimeDebug};
 
-#[cfg(feature = "kusama")]
-pub(in crate::agents::relaychain_agent) use kusama::*;
+pub(in crate::agents::bifrost_agent) use bifrost::*;
 
-#[cfg(feature = "polkadot")]
-pub(in crate::agents::relaychain_agent) use polkadot::*;
-
-#[cfg(feature = "kusama")]
-pub(in crate::agents::relaychain_agent) mod kusama {
-	use crate::agents::relaychain_agent::call::*;
+pub(in crate::agents::bifrost_agent) mod bifrost {
+	use crate::agents::bifrost_agent::call::*;
 
 	#[derive(Encode, Decode, RuntimeDebug)]
-	pub(in crate::agents::relaychain_agent) enum RelayCall<T: Config> {
-		#[codec(index = 20)]
+	pub(in crate::agents::bifrost_agent) enum BifrostCall<T: Config> {
+		#[codec(index = 36)]
 		ConvictionVoting(ConvictionVoting<T>),
-		#[codec(index = 24)]
-		Utility(Utility<Self>),
-	}
-}
-
-#[cfg(feature = "polkadot")]
-pub(in crate::agents::relaychain_agent) mod polkadot {
-	use crate::agents::relaychain_agent::call::*;
-
-	#[derive(Encode, Decode, RuntimeDebug)]
-	pub(in crate::agents::relaychain_agent) enum RelayCall<T: Config> {
-		#[codec(index = 20)]
-		ConvictionVoting(ConvictionVoting<T>),
-		#[codec(index = 26)]
+		#[codec(index = 50)]
 		Utility(Utility<Self>),
 	}
 }
 
 #[derive(Encode, Decode, RuntimeDebug, Clone)]
-pub(in crate::agents::relaychain_agent) enum ConvictionVoting<T: Config> {
+pub(in crate::agents::bifrost_agent) enum ConvictionVoting<T: Config> {
 	#[codec(index = 0)]
 	Vote(#[codec(compact)] PollIndex, AccountVote<BalanceOf<T>>),
 	#[codec(index = 3)]
@@ -65,7 +44,7 @@ pub(in crate::agents::relaychain_agent) enum ConvictionVoting<T: Config> {
 	RemoveVote(Option<PollClass>, PollIndex),
 }
 
-impl<T: Config> ConvictionVotingCall<T> for RelayCall<T> {
+impl<T: Config> ConvictionVotingCall<T> for BifrostCall<T> {
 	fn vote(poll_index: PollIndex, vote: AccountVote<BalanceOf<T>>) -> Self {
 		Self::ConvictionVoting(ConvictionVoting::Vote(poll_index, vote))
 	}
@@ -76,14 +55,14 @@ impl<T: Config> ConvictionVotingCall<T> for RelayCall<T> {
 }
 
 #[derive(Encode, Decode, RuntimeDebug, Clone)]
-pub(in crate::agents::relaychain_agent) enum Utility<Call> {
+pub(in crate::agents::bifrost_agent) enum Utility<Call> {
 	#[codec(index = 1)]
 	AsDerivative(DerivativeIndex, Box<Call>),
 	#[codec(index = 2)]
 	BatchAll(Vec<Call>),
 }
 
-impl<T: Config> UtilityCall<RelayCall<T>> for RelayCall<T> {
+impl<T: Config> UtilityCall<BifrostCall<T>> for BifrostCall<T> {
 	fn as_derivative(derivative_index: DerivativeIndex, call: Self) -> Self {
 		Self::Utility(Utility::AsDerivative(derivative_index, Box::new(call)))
 	}

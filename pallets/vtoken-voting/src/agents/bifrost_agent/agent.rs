@@ -21,15 +21,15 @@ use bifrost_primitives::{CurrencyId, DerivativeIndex};
 use frame_support::pallet_prelude::*;
 use xcm::v4::Location;
 
-use crate::{pallet::Error, traits::*};
+use crate::{agents::bifrost_agent::BifrostCall, pallet::Error, traits::*};
 
 /// VotingAgent implementation for Bifrost
-pub struct BifrostAgent<T: pallet::Config> {
+pub struct BifrostAgent<T: Config> {
 	vtoken: CurrencyIdOf<T>,
 	location: Location,
 }
 
-impl<T: pallet::Config> BifrostAgent<T> {
+impl<T: Config> BifrostAgent<T> {
 	pub fn new(vtoken: CurrencyId) -> Result<Self, Error<T>> {
 		if cfg!(feature = "polkadot") {
 			let location = Pallet::<T>::convert_vtoken_to_dest_location(vtoken)?;
@@ -53,7 +53,7 @@ impl<T: Config> VotingAgent<T> for BifrostAgent<T> {
 		&self,
 		who: AccountIdOf<T>,
 		vtoken: CurrencyIdOf<T>,
-		poll_index: PollIndexOf<T>,
+		poll_index: PollIndex,
 		_submitted: bool,
 		new_delegator_votes: Vec<(DerivativeIndex, AccountVote<BalanceOf<T>>)>,
 		maybe_old_vote: Option<(AccountVote<BalanceOf<T>>, BalanceOf<T>)>,
@@ -62,13 +62,12 @@ impl<T: Config> VotingAgent<T> for BifrostAgent<T> {
 		let vote_calls = new_delegator_votes
 			.iter()
 			.map(|(_derivative_index, vote)| {
-				pallet_conviction_voting::Call::<T>::vote {
-					poll_index,
-					vote: Pallet::<T>::transfer(*vote),
-				}
-				.into()
+				let call_encode =
+					<BifrostCall<T> as ConvictionVotingCall<T>>::vote(poll_index, *vote).encode();
+				<T as frame_system::Config>::RuntimeCall::decode(&mut &*call_encode)
+					.map_err(|_| Error::<T>::CallDecodeFailed)
 			})
-			.collect::<Vec<<T as Config>::RuntimeCall>>();
+			.collect::<Result<Vec<<T as frame_system::Config>::RuntimeCall>, Error<T>>>()?;
 
 		let vote_call = if vote_calls.len() == 1 {
 			vote_calls.into_iter().nth(0).ok_or(Error::<T>::NoData)?
@@ -80,8 +79,8 @@ impl<T: Config> VotingAgent<T> for BifrostAgent<T> {
 		let delegator: AccountIdOf<T> =
 			T::DerivativeAccount::get_account_id(token, derivative_index)
 				.ok_or(Error::<T>::NoData)?;
-		let origin: <T as pallet::Config>::PalletsOrigin = RawOrigin::Signed(delegator).into();
-		let success = vote_call.dispatch(origin.into()).is_ok();
+		let origin = RawOrigin::Signed(delegator).into();
+		let success = vote_call.dispatch(origin).is_ok();
 		Pallet::<T>::handle_vote_result(
 			success,
 			who,
@@ -101,7 +100,7 @@ impl<T: Config> VotingAgent<T> for BifrostAgent<T> {
 	fn vote_call_encode(
 		&self,
 		_new_delegator_votes: Vec<(DerivativeIndex, AccountVote<BalanceOf<T>>)>,
-		_poll_index: PollIndexOf<T>,
+		_poll_index: PollIndex,
 		_derivative_index: DerivativeIndex,
 	) -> Result<Vec<u8>, Error<T>> {
 		Err(Error::<T>::VTokenNotSupport)
@@ -110,22 +109,22 @@ impl<T: Config> VotingAgent<T> for BifrostAgent<T> {
 	fn delegate_remove_delegator_vote(
 		&self,
 		vtoken: CurrencyIdOf<T>,
-		poll_index: PollIndexOf<T>,
-		class: PollClassOf<T>,
+		poll_index: PollIndex,
+		class: PollClass,
 		derivative_index: DerivativeIndex,
 	) -> DispatchResult {
-		let call: <T as Config>::RuntimeCall = pallet_conviction_voting::Call::<T>::remove_vote {
-			class: Some(class),
-			index: poll_index,
-		}
-		.into();
+		let call_encode =
+			<BifrostCall<T> as ConvictionVotingCall<T>>::remove_vote(Some(class), poll_index)
+				.encode();
+		let call = <T as frame_system::Config>::RuntimeCall::decode(&mut &*call_encode)
+			.map_err(|_| Error::<T>::CallDecodeFailed)?;
 
 		let token = CurrencyId::to_token(&vtoken).map_err(|_| Error::<T>::NoData)?;
 		let delegator: AccountIdOf<T> =
 			T::DerivativeAccount::get_account_id(token, derivative_index)
 				.ok_or(Error::<T>::NoData)?;
-		let origin: <T as pallet::Config>::PalletsOrigin = RawOrigin::Signed(delegator).into();
-		let success = call.dispatch(origin.into()).is_ok();
+		let origin = RawOrigin::Signed(delegator).into();
+		let success = call.dispatch(origin).is_ok();
 
 		if success {
 			Pallet::<T>::handle_remove_delegator_vote_success(vtoken, poll_index);
@@ -137,8 +136,8 @@ impl<T: Config> VotingAgent<T> for BifrostAgent<T> {
 
 	fn remove_delegator_vote_call_encode(
 		&self,
-		_class: PollClassOf<T>,
-		_poll_index: PollIndexOf<T>,
+		_class: PollClass,
+		_poll_index: PollIndex,
 		_derivative_index: DerivativeIndex,
 	) -> Result<Vec<u8>, Error<T>> {
 		Err(Error::<T>::VTokenNotSupport)

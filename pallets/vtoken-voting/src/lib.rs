@@ -49,11 +49,11 @@ use cumulus_primitives_core::{ParaId, QueryId, Response};
 use frame_support::{
 	dispatch::{GetDispatchInfo, PostDispatchInfo},
 	pallet_prelude::*,
-	traits::{Currency, Get, LockIdentifier, Polling},
+	traits::{Get, LockIdentifier},
 };
 use frame_system::{
 	pallet_prelude::{BlockNumberFor, *},
-	RawOrigin, {self as system},
+	RawOrigin,
 };
 use orml_traits::{MultiCurrency, MultiLockableCurrency};
 pub use pallet::*;
@@ -64,19 +64,16 @@ use sp_runtime::{
 		BlockNumberProvider, Bounded, CheckedDiv, CheckedMul, Dispatchable, Saturating,
 		UniqueSaturatedInto, Zero,
 	},
-	ArithmeticError, Perbill, SaturatedConversion,
+	ArithmeticError, Perbill,
 };
 use sp_std::{boxed::Box, vec::Vec};
 pub use weights::WeightInfo;
 use xcm::v4::{prelude::*, Location, Weight as XcmWeight};
 
 const CONVICTION_VOTING_ID: LockIdentifier = *b"vtvoting";
-pub type PollIndexOf<T> = <<T as pallet_conviction_voting::Config>::Polls as Polling<
-	pallet_conviction_voting::TallyOf<T>,
->>::Index;
-type PollClassOf<T> = <<T as pallet_conviction_voting::Config>::Polls as Polling<
-	pallet_conviction_voting::TallyOf<T>,
->>::Class;
+
+type PollIndex = u32;
+type PollClass = u16;
 
 pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
 
@@ -85,20 +82,10 @@ pub type CurrencyIdOf<T> =
 
 pub type BalanceOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<AccountIdOf<T>>>::Balance;
 
-pub type ConvictionVotingBalanceOf<T> =
-	<<T as pallet_conviction_voting::Config>::Currency as Currency<
-		<T as frame_system::Config>::AccountId,
-	>>::Balance;
-
 pub type TallyOf<T> = Tally<BalanceOf<T>, ()>;
 
-type VotingOf<T> = Voting<
-	BalanceOf<T>,
-	AccountIdOf<T>,
-	BlockNumberFor<T>,
-	PollIndexOf<T>,
-	<T as Config>::NativeMaxVotes,
->;
+type VotingOf<T> =
+	Voting<BalanceOf<T>, AccountIdOf<T>, BlockNumberFor<T>, PollIndex, <T as Config>::MaxVotes>;
 
 pub type ReferendumInfoOf<T> = ReferendumInfo<BlockNumberFor<T>, TallyOf<T>>;
 
@@ -117,17 +104,13 @@ pub mod pallet {
 	pub struct Pallet<T>(_);
 
 	#[pallet::config]
-	pub trait Config:
-		frame_system::Config + pallet_xcm::Config + pallet_conviction_voting::Config
-	{
+	pub trait Config: frame_system::Config + pallet_xcm::Config {
 		type RuntimeEvent: IsType<<Self as frame_system::Config>::RuntimeEvent> + From<Event<Self>>;
 
 		type RuntimeOrigin: IsType<<Self as frame_system::Config>::RuntimeOrigin>
-			+ Into<Result<pallet_xcm::Origin, <Self as Config>::RuntimeOrigin>>
-			+ From<Self::PalletsOrigin>;
+			+ Into<Result<pallet_xcm::Origin, <Self as Config>::RuntimeOrigin>>;
 
 		type RuntimeCall: IsType<<Self as pallet_xcm::Config>::RuntimeCall>
-			+ From<pallet_conviction_voting::Call<Self>>
 			+ From<Call<Self>>
 			+ GetDispatchInfo
 			+ Dispatchable<
@@ -161,7 +144,7 @@ pub mod pallet {
 
 		/// The maximum number of concurrent votes an account may have.
 		#[pallet::constant]
-		type NativeMaxVotes: Get<u32>;
+		type MaxVotes: Get<u32>;
 
 		#[pallet::constant]
 		type QueryTimeout: Get<BlockNumberFor<Self>>;
@@ -172,7 +155,7 @@ pub mod pallet {
 		/// Weight information for extrinsics in this pallet.
 		type WeightInfo: WeightInfo;
 
-		type PalletsOrigin: From<system::RawOrigin<Self::AccountId>> + CallerTrait<Self::AccountId>;
+		type PalletsOrigin: CallerTrait<Self::AccountId>;
 	}
 
 	#[pallet::event]
@@ -181,14 +164,14 @@ pub mod pallet {
 		Voted {
 			who: AccountIdOf<T>,
 			vtoken: CurrencyIdOf<T>,
-			poll_index: PollIndexOf<T>,
+			poll_index: PollIndex,
 			token_vote: AccountVote<BalanceOf<T>>,
 			delegator_vote: AccountVote<BalanceOf<T>>,
 		},
 		Unlocked {
 			who: AccountIdOf<T>,
 			vtoken: CurrencyIdOf<T>,
-			poll_index: PollIndexOf<T>,
+			poll_index: PollIndex,
 		},
 		DelegatorVoteRemoved {
 			who: AccountIdOf<T>,
@@ -201,12 +184,12 @@ pub mod pallet {
 		},
 		ReferendumInfoCreated {
 			vtoken: CurrencyIdOf<T>,
-			poll_index: PollIndexOf<T>,
+			poll_index: PollIndex,
 			info: ReferendumInfoOf<T>,
 		},
 		ReferendumInfoSet {
 			vtoken: CurrencyIdOf<T>,
-			poll_index: PollIndexOf<T>,
+			poll_index: PollIndex,
 			info: ReferendumInfoOf<T>,
 		},
 		VoteLockingPeriodSet {
@@ -219,16 +202,16 @@ pub mod pallet {
 		},
 		ReferendumKilled {
 			vtoken: CurrencyIdOf<T>,
-			poll_index: PollIndexOf<T>,
+			poll_index: PollIndex,
 		},
 		VoteNotified {
 			vtoken: CurrencyIdOf<T>,
-			poll_index: PollIndexOf<T>,
+			poll_index: PollIndex,
 			success: bool,
 		},
 		DelegatorVoteRemovedNotified {
 			vtoken: CurrencyIdOf<T>,
-			poll_index: PollIndexOf<T>,
+			poll_index: PollIndex,
 			success: bool,
 		},
 		ResponseReceived {
@@ -285,6 +268,7 @@ pub mod pallet {
 		/// The given value is out of range.
 		OutOfRange,
 		InvalidCallDispatch,
+		CallDecodeFailed,
 	}
 
 	/// Information concerning any given referendum.
@@ -294,7 +278,7 @@ pub mod pallet {
 		Twox64Concat,
 		CurrencyIdOf<T>,
 		Twox64Concat,
-		PollIndexOf<T>,
+		PollIndex,
 		ReferendumInfoOf<T>,
 	>;
 
@@ -312,13 +296,13 @@ pub mod pallet {
 		_,
 		Twox64Concat,
 		AccountIdOf<T>,
-		BoundedVec<(CurrencyIdOf<T>, BalanceOf<T>), T::NativeMaxVotes>,
+		BoundedVec<(CurrencyIdOf<T>, BalanceOf<T>), T::MaxVotes>,
 		ValueQuery,
 	>;
 
 	#[pallet::storage]
 	pub type PendingReferendumInfo<T: Config> =
-		StorageMap<_, Twox64Concat, QueryId, (CurrencyIdOf<T>, PollIndexOf<T>)>;
+		StorageMap<_, Twox64Concat, QueryId, (CurrencyIdOf<T>, PollIndex)>;
 
 	#[pallet::storage]
 	pub type PendingVotingInfo<T: Config> = StorageMap<
@@ -327,7 +311,7 @@ pub mod pallet {
 		QueryId,
 		(
 			CurrencyIdOf<T>,
-			PollIndexOf<T>,
+			PollIndex,
 			DerivativeIndex,
 			AccountIdOf<T>,
 			Option<(AccountVote<BalanceOf<T>>, BalanceOf<T>)>,
@@ -336,7 +320,7 @@ pub mod pallet {
 
 	#[pallet::storage]
 	pub type PendingRemoveDelegatorVote<T: Config> =
-		StorageMap<_, Twox64Concat, QueryId, (CurrencyIdOf<T>, PollIndexOf<T>, DerivativeIndex)>;
+		StorageMap<_, Twox64Concat, QueryId, (CurrencyIdOf<T>, PollIndex, DerivativeIndex)>;
 
 	#[pallet::storage]
 	pub type VoteLockingPeriod<T: Config> =
@@ -365,7 +349,7 @@ pub mod pallet {
 		Twox64Concat,
 		CurrencyIdOf<T>,
 		Twox64Concat,
-		PollIndexOf<T>,
+		PollIndex,
 		BoundedVec<(DerivativeIndex, AccountVote<BalanceOf<T>>), ConstU32<100>>,
 		ValueQuery,
 	>;
@@ -376,7 +360,7 @@ pub mod pallet {
 		Twox64Concat,
 		CurrencyIdOf<T>,
 		Twox64Concat,
-		PollIndexOf<T>,
+		PollIndex,
 		BoundedVec<(DerivativeIndex, AccountVote<BalanceOf<T>>), ConstU32<100>>,
 		ValueQuery,
 	>;
@@ -386,7 +370,7 @@ pub mod pallet {
 		_,
 		Twox64Concat,
 		BlockNumberFor<T>,
-		BoundedVec<(CurrencyIdOf<T>, PollIndexOf<T>), ConstU32<50>>,
+		BoundedVec<(CurrencyIdOf<T>, PollIndex), ConstU32<50>>,
 		ValueQuery,
 	>;
 
@@ -396,7 +380,7 @@ pub mod pallet {
 		(
 			NMapKey<Twox64Concat, AccountIdOf<T>>,
 			NMapKey<Twox64Concat, CurrencyIdOf<T>>,
-			NMapKey<Twox64Concat, PollIndexOf<T>>,
+			NMapKey<Twox64Concat, PollIndex>,
 		),
 		DerivativeIndex,
 	>;
@@ -478,7 +462,7 @@ pub mod pallet {
 		pub fn vote(
 			origin: OriginFor<T>,
 			vtoken: CurrencyIdOf<T>,
-			poll_index: PollIndexOf<T>,
+			poll_index: PollIndex,
 			vtoken_vote: AccountVote<BalanceOf<T>>,
 		) -> DispatchResult {
 			let who = ensure_signed(origin)?;
@@ -491,7 +475,6 @@ pub mod pallet {
 			// create referendum if not exist
 			let mut submitted = false;
 			if !ReferendumInfoFor::<T>::contains_key(vtoken, poll_index) {
-				// todo
 				ReferendumInfoFor::<T>::insert(
 					vtoken,
 					poll_index,
@@ -549,7 +532,7 @@ pub mod pallet {
 		pub fn unlock(
 			origin: OriginFor<T>,
 			vtoken: CurrencyIdOf<T>,
-			poll_index: PollIndexOf<T>,
+			#[pallet::compact] poll_index: PollIndex,
 		) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 			Self::ensure_vtoken(&vtoken)?;
@@ -574,8 +557,8 @@ pub mod pallet {
 		pub fn remove_delegator_vote(
 			origin: OriginFor<T>,
 			vtoken: CurrencyIdOf<T>,
-			class: PollClassOf<T>,
-			poll_index: PollIndexOf<T>,
+			#[pallet::compact] class: PollClass,
+			#[pallet::compact] poll_index: PollIndex,
 			#[pallet::compact] derivative_index: DerivativeIndex,
 		) -> DispatchResult {
 			let who = ensure_signed(origin)?;
@@ -601,7 +584,7 @@ pub mod pallet {
 		pub fn kill_referendum(
 			origin: OriginFor<T>,
 			vtoken: CurrencyIdOf<T>,
-			poll_index: PollIndexOf<T>,
+			#[pallet::compact] poll_index: PollIndex,
 		) -> DispatchResult {
 			T::ControlOrigin::ensure_origin(origin)?;
 			Self::ensure_vtoken(&vtoken)?;
@@ -652,7 +635,7 @@ pub mod pallet {
 		pub fn set_referendum_status(
 			origin: OriginFor<T>,
 			vtoken: CurrencyIdOf<T>,
-			poll_index: PollIndexOf<T>,
+			#[pallet::compact] poll_index: PollIndex,
 			info: ReferendumInfoOf<T>,
 		) -> DispatchResult {
 			T::ControlOrigin::ensure_origin(origin)?;
@@ -811,7 +794,7 @@ pub mod pallet {
 	impl<T: Config> Pallet<T> {
 		pub(crate) fn handle_remove_delegator_vote_success(
 			vtoken: CurrencyIdOf<T>,
-			poll_index: PollIndexOf<T>,
+			poll_index: PollIndex,
 		) {
 			DelegatorVotes::<T>::remove(vtoken, poll_index);
 		}
@@ -820,7 +803,7 @@ pub mod pallet {
 			success: bool,
 			who: AccountIdOf<T>,
 			vtoken: CurrencyIdOf<T>,
-			poll_index: PollIndexOf<T>,
+			poll_index: PollIndex,
 			maybe_old_vote: Option<(AccountVote<BalanceOf<T>>, BalanceOf<T>)>,
 			derivative_index: DerivativeIndex,
 		) -> DispatchResult {
@@ -854,7 +837,7 @@ pub mod pallet {
 		pub(crate) fn send_xcm_vote_message(
 			who: AccountIdOf<T>,
 			vtoken: CurrencyIdOf<T>,
-			poll_index: PollIndexOf<T>,
+			poll_index: PollIndex,
 			submitted: bool,
 			new_delegator_votes: Vec<(DerivativeIndex, AccountVote<BalanceOf<T>>)>,
 			maybe_old_vote: Option<(AccountVote<BalanceOf<T>>, BalanceOf<T>)>,
@@ -882,7 +865,6 @@ pub mod pallet {
 				weight,
 				extra_fee,
 				|query_id| {
-					// todo
 					if !submitted {
 						PendingReferendumInfo::<T>::insert(query_id, (vtoken, poll_index));
 					}
@@ -898,8 +880,8 @@ pub mod pallet {
 
 		pub(crate) fn send_xcm_remove_delegator_vote_message(
 			vtoken: CurrencyIdOf<T>,
-			poll_index: PollIndexOf<T>,
-			class: PollClassOf<T>,
+			poll_index: PollIndex,
+			class: PollClass,
 			derivative_index: DerivativeIndex,
 		) -> DispatchResult {
 			let voting_agent = Self::get_voting_agent(&vtoken)?;
@@ -1005,36 +987,10 @@ pub mod pallet {
 			Ok(Xcm(xcm_message))
 		}
 
-		pub(crate) fn transfer(
-			account_vote: AccountVote<BalanceOf<T>>,
-		) -> ConvictionVotingAccountVote<ConvictionVotingBalanceOf<T>> {
-			match account_vote {
-				AccountVote::Standard { vote, balance } => ConvictionVotingAccountVote::Standard {
-					vote,
-					balance: Self::transfer_balance(balance),
-				},
-				AccountVote::Split { aye, nay } => ConvictionVotingAccountVote::Split {
-					aye: Self::transfer_balance(aye),
-					nay: Self::transfer_balance(nay),
-				},
-				AccountVote::SplitAbstain { aye, nay, abstain } =>
-					ConvictionVotingAccountVote::SplitAbstain {
-						aye: Self::transfer_balance(aye),
-						nay: Self::transfer_balance(nay),
-						abstain: Self::transfer_balance(abstain),
-					},
-			}
-		}
-
-		fn transfer_balance(balance: BalanceOf<T>) -> ConvictionVotingBalanceOf<T> {
-			let balance: u128 = balance.saturated_into::<u128>();
-			ConvictionVotingBalanceOf::<T>::saturated_from(balance)
-		}
-
 		fn try_vote(
 			who: &AccountIdOf<T>,
 			vtoken: CurrencyIdOf<T>,
-			poll_index: PollIndexOf<T>,
+			poll_index: PollIndex,
 			vote: AccountVote<BalanceOf<T>>,
 			vtoken_balance: BalanceOf<T>,
 		) -> Result<
@@ -1099,7 +1055,7 @@ pub mod pallet {
 		pub(crate) fn try_remove_vote(
 			who: &AccountIdOf<T>,
 			vtoken: CurrencyIdOf<T>,
-			poll_index: PollIndexOf<T>,
+			poll_index: PollIndex,
 			scope: UnvoteScope,
 		) -> DispatchResult {
 			VotingFor::<T>::try_mutate(who, |voting| {
@@ -1214,7 +1170,7 @@ pub mod pallet {
 
 		fn ensure_no_pending_vote(
 			vtoken: CurrencyIdOf<T>,
-			poll_index: PollIndexOf<T>,
+			poll_index: PollIndex,
 		) -> DispatchResult {
 			ensure!(
 				!PendingVotingInfo::<T>::iter()
@@ -1226,7 +1182,7 @@ pub mod pallet {
 
 		pub fn ensure_referendum_ongoing(
 			vtoken: CurrencyIdOf<T>,
-			poll_index: PollIndexOf<T>,
+			poll_index: PollIndex,
 		) -> Result<ReferendumStatus<BlockNumberFor<T>, TallyOf<T>>, DispatchError> {
 			match ReferendumInfoFor::<T>::get(vtoken, poll_index) {
 				Some(ReferendumInfo::Ongoing(status)) => Ok(status),
@@ -1236,7 +1192,7 @@ pub mod pallet {
 
 		fn ensure_referendum_completed(
 			vtoken: CurrencyIdOf<T>,
-			poll_index: PollIndexOf<T>,
+			poll_index: PollIndex,
 		) -> DispatchResult {
 			match ReferendumInfoFor::<T>::get(vtoken, poll_index) {
 				Some(ReferendumInfo::Completed(_)) => Ok(()),
@@ -1246,7 +1202,7 @@ pub mod pallet {
 
 		fn ensure_referendum_expired(
 			vtoken: CurrencyIdOf<T>,
-			poll_index: PollIndexOf<T>,
+			poll_index: PollIndex,
 		) -> DispatchResult {
 			let delegator_votes = DelegatorVotes::<T>::get(vtoken, poll_index).into_inner();
 			let (_derivative_index, delegator_vote) =
@@ -1278,7 +1234,7 @@ pub mod pallet {
 
 		fn ensure_referendum_killed(
 			vtoken: CurrencyIdOf<T>,
-			poll_index: PollIndexOf<T>,
+			poll_index: PollIndex,
 		) -> DispatchResult {
 			match ReferendumInfoFor::<T>::get(vtoken, poll_index) {
 				Some(ReferendumInfo::Killed(_)) => Ok(()),
@@ -1297,7 +1253,7 @@ pub mod pallet {
 
 		fn try_access_poll<R>(
 			vtoken: CurrencyIdOf<T>,
-			poll_index: PollIndexOf<T>,
+			poll_index: PollIndex,
 			f: impl FnOnce(PollStatus<&mut TallyOf<T>, BlockNumberFor<T>>) -> Result<R, DispatchError>,
 		) -> Result<R, DispatchError> {
 			match ReferendumInfoFor::<T>::get(vtoken, poll_index) {
@@ -1377,7 +1333,7 @@ pub mod pallet {
 
 		pub(crate) fn allocate_delegator_votes(
 			vtoken: CurrencyIdOf<T>,
-			poll_index: PollIndexOf<T>,
+			poll_index: PollIndex,
 			delegator_total_vote: AccountVote<BalanceOf<T>>,
 		) -> Result<Vec<(DerivativeIndex, AccountVote<BalanceOf<T>>)>, DispatchError> {
 			let vote_role: VoteRole = delegator_total_vote.into();
@@ -1442,10 +1398,7 @@ pub mod pallet {
 			let token = CurrencyId::to_token(&vtoken).map_err(|_| Error::<T>::NoData)?;
 			match token {
 				KSM | DOT => Ok(Location::parent()),
-				BNC => Ok(xcm::v4::Location::new(
-					1,
-					[xcm::v4::prelude::Parachain(T::ParachainId::get().into())],
-				)),
+				BNC => Ok(Location::new(1, [Parachain(T::ParachainId::get().into())])),
 				_ => Err(Error::<T>::VTokenNotSupport),
 			}
 		}
