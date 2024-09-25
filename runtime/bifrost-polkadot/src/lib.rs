@@ -1845,6 +1845,7 @@ pub mod migrations {
 	pub type Unreleased = (
 		// permanent migration, do not remove
 		pallet_xcm::migration::MigrateToLatestXcmVersion<Runtime>,
+		bifrost_cross_in_out::migrations::v3::MigrateToV2<Runtime>,
 		frame_support::migrations::RemovePallet<SystemMakerName, RocksDbWeight>,
 	);
 }
