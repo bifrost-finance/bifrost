@@ -25,7 +25,9 @@ use crate::{Config, DispatchResult, QueryResponseManager, XcmDestWeightAndFeeHan
 use bifrost_asset_registry::AssetIdMaps;
 use bifrost_primitives::{
 	currency::{BNC, KSM},
-	Amount, Balance, CurrencyId, MoonbeamChainId, SlpxOperator, TokenSymbol, XcmOperationType,
+	Amount, Balance, BifrostEntranceAccount, BifrostExitAccount, BifrostFeeAccount, CurrencyId,
+	IncentivePoolAccount, MoonbeamChainId, ParachainStakingPalletId, SlpxOperator, TokenSymbol,
+	XcmOperationType,
 };
 pub use cumulus_primitives_core::ParaId;
 use frame_support::{
@@ -36,7 +38,6 @@ use frame_support::{
 	PalletId,
 };
 use frame_system::{EnsureRoot, EnsureSignedBy};
-use hex_literal::hex;
 use orml_traits::{location::RelativeReserveProvider, parameter_type_with_key};
 use parity_scale_codec::{Decode, Encode};
 use sp_core::{bounded::BoundedVec, hashing::blake2_256, ConstU32};
@@ -185,10 +186,6 @@ impl orml_xtokens::Config for Runtime {
 parameter_types! {
 	pub const MaximumUnlockIdOfUser: u32 = 10;
 	pub const MaximumUnlockIdOfTimeUnit: u32 = 50;
-	pub BifrostEntranceAccount: PalletId = PalletId(*b"bf/vtkin");
-	pub BifrostExitAccount: PalletId = PalletId(*b"bf/vtout");
-	pub BifrostFeeAccount: AccountId = hex!["e4da05f08e89bf6c43260d96f26fffcfc7deae5b465da08669a9d008e64c2c63"].into();
-	pub IncentivePoolAccount: PalletId = PalletId(*b"bf/inpoo");
 }
 
 impl bifrost_vtoken_minting::Config for Runtime {
@@ -237,7 +234,6 @@ parameter_types! {
 	pub const MinDelegation: u128 = 3;
 	pub AllowInflation: bool = true;
 	pub PaymentInRound: u128 = 10;
-	pub const ParachainStakingPalletId: PalletId = PalletId(*b"bf/stake");
 	pub ToMigrateInvulnables: Vec<AccountId> = vec![AccountId32::new([1u8; 32])];
 	pub InitSeedStk: u128 = 10;
 }

@@ -21,8 +21,12 @@
 #![cfg(test)]
 #![allow(non_upper_case_globals)]
 
-pub use bifrost_primitives::{currency::*, CurrencyId, TokenSymbol};
-use frame_support::{derive_impl, ord_parameter_types, parameter_types, traits::Nothing, PalletId};
+pub use bifrost_primitives::{currency::*, CurrencyId};
+use bifrost_primitives::{
+	currency::{ASG, KSM},
+	BifrostVsbondAccount,
+};
+use frame_support::{derive_impl, ord_parameter_types, parameter_types, traits::Nothing};
 use frame_system::EnsureSignedBy;
 use sp_core::ConstU32;
 use sp_runtime::{traits::IdentityLookup, AccountId32, BuildStorage};
@@ -66,7 +70,7 @@ impl frame_system::Config for Runtime {
 }
 
 parameter_types! {
-	pub const GetNativeCurrencyId: CurrencyId = CurrencyId::Native(TokenSymbol::ASG);
+	pub const GetNativeCurrencyId: CurrencyId = ASG;
 }
 
 pub type AdaptedBasicCurrency =
@@ -120,13 +124,11 @@ impl orml_tokens::Config for Runtime {
 
 parameter_types! {
 	pub const TreasuryAccount: AccountId32 = TREASURY_ACCOUNT;
-	pub BifrostVsbondAccount: PalletId = PalletId(*b"bf/salpb");
 }
 
 ord_parameter_types! {
 	pub const One: AccountId = ALICE;
-	// pub const RelayCurrencyId: CurrencyId = CurrencyId::Token2(DOT_TOKEN_ID);
-	pub const RelayCurrencyId: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
+	pub const RelayCurrencyId: CurrencyId = KSM;
 }
 
 impl bifrost_vstoken_conversion::Config for Runtime {

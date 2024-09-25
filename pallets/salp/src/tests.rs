@@ -19,7 +19,9 @@
 // Ensure we're `no_std` when compiling for Wasm.
 
 use crate::{mock::*, Error, FundStatus, *};
-use bifrost_primitives::{CurrencyId, TokenSymbol, TryConvertFrom, KSM, VKSM, VSKSM};
+use bifrost_primitives::{
+	BuybackPalletId, CurrencyId, TokenSymbol, TryConvertFrom, KSM, VKSM, VSKSM,
+};
 use bifrost_xcm_interface::SalpHelper;
 use frame_support::{assert_noop, assert_ok};
 use frame_system::pallet_prelude::BlockNumberFor;

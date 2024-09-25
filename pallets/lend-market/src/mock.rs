@@ -22,7 +22,6 @@ pub use bifrost_primitives::{currency::*, *};
 use frame_support::{
 	construct_runtime, derive_impl, parameter_types,
 	traits::{AsEnsureOriginWithArg, Nothing, SortedMembers},
-	PalletId,
 };
 use frame_system::{EnsureRoot, EnsureSigned, EnsureSignedBy};
 use orml_traits::{DataFeeder, DataProvider, DataProviderExtended};
@@ -88,11 +87,6 @@ parameter_types! {
 	pub const MaxLocks: u32 = 50;
 }
 
-parameter_types! {
-	pub const StableCurrencyId: CurrencyId = CurrencyId::Stable(TokenSymbol::KUSD);
-	pub const PolkadotCurrencyId: CurrencyId = CurrencyId::Token(TokenSymbol::DOT);
-}
-
 impl pallet_balances::Config for Test {
 	type AccountStore = frame_system::Pallet<Test>;
 	type Balance = Balance;
@@ -114,10 +108,6 @@ impl bifrost_asset_registry::Config for Test {
 	type Currency = Balances;
 	type RegisterOrigin = EnsureSignedBy<AliceCreatePoolOrigin, AccountId>;
 	type WeightInfo = ();
-}
-
-parameter_types! {
-	pub const NativeCurrencyId: CurrencyId = CurrencyId::Native(TokenSymbol::BNC);
 }
 
 orml_traits::parameter_type_with_key! {
@@ -316,7 +306,6 @@ impl pallet_prices::Config for Test {
 }
 
 parameter_types! {
-	pub const LendMarketPalletId: PalletId = PalletId(*b"bf/ldmkt");
 	pub const RewardAssetId: CurrencyId = BNC;
 	pub const LiquidationFreeAssetId: CurrencyId = DOT;
 }

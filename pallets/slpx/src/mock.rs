@@ -19,9 +19,12 @@
 
 use crate as slpx;
 use bifrost_asset_registry::AssetIdMaps;
-use bifrost_primitives::MoonbeamChainId;
+use bifrost_primitives::{
+	BifrostEntranceAccount, BifrostExitAccount, BifrostFeeAccount, IncentivePoolAccount,
+	MoonbeamChainId, StableAssetPalletId, ZenlinkPalletId,
+};
 pub use bifrost_primitives::{
-	CurrencyId, CurrencyIdMapping, MockXcmExecutor, SlpxOperator, TokenSymbol, BNC, KSM,
+	CurrencyId, CurrencyIdMapping, MockXcmExecutor, SlpxOperator, BNC, KSM,
 };
 use bifrost_slp::{QueryId, QueryResponseManager};
 use cumulus_primitives_core::ParaId;
@@ -30,10 +33,8 @@ use frame_support::{
 	pallet_prelude::*,
 	parameter_types,
 	traits::{Everything, Nothing},
-	PalletId,
 };
 use frame_system::{EnsureRoot, EnsureSignedBy};
-use hex_literal::hex;
 use orml_traits::{
 	location::RelativeReserveProvider, parameter_type_with_key, xcm_transfer::Transferred,
 	MultiCurrency, XcmTransfer,
@@ -119,7 +120,7 @@ impl pallet_balances::Config for Test {
 }
 
 parameter_types! {
-	pub const GetNativeCurrencyId: CurrencyId = CurrencyId::Native(TokenSymbol::BNC);
+	pub const GetNativeCurrencyId: CurrencyId = BNC;
 }
 
 pub type AdaptedBasicCurrency =
@@ -161,11 +162,7 @@ impl orml_tokens::Config for Test {
 parameter_types! {
 	pub const MaximumUnlockIdOfUser: u32 = 10;
 	pub const MaximumUnlockIdOfTimeUnit: u32 = 50;
-	pub BifrostEntranceAccount: PalletId = PalletId(*b"bf/vtkin");
-	pub BifrostExitAccount: PalletId = PalletId(*b"bf/vtout");
-	pub BifrostFeeAccount: AccountId = hex!["e4da05f08e89bf6c43260d96f26fffcfc7deae5b465da08669a9d008e64c2c63"].into();
 	pub const RelayCurrencyId: CurrencyId = KSM;
-	pub IncentivePoolAccount: PalletId = PalletId(*b"bf/inpoo");
 }
 
 ord_parameter_types! {
@@ -266,7 +263,6 @@ where
 type MultiAssets = ZenlinkMultiAssets<ZenlinkProtocol, Balances, LocalAssetAdaptor<Currencies>>;
 
 parameter_types! {
-	pub const ZenlinkPalletId: PalletId = PalletId(*b"/zenlink");
 	pub const GetExchangeFee: (u32, u32) = (3, 1000);   // 0.3%
 	pub const SelfParaId: u32 = 2001;
 }
@@ -476,9 +472,6 @@ impl bifrost_stable_asset::traits::ValidateAssetId<CurrencyId> for EnsurePoolAss
 		true
 	}
 }
-parameter_types! {
-	pub const StableAssetPalletId: PalletId = PalletId(*b"nuts/sta");
-}
 
 impl bifrost_stable_asset::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
@@ -509,7 +502,7 @@ impl bifrost_stable_pool::Config for Test {
 
 // Pallet slpx configuration
 parameter_types! {
-	pub const NativeCurrencyId: CurrencyId = CurrencyId::Native(TokenSymbol::BNC);
+	pub const NativeCurrencyId: CurrencyId = BNC;
 }
 
 pub struct XTokensMock;

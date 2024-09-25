@@ -16,7 +16,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-use bifrost_primitives::{Amount, Balance, CurrencyId, TokenSymbol};
+use bifrost_primitives::{Amount, Balance, CurrencyId, TokenSymbol, VsbondAuctionPalletId, KSM};
 #[cfg(feature = "runtime-benchmarks")]
 use frame_benchmarking::{account, whitelisted_caller};
 use frame_support::{
@@ -111,10 +111,9 @@ impl orml_tokens::Config for Test {
 }
 
 parameter_types! {
-	pub const InvoicingCurrency: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
+	pub const InvoicingCurrency: CurrencyId = KSM;
 	pub const MaximumOrderInTrade: u32 = 5;
 	pub const MinimumSupply: Balance = 0;
-	pub const VsbondAuctionPalletId: PalletId = PalletId(*b"bf/vsbnd");
 	pub BifrostTreasuryAccount: AccountId = PalletId(*b"bf/trsry").into_account_truncating();
 }
 
