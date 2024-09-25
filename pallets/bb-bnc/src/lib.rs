@@ -217,6 +217,17 @@ pub mod pallet {
 		PartiallyRefreshed { currency_id: CurrencyIdOf<T> },
 		/// Notify reward failed.
 		NotifyRewardFailed { rewards: Vec<(CurrencyIdOf<T>, BalanceOf<T>)> },
+		/// Markup has been deposited.
+		MarkupDeposited {
+			/// The user who deposited
+			who: AccountIdOf<T>,
+			/// The token type of the deposit
+			currency_id: CurrencyIdOf<T>,
+			/// The amount of currency_id to be deposited this time
+			value: BalanceOf<T>,
+		},
+		/// Markup has been withdrawn.
+		MarkupWithdrawn { who: AccountIdOf<T>, currency_id: CurrencyIdOf<T> },
 	}
 
 	#[pallet::error]
@@ -623,7 +634,7 @@ pub mod pallet {
 	impl<T: Config> Pallet<T> {
 		pub fn _checkpoint(
 			who: &AccountIdOf<T>,
-			addr: u128,
+			position: u128,
 			old_locked: LockedBalance<BalanceOf<T>, BlockNumberFor<T>>,
 			new_locked: LockedBalance<BalanceOf<T>, BlockNumberFor<T>>,
 		) -> DispatchResult {
@@ -780,14 +791,13 @@ pub mod pallet {
 			}
 
 			// Now handle user history
-			let user_epoch = UserPointEpoch::<T>::get(addr)
+			let user_epoch = UserPointEpoch::<T>::get(position)
 				.checked_add(U256::one())
 				.ok_or(ArithmeticError::Overflow)?;
-			UserPointEpoch::<T>::insert(addr, user_epoch);
+			UserPointEpoch::<T>::insert(position, user_epoch);
 			u_new.block = current_block_number;
-			// u_new.amount = Locked::<T>::get(addr).amount;
 			u_new.amount = new_locked.amount;
-			UserPointHistory::<T>::insert(addr, user_epoch, u_new);
+			UserPointHistory::<T>::insert(position, user_epoch, u_new);
 
 			Ok(())
 		}
@@ -841,17 +851,17 @@ pub mod pallet {
 			Ok(())
 		}
 
-		// Get the current voting power for `addr`
+		// Get the current voting power for `position`
 		pub(crate) fn balance_of_position_current_block(
-			addr: u128,
+			position: u128,
 		) -> Result<BalanceOf<T>, DispatchError> {
 			let current_block_number: BlockNumberFor<T> = frame_system::Pallet::<T>::block_number();
-			let u_epoch = UserPointEpoch::<T>::get(addr);
+			let u_epoch = UserPointEpoch::<T>::get(position);
 			if u_epoch == U256::zero() {
 				return Ok(Zero::zero());
 			} else {
 				let mut last_point: Point<BalanceOf<T>, BlockNumberFor<T>> =
-					UserPointHistory::<T>::get(addr, u_epoch);
+					UserPointHistory::<T>::get(position, u_epoch);
 
 				last_point.bias = last_point
 					.bias
@@ -877,9 +887,9 @@ pub mod pallet {
 			}
 		}
 
-		// Measure voting power of `addr` at block height `block`
+		// Measure voting power of `position` at block height `block`
 		pub(crate) fn balance_of_position_at(
-			addr: u128,
+			position: u128,
 			block: BlockNumberFor<T>,
 		) -> Result<BalanceOf<T>, DispatchError> {
 			let current_block_number: BlockNumberFor<T> = frame_system::Pallet::<T>::block_number();
@@ -887,7 +897,7 @@ pub mod pallet {
 
 			// Binary search
 			let mut _min = U256::zero();
-			let mut _max = UserPointEpoch::<T>::get(addr);
+			let mut _max = UserPointEpoch::<T>::get(position);
 			for _i in 0..128 {
 				if _min >= _max {
 					break;
@@ -900,7 +910,7 @@ pub mod pallet {
 				.checked_div(U256::from(2_u128))
 				.ok_or(ArithmeticError::Overflow)?;
 
-				if UserPointHistory::<T>::get(addr, _mid).block <= block {
+				if UserPointHistory::<T>::get(position, _mid).block <= block {
 					_min = _mid
 				} else {
 					_max = _mid.checked_sub(U256::one()).ok_or(ArithmeticError::Overflow)?
@@ -908,7 +918,7 @@ pub mod pallet {
 			}
 
 			let mut upoint: Point<BalanceOf<T>, BlockNumberFor<T>> =
-				UserPointHistory::<T>::get(addr, _min);
+				UserPointHistory::<T>::get(position, _min);
 			upoint.bias = upoint
 				.bias
 				.checked_sub(
@@ -932,11 +942,11 @@ pub mod pallet {
 		}
 
 		pub(crate) fn balance_of_at(
-			addr: &AccountIdOf<T>,
+			who: &AccountIdOf<T>,
 			block: BlockNumberFor<T>,
 		) -> Result<BalanceOf<T>, DispatchError> {
 			let mut balance = BalanceOf::<T>::zero();
-			UserPositions::<T>::get(addr).into_iter().try_for_each(
+			UserPositions::<T>::get(who).into_iter().try_for_each(
 				|position| -> DispatchResult {
 					balance = balance
 						.checked_add(Self::balance_of_position_at(position, block)?)
@@ -948,10 +958,10 @@ pub mod pallet {
 		}
 
 		pub(crate) fn balance_of_current_block(
-			addr: &AccountIdOf<T>,
+			who: &AccountIdOf<T>,
 		) -> Result<BalanceOf<T>, DispatchError> {
 			let mut balance = BalanceOf::<T>::zero();
-			UserPositions::<T>::get(addr).into_iter().try_for_each(
+			UserPositions::<T>::get(who).into_iter().try_for_each(
 				|position| -> DispatchResult {
 					balance = balance
 						.checked_add(Self::balance_of_position_current_block(position)?)
@@ -963,7 +973,7 @@ pub mod pallet {
 		}
 
 		pub fn markup_calc(
-			addr: &AccountIdOf<T>,
+			who: &AccountIdOf<T>,
 			position: u128,
 			mut old_locked: LockedBalance<BalanceOf<T>, BlockNumberFor<T>>,
 			mut new_locked: LockedBalance<BalanceOf<T>, BlockNumberFor<T>>,
@@ -982,12 +992,12 @@ pub mod pallet {
 					.ok_or(ArithmeticError::Overflow)?;
 			}
 
-			Self::_checkpoint(addr, position, old_locked.clone(), new_locked.clone())?;
+			Self::_checkpoint(who, position, old_locked.clone(), new_locked.clone())?;
 			Ok(())
 		}
 
 		pub fn deposit_markup_inner(
-			addr: &AccountIdOf<T>,
+			who: &AccountIdOf<T>,
 			currency_id: CurrencyIdOf<T>,
 			value: BalanceOf<T>,
 		) -> DispatchResult {
@@ -1002,9 +1012,9 @@ pub mod pallet {
 
 			let current_block_number: BlockNumberFor<T> = frame_system::Pallet::<T>::block_number();
 
-			let mut user_markup_info = UserMarkupInfos::<T>::get(&addr).unwrap_or_default();
+			let mut user_markup_info = UserMarkupInfos::<T>::get(&who).unwrap_or_default();
 			let mut locked_token =
-				LockedTokens::<T>::get(currency_id, &addr).unwrap_or(LockedToken {
+				LockedTokens::<T>::get(currency_id, &who).unwrap_or(LockedToken {
 					amount: Zero::zero(),
 					markup_coefficient: Zero::zero(),
 					refresh_block: current_block_number,
@@ -1034,7 +1044,7 @@ pub mod pallet {
 					Ordering::Equal | Ordering::Greater => currency_id_markup_coefficient,
 				};
 			Self::update_markup_info(
-				&addr,
+				&who,
 				user_markup_info
 					.markup_coefficient
 					.saturating_sub(locked_token.markup_coefficient)
@@ -1044,15 +1054,15 @@ pub mod pallet {
 			locked_token.markup_coefficient = new_markup_coefficient;
 			locked_token.refresh_block = current_block_number;
 
-			T::MultiCurrency::set_lock(MARKUP_LOCK_ID, currency_id, &addr, locked_token.amount)?;
-			LockedTokens::<T>::insert(&currency_id, &addr, locked_token);
-			UserPositions::<T>::get(&addr).into_iter().try_for_each(
+			T::MultiCurrency::set_lock(MARKUP_LOCK_ID, currency_id, &who, locked_token.amount)?;
+			LockedTokens::<T>::insert(&currency_id, &who, locked_token);
+			UserPositions::<T>::get(&who).into_iter().try_for_each(
 				|position| -> DispatchResult {
 					let _locked: LockedBalance<BalanceOf<T>, BlockNumberFor<T>> =
 						Locked::<T>::get(position);
 					ensure!(!_locked.amount.is_zero(), Error::<T>::ArgumentsError);
 					Self::markup_calc(
-						&addr,
+						&who,
 						position,
 						_locked.clone(),
 						_locked,
@@ -1062,21 +1072,22 @@ pub mod pallet {
 			)?;
 
 			// Locked cannot be updated because it is markup, not a lock vBNC
+			Self::deposit_event(Event::MarkupDeposited { who: who.clone(), currency_id, value });
 			Ok(())
 		}
 
 		pub fn withdraw_markup_inner(
-			addr: &AccountIdOf<T>,
+			who: &AccountIdOf<T>,
 			currency_id: CurrencyIdOf<T>,
 		) -> DispatchResult {
 			let _ = MarkupCoefficient::<T>::get(currency_id).ok_or(Error::<T>::ArgumentsError)?; // Ensure it is the correct token type.
 
-			let mut user_markup_info = UserMarkupInfos::<T>::get(&addr).unwrap_or_default();
+			let mut user_markup_info = UserMarkupInfos::<T>::get(&who).unwrap_or_default();
 
 			let locked_token =
-				LockedTokens::<T>::get(&currency_id, &addr).ok_or(Error::<T>::LockNotExist)?;
+				LockedTokens::<T>::get(&currency_id, &who).ok_or(Error::<T>::LockNotExist)?;
 			Self::update_markup_info(
-				&addr,
+				&who,
 				user_markup_info
 					.markup_coefficient
 					.saturating_sub(locked_token.markup_coefficient),
@@ -1087,16 +1098,16 @@ pub mod pallet {
 					total_lock.checked_sub(locked_token.amount).ok_or(ArithmeticError::Overflow)?;
 				Ok(())
 			})?;
-			T::MultiCurrency::remove_lock(MARKUP_LOCK_ID, currency_id, &addr)?;
+			T::MultiCurrency::remove_lock(MARKUP_LOCK_ID, currency_id, &who)?;
 
-			LockedTokens::<T>::remove(&currency_id, &addr);
-			UserPositions::<T>::get(&addr).into_iter().try_for_each(
+			LockedTokens::<T>::remove(&currency_id, &who);
+			UserPositions::<T>::get(&who).into_iter().try_for_each(
 				|position| -> DispatchResult {
 					let _locked: LockedBalance<BalanceOf<T>, BlockNumberFor<T>> =
 						Locked::<T>::get(position);
 					ensure!(!_locked.amount.is_zero(), Error::<T>::ArgumentsError); // TODO
 					Self::markup_calc(
-						&addr,
+						&who,
 						position,
 						_locked.clone(),
 						_locked,
@@ -1104,6 +1115,8 @@ pub mod pallet {
 					)
 				},
 			)?;
+
+			Self::deposit_event(Event::MarkupWithdrawn { who: who.clone(), currency_id });
 			Ok(())
 		}
 
@@ -1116,7 +1129,7 @@ pub mod pallet {
 			let mut refresh_count = 0;
 			let locked_tokens = LockedTokens::<T>::iter_prefix(&currency_id);
 
-			for (addr, mut locked_token) in locked_tokens {
+			for (who, mut locked_token) in locked_tokens {
 				if refresh_count >= limit {
 					all_refreshed = false;
 					break;
@@ -1145,7 +1158,7 @@ pub mod pallet {
 						left.checked_add(&right).ok_or(ArithmeticError::Overflow)?;
 
 					let mut user_markup_info =
-						UserMarkupInfos::<T>::get(&addr).ok_or(Error::<T>::LockNotExist)?;
+						UserMarkupInfos::<T>::get(&who).ok_or(Error::<T>::LockNotExist)?;
 
 					let new_markup_coefficient =
 						match markup_coefficient.hardcap.cmp(&currency_id_markup_coefficient) {
@@ -1153,7 +1166,7 @@ pub mod pallet {
 							Ordering::Equal | Ordering::Greater => currency_id_markup_coefficient,
 						};
 					Self::update_markup_info(
-						&addr,
+						&who,
 						user_markup_info
 							.markup_coefficient
 							.saturating_sub(locked_token.markup_coefficient)
@@ -1161,14 +1174,14 @@ pub mod pallet {
 						&mut user_markup_info,
 					);
 					locked_token.markup_coefficient = new_markup_coefficient;
-					LockedTokens::<T>::insert(&currency_id, &addr, locked_token);
-					UserPositions::<T>::get(&addr).into_iter().try_for_each(
+					LockedTokens::<T>::insert(&currency_id, &who, locked_token);
+					UserPositions::<T>::get(&who).into_iter().try_for_each(
 						|position| -> DispatchResult {
 							let _locked: LockedBalance<BalanceOf<T>, BlockNumberFor<T>> =
 								Locked::<T>::get(position);
 							ensure!(!_locked.amount.is_zero(), Error::<T>::ArgumentsError); // TODO
 							Self::markup_calc(
-								&addr,
+								&who,
 								position,
 								_locked.clone(),
 								_locked,

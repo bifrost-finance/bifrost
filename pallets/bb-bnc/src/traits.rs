@@ -24,7 +24,7 @@ use crate::*;
 pub trait BbBNCInterface<AccountId, CurrencyId, Balance, BlockNumber> {
 	fn deposit_for(_who: &AccountId, position: u128, value: Balance) -> DispatchResult;
 	fn withdraw_inner(who: &AccountId, position: u128) -> DispatchResult;
-	fn balance_of(addr: &AccountId, time: Option<BlockNumber>) -> Result<Balance, DispatchError>;
+	fn balance_of(who: &AccountId, time: Option<BlockNumber>) -> Result<Balance, DispatchError>;
 	fn total_supply(t: BlockNumber) -> Result<Balance, DispatchError>;
 	fn supply_at(
 		point: Point<Balance, BlockNumber>,
@@ -35,13 +35,13 @@ pub trait BbBNCInterface<AccountId, CurrencyId, Balance, BlockNumber> {
 		who: &AccountId,
 		_value: Balance,
 		_unlock_time: BlockNumber,
-	) -> DispatchResult; // Deposit `_value` BNC for `addr` and lock until `_unlock_time`
-	fn increase_amount_inner(who: &AccountId, position: u128, value: Balance) -> DispatchResult; // Deposit `_value` additional BNC for `addr` without modifying the unlock time
+	) -> DispatchResult; // Deposit `_value` BNC for `who` and lock until `_unlock_time`
+	fn increase_amount_inner(who: &AccountId, position: u128, value: Balance) -> DispatchResult; // Deposit `_value` additional BNC for `who` without modifying the unlock time
 	fn increase_unlock_time_inner(
 		who: &AccountId,
 		position: u128,
 		_unlock_time: BlockNumber,
-	) -> DispatchResult; // Extend the unlock time for `addr` to `_unlock_time`
+	) -> DispatchResult; // Extend the unlock time for `who` to `_unlock_time`
 	fn auto_notify_reward(
 		pool_id: PoolId,
 		n: BlockNumber,
@@ -49,12 +49,12 @@ pub trait BbBNCInterface<AccountId, CurrencyId, Balance, BlockNumber> {
 	) -> DispatchResult;
 	fn update_reward(
 		pool_id: PoolId,
-		addr: Option<&AccountId>,
+		who: Option<&AccountId>,
 		share_info: Option<(Balance, Balance)>,
 	) -> DispatchResult;
 	fn get_rewards(
 		pool_id: PoolId,
-		addr: &AccountId,
+		who: &AccountId,
 		share_info: Option<(Balance, Balance)>,
 	) -> DispatchResult;
 	fn set_incentive(
@@ -63,14 +63,14 @@ pub trait BbBNCInterface<AccountId, CurrencyId, Balance, BlockNumber> {
 		controller: Option<AccountId>,
 	);
 	fn add_reward(
-		addr: &AccountId,
+		who: &AccountId,
 		conf: &mut IncentiveConfig<CurrencyId, Balance, BlockNumber, AccountId>,
 		rewards: &Vec<(CurrencyId, Balance)>,
 		remaining: Balance,
 	) -> DispatchResult;
 	fn notify_reward(
 		pool_id: PoolId,
-		addr: &Option<AccountId>,
+		who: &Option<AccountId>,
 		rewards: Vec<(CurrencyId, Balance)>,
 	) -> DispatchResult;
 }
@@ -199,12 +199,12 @@ impl<T: Config> BbBNCInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>, Bl
 	}
 
 	fn balance_of(
-		addr: &AccountIdOf<T>,
+		who: &AccountIdOf<T>,
 		time: Option<BlockNumberFor<T>>,
 	) -> Result<BalanceOf<T>, DispatchError> {
 		match time {
-			Some(_t) => Self::balance_of_at(addr, _t),
-			None => Self::balance_of_current_block(addr),
+			Some(_t) => Self::balance_of_at(who, _t),
+			None => Self::balance_of_current_block(who),
 		}
 	}
 
@@ -296,18 +296,18 @@ impl<T: Config> BbBNCInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>, Bl
 
 	fn update_reward(
 		pool_id: PoolId,
-		addr: Option<&AccountIdOf<T>>,
+		who: Option<&AccountIdOf<T>>,
 		share_info: Option<(BalanceOf<T>, BalanceOf<T>)>,
 	) -> DispatchResult {
-		Self::update_reward(pool_id, addr, share_info)
+		Self::update_reward(pool_id, who, share_info)
 	}
 
 	fn get_rewards(
 		pool_id: PoolId,
-		addr: &AccountIdOf<T>,
+		who: &AccountIdOf<T>,
 		share_info: Option<(BalanceOf<T>, BalanceOf<T>)>,
 	) -> DispatchResult {
-		Self::get_rewards_inner(pool_id, addr, share_info)
+		Self::get_rewards_inner(pool_id, who, share_info)
 	}
 
 	fn set_incentive(
@@ -328,7 +328,7 @@ impl<T: Config> BbBNCInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>, Bl
 	}
 
 	fn add_reward(
-		addr: &AccountIdOf<T>,
+		who: &AccountIdOf<T>,
 		conf: &mut IncentiveConfig<
 			CurrencyIdOf<T>,
 			BalanceOf<T>,
@@ -370,7 +370,7 @@ impl<T: Config> BbBNCInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>, Bl
 				.or_insert(new_reward);
 			T::MultiCurrency::transfer(
 				*currency,
-				addr,
+				who,
 				&T::IncentivePalletId::get().into_account_truncating(),
 				*reward,
 			)
@@ -379,10 +379,10 @@ impl<T: Config> BbBNCInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>, Bl
 
 	fn notify_reward(
 		pool_id: PoolId,
-		addr: &Option<AccountIdOf<T>>,
+		who: &Option<AccountIdOf<T>>,
 		rewards: Vec<(CurrencyIdOf<T>, BalanceOf<T>)>,
 	) -> DispatchResult {
-		Self::notify_reward_amount(pool_id, addr, rewards)
+		Self::notify_reward_amount(pool_id, who, rewards)
 	}
 }
 
@@ -419,7 +419,7 @@ where
 		Ok(())
 	}
 
-	fn balance_of(_addr: &AccountId, _time: Option<BlockNumber>) -> Result<Balance, DispatchError> {
+	fn balance_of(_who: &AccountId, _time: Option<BlockNumber>) -> Result<Balance, DispatchError> {
 		Ok(Zero::zero())
 	}
 
@@ -448,7 +448,7 @@ where
 
 	fn update_reward(
 		_pool_id: PoolId,
-		_addr: Option<&AccountId>,
+		_who: Option<&AccountId>,
 		_share_info: Option<(Balance, Balance)>,
 	) -> DispatchResult {
 		Ok(())
@@ -456,7 +456,7 @@ where
 
 	fn get_rewards(
 		_pool_id: PoolId,
-		_addr: &AccountId,
+		_who: &AccountId,
 		_share_info: Option<(Balance, Balance)>,
 	) -> DispatchResult {
 		Ok(())
@@ -469,7 +469,7 @@ where
 	) {
 	}
 	fn add_reward(
-		_addr: &AccountId,
+		_who: &AccountId,
 		_conf: &mut IncentiveConfig<CurrencyId, Balance, BlockNumber, AccountId>,
 		_rewards: &Vec<(CurrencyId, Balance)>,
 		_remaining: Balance,
@@ -478,7 +478,7 @@ where
 	}
 	fn notify_reward(
 		_pool_id: PoolId,
-		_addr: &Option<AccountId>,
+		_who: &Option<AccountId>,
 		_rewards: Vec<(CurrencyId, Balance)>,
 	) -> DispatchResult {
 		Ok(())
@@ -509,7 +509,7 @@ pub struct MarkupCoefficientInfo<BlockNumber> {
 
 pub trait MarkupInfo<AccountId> {
 	fn update_markup_info(
-		addr: &AccountId,
+		who: &AccountId,
 		new_markup_coefficient: FixedU128,
 		user_markup_info: &mut UserMarkupInfo,
 	);
@@ -517,12 +517,12 @@ pub trait MarkupInfo<AccountId> {
 
 impl<T: Config> MarkupInfo<AccountIdOf<T>> for Pallet<T> {
 	fn update_markup_info(
-		addr: &AccountIdOf<T>,
+		who: &AccountIdOf<T>,
 		new_markup_coefficient: FixedU128,
 		user_markup_info: &mut UserMarkupInfo,
 	) {
 		user_markup_info.old_markup_coefficient = user_markup_info.markup_coefficient;
 		user_markup_info.markup_coefficient = new_markup_coefficient;
-		UserMarkupInfos::<T>::insert(addr, user_markup_info);
+		UserMarkupInfos::<T>::insert(who, user_markup_info);
 	}
 }
