@@ -121,7 +121,8 @@ impl<T: Config> BbBNCInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>, Bl
 
 		Self::_deposit_for(who, new_position, _value, unlock_time, _locked)?;
 		Self::deposit_event(Event::LockCreated {
-			addr: who.to_owned(),
+			who: who.to_owned(),
+			position: new_position,
 			value: _value,
 			unlock_time: _unlock_time,
 		});
@@ -164,7 +165,7 @@ impl<T: Config> BbBNCInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>, Bl
 		Self::deposit_event(Event::UnlockTimeIncreased {
 			who: who.to_owned(),
 			position,
-			unlock_time: _unlock_time,
+			unlock_time,
 		});
 		Ok(())
 	}

@@ -65,8 +65,9 @@ const MARKUP_LOCK_ID: LockIdentifier = *b"bbbncmkp";
 const BB_BNC_SYSTEM_POOL_ID: PoolId = u32::MAX;
 #[derive(Clone, Encode, Decode, PartialEq, Eq, RuntimeDebug, TypeInfo, Default)]
 pub struct BbConfig<Balance, BlockNumber> {
-	amount: Balance,
+	/// Minimum number of TokenType that users can lock
 	min_mint: Balance,
+	/// Minimum time that users can lock
 	min_block: BlockNumber,
 }
 
@@ -131,6 +132,7 @@ pub mod pallet {
 		#[pallet::constant]
 		type MaxPositions: Get<u32>;
 
+		/// Maximum number of users per refresh.
 		#[pallet::constant]
 		type MarkupRefreshLimit: Get<u32>;
 	}
@@ -138,34 +140,82 @@ pub mod pallet {
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
-		/// Config set. \[config\]
+		/// The minimum number of TokenType and minimum time that users can lock has been set.
 		ConfigSet { config: BbConfig<BalanceOf<T>, BlockNumberFor<T>> },
-		/// A successful call of the `create_lock` function. \[addr, value, unlock_time, now\]
-		Minted { addr: u128, value: BalanceOf<T>, end: BlockNumberFor<T>, now: BlockNumberFor<T> },
-		/// The supply of the token has changed. \[supply_before, supply\]
-		Supply { supply_before: BalanceOf<T>, supply: BalanceOf<T> },
-		/// A lock was created. \[addr, value, unlock_time\]
-		LockCreated { addr: AccountIdOf<T>, value: BalanceOf<T>, unlock_time: BlockNumberFor<T> },
-		/// A lock was extended. \[who, position, unlock_time\]
-		UnlockTimeIncreased { who: AccountIdOf<T>, position: u128, unlock_time: BlockNumberFor<T> },
-		/// A lock was increased. \[who, position, value\]
-		AmountIncreased { who: AccountIdOf<T>, position: u128, value: BalanceOf<T> },
-		/// A lock was withdrawn. \[who, position\]
-		Withdrawn { position: u128, value: BalanceOf<T> },
-		/// Incentive config set. \[incentive_config]
+		/// A successful call of the `create_lock` function.
+		Minted {
+			/// the user who mint
+			who: AccountIdOf<T>,
+			/// the position of this minting
+			position: u128,
+			/// the value of this minting
+			value: BalanceOf<T>,
+			/// total mint value for this user
+			total_value: BalanceOf<T>,
+			/// withdrawable time
+			end: BlockNumberFor<T>,
+			/// current time
+			now: BlockNumberFor<T>,
+		},
+		/// Change in TokenType locked after calling.
+		Supply {
+			/// The balance before the change.
+			supply_before: BalanceOf<T>,
+			/// The balance after the change.
+			supply: BalanceOf<T>,
+		},
+		/// A position was created.
+		LockCreated {
+			/// Position owner
+			who: AccountIdOf<T>,
+			/// Position ID
+			position: u128,
+			/// Locked value
+			value: BalanceOf<T>,
+			/// withdrawable time
+			unlock_time: BlockNumberFor<T>,
+		},
+		/// A position was extended.
+		UnlockTimeIncreased {
+			/// Position owner
+			who: AccountIdOf<T>,
+			/// Position ID
+			position: u128,
+			/// New withdrawable time
+			unlock_time: BlockNumberFor<T>,
+		},
+		/// A position was increased.
+		AmountIncreased {
+			/// Position owner
+			who: AccountIdOf<T>,
+			/// Position ID
+			position: u128,
+			/// Increased value, not new locked value
+			value: BalanceOf<T>,
+		},
+		/// A position was withdrawn.
+		Withdrawn {
+			/// Position owner
+			who: AccountIdOf<T>,
+			/// Position ID
+			position: u128,
+			/// Withdrawn value
+			value: BalanceOf<T>,
+		},
+		/// Incentive config set.
 		IncentiveSet {
 			incentive_config:
 				IncentiveConfig<CurrencyIdOf<T>, BalanceOf<T>, BlockNumberFor<T>, AccountIdOf<T>>,
 		},
-		/// Reward added. \[rewards]
+		/// The rewards for this round have been added to the system account.
 		RewardAdded { rewards: Vec<(CurrencyIdOf<T>, BalanceOf<T>)> },
-		/// Reward distributed. \[addr, rewards]
-		Rewarded { addr: AccountIdOf<T>, rewards: Vec<(CurrencyIdOf<T>, BalanceOf<T>)> },
-		/// Refreshed. \[currency_id]
+		/// The user has received the reward.
+		Rewarded { who: AccountIdOf<T>, rewards: Vec<(CurrencyIdOf<T>, BalanceOf<T>)> },
+		/// This currency_id has been refreshed.
 		AllRefreshed { currency_id: CurrencyIdOf<T> },
-		/// Partially refreshed. \[currency_id]
+		/// This currency_id has been partially refreshed.
 		PartiallyRefreshed { currency_id: CurrencyIdOf<T> },
-		/// Notify reward failed. \[rewards]
+		/// Notify reward failed.
 		NotifyRewardFailed { rewards: Vec<(CurrencyIdOf<T>, BalanceOf<T>)> },
 	}
 
@@ -349,14 +399,16 @@ pub mod pallet {
 	impl<T: Config> Pallet<T> {
 		/// Set configuration.
 		///
+		/// Set the minimum number of tokens and minimum time that users can lock.
+		///
 		/// - `min_mint`: The minimum mint balance
 		/// - `min_block`: The minimum lockup time
 		#[pallet::call_index(0)]
 		#[pallet::weight(T::WeightInfo::set_config())]
 		pub fn set_config(
 			origin: OriginFor<T>,
-			min_mint: Option<BalanceOf<T>>,       // Minimum mint balance
-			min_block: Option<BlockNumberFor<T>>, // Minimum lockup time
+			min_mint: Option<BalanceOf<T>>,
+			min_block: Option<BlockNumberFor<T>>,
 		) -> DispatchResult {
 			T::ControlOrigin::ensure_origin(origin)?;
 
@@ -375,6 +427,9 @@ pub mod pallet {
 
 		/// Create a lock.
 		///
+		/// If the signer already has a position, the position will not be extended. it will be
+		/// created a new position until the maximum number of positions is reached.
+		///
 		/// - `value`: The amount of tokens to lock
 		/// - `unlock_time`: The lockup time
 		#[pallet::call_index(1)]
@@ -390,6 +445,10 @@ pub mod pallet {
 
 		/// Increase the lock amount.
 		///
+		/// If the signer does not have the position, it doesn't work and the position will not be
+		/// created. Only the position existed and owned by the signer, the locking amount will be
+		/// increased.
+		///
 		/// - `position`: The lock position
 		/// - `value`: The amount of tokens to increase
 		#[pallet::call_index(2)]
@@ -400,13 +459,16 @@ pub mod pallet {
 			value: BalanceOf<T>,
 		) -> DispatchResult {
 			let exchanger = ensure_signed(origin)?;
-			// TODO: ensure postion is owned by exchanger
 			let user_positions = UserPositions::<T>::get(&exchanger);
 			ensure!(user_positions.contains(&position), Error::<T>::LockNotExist);
 			Self::increase_amount_inner(&exchanger, position, value)
 		}
 
 		/// Increase the unlock time.
+		///
+		/// If the signer does not have the position, it doesn't work and the position will not be
+		/// created. Only the position existed and owned by the signer, the locking time will be
+		/// increased.
 		///
 		/// - `position`: The lock position
 		/// - `time`: Additional lock time
@@ -437,6 +499,11 @@ pub mod pallet {
 
 		/// Notify rewards.
 		///
+		/// Set the incentive controller and rewards token type for future round. Reward duration
+		/// should be one round interval. It will notify the rewards from incentive controller to
+		/// the system account and start a new round immediately, and the next round will auto start
+		/// at now + rewards_duration.
+		///
 		/// - `incentive_from`: The incentive controller
 		/// - `rewards_duration`: The rewards duration
 		/// - `rewards`: The rewards
@@ -457,7 +524,7 @@ pub mod pallet {
 			Self::notify_reward_amount(BB_BNC_SYSTEM_POOL_ID, &Some(incentive_from), rewards)
 		}
 
-		/// Get rewards.
+		/// Get rewards for the signer.
 		#[pallet::call_index(6)]
 		#[pallet::weight(T::WeightInfo::get_rewards())]
 		pub fn get_rewards(origin: OriginFor<T>) -> DispatchResult {
@@ -466,6 +533,8 @@ pub mod pallet {
 		}
 
 		/// Fast unlocking, handling fee applies
+		///
+		/// When users want to redeem early regardless of cost, they can use this call.
 		///
 		/// - `position`: The lock position
 		#[pallet::call_index(7)]
@@ -484,9 +553,9 @@ pub mod pallet {
 		#[pallet::weight(T::WeightInfo::set_markup_coefficient())]
 		pub fn set_markup_coefficient(
 			origin: OriginFor<T>,
-			currency_id: CurrencyId, // token类型
-			markup: FixedU128,       // 单位token的加成系数
-			hardcap: FixedU128,      // token对应加成硬顶
+			currency_id: CurrencyId,
+			markup: FixedU128,
+			hardcap: FixedU128,
 		) -> DispatchResult {
 			T::ControlOrigin::ensure_origin(origin)?;
 
@@ -507,6 +576,8 @@ pub mod pallet {
 
 		/// Deposit markup.
 		///
+		/// Deposit the token to the system account for the markup.
+		///
 		/// - `currency_id`: The token type
 		/// - `value`: The amount of tokens to deposit
 		#[pallet::call_index(9)]
@@ -522,6 +593,8 @@ pub mod pallet {
 
 		/// Withdraw markup.
 		///
+		/// Withdraw the token from the system account for the markup.
+		///
 		/// - `currency_id`: The token type
 		#[pallet::call_index(10)]
 		#[pallet::weight(T::WeightInfo::withdraw_markup())]
@@ -534,6 +607,9 @@ pub mod pallet {
 		}
 
 		/// Refresh the markup.
+		///
+		/// Any user can call this function to refresh the markup coefficient. The maximum number of
+		/// accounts that can be refreshed in one execution is MarkupRefreshLimit.
 		///
 		/// - `currency_id`: The token type
 		#[pallet::call_index(11)]
@@ -718,7 +794,7 @@ pub mod pallet {
 
 		pub fn _deposit_for(
 			who: &AccountIdOf<T>,
-			addr: u128,
+			position: u128,
 			value: BalanceOf<T>,
 			unlock_time: BlockNumberFor<T>,
 			locked_balance: LockedBalance<BalanceOf<T>, BlockNumberFor<T>>,
@@ -726,14 +802,15 @@ pub mod pallet {
 			let current_block_number: BlockNumberFor<T> = frame_system::Pallet::<T>::block_number();
 			let mut _locked = locked_balance;
 			let supply_before = Supply::<T>::get();
-			Supply::<T>::set(supply_before.checked_add(value).ok_or(ArithmeticError::Overflow)?);
+			let supply_after = supply_before.checked_add(value).ok_or(ArithmeticError::Overflow)?;
+			Supply::<T>::set(supply_after);
 
 			let old_locked = _locked.clone();
 			_locked.amount = _locked.amount.checked_add(value).ok_or(ArithmeticError::Overflow)?;
 			if unlock_time != Zero::zero() {
 				_locked.end = unlock_time
 			}
-			Locked::<T>::insert(addr, _locked.clone());
+			Locked::<T>::insert(position, _locked.clone());
 
 			let free_balance = T::MultiCurrency::free_balance(T::TokenType::get(), &who);
 			if value != BalanceOf::<T>::zero() {
@@ -746,22 +823,21 @@ pub mod pallet {
 
 			Self::markup_calc(
 				who,
-				addr,
+				position,
 				old_locked,
 				_locked.clone(),
 				UserMarkupInfos::<T>::get(who).as_ref(),
 			)?;
 
 			Self::deposit_event(Event::Minted {
-				addr,
+				who: who.clone(),
+				position,
 				value,
+				total_value: _locked.amount,
 				end: _locked.end,
 				now: current_block_number,
 			});
-			Self::deposit_event(Event::Supply {
-				supply_before,
-				supply: supply_before.checked_add(value).ok_or(ArithmeticError::Overflow)?,
-			});
+			Self::deposit_event(Event::Supply { supply_before, supply: supply_after });
 			Ok(())
 		}
 
@@ -1135,7 +1211,8 @@ pub mod pallet {
 			Locked::<T>::insert(position, _locked.clone());
 
 			let supply_before = Supply::<T>::get();
-			Supply::<T>::set(supply_before.saturating_sub(value));
+			let supply_after = supply_before.checked_sub(value).ok_or(ArithmeticError::Overflow)?;
+			Supply::<T>::set(supply_after);
 
 			// BNC should be transferred before checkpoint
 			UserPositions::<T>::mutate(who, |positions| {
@@ -1158,11 +1235,8 @@ pub mod pallet {
 
 			Self::_checkpoint(who, position, old_locked, _locked.clone())?;
 
-			Self::deposit_event(Event::Withdrawn { position, value });
-			Self::deposit_event(Event::Supply {
-				supply_before,
-				supply: supply_before.saturating_sub(value),
-			});
+			Self::deposit_event(Event::Withdrawn { who: who.clone(), position, value });
+			Self::deposit_event(Event::Supply { supply_before, supply: supply_after });
 			Ok(())
 		}
 

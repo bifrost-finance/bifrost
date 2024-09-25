@@ -23,12 +23,20 @@ use sp_std::collections::btree_map::BTreeMap;
 
 #[derive(Clone, Encode, Decode, PartialEq, Eq, RuntimeDebug, TypeInfo)]
 pub struct IncentiveConfig<CurrencyId, Balance, BlockNumber, AccountId> {
+	/// Reward per block number per currency_id, which will change at notify_reward.
 	pub reward_rate: BTreeMap<CurrencyId, Balance>,
+	/// Each currency_id is rewarded against each TokenType and grows with user actions.
 	pub reward_per_token_stored: BTreeMap<CurrencyId, Balance>,
+	/// Round duration.
 	pub rewards_duration: BlockNumber,
+	/// The time when this round ends.
 	pub period_finish: BlockNumber,
+	/// Last time rewards were updated, any user action will update this field.
 	pub last_update_time: BlockNumber,
+	/// When a round is started, the corresponding value will be transferred from this account to
+	/// the system account.
 	pub incentive_controller: Option<AccountId>,
+	/// When a round is started, the value to be transferred will be obtained from this field.
 	pub last_reward: Vec<(CurrencyId, Balance)>,
 }
 
@@ -217,25 +225,25 @@ impl<T: Config> Pallet<T> {
 	///Transfer rewards into an account
 	pub fn get_rewards_inner(
 		pool_id: PoolId,
-		addr: &AccountIdOf<T>,
+		who: &AccountIdOf<T>,
 		share_info: Option<(BalanceOf<T>, BalanceOf<T>)>,
 	) -> DispatchResult {
-		Self::update_reward(pool_id, Some(addr), share_info)?;
-		if Self::balance_of_current_block(addr)? == BalanceOf::<T>::zero() {
+		Self::update_reward(pool_id, Some(who), share_info)?;
+		if Self::balance_of_current_block(who)? == BalanceOf::<T>::zero() {
 			return Ok(());
 		} // Excit earlier if balance of token is zero
-		if let Some(rewards) = Rewards::<T>::get(addr) {
+		if let Some(rewards) = Rewards::<T>::get(who) {
 			rewards.iter().try_for_each(|(currency, &reward)| -> DispatchResult {
 				T::MultiCurrency::transfer(
 					*currency,
 					&T::IncentivePalletId::get().into_account_truncating(),
-					addr,
+					who,
 					reward,
 				)
 			})?;
-			Rewards::<T>::remove(addr);
+			Rewards::<T>::remove(who);
 			Self::deposit_event(Event::Rewarded {
-				addr: addr.to_owned(),
+				who: who.to_owned(),
 				rewards: rewards.into_iter().collect(),
 			});
 		}
