@@ -161,6 +161,7 @@ impl ExtBuilder {
 			(CHARLIE, BNC, 100),
 			(ALICE, DOT, 100),
 			(ALICE, VDOT, 400),
+			(ALICE, KSM, 100),
 			(BOB, DOT, 100),
 			(BOB, KSM, 100),
 		])
