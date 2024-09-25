@@ -46,11 +46,6 @@ parameter_types! {
 	pub const EthereumChainId: u64 = 1;
 }
 
-// Token Location
-parameter_types! {
-	pub MoonbeamTokenLocation: Location = Location::here();
-}
-
 // Location
 parameter_types! {
 	pub SelfLocation: Location = Location::here();

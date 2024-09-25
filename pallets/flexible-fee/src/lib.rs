@@ -19,9 +19,13 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 pub use crate::pallet::*;
-use bifrost_primitives::{currency::{VGLMR, VMANTA, WETH}, traits::XcmDestWeightAndFeeHandler, AssetHubChainId, Balance, BalanceCmp, CurrencyId, DerivativeIndex, OraclePriceProvider, Price, TryConvertFrom, XcmOperationType, BNC, DOT, GLMR, MANTA, VBNC, VDOT};
-use bifrost_xcm_interface::calls::PolkadotXcmCall;
-use bifrost_xcm_interface::calls::RelaychainCall;
+use bifrost_primitives::{
+	currency::{VGLMR, VMANTA, WETH},
+	traits::XcmDestWeightAndFeeHandler,
+	AssetHubChainId, Balance, BalanceCmp, CurrencyId, DerivativeIndex, OraclePriceProvider, Price,
+	TryConvertFrom, XcmOperationType, BNC, DOT, GLMR, MANTA, VBNC, VDOT,
+};
+use bifrost_xcm_interface::calls::{PolkadotXcmCall, RelaychainCall};
 use core::convert::Into;
 use cumulus_primitives_core::ParaId;
 use frame_support::{
@@ -270,28 +274,24 @@ impl<T: Config> Pallet<T> {
 				)),
 			};
 
-			let remote_call =
-				RelaychainCall::XcmPallet(
-					PolkadotXcmCall::LimitedTeleportAssets(
-						Box::new(Location::new(0, [Parachain(AssetHubChainId::get())]).into()),
-						Box::new(
-							Location::new(
-								0,
-								[AccountId32 {
-									network: None,
-									id: Sibling::from(T::ParachainId::get())
-										.into_account_truncating(),
-								}],
-							)
-							.into(),
-						),
-						Box::new(asset.into()),
+			let remote_call = RelaychainCall::XcmPallet(PolkadotXcmCall::LimitedTeleportAssets(
+				Box::new(Location::new(0, [Parachain(AssetHubChainId::get())]).into()),
+				Box::new(
+					Location::new(
 						0,
-						Unlimited,
-					),
-				)
-				.encode()
-				.into();
+						[AccountId32 {
+							network: None,
+							id: Sibling::from(T::ParachainId::get()).into_account_truncating(),
+						}],
+					)
+					.into(),
+				),
+				Box::new(asset.into()),
+				0,
+				Unlimited,
+			))
+			.encode()
+			.into();
 
 			let (require_weight_at_most, xcm_fee) =
 				T::XcmWeightAndFeeHandler::get_operation_weight_and_fee(

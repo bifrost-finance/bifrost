@@ -21,7 +21,6 @@ use super::*;
 use bifrost_primitives::{XcmOperationType, BNC};
 use frame_benchmarking::v2::*;
 use frame_system::RawOrigin;
-use crate::Pallet as XcmInterface;
 
 #[benchmarks]
 mod benchmarks {
@@ -40,5 +39,5 @@ mod benchmarks {
 		_(RawOrigin::Root, updates);
 	}
 
-	impl_benchmark_test_suite!(XcmInterface, mock::new_test_ext(), mock::Test);
+	impl_benchmark_test_suite!(Pallet, mock::new_test_ext(), mock::Test);
 }

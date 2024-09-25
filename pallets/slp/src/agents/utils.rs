@@ -21,7 +21,9 @@ use crate::{
 	ValidatorsByDelegatorUpdateEntry, ValidatorsByDelegatorXcmUpdateQueue, ASTR, DOT, GLMR, H160,
 	KSM, MANTA, MOVR, PHA,
 };
-use bifrost_primitives::{AstarChainId, CurrencyId, MantaChainId, MoonbeamChainId, MoonriverChainId, PhalaChainId};
+use bifrost_primitives::{
+	AstarChainId, CurrencyId, MantaChainId, MoonbeamChainId, MoonriverChainId, PhalaChainId,
+};
 use frame_support::ensure;
 use parity_scale_codec::Encode;
 use sp_core::Get;
@@ -324,10 +326,8 @@ impl<T: Config> Pallet<T> {
 				1,
 				[xcm::v4::prelude::Parachain(MoonriverChainId::get())],
 			)),
-			GLMR => Ok(xcm::v4::Location::new(
-				1,
-				[xcm::v4::prelude::Parachain(MoonbeamChainId::get())],
-			)),
+			GLMR =>
+				Ok(xcm::v4::Location::new(1, [xcm::v4::prelude::Parachain(MoonbeamChainId::get())])),
 			ASTR =>
 				Ok(xcm::v4::Location::new(1, [xcm::v4::prelude::Parachain(AstarChainId::get())])),
 			MANTA =>
@@ -344,34 +344,21 @@ impl<T: Config> Pallet<T> {
 		match currency_id {
 			MOVR => Ok(MultiLocation {
 				parents: 1,
-				interior: X2(
-					Parachain(MoonriverChainId::get()),
-					PalletInstance(10),
-				),
+				interior: X2(Parachain(MoonriverChainId::get()), PalletInstance(10)),
 			}),
 			GLMR => Ok(MultiLocation {
 				parents: 1,
-				interior: X2(
-					Parachain(MoonbeamChainId::get()),
-					PalletInstance(10),
-				),
+				interior: X2(Parachain(MoonbeamChainId::get()), PalletInstance(10)),
 			}),
-			MANTA =>
-				Ok(MultiLocation { parents: 1, interior: X1(Parachain(MantaChainId::get())) }),
+			MANTA => Ok(MultiLocation { parents: 1, interior: X1(Parachain(MantaChainId::get())) }),
 			_ => Err(Error::<T>::NotSupportedCurrencyId),
 		}
 	}
 
 	pub fn convert_currency_to_remote_fee_location(currency_id: CurrencyId) -> xcm::v4::Location {
 		match currency_id {
-			MOVR => xcm::v4::Location::new(
-				0,
-				[xcm::v4::prelude::PalletInstance(10)],
-			),
-			GLMR => xcm::v4::Location::new(
-				0,
-				[xcm::v4::prelude::PalletInstance(10)],
-			),
+			MOVR => xcm::v4::Location::new(0, [xcm::v4::prelude::PalletInstance(10)]),
+			GLMR => xcm::v4::Location::new(0, [xcm::v4::prelude::PalletInstance(10)]),
 			_ => xcm::v4::Location::here(),
 		}
 	}

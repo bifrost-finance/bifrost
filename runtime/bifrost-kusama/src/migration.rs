@@ -376,7 +376,6 @@ pub mod system_maker {
 	pub use bifrost_primitives::currency::{KSM, VKSM};
 	use frame_support::{pallet_prelude::PhantomData, traits::OnRuntimeUpgrade};
 	use sp_core::Get;
-	use sp_runtime::traits::Zero;
 	pub struct SystemMakerClearPalletId<T>(PhantomData<T>);
 	impl<T: bifrost_vtoken_minting::Config> OnRuntimeUpgrade for SystemMakerClearPalletId<T> {
 		#[cfg(feature = "try-runtime")]
@@ -418,8 +417,6 @@ pub mod system_maker {
 
 		#[cfg(feature = "try-runtime")]
 		fn post_upgrade(_: sp_std::prelude::Vec<u8>) -> Result<(), sp_runtime::DispatchError> {
-			#[allow(unused_imports)]
-			use frame_support::PalletId;
 			log::info!("Bifrost `post_upgrade`...");
 			let account_id = SystemMakerPalletId::get().into_account_truncating();
 			let ksm_balance = T::MultiCurrency::free_balance(KSM, &account_id);

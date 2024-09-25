@@ -18,7 +18,11 @@
 
 use super::*;
 use bifrost_asset_registry::{AssetIdMaps, FixedRateOfAsset};
-use bifrost_primitives::{AccountId, AccountIdToLocation, AssetHubChainId, AssetHubLocation, AssetPrefixFrom, CurrencyId, CurrencyIdMapping, EthereumLocation, KaruraChainId, KusamaNetwork, KusamaUniversalLocation, NativeAssetFrom, PhalaChainId, SelfLocation, TokenSymbol};
+use bifrost_primitives::{
+	AccountId, AccountIdToLocation, AssetHubChainId, AssetHubLocation, AssetPrefixFrom, CurrencyId,
+	CurrencyIdMapping, EthereumLocation, KaruraChainId, KusamaNetwork, KusamaUniversalLocation,
+	NativeAssetFrom, PhalaChainId, SelfLocation, TokenSymbol,
+};
 pub use cumulus_primitives_core::ParaId;
 use frame_support::{parameter_types, sp_runtime::traits::Convert, traits::Get};
 use parity_scale_codec::Encode;
@@ -655,6 +659,6 @@ impl bifrost_xcm_interface::Config for Runtime {
 	type AccountIdToLocation = AccountIdToLocation;
 	type ParachainId = ParachainInfo;
 	type CurrencyIdConvert = AssetIdMaps<Runtime>;
-	type WeightInfo = ();
+	type WeightInfo = weights::bifrost_xcm_interface::BifrostWeight<Runtime>;
 	type XcmRouter = XcmRouter;
 }

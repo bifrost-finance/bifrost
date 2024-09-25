@@ -18,11 +18,13 @@
 
 #![cfg(test)]
 
+use crate::{
+	mock::{new_test_ext, RuntimeOrigin, Test},
+	Pallet as XcmInterface, XcmWeightAndFee,
+};
+use bifrost_primitives::{XcmOperationType, BNC};
 use frame_support::assert_ok;
 use xcm::v4::Weight;
-use bifrost_primitives::{XcmOperationType, BNC};
-use crate::mock::{new_test_ext, RuntimeOrigin, Test};
-use crate::{Pallet as XcmInterface, XcmWeightAndFee};
 
 #[test]
 fn update_xcm_dest_weight_and_fee() {
@@ -35,7 +37,10 @@ fn update_xcm_dest_weight_and_fee() {
 			(BNC, XcmOperationType::Bond, Weight::zero(), 0u128),
 		];
 
-		assert_ok!(XcmInterface::<Test>::update_xcm_dest_weight_and_fee(RuntimeOrigin::root(), updates));
+		assert_ok!(XcmInterface::<Test>::update_xcm_dest_weight_and_fee(
+			RuntimeOrigin::root(),
+			updates
+		));
 
 		assert_eq!(
 			XcmWeightAndFee::<Test>::get(BNC, XcmOperationType::Bond),

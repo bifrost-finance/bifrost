@@ -21,9 +21,11 @@
 #[cfg(feature = "runtime-benchmarks")]
 mod benchmarking;
 
+pub mod calls;
+pub mod weights;
+pub use weights::WeightInfo;
 mod mock;
 mod tests;
-pub mod calls;
 
 use crate::calls::{AssetHubCall, PolkadotXcmCall};
 use bifrost_asset_registry::AssetMetadata;
@@ -43,7 +45,6 @@ use xcm::{
 	v4::{prelude::*, Asset, Location},
 	DoubleEncoded,
 };
-use frame_system::WeightInfo;
 
 type BalanceOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<
 	<T as frame_system::Config>::AccountId,
@@ -84,9 +85,13 @@ pub mod pallet {
 
 	#[pallet::error]
 	pub enum Error<T> {
+		/// Failed to send XCM message.
 		XcmSendFailed,
+		/// The weight and fee for the operation does not exist.
 		OperationWeightAndFeeNotExist,
+		/// Failed to convert currency id.
 		FailToConvert,
+		/// The message is unweighable.
 		UnweighableMessage,
 	}
 
@@ -131,7 +136,7 @@ pub mod pallet {
 		/// Parameters:
 		/// - `updates`: vec of tuple: (XcmOperationType, WeightChange, FeeChange).
 		#[pallet::call_index(0)]
-		#[pallet::weight({16_690_000})]
+		#[pallet::weight(T::WeightInfo::update_xcm_dest_weight_and_fee())]
 		pub fn update_xcm_dest_weight_and_fee(
 			origin: OriginFor<T>,
 			updates: Vec<(CurrencyId, XcmOperationType, Weight, BalanceOf<T>)>,

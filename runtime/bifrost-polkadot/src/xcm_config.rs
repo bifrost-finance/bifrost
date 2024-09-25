@@ -536,5 +536,5 @@ impl bifrost_xcm_interface::Config for Runtime {
 	type ParachainId = ParachainInfo;
 	type CurrencyIdConvert = AssetIdMaps<Runtime>;
 	type XcmRouter = XcmRouter;
-	type WeightInfo = ();
+	type WeightInfo = weights::bifrost_xcm_interface::BifrostWeight<Runtime>;
 }
