@@ -29,7 +29,13 @@ use frame_support::{
 };
 use pallet_xcm::Origin as XcmOrigin;
 
-const TOKENS: &[CurrencyId] = if cfg!(feature = "polkadot") { &[VDOT] } else { &[VKSM] };
+const TOKENS: &[CurrencyId] = if cfg!(feature = "polkadot") {
+	&[VDOT]
+} else if cfg!(feature = "kusama") {
+	&[VKSM]
+} else {
+	&[]
+};
 
 fn aye(amount: Balance, conviction: u8) -> AccountVote<Balance> {
 	let vote = Vote { aye: true, conviction: conviction.try_into().unwrap() };
