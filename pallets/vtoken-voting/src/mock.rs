@@ -28,17 +28,19 @@ use bifrost_primitives::{
 use cumulus_primitives_core::ParaId;
 use frame_support::{
 	derive_impl, ord_parameter_types,
-	pallet_prelude::Weight,
+	pallet_prelude::{DispatchError, Weight},
 	parameter_types,
-	traits::{Everything, Get, Nothing},
+	traits::{ConstU64, Everything, Get, Nothing, PollStatus, Polling, VoteTally},
 	weights::RuntimeDbWeight,
 };
 use frame_system::EnsureRoot;
+use pallet_conviction_voting::{Tally, TallyOf};
 use pallet_xcm::EnsureResponse;
 use sp_runtime::{
 	traits::{BlockNumberProvider, ConstU32, IdentityLookup},
 	BuildStorage, Perbill,
 };
+use std::collections::BTreeMap;
 use xcm::{prelude::*, v3::MultiLocation};
 use xcm_builder::{FixedWeightBounds, FrameTransactionalProcessor};
 use xcm_executor::XcmExecutor;
@@ -63,6 +65,7 @@ frame_support::construct_runtime!(
 		Currencies: bifrost_currencies,
 		PolkadotXcm: pallet_xcm,
 		VtokenVoting: vtoken_voting,
+		ConvictionVoting: pallet_conviction_voting::{Pallet, Call, Storage, Event<T>} = 36,
 	}
 );
 
@@ -103,7 +106,7 @@ impl pallet_balances::Config for Runtime {
 	type DustRemoval = ();
 	type RuntimeEvent = RuntimeEvent;
 	type ExistentialDeposit = ExistentialDeposit;
-	type MaxLocks = ();
+	type MaxLocks = ConstU32<100>;
 	type MaxReserves = ();
 	type ReserveIdentifier = [u8; 8];
 	type WeightInfo = ();
@@ -111,6 +114,101 @@ impl pallet_balances::Config for Runtime {
 	type RuntimeFreezeReason = RuntimeFreezeReason;
 	type FreezeIdentifier = ();
 	type MaxFreezes = ConstU32<0>;
+}
+
+#[derive(Clone, PartialEq, Eq, Debug)]
+pub enum TestPollState {
+	Ongoing(TallyOf<Runtime>, u8),
+	Completed(u64, bool),
+}
+use TestPollState::*;
+
+parameter_types! {
+	pub static Polls: BTreeMap<u8, TestPollState> = (0u8..=255)
+		.map(|i| (i, Ongoing(Tally::from_parts(0, 0, 0), 0)))
+		.collect();
+}
+
+pub struct TestPolls;
+impl Polling<TallyOf<Runtime>> for TestPolls {
+	type Index = u8;
+	type Votes = u128;
+	type Moment = u64;
+	type Class = u8;
+	fn classes() -> Vec<u8> {
+		vec![0, 1, 2]
+	}
+	fn as_ongoing(index: u8) -> Option<(TallyOf<Runtime>, Self::Class)> {
+		Polls::get().remove(&index).and_then(|x| {
+			if let TestPollState::Ongoing(t, c) = x {
+				Some((t, c))
+			} else {
+				None
+			}
+		})
+	}
+	fn access_poll<R>(
+		index: Self::Index,
+		f: impl FnOnce(PollStatus<&mut TallyOf<Runtime>, u64, u8>) -> R,
+	) -> R {
+		let mut polls = Polls::get();
+		let entry = polls.get_mut(&index);
+		let r = match entry {
+			Some(Ongoing(ref mut tally_mut_ref, class)) =>
+				f(PollStatus::Ongoing(tally_mut_ref, *class)),
+			Some(Completed(when, succeeded)) => f(PollStatus::Completed(*when, *succeeded)),
+			None => f(PollStatus::None),
+		};
+		Polls::set(polls);
+		r
+	}
+	fn try_access_poll<R>(
+		index: Self::Index,
+		f: impl FnOnce(PollStatus<&mut TallyOf<Runtime>, u64, u8>) -> Result<R, DispatchError>,
+	) -> Result<R, DispatchError> {
+		let mut polls = Polls::get();
+		let entry = polls.get_mut(&index);
+		let r = match entry {
+			Some(Ongoing(ref mut tally_mut_ref, class)) =>
+				f(PollStatus::Ongoing(tally_mut_ref, *class)),
+			Some(Completed(when, succeeded)) => f(PollStatus::Completed(*when, *succeeded)),
+			None => f(PollStatus::None),
+		}?;
+		Polls::set(polls);
+		Ok(r)
+	}
+
+	#[cfg(feature = "runtime-benchmarks")]
+	fn create_ongoing(class: Self::Class) -> Result<Self::Index, ()> {
+		let mut polls = Polls::get();
+		let i = polls.keys().rev().next().map_or(0, |x| x + 1);
+		polls.insert(i, Ongoing(Tally::new(0), class));
+		Polls::set(polls);
+		Ok(i)
+	}
+
+	#[cfg(feature = "runtime-benchmarks")]
+	fn end_ongoing(index: Self::Index, approved: bool) -> Result<(), ()> {
+		let mut polls = Polls::get();
+		match polls.get(&index) {
+			Some(Ongoing(..)) => {},
+			_ => return Err(()),
+		}
+		let now = frame_system::Pallet::<Runtime>::block_number();
+		polls.insert(index, Completed(now, approved));
+		Polls::set(polls);
+		Ok(())
+	}
+}
+
+impl pallet_conviction_voting::Config for Runtime {
+	type WeightInfo = ();
+	type RuntimeEvent = RuntimeEvent;
+	type Currency = Balances;
+	type VoteLockingPeriod = ConstU64<3>;
+	type MaxVotes = ConstU32<512>;
+	type MaxTurnout = frame_support::traits::TotalIssuanceOf<Balances, Self::AccountId>;
+	type Polls = TestPolls;
 }
 
 orml_traits::parameter_type_with_key! {
@@ -349,7 +447,7 @@ impl vtoken_voting::Config for Runtime {
 pub fn new_test_ext() -> sp_io::TestExternalities {
 	let mut t = frame_system::GenesisConfig::<Runtime>::default().build_storage().unwrap();
 	pallet_balances::GenesisConfig::<Runtime> {
-		balances: vec![(ALICE, 10), (BOB, 20), (CHARLIE, 30)],
+		balances: vec![(ALICE, 10), (BOB, 20), (CHARLIE, 3000)],
 	}
 	.assimilate_storage(&mut t)
 	.unwrap();

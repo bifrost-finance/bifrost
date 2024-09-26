@@ -30,6 +30,7 @@ pub struct BifrostAgent<T: Config> {
 }
 
 impl<T: Config> BifrostAgent<T> {
+	// Only polkadot networks are supported.
 	pub fn new(vtoken: CurrencyId) -> Result<Self, Error<T>> {
 		if cfg!(feature = "polkadot") {
 			let location = Pallet::<T>::convert_vtoken_to_dest_location(vtoken)?;
@@ -58,22 +59,13 @@ impl<T: Config> VotingAgent<T> for BifrostAgent<T> {
 		new_delegator_votes: Vec<(DerivativeIndex, AccountVote<BalanceOf<T>>)>,
 		maybe_old_vote: Option<(AccountVote<BalanceOf<T>>, BalanceOf<T>)>,
 	) -> DispatchResult {
+		// Get the derivative index from the first delegator vote.
 		let derivative_index = new_delegator_votes[0].0;
-		let vote_calls = new_delegator_votes
-			.iter()
-			.map(|(_derivative_index, vote)| {
-				let call_encode =
-					<BifrostCall<T> as ConvictionVotingCall<T>>::vote(poll_index, *vote).encode();
-				<T as frame_system::Config>::RuntimeCall::decode(&mut &*call_encode)
-					.map_err(|_| Error::<T>::CallDecodeFailed)
-			})
-			.collect::<Result<Vec<<T as frame_system::Config>::RuntimeCall>, Error<T>>>()?;
-
-		let vote_call = if vote_calls.len() == 1 {
-			vote_calls.into_iter().nth(0).ok_or(Error::<T>::NoData)?
-		} else {
-			return Err(Error::<T>::NoPermissionYet.into());
-		};
+		let call_encode =
+			self.vote_call_encode(new_delegator_votes, poll_index, derivative_index)?;
+		let vote_call: <T as frame_system::Config>::RuntimeCall =
+			<T as frame_system::Config>::RuntimeCall::decode(&mut &*call_encode)
+				.map_err(|_| Error::<T>::CallDecodeFailed)?;
 
 		let token = CurrencyId::to_token(&vtoken).map_err(|_| Error::<T>::NoData)?;
 		let delegator: AccountIdOf<T> =
@@ -99,11 +91,24 @@ impl<T: Config> VotingAgent<T> for BifrostAgent<T> {
 
 	fn vote_call_encode(
 		&self,
-		_new_delegator_votes: Vec<(DerivativeIndex, AccountVote<BalanceOf<T>>)>,
-		_poll_index: PollIndex,
+		new_delegator_votes: Vec<(DerivativeIndex, AccountVote<BalanceOf<T>>)>,
+		poll_index: PollIndex,
 		_derivative_index: DerivativeIndex,
 	) -> Result<Vec<u8>, Error<T>> {
-		Err(Error::<T>::VTokenNotSupport)
+		let vote_calls = new_delegator_votes
+			.iter()
+			.map(|(_derivative_index, vote)| {
+				<BifrostCall<T> as ConvictionVotingCall<T>>::vote(poll_index, *vote)
+			})
+			.collect::<Vec<_>>();
+		let vote_call = if vote_calls.len() == 1 {
+			vote_calls.into_iter().nth(0).ok_or(Error::<T>::NoData)?
+		} else {
+			ensure!(false, Error::<T>::NoPermissionYet);
+			<BifrostCall<T> as UtilityCall<BifrostCall<T>>>::batch_all(vote_calls)
+		};
+
+		Ok(vote_call.encode())
 	}
 
 	fn delegate_remove_delegator_vote(
@@ -114,8 +119,7 @@ impl<T: Config> VotingAgent<T> for BifrostAgent<T> {
 		derivative_index: DerivativeIndex,
 	) -> DispatchResult {
 		let call_encode =
-			<BifrostCall<T> as ConvictionVotingCall<T>>::remove_vote(Some(class), poll_index)
-				.encode();
+			self.remove_delegator_vote_call_encode(class, poll_index, derivative_index)?;
 		let call = <T as frame_system::Config>::RuntimeCall::decode(&mut &*call_encode)
 			.map_err(|_| Error::<T>::CallDecodeFailed)?;
 
@@ -136,10 +140,11 @@ impl<T: Config> VotingAgent<T> for BifrostAgent<T> {
 
 	fn remove_delegator_vote_call_encode(
 		&self,
-		_class: PollClass,
-		_poll_index: PollIndex,
+		class: PollClass,
+		poll_index: PollIndex,
 		_derivative_index: DerivativeIndex,
 	) -> Result<Vec<u8>, Error<T>> {
-		Err(Error::<T>::VTokenNotSupport)
+		Ok(<BifrostCall<T> as ConvictionVotingCall<T>>::remove_vote(Some(class), poll_index)
+			.encode())
 	}
 }

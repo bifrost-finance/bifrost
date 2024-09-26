@@ -161,6 +161,13 @@ pub mod pallet {
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
+		/// A vote has been cast.
+		///
+		/// - `who`: The account that cast the vote.
+		/// - `vtoken`: The token used for voting.
+		/// - `poll_index`: The index of the poll being voted on.
+		/// - `token_vote`: The vote cast using the token.
+		/// - `delegator_vote`: The vote cast by a delegator.
 		Voted {
 			who: AccountIdOf<T>,
 			vtoken: CurrencyIdOf<T>,
@@ -168,61 +175,101 @@ pub mod pallet {
 			token_vote: AccountVote<BalanceOf<T>>,
 			delegator_vote: AccountVote<BalanceOf<T>>,
 		},
-		Unlocked {
-			who: AccountIdOf<T>,
-			vtoken: CurrencyIdOf<T>,
-			poll_index: PollIndex,
-		},
+
+		/// A user's vote has been unlocked, allowing them to retrieve their tokens.
+		///
+		/// - `who`: The account whose tokens are unlocked.
+		/// - `vtoken`: The token that was locked during voting.
+		/// - `poll_index`: The index of the poll associated with the unlocking.
+		Unlocked { who: AccountIdOf<T>, vtoken: CurrencyIdOf<T>, poll_index: PollIndex },
+
+		/// A delegator's vote has been removed.
+		///
+		/// - `who`: The account that dispatched remove_delegator_vote.
+		/// - `vtoken`: The token associated with the delegator's vote.
+		/// - `derivative_index`: The index of the derivative.
 		DelegatorVoteRemoved {
 			who: AccountIdOf<T>,
 			vtoken: CurrencyIdOf<T>,
 			derivative_index: DerivativeIndex,
 		},
-		DelegatorAdded {
-			vtoken: CurrencyIdOf<T>,
-			derivative_index: DerivativeIndex,
-		},
+
+		/// A delegator has been added.
+		///
+		/// - `vtoken`: The token associated with the delegator.
+		/// - `derivative_index`: The index of the derivative being added for the delegator.
+		DelegatorAdded { vtoken: CurrencyIdOf<T>, derivative_index: DerivativeIndex },
+
+		/// A new referendum information has been created.
+		///
+		/// - `vtoken`: The token associated with the referendum.
+		/// - `poll_index`: The index of the poll.
+		/// - `info`: The referendum information (details about the poll).
 		ReferendumInfoCreated {
 			vtoken: CurrencyIdOf<T>,
 			poll_index: PollIndex,
 			info: ReferendumInfoOf<T>,
 		},
+
+		/// Referendum information has been updated.
+		///
+		/// - `vtoken`: The token associated with the referendum.
+		/// - `poll_index`: The index of the poll.
+		/// - `info`: The updated referendum information.
 		ReferendumInfoSet {
 			vtoken: CurrencyIdOf<T>,
 			poll_index: PollIndex,
 			info: ReferendumInfoOf<T>,
 		},
-		VoteLockingPeriodSet {
-			vtoken: CurrencyIdOf<T>,
-			locking_period: BlockNumberFor<T>,
-		},
-		UndecidingTimeoutSet {
-			vtoken: CurrencyIdOf<T>,
-			undeciding_timeout: BlockNumberFor<T>,
-		},
-		ReferendumKilled {
-			vtoken: CurrencyIdOf<T>,
-			poll_index: PollIndex,
-		},
-		VoteNotified {
-			vtoken: CurrencyIdOf<T>,
-			poll_index: PollIndex,
-			success: bool,
-		},
+
+		/// The vote locking period has been set.
+		///
+		/// - `vtoken`: The token for which the locking period is being set.
+		/// - `locking_period`: The period for which votes will be locked (in block numbers).
+		VoteLockingPeriodSet { vtoken: CurrencyIdOf<T>, locking_period: BlockNumberFor<T> },
+
+		/// The undeciding timeout period has been set.
+		///
+		/// - `vtoken`: The token associated with the timeout.
+		/// - `undeciding_timeout`: The period of time before a poll is considered undecided.
+		UndecidingTimeoutSet { vtoken: CurrencyIdOf<T>, undeciding_timeout: BlockNumberFor<T> },
+
+		/// A referendum has been killed (cancelled or ended).
+		///
+		/// - `vtoken`: The token associated with the referendum.
+		/// - `poll_index`: The index of the poll being killed.
+		ReferendumKilled { vtoken: CurrencyIdOf<T>, poll_index: PollIndex },
+
+		/// A notification about the result of a vote has been sent.
+		///
+		/// - `vtoken`: The token associated with the poll.
+		/// - `poll_index`: The index of the poll.
+		/// - `success`: Whether the notification was successful or not.
+		VoteNotified { vtoken: CurrencyIdOf<T>, poll_index: PollIndex, success: bool },
+
+		/// A notification about the removal of a delegator's vote has been sent.
+		///
+		/// - `vtoken`: The token associated with the poll.
+		/// - `poll_index`: The index of the poll.
+		/// - `success`: Whether the notification was successful or not.
 		DelegatorVoteRemovedNotified {
 			vtoken: CurrencyIdOf<T>,
 			poll_index: PollIndex,
 			success: bool,
 		},
-		ResponseReceived {
-			responder: Location,
-			query_id: QueryId,
-			response: Response,
-		},
-		VoteCapRatioSet {
-			vtoken: CurrencyIdOf<T>,
-			vote_cap_ratio: Perbill,
-		},
+
+		/// A response has been received from a specific location.
+		///
+		/// - `responder`: The location that sent the response.
+		/// - `query_id`: The ID of the query that was responded to.
+		/// - `response`: The content of the response.
+		ResponseReceived { responder: Location, query_id: QueryId, response: Response },
+
+		/// The vote cap ratio has been set.
+		///
+		/// - `vtoken`: The token associated with the cap.
+		/// - `vote_cap_ratio`: The maximum allowed ratio for the vote.
+		VoteCapRatioSet { vtoken: CurrencyIdOf<T>, vote_cap_ratio: Perbill },
 	}
 
 	#[pallet::error]

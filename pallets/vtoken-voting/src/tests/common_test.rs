@@ -17,9 +17,7 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 // Ensure we're `no_std` when compiling for Wasm.
-
-use super::*;
-use crate::mock::*;
+use crate::{mock::*, *};
 use bifrost_primitives::currency::VPHA;
 use frame_support::{
 	assert_noop, assert_ok,
@@ -29,8 +27,9 @@ use frame_support::{
 	},
 	weights::RuntimeDbWeight,
 };
-use pallet_conviction_voting::Vote;
 use pallet_xcm::Origin as XcmOrigin;
+
+const TOKENS: &[CurrencyId] = if cfg!(feature = "polkadot") { &[VDOT] } else { &[VKSM] };
 
 fn aye(amount: Balance, conviction: u8) -> AccountVote<Balance> {
 	let vote = Vote { aye: true, conviction: conviction.try_into().unwrap() };
@@ -64,12 +63,9 @@ fn response_fail() -> Response {
 	Response::DispatchResult(MaybeErrorCode::Error(BoundedVec::try_from(vec![0u8, 1u8]).unwrap()))
 }
 
-// const TOKENS: [CurrencyId; 2] = [VBNC, VDOT];
-const TOKENS: [CurrencyId; 1] = [VBNC];
-
 #[test]
 fn basic_voting_works() {
-	for &vtoken in &TOKENS {
+	for &vtoken in TOKENS {
 		new_test_ext().execute_with(|| {
 			let poll_index = 3;
 
@@ -100,7 +96,7 @@ fn basic_voting_works() {
 
 #[test]
 fn voting_balance_gets_locked() {
-	for &vtoken in &TOKENS {
+	for &vtoken in TOKENS {
 		new_test_ext().execute_with(|| {
 			let poll_index = 3;
 
@@ -125,7 +121,7 @@ fn voting_balance_gets_locked() {
 
 #[test]
 fn successful_but_zero_conviction_vote_balance_can_be_unlocked() {
-	for &vtoken in &TOKENS {
+	for &vtoken in TOKENS {
 		new_test_ext().execute_with(|| {
 			let poll_index = 3;
 
@@ -175,7 +171,7 @@ fn successful_but_zero_conviction_vote_balance_can_be_unlocked() {
 
 #[test]
 fn unsuccessful_conviction_vote_balance_can_be_unlocked() {
-	for &vtoken in &TOKENS {
+	for &vtoken in TOKENS {
 		new_test_ext().execute_with(|| {
 			let poll_index = 3;
 			let locking_period = 10;
@@ -216,7 +212,7 @@ fn unsuccessful_conviction_vote_balance_can_be_unlocked() {
 
 #[test]
 fn ensure_balance_after_unlock() {
-	for &vtoken in &TOKENS {
+	for &vtoken in TOKENS {
 		new_test_ext().execute_with(|| {
 			let poll_index = 3;
 			let poll_index_2 = 4;
@@ -259,7 +255,7 @@ fn ensure_balance_after_unlock() {
 
 #[test]
 fn ensure_comprehensive_balance_after_unlock() {
-	for &vtoken in &TOKENS {
+	for &vtoken in TOKENS {
 		new_test_ext().execute_with(|| {
 			let poll_index = 3;
 			let poll_index_2 = 4;
@@ -322,7 +318,7 @@ fn ensure_comprehensive_balance_after_unlock() {
 
 #[test]
 fn successful_conviction_vote_balance_stays_locked_for_correct_time() {
-	for &vtoken in &TOKENS {
+	for &vtoken in TOKENS {
 		new_test_ext().execute_with(|| {
 			let poll_index = 3;
 			let locking_period = 10;
@@ -360,7 +356,7 @@ fn successful_conviction_vote_balance_stays_locked_for_correct_time() {
 
 #[test]
 fn lock_amalgamation_valid_with_multiple_removed_votes() {
-	for &vtoken in &TOKENS {
+	for &vtoken in TOKENS {
 		new_test_ext().execute_with(|| {
 			let response = response_success();
 
@@ -470,7 +466,7 @@ fn lock_amalgamation_valid_with_multiple_removed_votes() {
 
 #[test]
 fn removed_votes_when_referendum_killed() {
-	for &vtoken in &TOKENS {
+	for &vtoken in TOKENS {
 		new_test_ext().execute_with(|| {
 			let response = response_success();
 
@@ -540,7 +536,7 @@ fn removed_votes_when_referendum_killed() {
 
 #[test]
 fn errors_with_vote_works() {
-	for &vtoken in &TOKENS {
+	for &vtoken in TOKENS {
 		new_test_ext().execute_with(|| {
 			assert_noop!(
 				VtokenVoting::vote(RuntimeOrigin::signed(1), VPHA, 0, aye(10, 0)),
@@ -569,7 +565,7 @@ fn errors_with_vote_works() {
 
 #[test]
 fn kill_referendum_works() {
-	for &vtoken in &TOKENS {
+	for &vtoken in TOKENS {
 		new_test_ext().execute_with(|| {
 			let poll_index = 3;
 
@@ -596,7 +592,7 @@ fn kill_referendum_works() {
 
 #[test]
 fn kill_referendum_with_origin_signed_fails() {
-	for &vtoken in &TOKENS {
+	for &vtoken in TOKENS {
 		new_test_ext().execute_with(|| {
 			let poll_index = 3;
 
@@ -622,7 +618,7 @@ fn kill_referendum_with_origin_signed_fails() {
 
 #[test]
 fn add_delegator_works() {
-	for &vtoken in &TOKENS {
+	for &vtoken in TOKENS {
 		new_test_ext().execute_with(|| {
 			let derivative_index: DerivativeIndex = 100;
 
@@ -642,7 +638,7 @@ fn add_delegator_works() {
 
 #[test]
 fn set_referendum_status_works() {
-	for &vtoken in &TOKENS {
+	for &vtoken in TOKENS {
 		new_test_ext().execute_with(|| {
 			let poll_index = 3;
 			let info = ReferendumInfo::Completed(3);
@@ -671,7 +667,7 @@ fn set_referendum_status_works() {
 
 #[test]
 fn set_referendum_status_without_vote_should_fail() {
-	for &vtoken in &TOKENS {
+	for &vtoken in TOKENS {
 		new_test_ext().execute_with(|| {
 			let poll_index = 3;
 			let info = ReferendumInfo::Completed(3);
@@ -691,7 +687,7 @@ fn set_referendum_status_without_vote_should_fail() {
 
 #[test]
 fn set_referendum_status_with_origin_signed_should_fail() {
-	for &vtoken in &TOKENS {
+	for &vtoken in TOKENS {
 		new_test_ext().execute_with(|| {
 			let poll_index = 3;
 			let info = ReferendumInfo::Completed(3);
@@ -711,7 +707,7 @@ fn set_referendum_status_with_origin_signed_should_fail() {
 
 #[test]
 fn set_vote_locking_period_works() {
-	for &vtoken in &TOKENS {
+	for &vtoken in TOKENS {
 		new_test_ext().execute_with(|| {
 			let locking_period = 100;
 
@@ -731,7 +727,7 @@ fn set_vote_locking_period_works() {
 
 #[test]
 fn set_vote_locking_period_with_origin_signed_should_fail() {
-	for &vtoken in &TOKENS {
+	for &vtoken in TOKENS {
 		new_test_ext().execute_with(|| {
 			let locking_period = 100;
 
@@ -749,7 +745,7 @@ fn set_vote_locking_period_with_origin_signed_should_fail() {
 
 #[test]
 fn set_undeciding_timeout_works() {
-	for &vtoken in &TOKENS {
+	for &vtoken in TOKENS {
 		new_test_ext().execute_with(|| {
 			let undeciding_timeout = 100;
 
@@ -769,7 +765,7 @@ fn set_undeciding_timeout_works() {
 
 #[test]
 fn set_undeciding_timeout_with_origin_signed_should_fail() {
-	for &vtoken in &TOKENS {
+	for &vtoken in TOKENS {
 		new_test_ext().execute_with(|| {
 			let undeciding_timeout = 100;
 
@@ -787,7 +783,7 @@ fn set_undeciding_timeout_with_origin_signed_should_fail() {
 
 #[test]
 fn notify_vote_success_works() {
-	for &vtoken in &TOKENS {
+	for &vtoken in TOKENS {
 		new_test_ext().execute_with(|| {
 			let poll_index = 3;
 			let query_id = 0;
@@ -864,7 +860,7 @@ fn notify_vote_success_works() {
 
 #[test]
 fn notify_vote_success_max_works() {
-	for &vtoken in &TOKENS {
+	for &vtoken in TOKENS {
 		new_test_ext().execute_with(|| {
 			for poll_index in 0..256 {
 				RelaychainDataProvider::set_block_number(1);
@@ -892,7 +888,7 @@ fn notify_vote_success_max_works() {
 
 #[test]
 fn notify_vote_success_exceed_max_fail() {
-	for &vtoken in &TOKENS {
+	for &vtoken in TOKENS {
 		new_test_ext().execute_with(|| {
 			for poll_index in 0..50 {
 				assert_ok!(VtokenVoting::vote(
@@ -928,7 +924,7 @@ fn notify_vote_success_exceed_max_fail() {
 
 #[test]
 fn notify_vote_fail_works() {
-	for &vtoken in &TOKENS {
+	for &vtoken in TOKENS {
 		new_test_ext().execute_with(|| {
 			let poll_index = 3;
 			let query_id = 0;
@@ -995,7 +991,7 @@ fn notify_vote_with_no_data_works() {
 
 #[test]
 fn notify_remove_delegator_vote_success_works() {
-	for &vtoken in &TOKENS {
+	for &vtoken in TOKENS {
 		new_test_ext().execute_with(|| {
 			let class = 0;
 			let poll_index = 3;
@@ -1074,7 +1070,7 @@ fn notify_remove_delegator_vote_success_works() {
 
 #[test]
 fn notify_remove_delegator_vote_fail_works() {
-	for &vtoken in &TOKENS {
+	for &vtoken in TOKENS {
 		new_test_ext().execute_with(|| {
 			let class = 0;
 			let poll_index = 3;
@@ -1169,7 +1165,7 @@ fn notify_remove_delegator_vote_with_no_data_works() {
 
 #[test]
 fn on_idle_works() {
-	for &vtoken in &TOKENS {
+	for &vtoken in TOKENS {
 		new_test_ext().execute_with(|| {
 			for (index, poll_index) in (0..50).collect::<Vec<_>>().iter().enumerate() {
 				let relay_block_number = index as BlockNumber;
@@ -1217,7 +1213,7 @@ fn on_idle_works() {
 
 #[test]
 fn set_vote_cap_ratio_works() {
-	for &vtoken in &TOKENS {
+	for &vtoken in TOKENS {
 		new_test_ext().execute_with(|| {
 			assert_ok!(VtokenVoting::set_vote_cap_ratio(
 				RuntimeOrigin::root(),
@@ -1245,7 +1241,7 @@ fn set_vote_cap_ratio_works() {
 
 #[test]
 fn vote_cap_works() {
-	for &vtoken in &TOKENS {
+	for &vtoken in TOKENS {
 		new_test_ext().execute_with(|| {
 			assert_eq!(VtokenVoting::vote_cap(vtoken), Ok((u64::MAX / 10) as Balance));
 		});
@@ -1267,7 +1263,7 @@ fn vote_to_capital_works() {
 
 #[test]
 fn compute_delegator_total_vote_works() {
-	for &vtoken in &TOKENS {
+	for &vtoken in TOKENS {
 		new_test_ext().execute_with(|| {
 			assert_eq!(
 				VtokenVoting::compute_delegator_total_vote(vtoken, aye(10, 0)),
@@ -1456,7 +1452,7 @@ fn compute_delegator_total_vote_works() {
 
 #[test]
 fn compute_delegator_total_vote_with_low_value_will_loss() {
-	for &vtoken in &TOKENS {
+	for &vtoken in TOKENS {
 		new_test_ext().execute_with(|| {
 			assert_eq!(
 				VtokenVoting::compute_delegator_total_vote(vtoken, aye(9, 0)),
@@ -1472,7 +1468,7 @@ fn compute_delegator_total_vote_with_low_value_will_loss() {
 
 #[test]
 fn allocate_delegator_votes_works() {
-	for &vtoken in &TOKENS {
+	for &vtoken in TOKENS {
 		new_test_ext().execute_with(|| {
 			let poll_index = 3;
 
@@ -1547,7 +1543,7 @@ fn tally_convert_works() {
 
 #[test]
 fn set_lock_works() {
-	for &vtoken in &TOKENS {
+	for &vtoken in TOKENS {
 		new_test_ext().execute_with(|| {
 			assert_ok!(VtokenVoting::set_lock(&ALICE, vtoken, 10));
 			assert_eq!(usable_balance(vtoken, &ALICE), 0);
