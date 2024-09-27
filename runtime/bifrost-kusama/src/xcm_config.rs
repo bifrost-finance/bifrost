@@ -19,11 +19,10 @@
 use super::*;
 use bifrost_asset_registry::{AssetIdMaps, FixedRateOfAsset};
 use bifrost_primitives::{
-	AccountId, AccountIdToLocation, AssetHubLocation, AssetPrefixFrom, CurrencyId,
-	CurrencyIdMapping, EthereumLocation, KusamaNetwork, KusamaUniversalLocation, NativeAssetFrom,
-	SelfLocation, TokenSymbol,
+	AccountId, AccountIdToLocation, AssetHubChainId, AssetHubLocation, AssetPrefixFrom, CurrencyId,
+	CurrencyIdMapping, EthereumLocation, KaruraChainId, KusamaNetwork, KusamaUniversalLocation,
+	NativeAssetFrom, PhalaChainId, SelfLocation, TokenSymbol,
 };
-pub use bifrost_xcm_interface::traits::{parachains, XcmBaseWeight};
 pub use cumulus_primitives_core::ParaId;
 use frame_support::{parameter_types, sp_runtime::traits::Convert, traits::Get};
 use parity_scale_codec::Encode;
@@ -206,7 +205,7 @@ parameter_types! {
 	pub KarPerSecond: (AssetId, u128,u128) = (
 		Location::new(
 			1,
-			[Parachain(parachains::karura::ID), Junction::from(BoundedVec::try_from(parachains::karura::KAR_KEY.to_vec()).unwrap())]
+			[Parachain(KaruraChainId::get()), Junction::from(BoundedVec::try_from(vec![0,128u8]).unwrap())]
 		).into(),
 		// KAR:KSM = 100:1
 		ksm_per_second::<Runtime>() * 100,
@@ -215,7 +214,7 @@ parameter_types! {
 	pub KusdPerSecond: (AssetId, u128,u128) = (
 		Location::new(
 			1,
-			[Parachain(parachains::karura::ID), Junction::from(BoundedVec::try_from(parachains::karura::KUSD_KEY.to_vec()).unwrap())]
+			[Parachain(KaruraChainId::get()), Junction::from(BoundedVec::try_from(vec![0,129u8]).unwrap())]
 		).into(),
 		// kUSD:KSM = 400:1
 		ksm_per_second::<Runtime>() * 400,
@@ -224,7 +223,7 @@ parameter_types! {
 	pub PhaPerSecond: (AssetId, u128,u128) = (
 		Location::new(
 			1,
-			[Parachain(parachains::phala::ID)],
+			[Parachain(PhalaChainId::get())],
 		).into(),
 		// PHA:KSM = 400:1
 		ksm_per_second::<Runtime>() * 400,
@@ -233,7 +232,7 @@ parameter_types! {
 	pub RmrkPerSecond: (AssetId, u128,u128) = (
 		Location::new(
 			1,
-			[Parachain(parachains::Statemine::ID), GeneralIndex(parachains::Statemine::RMRK_ID.into())]
+			[Parachain(AssetHubChainId::get()), GeneralIndex(50)]
 		).into(),
 		// rmrk:KSM = 10:1
 		ksm_per_second::<Runtime>() * 10 / 100, //rmrk currency decimal as 10
@@ -242,7 +241,7 @@ parameter_types! {
 	pub RmrkNewPerSecond: (AssetId, u128,u128) = (
 		Location::new(
 			1,
-			[Parachain(parachains::Statemine::ID), PalletInstance(parachains::Statemine::PALLET_ID),GeneralIndex(parachains::Statemine::RMRK_ID.into())]
+			[Parachain(AssetHubChainId::get()), PalletInstance(50), GeneralIndex(8)]
 		).into(),
 		// rmrk:KSM = 10:1
 		ksm_per_second::<Runtime>() * 10 / 100, //rmrk currency decimal as 10
@@ -251,7 +250,7 @@ parameter_types! {
 	pub MovrPerSecond: (AssetId, u128,u128) = (
 		Location::new(
 			1,
-			[Parachain(parachains::moonriver::ID), PalletInstance(parachains::moonriver::PALLET_ID.into())]
+			[Parachain(MoonriverChainId::get()), PalletInstance(10)]
 		).into(),
 		// MOVR:KSM = 2.67:1
 		ksm_per_second::<Runtime>() * 267 * 10_000, //movr currency decimal as 18
@@ -351,12 +350,7 @@ impl Contains<RuntimeCall> for SafeCallFilter {
 				bifrost_farming::Call::withdraw_claim { .. }
 			) |
 			RuntimeCall::Salp(
-				bifrost_salp::Call::contribute { .. } |
-				bifrost_salp::Call::batch_unlock { .. } |
-				bifrost_salp::Call::redeem { .. } |
-				bifrost_salp::Call::unlock { .. } |
-				bifrost_salp::Call::unlock_by_vsbond { .. } |
-				bifrost_salp::Call::unlock_vstoken { .. }
+				bifrost_salp::Call::redeem { .. }
 			) |
 			RuntimeCall::VSBondAuction(
 				bifrost_vsbond_auction::Call::clinch_order { .. } |
@@ -373,9 +367,6 @@ impl Contains<RuntimeCall> for SafeCallFilter {
 				bifrost_vtoken_minting::Call::rebond { .. } |
 				bifrost_vtoken_minting::Call::rebond_by_unlock_id { .. } |
 				bifrost_vtoken_minting::Call::redeem { .. }
-			) |
-			RuntimeCall::XcmInterface(
-				bifrost_xcm_interface::Call::transfer_statemine_assets { .. }
 			) |
 			RuntimeCall::Slpx(..) |
 			RuntimeCall::ZenlinkProtocol(
@@ -665,16 +656,9 @@ impl bifrost_xcm_interface::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type UpdateOrigin = TechAdminOrCouncil;
 	type MultiCurrency = Currencies;
-	type RelayNetwork = KusamaNetwork;
-	type RelaychainCurrencyId = RelayCurrencyId;
-	type ParachainSovereignAccount = ParachainAccount;
-	#[cfg(feature = "runtime-benchmarks")]
-	type XcmExecutor = bifrost_primitives::MockXcmExecutor;
-	#[cfg(not(feature = "runtime-benchmarks"))]
-	type XcmExecutor = XcmExecutor<XcmConfig>;
 	type AccountIdToLocation = AccountIdToLocation;
-	type SalpHelper = Salp;
 	type ParachainId = ParachainInfo;
-	type CallBackTimeOut = ConstU32<10>;
 	type CurrencyIdConvert = AssetIdMaps<Runtime>;
+	type WeightInfo = weights::bifrost_xcm_interface::BifrostWeight<Runtime>;
+	type XcmRouter = XcmRouter;
 }

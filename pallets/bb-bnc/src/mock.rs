@@ -23,9 +23,12 @@
 
 use crate as bb_bnc;
 use bifrost_asset_registry::AssetIdMaps;
-use bifrost_primitives::MoonbeamChainId;
 pub use bifrost_primitives::{
 	currency::*, CurrencyId, CurrencyIdMapping, SlpxOperator, TokenSymbol,
+};
+use bifrost_primitives::{
+	BifrostEntranceAccount, BifrostExitAccount, BifrostFeeAccount, BuyBackAccount,
+	IncentivePalletId, IncentivePoolAccount, MoonbeamChainId,
 };
 use bifrost_runtime_common::{micro, milli};
 use bifrost_slp::{QueryId, QueryResponseManager};
@@ -35,10 +38,8 @@ use frame_support::{
 	pallet_prelude::Get,
 	parameter_types,
 	traits::{Everything, Nothing},
-	PalletId,
 };
 use frame_system::{EnsureRoot, EnsureSignedBy};
-use hex_literal::hex;
 use orml_traits::{location::RelativeReserveProvider, parameter_type_with_key};
 use sp_core::ConstU32;
 use sp_runtime::{
@@ -90,7 +91,7 @@ impl frame_system::Config for Runtime {
 }
 
 parameter_types! {
-	pub const NativeCurrencyId: CurrencyId = CurrencyId::Native(TokenSymbol::BNC);
+	pub const NativeCurrencyId: CurrencyId = BNC;
 }
 
 pub type AdaptedBasicCurrency =
@@ -105,11 +106,8 @@ impl bifrost_currencies::Config for Runtime {
 
 parameter_types! {
 	pub const ExistentialDeposit: Balance = 1;
-	// pub const NativeCurrencyId: CurrencyId = CurrencyId::Native(TokenSymbol::BNC);
-	// pub const RelayCurrencyId: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
-	pub const StableCurrencyId: CurrencyId = CurrencyId::Stable(TokenSymbol::KUSD);
-	// pub SelfParaId: u32 = ParachainInfo::parachain_id().into();
-	pub const PolkadotCurrencyId: CurrencyId = CurrencyId::Token(TokenSymbol::DOT);
+	pub const StableCurrencyId: CurrencyId = KUSD;
+	pub const PolkadotCurrencyId: CurrencyId = DOT;
 }
 
 impl pallet_balances::Config for Runtime {
@@ -192,15 +190,11 @@ impl orml_xtokens::Config for Runtime {
 parameter_types! {
 	pub const MaximumUnlockIdOfUser: u32 = 1_000;
 	pub const MaximumUnlockIdOfTimeUnit: u32 = 1_000;
-	pub BifrostEntranceAccount: PalletId = PalletId(*b"bf/vtkin");
-	pub BifrostExitAccount: PalletId = PalletId(*b"bf/vtout");
-	pub BifrostFeeAccount: AccountId = hex!["e4da05f08e89bf6c43260d96f26fffcfc7deae5b465da08669a9d008e64c2c63"].into();
-	pub IncentivePoolAccount: PalletId = PalletId(*b"bf/inpoo");
 }
 
 ord_parameter_types! {
 	pub const One: AccountId = ALICE;
-	pub const RelayCurrencyId: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
+	pub const RelayCurrencyId: CurrencyId = KSM;
 }
 
 impl bifrost_vtoken_minting::Config for Runtime {
@@ -240,9 +234,7 @@ impl bifrost_asset_registry::Config for Runtime {
 }
 
 parameter_types! {
-	pub const BbBNCTokenType: CurrencyId = CurrencyId::VToken(TokenSymbol::BNC);
-	pub IncentivePalletId: PalletId = PalletId(*b"bf/bbict");
-	pub const BuyBackAccount: PalletId = PalletId(*b"bf/bybck");
+	pub const BbBNCTokenType: CurrencyId = VBNC;
 	pub const Week: BlockNumber = 50400; // a week
 	pub const MaxBlock: BlockNumber = 10512000; // four years
 	pub const Multiplier: Balance = 10_u128.pow(12);

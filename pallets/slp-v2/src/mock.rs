@@ -19,19 +19,18 @@
 use crate as slp_v2;
 use bifrost_asset_registry::AssetIdMaps;
 use bifrost_primitives::{
-	Amount, Balance, BlockNumber, CurrencyId, MockXcmRouter, MockXcmTransfer, SlpOperator,
-	SlpxOperator, BNC, DOT,
+	currency::DOT, Amount, Balance, BifrostEntranceAccount, BifrostExitAccount, BifrostFeeAccount,
+	BlockNumber, CommissionPalletId, CurrencyId, IncentivePoolAccount, MockXcmRouter,
+	MockXcmTransfer, SlpOperator, SlpxOperator, BNC,
 };
 use frame_support::{
 	derive_impl,
 	pallet_prelude::{ConstU32, Get},
 	parameter_types,
 	traits::{Everything, Nothing},
-	PalletId,
 };
 use frame_system as system;
 use frame_system::EnsureRoot;
-use hex_literal::hex;
 use pallet_xcm::EnsureResponse;
 use polkadot_parachain_primitives::primitives::Id as ParaId;
 use sp_core::{crypto::AccountId32, ConstU64};
@@ -142,7 +141,6 @@ parameter_types! {
 	pub UnitWeightCost: Weight = Weight::from_parts(200_000_000, 0);
 	pub const MaxInstructions: u32 = 100;
 	pub UniversalLocation: InteriorLocation = Parachain(2030).into();
-	pub CommissionPalletId: PalletId = PalletId(*b"bf/comms");
 }
 
 pub struct XcmConfig;
@@ -215,11 +213,7 @@ impl Get<ParaId> for ParachainId {
 parameter_types! {
 	pub const MaximumUnlockIdOfUser: u32 = 10;
 	pub const MaximumUnlockIdOfTimeUnit: u32 = 50;
-	pub BifrostEntranceAccount: PalletId = PalletId(*b"bf/vtkin");
-	pub BifrostExitAccount: PalletId = PalletId(*b"bf/vtout");
-	pub BifrostFeeAccount: AccountId = hex!["e4da05f08e89bf6c43260d96f26fffcfc7deae5b465da08669a9d008e64c2c63"].into();
 	pub const RelayCurrencyId: CurrencyId = DOT;
-	pub IncentivePoolAccount: PalletId = PalletId(*b"bf/inpoo");
 }
 
 pub struct SlpxInterface;

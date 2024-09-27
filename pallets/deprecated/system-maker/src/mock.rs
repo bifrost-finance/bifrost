@@ -22,8 +22,11 @@
 #![allow(non_upper_case_globals)]
 
 use bifrost_asset_registry::AssetIdMaps;
-use bifrost_primitives::MoonbeamChainId;
-pub use bifrost_primitives::{currency::*, CurrencyId, SlpxOperator, TokenSymbol};
+pub use bifrost_primitives::{currency::*, CurrencyId, SlpxOperator};
+use bifrost_primitives::{
+	BifrostEntranceAccount, BifrostExitAccount, BifrostFeeAccount, IncentivePoolAccount,
+	MoonbeamChainId, SystemMakerPalletId, ZenlinkPalletId,
+};
 use bifrost_slp::{QueryId, QueryResponseManager};
 pub use cumulus_primitives_core::ParaId;
 use frame_support::{
@@ -32,10 +35,8 @@ use frame_support::{
 	parameter_types,
 	sp_runtime::{DispatchError, DispatchResult},
 	traits::{Everything, Nothing},
-	PalletId,
 };
 use frame_system::{EnsureRoot, EnsureSignedBy};
-use hex_literal::hex;
 use orml_traits::{location::RelativeReserveProvider, parameter_type_with_key, MultiCurrency};
 use sp_core::ConstU32;
 use sp_runtime::{
@@ -103,7 +104,7 @@ impl frame_system::Config for Runtime {
 }
 
 parameter_types! {
-	pub const GetNativeCurrencyId: CurrencyId = CurrencyId::Native(TokenSymbol::ASG);
+	pub const GetNativeCurrencyId: CurrencyId = ASG;
 }
 
 pub type AdaptedBasicCurrency =
@@ -157,14 +158,11 @@ impl orml_tokens::Config for Runtime {
 
 parameter_types! {
 	pub const TreasuryAccount: AccountId32 = TREASURY_ACCOUNT;
-	pub BifrostVsbondAccount: PalletId = PalletId(*b"bf/salpb");
-	pub const SystemMakerPalletId: PalletId = PalletId(*b"bf/sysmk");
 }
 
 ord_parameter_types! {
 	pub const One: AccountId = ALICE;
-	// pub const RelayChainTokenSymbolKSM: TokenSymbol = TokenSymbol::KSM;
-	pub const RelayCurrencyId: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
+	pub const RelayCurrencyId: CurrencyId = KSM;
 }
 
 impl bifrost_system_maker::Config for Runtime {
@@ -282,10 +280,6 @@ impl orml_xtokens::Config for Runtime {
 parameter_types! {
 	pub const MaximumUnlockIdOfUser: u32 = 10;
 	pub const MaximumUnlockIdOfTimeUnit: u32 = 50;
-	pub BifrostEntranceAccount: PalletId = PalletId(*b"bf/vtkin");
-	pub BifrostExitAccount: PalletId = PalletId(*b"bf/vtout");
-	pub BifrostFeeAccount: AccountId = hex!["e4da05f08e89bf6c43260d96f26fffcfc7deae5b465da08669a9d008e64c2c63"].into();
-	pub IncentivePoolAccount: PalletId = PalletId(*b"bf/inpoo");
 }
 
 impl bifrost_vtoken_minting::Config for Runtime {
@@ -315,7 +309,6 @@ impl bifrost_vtoken_minting::Config for Runtime {
 }
 
 parameter_types! {
-	pub const ZenlinkPalletId: PalletId = PalletId(*b"/zenlink");
 	pub const GetExchangeFee: (u32, u32) = (3, 1000);   // 0.3%
 	pub const SelfParaId: u32 = 2001;
 }

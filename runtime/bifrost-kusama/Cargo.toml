@@ -322,6 +322,7 @@ runtime-benchmarks = [
 	"bifrost-slpx/runtime-benchmarks",
 	"bifrost-stable-pool/runtime-benchmarks",
 	"bifrost-vtoken-voting/runtime-benchmarks",
+	"bifrost-xcm-interface/runtime-benchmarks",
 	"lend-market/runtime-benchmarks",
 	"leverage-staking/runtime-benchmarks",
 	"bifrost-channel-commission/runtime-benchmarks",

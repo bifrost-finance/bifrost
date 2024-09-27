@@ -40,6 +40,7 @@ pub mod bifrost_vsbond_auction;
 pub mod bifrost_vstoken_conversion;
 pub mod bifrost_vtoken_minting;
 pub mod bifrost_vtoken_voting;
+pub mod bifrost_xcm_interface;
 pub mod orml_oracle;
 pub mod orml_tokens;
 pub mod pallet_xcm;

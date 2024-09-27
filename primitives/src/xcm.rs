@@ -41,6 +41,8 @@ parameter_types! {
 	pub const MantaChainId: u32 = 2104;
 	pub const MoonbeamChainId: u32 = 2004;
 	pub const MoonriverChainId: u32 = 2023;
+	pub const PhalaChainId: u32 = 2035;
+	pub const KaruraChainId: u32 = 2000;
 	pub const EthereumChainId: u64 = 1;
 }
 

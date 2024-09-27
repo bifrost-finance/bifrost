@@ -18,7 +18,6 @@
 use frame_support::{
 	construct_runtime, derive_impl, parameter_types,
 	traits::{LockIdentifier, LockableCurrency, OnFinalize, OnInitialize, ReservableCurrency},
-	PalletId,
 };
 use sp_core::ConstU32;
 use sp_runtime::{traits::IdentityLookup, Perbill, Percent};
@@ -29,6 +28,7 @@ use crate::{
 	DelegatorReserveToLockMigrations, DelegatorState, InflationInfo, Points, Range,
 	COLLATOR_LOCK_ID, DELEGATOR_LOCK_ID,
 };
+use bifrost_primitives::ParachainStakingPalletId;
 use sp_runtime::BuildStorage;
 
 pub type AccountId = u64;
@@ -96,7 +96,6 @@ parameter_types! {
 	pub const MinDelegation: u128 = 3;
 	pub AllowInflation: bool = true;
 	pub PaymentInRound: u128 = 10;
-	pub const ParachainStakingPalletId: PalletId = PalletId(*b"bf/stake");
 	pub ToMigrateInvulnables: Vec<AccountId> = vec![
 		0,1
 	];

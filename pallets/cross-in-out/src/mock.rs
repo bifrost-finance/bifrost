@@ -20,8 +20,8 @@
 #![allow(non_upper_case_globals)]
 
 use bifrost_primitives::{
-	currency::{BNC, DOT, KSM, VDOT},
-	CurrencyId, TokenSymbol,
+	currency::{ASG, BNC, DOT, KSM, VDOT},
+	CurrencyId, SlpEntrancePalletId,
 };
 use frame_support::{derive_impl, ord_parameter_types, parameter_types, traits::Nothing, PalletId};
 use frame_system::EnsureSignedBy;
@@ -65,7 +65,7 @@ impl frame_system::Config for Runtime {
 }
 
 parameter_types! {
-	pub const GetNativeCurrencyId: CurrencyId = CurrencyId::Native(TokenSymbol::ASG);
+	pub const GetNativeCurrencyId: CurrencyId = ASG;
 }
 
 pub type AdaptedBasicCurrency =
@@ -126,7 +126,6 @@ ord_parameter_types! {
 }
 
 parameter_types! {
-	pub const SlpEntrancePalletId: PalletId = PalletId(*b"bf/vtkin");
 	pub const MaxLengthLimit: u32 = 100;
 }
 
@@ -162,6 +161,7 @@ impl ExtBuilder {
 			(CHARLIE, BNC, 100),
 			(ALICE, DOT, 100),
 			(ALICE, VDOT, 400),
+			(ALICE, KSM, 100),
 			(BOB, DOT, 100),
 			(BOB, KSM, 100),
 		])
