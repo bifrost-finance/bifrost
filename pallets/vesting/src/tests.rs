@@ -286,7 +286,6 @@ fn set_vesting_per_block_should_work() {
 
 		//check result start_at 10 > now 5 => 10 start_at
 		let user_vesting_schedule_1 = VestingInfo::new(20000, 100, 10);
-		// assert_eq!(Vesting::<Test>::get(&BOB).unwrap().to_vec(), vec![user_vesting_schedule_1]);
 		assert_eq!(vesting::<Test>::get(&BOB).unwrap().to_vec(), vec![user_vesting_schedule_1]);
 
 		//set block to 15
