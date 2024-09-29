@@ -30,7 +30,7 @@ check-all: format
 	SKIP_WASM_BUILD= cargo check -p bifrost-cli --locked --features "with-all-runtime,runtime-benchmarks,try-runtime"
 
 .PHONY: test-all # cargo test all
-test-all: test-runtimes test-benchmarks
+test-all: test-runtimes test-benchmarks test-vtoken-voting-kusama
 
 .PHONY: test-runtimes
 test-runtimes:
@@ -39,6 +39,9 @@ test-runtimes:
 .PHONY: test-benchmarks
 test-benchmarks:
 	SKIP_WASM_BUILD= cargo test benchmarking  --features="with-bifrost-runtime, runtime-benchmarks, polkadot"
+
+test-vtoken-voting-kusama:
+	SKIP_WASM_BUILD= cargo test -p bifrost-vtoken-voting --features="kusama, runtime-benchmarks"
 
 .PHONY: clean # cargo clean
 clean:
