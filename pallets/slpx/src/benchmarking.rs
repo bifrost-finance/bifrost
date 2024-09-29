@@ -19,21 +19,20 @@
 
 use crate::*;
 use bifrost_asset_registry::CurrencyIdToLocations;
-use bifrost_primitives::{CurrencyId, KSM, VKSM};
+use bifrost_primitives::{KSM, VKSM};
 use frame_benchmarking::v2::*;
 use frame_support::{assert_ok, sp_runtime::traits::UniqueSaturatedFrom, BoundedVec};
 use frame_system::RawOrigin;
 
 fn init_whitelist<T: Config + bifrost_asset_registry::Config>() -> (T::AccountId, H160) {
 	let caller: T::AccountId = whitelisted_caller();
-	assert_ok!(Pallet::<T>::add_whitelist(
-		RawOrigin::Root.into(),
+	WhitelistAccountId::<T>::insert(
 		SupportChain::Astar,
-		caller.clone()
-	));
+		BoundedVec::try_from(vec![caller.clone()]).unwrap(),
+	);
 	let addr: [u8; 20] = hex_literal::hex!["3Cd0A705a2DC65e5b1E1205896BaA2be8A07c6e0"].into();
 	let receiver = H160::from(addr);
-	let evm_caller_account_id = Pallet::<T>::h160_to_account_id(receiver);
+	let evm_caller_account_id = Pallet::<T>::h160_to_account_id(&receiver);
 	assert_ok!(<T as Config>::MultiCurrency::deposit(
 		KSM,
 		&evm_caller_account_id,
@@ -52,29 +51,30 @@ fn init_whitelist<T: Config + bifrost_asset_registry::Config>() -> (T::AccountId
 	(caller, receiver)
 }
 
-#[benchmarks(where  T: Config + bifrost_asset_registry::Config + bifrost_stable_pool::Config + bifrost_stable_asset::Config + orml_tokens::Config<CurrencyId = CurrencyId>)]
+#[benchmarks(where  T: Config + bifrost_asset_registry::Config + orml_tokens::Config<CurrencyId = CurrencyId>)]
 mod benchmarks {
 	use super::*;
+	use hex_literal::hex;
 
 	#[benchmark]
 	fn add_whitelist() {
-		let contract: T::AccountId = whitelisted_caller();
+		let addr: [u8; 20] = hex_literal::hex!["3Cd0A705a2DC65e5b1E1205896BaA2be8A07c6e0"].into();
+		let receiver = H160::from(addr);
 
 		#[extrinsic_call]
-		_(RawOrigin::Root, SupportChain::Astar, contract.clone());
-
-		assert_eq!(WhitelistAccountId::<T>::get(SupportChain::Astar).first(), Some(&contract));
+		_(RawOrigin::Root, SupportChain::Astar, receiver);
 	}
 
 	#[benchmark]
 	fn remove_whitelist() {
-		let contract: T::AccountId = whitelisted_caller();
-		let whitelist = BoundedVec::try_from(vec![contract.clone()]).unwrap();
+		let address: [u8; 20] = hex!["c6bf0C5C78686f1D0E2E54b97D6de6e2cEFAe9fD"];
+		let address = H160::from_slice(&address);
 
-		WhitelistAccountId::<T>::insert(SupportChain::Astar, whitelist);
+		let _ =
+			crate::Pallet::<T>::add_whitelist(RawOrigin::Root.into(), SupportChain::Astar, address);
 
 		#[extrinsic_call]
-		_(RawOrigin::Root, SupportChain::Astar, contract.clone());
+		_(RawOrigin::Root, SupportChain::Astar, address);
 
 		assert_eq!(WhitelistAccountId::<T>::get(SupportChain::Astar).first(), None);
 	}

@@ -1,7 +1,7 @@
 [package]
 name = "bifrost-slpx"
 description = "A pallet to manage the execution of XCM messages"
-authors = ["hqwangningbo <2536935847@qq.com>"]
+authors = ["Liebi Technologies <bifrost@liebi.com>"]
 edition = "2021"
 version = "0.8.0"
 
@@ -29,7 +29,6 @@ tiny-keccak = { workspace = true }
 orml-traits = { workspace = true }
 orml-xtokens = { workspace = true }
 zenlink-protocol = { workspace = true }
-
 bifrost-primitives = { workspace = true }
 bifrost-xcm-interface = { workspace = true }
 bifrost-asset-registry = { workspace = true }
@@ -37,6 +36,11 @@ bifrost-stable-pool = { workspace = true }
 bifrost-stable-asset = { workspace = true }
 orml-tokens = { workspace = true }
 log = { workspace = true }
+pallet-xcm  = { workspace = true }
+xcm-executor = { workspace = true }
+xcm-builder = { workspace = true }
+polkadot-primitives = { workspace = true }
+pallet-staking = { workspace = true }
 
 [dev-dependencies]
 hex = { workspace = true }
@@ -46,9 +50,6 @@ bifrost-vtoken-minting = { workspace = true }
 bifrost-slp = { workspace = true }
 cumulus-primitives-core = { workspace = true }
 bifrost-currencies = { workspace = true }
-xcm-executor = { workspace = true }
-xcm-builder = { workspace = true }
-pallet-xcm  = { workspace = true }
 xcm-simulator  = { workspace = true }
 bifrost-runtime-common = { workspace = true }
 pallet-collective = { workspace = true }
@@ -75,10 +76,15 @@ std = [
 	"cumulus-pallet-xcm/std",
 	"sp-core/std",
 	"sp-runtime/std",
+	"pallet-xcm/std",
 	"bifrost-asset-registry/std",
 	"bifrost-stable-pool/std",
 	"bifrost-stable-asset/std",
 	"log/std",
+	"xcm-executor/std",
+	"xcm-builder/std",
+	"polkadot-primitives/std",
+	"pallet-staking/std",
 ]
 runtime-benchmarks = [
 	"frame-benchmarking/runtime-benchmarks",
@@ -87,6 +93,7 @@ runtime-benchmarks = [
 	"pallet-xcm/runtime-benchmarks",
 	"xcm-builder/runtime-benchmarks",
 	"pallet-collective/runtime-benchmarks",
+	"pallet-staking/runtime-benchmarks",
 ]
 try-runtime = ["frame-support/try-runtime"]
 with-bifrost-polkadot-runtime = []

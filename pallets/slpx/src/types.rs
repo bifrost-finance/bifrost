@@ -60,6 +60,18 @@ pub enum TargetChain<AccountId> {
 	Manta(AccountId),
 }
 
+impl<AccountId> TargetChain<AccountId> {
+	pub fn support_chain(self: &TargetChain<AccountId>) -> SupportChain {
+		match self {
+			TargetChain::Astar(_) => SupportChain::Astar,
+			TargetChain::Moonbeam(_) => SupportChain::Moonbeam,
+			TargetChain::Hydradx(_) => SupportChain::Hydradx,
+			TargetChain::Interlay(_) => SupportChain::Interlay,
+			TargetChain::Manta(_) => SupportChain::Manta,
+		}
+	}
+}
+
 #[derive(Clone, Debug, Eq, PartialEq, Encode, Decode, TypeInfo, MaxEncodedLen)]
 pub struct EthereumCallConfiguration<BlockNumber> {
 	/// XCM message execution costs to be consumed

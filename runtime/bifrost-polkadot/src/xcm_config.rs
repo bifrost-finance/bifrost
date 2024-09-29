@@ -118,6 +118,8 @@ pub type Barrier = TrailingSetTopicAsId<(
 		(
 			// If the message is one that immediately attemps to pay for execution, then allow it.
 			AllowTopLevelPaidExecutionFrom<Everything>,
+			// TODO: Messages coming from system parachains need not pay for execution.
+			// AllowExplicitUnpaidExecutionFrom<Everything>,
 			// Subscriptions for version tracking are OK.
 			AllowSubscriptionsFrom<Everything>,
 		),

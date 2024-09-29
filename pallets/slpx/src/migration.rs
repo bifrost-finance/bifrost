@@ -162,7 +162,7 @@ pub fn migrate_to_v1<T: Config>() -> Weight {
 		};
 
 		OrderQueue::<T>::mutate(|order_queue| -> DispatchResultWithPostInfo {
-			order_queue.try_push(order.clone()).map_err(|_| Error::<T>::ArgumentsError)?;
+			order_queue.try_push(order.clone()).map_err(|_| Error::<T>::ErrorArguments)?;
 			Ok(().into())
 		})
 		.expect("BoundedVec should not overflow");
