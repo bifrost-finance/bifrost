@@ -30,6 +30,14 @@ use bifrost_slp::{DerivativeAccountProvider, QueryResponseManager};
 use core::convert::TryInto;
 use pallet_traits::evm::InspectEvmAccounts;
 // A few exports that help ease life for downstream crates.
+use bifrost_primitives::{
+	BifrostCrowdloanId, BifrostVsbondAccount, BuyBackAccount, BuybackPalletId, CloudsPalletId,
+	CommissionPalletId, FarmingBoostPalletId, FarmingGaugeRewardIssuerPalletId,
+	FarmingKeeperPalletId, FarmingRewardIssuerPalletId, FeeSharePalletId, FlexibleFeePalletId,
+	IncentivePalletId, IncentivePoolAccount, LendMarketPalletId, LiquidityAccount,
+	MerkleDirtributorPalletId, OraclePalletId, SlpEntrancePalletId, SlpExitPalletId,
+	SystemMakerPalletId, SystemStakingPalletId, TreasuryPalletId,
+};
 use cumulus_pallet_parachain_system::{RelayNumberStrictlyIncreases, RelaychainDataProvider};
 pub use frame_support::{
 	construct_runtime, match_types, parameter_types,
@@ -226,31 +234,8 @@ parameter_types! {
 }
 
 parameter_types! {
-	pub const TreasuryPalletId: PalletId = PalletId(*b"bf/trsry");
-	pub const BifrostCrowdloanId: PalletId = PalletId(*b"bf/salp#");
-	pub const MerkleDirtributorPalletId: PalletId = PalletId(*b"bf/mklds");
-	pub const BifrostVsbondPalletId: PalletId = PalletId(*b"bf/salpb");
-	pub const SlpEntrancePalletId: PalletId = PalletId(*b"bf/vtkin");
-	pub const SlpExitPalletId: PalletId = PalletId(*b"bf/vtout");
-	pub const FarmingKeeperPalletId: PalletId = PalletId(*b"bf/fmkpr");
-	pub const FarmingRewardIssuerPalletId: PalletId = PalletId(*b"bf/fmrir");
-	pub const SystemStakingPalletId: PalletId = PalletId(*b"bf/sysst");
-	pub const BuybackPalletId: PalletId = PalletId(*b"bf/salpc");
-	pub const SystemMakerPalletId: PalletId = PalletId(*b"bf/sysmk");
-	pub const FeeSharePalletId: PalletId = PalletId(*b"bf/feesh");
 	pub CheckingAccount: AccountId = PolkadotXcm::check_account();
-	pub const IncentivePalletId: PalletId = PalletId(*b"bf/bbict");
-	pub const FarmingBoostPalletId: PalletId = PalletId(*b"bf/fmbst");
-	pub const LendMarketPalletId: PalletId = PalletId(*b"bf/ldmkt");
-	pub const OraclePalletId: PalletId = PalletId(*b"bf/oracl");
 	pub const StableAssetPalletId: PalletId = PalletId(*b"bf/stabl");
-	pub const CommissionPalletId: PalletId = PalletId(*b"bf/comms");
-	pub const CloudsPalletId: PalletId = PalletId(*b"bf/cloud");
-	pub IncentivePoolAccount: PalletId = PalletId(*b"bf/inpoo");
-	pub const FarmingGaugeRewardIssuerPalletId: PalletId = PalletId(*b"bf/fmgar");
-	pub const BuyBackAccount: PalletId = PalletId(*b"bf/bybck");
-	pub const LiquidityAccount: PalletId = PalletId(*b"bf/liqdt");
-	pub const FlexibleFeePalletId: PalletId = PalletId(*b"bf/flexi");
 }
 
 impl frame_system::Config for Runtime {
@@ -1135,7 +1120,7 @@ impl bifrost_vstoken_conversion::Config for Runtime {
 	type RelayCurrencyId = RelayCurrencyId;
 	type TreasuryAccount = BifrostTreasuryAccount;
 	type ControlOrigin = CoreAdminOrCouncil;
-	type VsbondAccount = BifrostVsbondPalletId;
+	type VsbondAccount = BifrostVsbondAccount;
 	type CurrencyIdConversion = AssetIdMaps<Runtime>;
 	type WeightInfo = weights::bifrost_vstoken_conversion::BifrostWeight<Runtime>;
 }

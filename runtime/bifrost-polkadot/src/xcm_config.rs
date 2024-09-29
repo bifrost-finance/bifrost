@@ -443,7 +443,7 @@ impl Contains<AccountId> for DustRemovalWhitelist {
 		let whitelist: Vec<AccountId> = vec![
 			TreasuryPalletId::get().into_account_truncating(),
 			BifrostCrowdloanId::get().into_account_truncating(),
-			BifrostVsbondPalletId::get().into_account_truncating(),
+			BifrostVsbondAccount::get().into_account_truncating(),
 			SlpEntrancePalletId::get().into_account_truncating(),
 			SlpExitPalletId::get().into_account_truncating(),
 			BuybackPalletId::get().into_account_truncating(),
