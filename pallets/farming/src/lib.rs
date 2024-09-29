@@ -236,22 +236,18 @@ pub mod pallet {
 	}
 
 	#[pallet::storage]
-	#[pallet::getter(fn pool_next_id)]
 	pub type PoolNextId<T: Config> = StorageValue<_, PoolId, ValueQuery>;
 
 	#[pallet::storage]
-	#[pallet::getter(fn gauge_pool_next_id)]
 	pub type GaugePoolNextId<T: Config> = StorageValue<_, PoolId, ValueQuery>;
 
 	#[pallet::storage]
-	#[pallet::getter(fn retire_limit)]
 	pub type RetireLimit<T: Config> = StorageValue<_, u32, ValueQuery>;
 
 	/// Record reward pool info.
 	///
 	/// map PoolId => PoolInfo
 	#[pallet::storage]
-	#[pallet::getter(fn pool_infos)]
 	pub type PoolInfos<T: Config> = StorageMap<
 		_,
 		Twox64Concat,
@@ -263,7 +259,6 @@ pub mod pallet {
 	///
 	/// map PoolId => GaugePoolInfo
 	#[pallet::storage]
-	#[pallet::getter(fn gauge_pool_infos)]
 	pub type GaugePoolInfos<T: Config> = StorageMap<
 		_,
 		Twox64Concat,
@@ -272,7 +267,6 @@ pub mod pallet {
 	>;
 
 	#[pallet::storage]
-	#[pallet::getter(fn gauge_infos)]
 	pub type GaugeInfos<T: Config> = StorageDoubleMap<
 		_,
 		Twox64Concat,
@@ -287,7 +281,6 @@ pub mod pallet {
 	///
 	/// double_map (PoolId, AccountId) => ShareInfo
 	#[pallet::storage]
-	#[pallet::getter(fn shares_and_withdrawn_rewards)]
 	pub type SharesAndWithdrawnRewards<T: Config> = StorageDoubleMap<
 		_,
 		Twox64Concat,
@@ -298,29 +291,23 @@ pub mod pallet {
 	>;
 
 	#[pallet::storage]
-	#[pallet::getter(fn boost_pool_infos)]
 	pub type BoostPoolInfos<T: Config> =
 		StorageValue<_, BoostPoolInfo<BalanceOf<T>, BlockNumberFor<T>>, ValueQuery>;
 
 	#[pallet::storage]
-	#[pallet::getter(fn user_boost_infos)]
 	pub type UserBoostInfos<T: Config> =
 		StorageMap<_, Blake2_128Concat, T::AccountId, UserBoostInfo<T>>;
 
 	#[pallet::storage]
-	#[pallet::getter(fn boost_whitelist)]
 	pub type BoostWhitelist<T: Config> = StorageMap<_, Twox64Concat, PoolId, ()>;
 
 	#[pallet::storage]
-	#[pallet::getter(fn boost_next_round_whitelist)]
 	pub type BoostNextRoundWhitelist<T: Config> = StorageMap<_, Twox64Concat, PoolId, ()>;
 
 	#[pallet::storage]
-	#[pallet::getter(fn boost_voting_pools)]
 	pub type BoostVotingPools<T: Config> = StorageMap<_, Twox64Concat, PoolId, BalanceOf<T>>;
 
 	#[pallet::storage]
-	#[pallet::getter(fn boost_basic_rewards)]
 	pub type BoostBasicRewards<T: Config> =
 		StorageDoubleMap<_, Twox64Concat, PoolId, Twox64Concat, CurrencyIdOf<T>, BalanceOf<T>>;
 
@@ -332,7 +319,7 @@ pub mod pallet {
 					pool_info.basic_rewards.clone().iter_mut().for_each(
 						|(reward_currency_id, reward_amount)| {
 							if let Some(boost_basic_reward) =
-								Self::boost_basic_rewards(pid, reward_currency_id)
+								BoostBasicRewards::<T>::get(pid, reward_currency_id)
 							{
 								*reward_amount = reward_amount.saturating_add(boost_basic_reward);
 							}
@@ -369,7 +356,7 @@ pub mod pallet {
 				}
 			});
 
-			if n == Self::boost_pool_infos().end_round {
+			if n == BoostPoolInfos::<T>::get().end_round {
 				Self::end_boost_round_inner();
 				Self::auto_start_boost_round();
 			}
@@ -399,7 +386,7 @@ pub mod pallet {
 		) -> DispatchResult {
 			T::ControlOrigin::ensure_origin(origin)?;
 
-			let pid = Self::pool_next_id();
+			let pid = PoolNextId::<T>::get();
 			let keeper = T::Keeper::get().into_sub_account_truncating(pid);
 			let reward_issuer = T::RewardIssuer::get().into_sub_account_truncating(pid);
 			let basic_token = *tokens_proportion.get(0).ok_or(Error::<T>::NotNullable)?;
@@ -449,7 +436,7 @@ pub mod pallet {
 		) -> DispatchResult {
 			let exchanger = ensure_signed(origin)?;
 
-			let mut pool_info = Self::pool_infos(&pid).ok_or(Error::<T>::PoolDoesNotExist)?;
+			let mut pool_info = PoolInfos::<T>::get(&pid).ok_or(Error::<T>::PoolDoesNotExist)?;
 
 			match if_gauge {
 				true => {
@@ -500,7 +487,7 @@ pub mod pallet {
 			// Check origin
 			let exchanger = ensure_signed(origin)?;
 
-			let mut pool_info = Self::pool_infos(&pid).ok_or(Error::<T>::PoolDoesNotExist)?;
+			let mut pool_info = PoolInfos::<T>::get(&pid).ok_or(Error::<T>::PoolDoesNotExist)?;
 			ensure!(
 				pool_info.state == PoolState::Ongoing || pool_info.state == PoolState::Charged,
 				Error::<T>::InvalidPoolState
@@ -543,14 +530,14 @@ pub mod pallet {
 			// Check origin
 			let exchanger = ensure_signed(origin)?;
 
-			let pool_info = Self::pool_infos(&pid).ok_or(Error::<T>::PoolDoesNotExist)?;
+			let pool_info = PoolInfos::<T>::get(&pid).ok_or(Error::<T>::PoolDoesNotExist)?;
 			ensure!(
 				pool_info.state == PoolState::Ongoing ||
 					pool_info.state == PoolState::Charged ||
 					pool_info.state == PoolState::Dead,
 				Error::<T>::InvalidPoolState
 			);
-			let share_info = Self::shares_and_withdrawn_rewards(&pid, &exchanger)
+			let share_info = SharesAndWithdrawnRewards::<T>::get(&pid, &exchanger)
 				.ok_or(Error::<T>::ShareInfoNotExists)?;
 			ensure!(
 				share_info.withdraw_list.len() < pool_info.withdraw_limit_count.into(),
@@ -570,14 +557,14 @@ pub mod pallet {
 			// Check origin
 			let exchanger = ensure_signed(origin)?;
 
-			let pool_info = Self::pool_infos(&pid).ok_or(Error::<T>::PoolDoesNotExist)?;
+			let pool_info = PoolInfos::<T>::get(&pid).ok_or(Error::<T>::PoolDoesNotExist)?;
 			ensure!(
 				pool_info.state == PoolState::Ongoing || pool_info.state == PoolState::Dead,
 				Error::<T>::InvalidPoolState
 			);
 
 			let current_block_number: BlockNumberFor<T> = frame_system::Pallet::<T>::block_number();
-			let share_info = Self::shares_and_withdrawn_rewards(&pid, &exchanger)
+			let share_info = SharesAndWithdrawnRewards::<T>::get(&pid, &exchanger)
 				.ok_or(Error::<T>::ShareInfoNotExists)?;
 			ensure!(
 				share_info.claim_last_block.saturating_add(pool_info.claim_limit_time) <=
@@ -598,7 +585,7 @@ pub mod pallet {
 			// Check origin
 			let exchanger = ensure_signed(origin)?;
 
-			let pool_info = Self::pool_infos(&pid).ok_or(Error::<T>::PoolDoesNotExist)?;
+			let pool_info = PoolInfos::<T>::get(&pid).ok_or(Error::<T>::PoolDoesNotExist)?;
 			Self::process_withdraw_list(&exchanger, pid, &pool_info, false)?;
 
 			Self::deposit_event(Event::WithdrawClaimed { who: exchanger, pid });
@@ -610,7 +597,7 @@ pub mod pallet {
 		pub fn force_retire_pool(origin: OriginFor<T>, pid: PoolId) -> DispatchResult {
 			T::ControlOrigin::ensure_origin(origin)?;
 
-			let mut pool_info = Self::pool_infos(&pid).ok_or(Error::<T>::PoolDoesNotExist)?;
+			let mut pool_info = PoolInfos::<T>::get(&pid).ok_or(Error::<T>::PoolDoesNotExist)?;
 			ensure!(pool_info.state == PoolState::Dead, Error::<T>::InvalidPoolState);
 			let withdraw_limit_time = BlockNumberFor::<T>::default();
 			let retire_limit = RetireLimit::<T>::get();
@@ -629,7 +616,7 @@ pub mod pallet {
 			if all_retired {
 				if let Some(ref gid) = pool_info.gauge {
 					let mut gauge_pool_info =
-						Self::gauge_pool_infos(gid).ok_or(Error::<T>::GaugePoolNotExist)?;
+						GaugePoolInfos::<T>::get(gid).ok_or(Error::<T>::GaugePoolNotExist)?;
 					gauge_pool_info.gauge_state = GaugeState::Unbond;
 					GaugePoolInfos::<T>::insert(&gid, gauge_pool_info);
 				}
@@ -661,7 +648,7 @@ pub mod pallet {
 		pub fn close_pool(origin: OriginFor<T>, pid: PoolId) -> DispatchResult {
 			T::ControlOrigin::ensure_origin(origin)?;
 
-			let mut pool_info = Self::pool_infos(&pid).ok_or(Error::<T>::PoolDoesNotExist)?;
+			let mut pool_info = PoolInfos::<T>::get(&pid).ok_or(Error::<T>::PoolDoesNotExist)?;
 			ensure!(pool_info.state == PoolState::Ongoing, Error::<T>::InvalidPoolState);
 			pool_info.state = PoolState::Dead;
 			PoolInfos::<T>::insert(&pid, pool_info);
@@ -685,7 +672,7 @@ pub mod pallet {
 		) -> DispatchResult {
 			T::ControlOrigin::ensure_origin(origin)?;
 
-			let mut pool_info = Self::pool_infos(&pid).ok_or(Error::<T>::PoolDoesNotExist)?;
+			let mut pool_info = PoolInfos::<T>::get(&pid).ok_or(Error::<T>::PoolDoesNotExist)?;
 			ensure!(pool_info.state == PoolState::Retired, Error::<T>::InvalidPoolState);
 			if let Some(basic_rewards) = basic_rewards {
 				let basic_rewards_map: BTreeMap<CurrencyIdOf<T>, BalanceOf<T>> =
@@ -728,7 +715,7 @@ pub mod pallet {
 		pub fn kill_pool(origin: OriginFor<T>, pid: PoolId) -> DispatchResult {
 			T::ControlOrigin::ensure_origin(origin)?;
 
-			let pool_info = Self::pool_infos(&pid).ok_or(Error::<T>::PoolDoesNotExist)?;
+			let pool_info = PoolInfos::<T>::get(&pid).ok_or(Error::<T>::PoolDoesNotExist)?;
 			ensure!(
 				pool_info.state == PoolState::Retired || pool_info.state == PoolState::UnCharged,
 				Error::<T>::InvalidPoolState
@@ -754,7 +741,7 @@ pub mod pallet {
 		) -> DispatchResult {
 			T::ControlOrigin::ensure_origin(origin)?;
 
-			let mut pool_info = Self::pool_infos(&pid).ok_or(Error::<T>::PoolDoesNotExist)?;
+			let mut pool_info = PoolInfos::<T>::get(&pid).ok_or(Error::<T>::PoolDoesNotExist)?;
 			ensure!(
 				pool_info.state == PoolState::Retired ||
 					pool_info.state == PoolState::Ongoing ||
@@ -922,7 +909,7 @@ pub mod pallet {
 
 impl<T: Config> FarmingInfo<BalanceOf<T>, CurrencyIdOf<T>> for Pallet<T> {
 	fn get_token_shares(pool_id: PoolId, currency_id: CurrencyIdOf<T>) -> BalanceOf<T> {
-		if let Some(pool_info) = Self::pool_infos(&pool_id) {
+		if let Some(pool_info) = PoolInfos::<T>::get(&pool_id) {
 			if let Some(token_proportion_value) = pool_info.tokens_proportion.get(&currency_id) {
 				let native_amount =
 					pool_info.basic_token.1.saturating_reciprocal_mul(pool_info.total_shares);
