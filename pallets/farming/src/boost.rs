@@ -43,10 +43,10 @@ impl<T: Config> BoostInterface<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>, Bl
 	for Pallet<T>
 {
 	fn refresh_vebnc_farming(who: &AccountIdOf<T>) -> DispatchResult {
-		let mut boost_pool_info = Self::boost_pool_infos();
+		let mut boost_pool_info = BoostPoolInfos::<T>::get();
 		let new_vote_amount = T::BbBNC::balance_of(who, None)?;
 
-		if let Some(mut user_boost_info) = Self::user_boost_infos(who) {
+		if let Some(mut user_boost_info) = UserBoostInfos::<T>::get(who) {
 			// If the user's last voting block height is greater than or equal to the block height
 			// at the beginning of this round, refresh.
 			if user_boost_info.last_vote >= boost_pool_info.start_round {
@@ -89,7 +89,7 @@ impl<T: Config> Pallet<T> {
 	// the next round.
 	pub(crate) fn start_boost_round_inner(round_length: BlockNumberFor<T>) -> DispatchResult {
 		ensure!(round_length != Zero::zero(), Error::<T>::RoundLengthNotSet);
-		let mut boost_pool_info = Self::boost_pool_infos();
+		let mut boost_pool_info = BoostPoolInfos::<T>::get();
 		ensure!(boost_pool_info.end_round == Zero::zero(), Error::<T>::RoundNotOver);
 
 		// Update whitelist
@@ -118,7 +118,7 @@ impl<T: Config> Pallet<T> {
 	// Clear boost_basic_rewards and boost_pool_info.end_round to eliminate the influence of boost
 	// in hook
 	pub(crate) fn end_boost_round_inner() {
-		let mut boost_pool_info = Self::boost_pool_infos();
+		let mut boost_pool_info = BoostPoolInfos::<T>::get();
 		let _ = BoostBasicRewards::<T>::clear(u32::max_value(), None);
 		Self::deposit_event(Event::RoundEnd {
 			total_votes: boost_pool_info.total_votes,
@@ -132,7 +132,7 @@ impl<T: Config> Pallet<T> {
 
 	// Only used in hook
 	pub(crate) fn auto_start_boost_round() {
-		let mut boost_pool_info = Self::boost_pool_infos();
+		let mut boost_pool_info = BoostPoolInfos::<T>::get();
 		let whitelist_iter = BoostWhitelist::<T>::iter_keys();
 		// Update whitelist
 		if BoostNextRoundWhitelist::<T>::iter().count() != 0 {
@@ -164,7 +164,7 @@ impl<T: Config> Pallet<T> {
 		boost_pool_info: &BoostPoolInfo<BalanceOf<T>, BlockNumberFor<T>>,
 	) -> DispatchResult {
 		BoostVotingPools::<T>::iter()
-			.filter_map(|(pid, value)| match Self::pool_infos(pid) {
+			.filter_map(|(pid, value)| match PoolInfos::<T>::get(pid) {
 				Some(pool_info) => Some((pid, value, pool_info)),
 				None => None,
 			})
@@ -201,9 +201,9 @@ impl<T: Config> Pallet<T> {
 		vote_list: Vec<(PoolId, Percent)>,
 	) -> DispatchResult {
 		let current_block_number = frame_system::Pallet::<T>::block_number();
-		let mut boost_pool_info = Self::boost_pool_infos();
+		let mut boost_pool_info = BoostPoolInfos::<T>::get();
 
-		if let Some(user_boost_info) = Self::user_boost_infos(who) {
+		if let Some(user_boost_info) = UserBoostInfos::<T>::get(who) {
 			// If the user's last voting block height is greater than or equal to the block height
 			// at the beginning of this round, subtract.
 			if user_boost_info.last_vote >= boost_pool_info.start_round {
@@ -230,7 +230,7 @@ impl<T: Config> Pallet<T> {
 		let new_vote_amount = T::BbBNC::balance_of(who, None)?;
 		let mut percent_check = Percent::from_percent(0);
 		vote_list.iter().try_for_each(|(pid, proportion)| -> DispatchResult {
-			ensure!(Self::boost_whitelist(pid) != None, Error::<T>::NotInWhitelist);
+			ensure!(BoostWhitelist::<T>::get(pid) != None, Error::<T>::NotInWhitelist);
 			let increace = *proportion * new_vote_amount;
 			percent_check =
 				percent_check.checked_add(proportion).ok_or(Error::<T>::PercentOverflow)?;
