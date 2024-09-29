@@ -30,6 +30,14 @@ use bifrost_slp::{DerivativeAccountProvider, QueryResponseManager};
 use core::convert::TryInto;
 // A few exports that help ease life for downstream crates.
 pub use bifrost_parachain_staking::{InflationInfo, Range};
+use bifrost_primitives::{
+	BifrostCrowdloanId, BifrostVsbondAccount, BuybackPalletId, CommissionPalletId,
+	FarmingBoostPalletId, FarmingGaugeRewardIssuerPalletId, FarmingKeeperPalletId,
+	FarmingRewardIssuerPalletId, FeeSharePalletId, FlexibleFeePalletId, IncentivePoolAccount,
+	LendMarketPalletId, MerkleDirtributorPalletId, OraclePalletId, ParachainStakingPalletId,
+	SlpEntrancePalletId, SlpExitPalletId, SystemMakerPalletId, SystemStakingPalletId,
+	TreasuryPalletId, VBNCConvertPalletId, VsbondAuctionPalletId,
+};
 pub use frame_support::{
 	construct_runtime, match_types, parameter_types,
 	traits::{
@@ -205,35 +213,11 @@ parameter_types! {
 }
 
 parameter_types! {
-	pub const TreasuryPalletId: PalletId = PalletId(*b"bf/trsry");
-	pub const BifrostCrowdloanId: PalletId = PalletId(*b"bf/salp#");
-	pub const BifrostSalpLiteCrowdloanId: PalletId = PalletId(*b"bf/salpl");
 	pub const LiquidityMiningPalletId: PalletId = PalletId(*b"bf/lm###");
-	pub const LiquidityMiningDOTPalletId: PalletId = PalletId(*b"bf/lmdot");
 	pub const LighteningRedeemPalletId: PalletId = PalletId(*b"bf/ltnrd");
-	pub const MerkleDirtributorPalletId: PalletId = PalletId(*b"bf/mklds");
-	pub const VsbondAuctionPalletId: PalletId = PalletId(*b"bf/vsbnd");
-	pub const ParachainStakingPalletId: PalletId = PalletId(*b"bf/stake");
-	pub const BifrostVsbondPalletId: PalletId = PalletId(*b"bf/salpb");
-	pub const SlpEntrancePalletId: PalletId = PalletId(*b"bf/vtkin");
-	pub const SlpExitPalletId: PalletId = PalletId(*b"bf/vtout");
 	pub const StableAmmPalletId: PalletId = PalletId(*b"bf/stamm");
-	pub const FarmingKeeperPalletId: PalletId = PalletId(*b"bf/fmkpr");
-	pub const FarmingRewardIssuerPalletId: PalletId = PalletId(*b"bf/fmrir");
-	pub const SystemStakingPalletId: PalletId = PalletId(*b"bf/sysst");
-	pub const BuybackPalletId: PalletId = PalletId(*b"bf/salpc");
-	pub const SystemMakerPalletId: PalletId = PalletId(*b"bf/sysmk");
-	pub const FeeSharePalletId: PalletId = PalletId(*b"bf/feesh");
 	pub CheckingAccount: AccountId = PolkadotXcm::check_account();
-	pub const FarmingBoostPalletId: PalletId = PalletId(*b"bf/fmbst");
-	pub const LendMarketPalletId: PalletId = PalletId(*b"bf/ldmkt");
-	pub const OraclePalletId: PalletId = PalletId(*b"bf/oracl");
 	pub const StableAssetPalletId: PalletId = PalletId(*b"bf/stabl");
-	pub const CommissionPalletId: PalletId = PalletId(*b"bf/comms");
-	pub IncentivePoolAccount: PalletId = PalletId(*b"bf/inpoo");
-	pub const FarmingGaugeRewardIssuerPalletId: PalletId = PalletId(*b"bf/fmgar");
-	pub const FlexibleFeePalletId: PalletId = PalletId(*b"bf/flexi");
-	pub const VBNCConvertPalletId: PalletId = PalletId(*b"bf/vbncc");
 }
 
 impl frame_system::Config for Runtime {
@@ -1274,7 +1258,7 @@ impl bifrost_vstoken_conversion::Config for Runtime {
 	type RelayCurrencyId = RelayCurrencyId;
 	type TreasuryAccount = BifrostTreasuryAccount;
 	type ControlOrigin = CoreAdminOrCouncil;
-	type VsbondAccount = BifrostVsbondPalletId;
+	type VsbondAccount = BifrostVsbondAccount;
 	type CurrencyIdConversion = AssetIdMaps<Runtime>;
 	type WeightInfo = weights::bifrost_vstoken_conversion::BifrostWeight<Runtime>;
 }
@@ -1502,17 +1486,17 @@ impl bifrost_vtoken_minting::Config for Runtime {
 
 impl bifrost_slpx::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
+	type RuntimeOrigin = RuntimeOrigin;
 	type ControlOrigin = TechAdminOrCouncil;
 	type MultiCurrency = Currencies;
-	type DexOperator = ZenlinkProtocol;
 	type VtokenMintingInterface = VtokenMinting;
-	type StablePoolHandler = StablePool;
 	type XcmTransfer = XTokens;
 	type XcmSender = XcmRouter;
 	type CurrencyIdConvert = AssetIdMaps<Runtime>;
 	type TreasuryAccount = BifrostTreasuryAccount;
 	type ParachainId = ParachainInfo;
 	type WeightInfo = weights::bifrost_slpx::BifrostWeight<Runtime>;
+	type MaxOrderSize = ConstU32<500>;
 }
 
 pub struct EnsurePoolAssetId;
