@@ -21,7 +21,7 @@ use bifrost_primitives::{CurrencyId, BNC};
 use frame_support::traits::{Get, OnRuntimeUpgrade};
 #[cfg(feature = "try-runtime")]
 use sp_runtime::TryRuntimeError;
-use xcm::v3::prelude::{GeneralKey, X1};
+use xcm::opaque::v3::Junctions::X1;
 
 const LOG_TARGET: &str = "asset-registry::migration";
 
@@ -44,7 +44,7 @@ pub fn update_blp_metadata<T: Config>(pool_count: u32) -> Weight {
 
 const BNC_LOCATION: xcm::v3::Location = xcm::v3::Location {
 	parents: 0,
-	interior: X1(GeneralKey {
+	interior: X1(xcm::v3::Junction::GeneralKey {
 		length: 2,
 		data: [
 			0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -67,16 +67,24 @@ impl<T: Config> OnRuntimeUpgrade for InsertBNCMetadata<T> {
 			},
 		);
 
-		CurrencyIdToLocations::<T>::insert(BNC, BNC_LOCATION);
+		match Location::try_from(BNC_LOCATION) {
+			Ok(location) => {
+				CurrencyIdToLocations::<T>::insert(BNC, location.clone());
+				LocationToCurrencyIds::<T>::insert(location, BNC);
 
-		LocationToCurrencyIds::<T>::insert(BNC_LOCATION, BNC);
-
-		Weight::from(T::DbWeight::get().reads_writes(3 as u64 + 1, 3 as u64 + 1))
+				Weight::from(T::DbWeight::get().reads_writes(3 as u64 + 1, 3 as u64 + 1))
+			},
+			Err(_) => {
+				log::error!(target: LOG_TARGET, "Conversion failed from BNC_LOCATION to v4_bnc_location.");
+				Weight::from(T::DbWeight::get().reads_writes(1 as u64 + 1, 1 as u64 + 1))
+			},
+		}
 	}
 
 	#[cfg(feature = "try-runtime")]
 	fn pre_upgrade() -> Result<Vec<u8>, TryRuntimeError> {
-		assert!(LocationToCurrencyIds::<T>::get(BNC_LOCATION).is_none());
+		let bnc_location = Location::try_from(BNC_LOCATION).unwrap();
+		assert!(LocationToCurrencyIds::<T>::get(bnc_location).is_none());
 
 		Ok(sp_std::vec![])
 	}
@@ -99,8 +107,10 @@ impl<T: Config> OnRuntimeUpgrade for InsertBNCMetadata<T> {
 			metadata
 		);
 
+		let bnc_location = Location::try_from(BNC_LOCATION).unwrap();
+
 		let location = CurrencyIdToLocations::<T>::get(BNC);
-		assert_eq!(location, Some(BNC_LOCATION));
+		assert_eq!(location, Some(bnc_location.clone()));
 
 		log::info!(
 			target: LOG_TARGET,
@@ -108,7 +118,7 @@ impl<T: Config> OnRuntimeUpgrade for InsertBNCMetadata<T> {
 			location
 		);
 
-		let currency = LocationToCurrencyIds::<T>::get(BNC_LOCATION);
+		let currency = LocationToCurrencyIds::<T>::get(bnc_location);
 		assert_eq!(currency, Some(BNC));
 		log::info!(
 			target: LOG_TARGET,

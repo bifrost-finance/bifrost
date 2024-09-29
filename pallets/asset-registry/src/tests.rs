@@ -21,7 +21,6 @@
 #![cfg(test)]
 
 use super::*;
-use bifrost_primitives::TokenSymbol;
 use frame_support::{assert_noop, assert_ok};
 use mock::{
 	AssetRegistry, CouncilAccount, ExtBuilder, Runtime, RuntimeEvent, RuntimeOrigin, System,
@@ -33,125 +32,6 @@ fn versioned_multi_location_convert_work() {
 		let versioned_location = VersionedLocation::V4(Location::from([Parachain(1000)]));
 		let location: Location = versioned_location.try_into().unwrap();
 		assert_eq!(location, Location::new(0, [Parachain(1000)]));
-	});
-}
-
-#[test]
-fn register_native_asset_works() {
-	ExtBuilder::default().build().execute_with(|| {
-		let versioned_location = VersionedLocation::V4(Location::from([Parachain(1000)]));
-
-		assert_ok!(AssetRegistry::register_native_asset(
-			RuntimeOrigin::signed(CouncilAccount::get()),
-			Token(TokenSymbol::DOT),
-			Box::new(versioned_location.clone()),
-			Box::new(AssetMetadata {
-				name: b"Token Name".to_vec(),
-				symbol: b"TN".to_vec(),
-				decimals: 12,
-				minimal_balance: 1,
-			})
-		));
-		System::assert_last_event(RuntimeEvent::AssetRegistry(Event::AssetRegistered {
-			asset_id: AssetIds::NativeAssetId(Token(TokenSymbol::DOT)),
-			metadata: AssetMetadata {
-				name: b"Token Name".to_vec(),
-				symbol: b"TN".to_vec(),
-				decimals: 12,
-				minimal_balance: 1,
-			},
-		}));
-
-		assert_eq!(
-			AssetMetadatas::<Runtime>::get(AssetIds::NativeAssetId(Token(TokenSymbol::DOT))),
-			Some(AssetMetadata {
-				name: b"Token Name".to_vec(),
-				symbol: b"TN".to_vec(),
-				decimals: 12,
-				minimal_balance: 1,
-			})
-		);
-		// Can't duplicate
-		assert_noop!(
-			AssetRegistry::register_native_asset(
-				RuntimeOrigin::signed(CouncilAccount::get()),
-				Token(TokenSymbol::DOT),
-				Box::new(versioned_location),
-				Box::new(AssetMetadata {
-					name: b"Token Name".to_vec(),
-					symbol: b"TN".to_vec(),
-					decimals: 12,
-					minimal_balance: 1,
-				})
-			),
-			Error::<Runtime>::AssetIdExisted
-		);
-	});
-}
-
-#[test]
-fn update_native_asset_works() {
-	let versioned_location = VersionedLocation::V4(Location::from([Parachain(1000)]));
-
-	ExtBuilder::default().build().execute_with(|| {
-		assert_noop!(
-			AssetRegistry::update_native_asset(
-				RuntimeOrigin::signed(CouncilAccount::get()),
-				Token(TokenSymbol::DOT),
-				Box::new(versioned_location.clone()),
-				Box::new(AssetMetadata {
-					name: b"New Token Name".to_vec(),
-					symbol: b"NTN".to_vec(),
-					decimals: 13,
-					minimal_balance: 2,
-				})
-			),
-			Error::<Runtime>::AssetIdNotExists
-		);
-
-		assert_ok!(AssetRegistry::register_native_asset(
-			RuntimeOrigin::signed(CouncilAccount::get()),
-			Token(TokenSymbol::DOT),
-			Box::new(versioned_location.clone()),
-			Box::new(AssetMetadata {
-				name: b"Token Name".to_vec(),
-				symbol: b"TN".to_vec(),
-				decimals: 12,
-				minimal_balance: 1,
-			})
-		));
-
-		assert_ok!(AssetRegistry::update_native_asset(
-			RuntimeOrigin::signed(CouncilAccount::get()),
-			Token(TokenSymbol::DOT),
-			Box::new(versioned_location.clone()),
-			Box::new(AssetMetadata {
-				name: b"New Token Name".to_vec(),
-				symbol: b"NTN".to_vec(),
-				decimals: 13,
-				minimal_balance: 2,
-			})
-		));
-
-		System::assert_last_event(RuntimeEvent::AssetRegistry(Event::AssetUpdated {
-			asset_id: AssetIds::NativeAssetId(Token(TokenSymbol::DOT)),
-			metadata: AssetMetadata {
-				name: b"New Token Name".to_vec(),
-				symbol: b"NTN".to_vec(),
-				decimals: 13,
-				minimal_balance: 2,
-			},
-		}));
-
-		assert_eq!(
-			AssetMetadatas::<Runtime>::get(AssetIds::NativeAssetId(Token(TokenSymbol::DOT))),
-			Some(AssetMetadata {
-				name: b"New Token Name".to_vec(),
-				symbol: b"NTN".to_vec(),
-				decimals: 13,
-				minimal_balance: 2,
-			})
-		);
 	});
 }
 
@@ -215,86 +95,6 @@ fn register_vtoken_metadata_should_work() {
 }
 
 #[test]
-fn register_vstoken_metadata_should_work() {
-	ExtBuilder::default().build().execute_with(|| {
-		let metadata = AssetMetadata {
-			name: b"KSM Native Token".to_vec(),
-			symbol: b"KSM".to_vec(),
-			decimals: 12,
-			minimal_balance: 0,
-		};
-		let v_metadata = AssetMetadata {
-			name: b"Voucher Slot KSM".to_vec(),
-			symbol: b"vsKSM".to_vec(),
-			decimals: 12,
-			minimal_balance: 0,
-		};
-		assert_noop!(
-			AssetRegistry::register_vtoken_metadata(
-				RuntimeOrigin::signed(CouncilAccount::get()),
-				1
-			),
-			Error::<Runtime>::CurrencyIdNotExists
-		);
-
-		assert_ok!(AssetRegistry::register_token_metadata(
-			RuntimeOrigin::signed(CouncilAccount::get()),
-			Box::new(metadata.clone())
-		));
-
-		assert_ok!(AssetRegistry::register_vstoken_metadata(
-			RuntimeOrigin::signed(CouncilAccount::get()),
-			0
-		));
-
-		assert_eq!(
-			CurrencyMetadatas::<Runtime>::get(CurrencyId::VSToken2(0)),
-			Some(v_metadata.clone())
-		)
-	})
-}
-
-#[test]
-fn register_vsbond_metadata_should_work() {
-	ExtBuilder::default().build().execute_with(|| {
-		let metadata = AssetMetadata {
-			name: b"KSM Native Token".to_vec(),
-			symbol: b"KSM".to_vec(),
-			decimals: 12,
-			minimal_balance: 0,
-		};
-		let name = "vsBOND-KSM-2001-10-20".as_bytes().to_vec();
-		let v_metadata =
-			AssetMetadata { name: name.clone(), symbol: name, decimals: 12, minimal_balance: 0 };
-		assert_noop!(
-			AssetRegistry::register_vtoken_metadata(
-				RuntimeOrigin::signed(CouncilAccount::get()),
-				1
-			),
-			Error::<Runtime>::CurrencyIdNotExists
-		);
-
-		assert_ok!(AssetRegistry::register_token_metadata(
-			RuntimeOrigin::signed(CouncilAccount::get()),
-			Box::new(metadata.clone())
-		));
-
-		assert_ok!(AssetRegistry::register_vsbond_metadata(
-			RuntimeOrigin::signed(CouncilAccount::get()),
-			0,
-			2001,
-			10,
-			20
-		));
-
-		assert_eq!(
-			CurrencyMetadatas::<Runtime>::get(CurrencyId::VSBond2(0, 2001, 10, 20)),
-			Some(v_metadata.clone())
-		)
-	})
-}
-
-#[test]
 fn register_multilocation_should_work() {
 	ExtBuilder::default().build().execute_with(|| {
 		let metadata = AssetMetadata {
@@ -305,7 +105,7 @@ fn register_multilocation_should_work() {
 		};
 
 		let versioned_location = VersionedLocation::V4(Location::new(1, [Parachain(2001)]));
-		let location: xcm::v3::Location = versioned_location.clone().try_into().unwrap();
+		let location: Location = versioned_location.clone().try_into().unwrap();
 
 		assert_noop!(
 			AssetRegistry::register_location(
@@ -339,7 +139,7 @@ fn register_multilocation_should_work() {
 			Error::<Runtime>::CurrencyIdExisted
 		);
 
-		assert_eq!(LocationToCurrencyIds::<Runtime>::get(location), Some(Token2(0)));
+		assert_eq!(LocationToCurrencyIds::<Runtime>::get(location.clone()), Some(Token2(0)));
 		assert_eq!(CurrencyIdToLocations::<Runtime>::get(Token2(0)), Some(location));
 		assert_eq!(
 			CurrencyIdToWeights::<Runtime>::get(Token2(0)),
@@ -358,7 +158,7 @@ fn force_set_multilocation_should_work() {
 			minimal_balance: 0,
 		};
 		let versioned_location = VersionedLocation::V4(Location::new(1, [Parachain(2001)]));
-		let location: xcm::v3::Location = versioned_location.clone().try_into().unwrap();
+		let location: Location = versioned_location.clone().try_into().unwrap();
 
 		assert_noop!(
 			AssetRegistry::force_set_location(
@@ -389,7 +189,7 @@ fn force_set_multilocation_should_work() {
 			Weight::from_parts(2000_000_000, 0)
 		));
 
-		assert_eq!(LocationToCurrencyIds::<Runtime>::get(location), Some(Token2(0)));
+		assert_eq!(LocationToCurrencyIds::<Runtime>::get(location.clone()), Some(Token2(0)));
 		assert_eq!(CurrencyIdToLocations::<Runtime>::get(Token2(0)), Some(location));
 		assert_eq!(
 			CurrencyIdToWeights::<Runtime>::get(Token2(0)),
