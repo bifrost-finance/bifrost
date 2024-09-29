@@ -17,15 +17,15 @@
 //! ## Overview
 //!
 //! This pallet provides the price from Oracle Module by implementing the
-//! `PriceFeeder` trait. In case of emergency, the price can be set directly
+//! `OraclePriceProvider` trait. In case of emergency, the price can be set directly
 //! by Oracle Collective.
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use bifrost_asset_registry::AssetMetadata;
 use bifrost_primitives::{
-	Balance, CurrencyId, CurrencyIdMapping, Price, PriceDetail, PriceFeeder, TimeStampedPrice,
-	TokenInfo,
+	Balance, CurrencyId, CurrencyIdMapping, OraclePriceProvider, Price, PriceDetail,
+	TimeStampedPrice, TokenInfo,
 };
 use frame_support::{dispatch::DispatchClass, pallet_prelude::*, transactional};
 use frame_system::pallet_prelude::*;
@@ -144,7 +144,7 @@ pub mod pallet {
 			price: Price,
 		) -> DispatchResultWithPostInfo {
 			T::FeederOrigin::ensure_origin(origin)?;
-			<Pallet<T> as EmergencyPriceFeeder<CurrencyId, Price>>::set_emergency_price(
+			<Pallet<T> as EmergencyOraclePriceProvider<CurrencyId, Price>>::set_emergency_price(
 				asset_id, price,
 			);
 			Ok(().into())
@@ -159,7 +159,9 @@ pub mod pallet {
 			asset_id: CurrencyId,
 		) -> DispatchResultWithPostInfo {
 			T::FeederOrigin::ensure_origin(origin)?;
-			<Pallet<T> as EmergencyPriceFeeder<CurrencyId, Price>>::reset_emergency_price(asset_id);
+			<Pallet<T> as EmergencyOraclePriceProvider<CurrencyId, Price>>::reset_emergency_price(
+				asset_id,
+			);
 			Ok(().into())
 		}
 
@@ -226,7 +228,7 @@ impl<T: Config> Pallet<T> {
 	}
 }
 
-impl<T: Config> PriceFeeder for Pallet<T> {
+impl<T: Config> OraclePriceProvider for Pallet<T> {
 	/// Returns the uniform format price and timestamp by asset id.
 	/// Formula: `price = oracle_price * 10.pow(18 - asset_decimal)`
 	/// We use `oracle_price.checked_div(&FixedU128::from_inner(mantissa))` represent that.
@@ -243,16 +245,6 @@ impl<T: Config> PriceFeeder for Pallet<T> {
 				.or_else(|| T::Source::get(asset_id))
 				.and_then(|price| Self::normalize_detail_price(price, mantissa))
 		})
-	}
-
-	fn get_normal_price(asset_id: &CurrencyId) -> Option<u128> {
-		let decimals = Self::get_asset_mantissa(asset_id)?;
-		EmergencyPrice::<T>::get(asset_id)
-			.and_then(|p| Some(p.into_inner().saturating_div(decimals)))
-			.or_else(|| {
-				T::Source::get(&asset_id)
-					.and_then(|price| Some(price.value.into_inner().saturating_div(decimals)))
-			})
 	}
 
 	/// Get the amount of currencies according to the input price data.
@@ -296,13 +288,17 @@ impl<T: Config> PriceFeeder for Pallet<T> {
 		currency_out: &CurrencyId,
 	) -> Option<(Balance, Price, Price)> {
 		let price_in = Self::get_storage_price(currency_in)?;
-		let price_out = Self::get_storage_price(currency_out)?;
-		Self::get_amount_by_prices(currency_in, amount_in, price_in, currency_out, price_out)
-			.map(|amount_out| (amount_out, price_in, price_out))
+		if currency_in == currency_out {
+			Some((amount_in, price_in, price_in))
+		} else {
+			let price_out = Self::get_storage_price(currency_out)?;
+			Self::get_amount_by_prices(currency_in, amount_in, price_in, currency_out, price_out)
+				.map(|amount_out| (amount_out, price_in, price_out))
+		}
 	}
 }
 
-impl<T: Config> EmergencyPriceFeeder<CurrencyId, Price> for Pallet<T> {
+impl<T: Config> EmergencyOraclePriceProvider<CurrencyId, Price> for Pallet<T> {
 	/// Set emergency price
 	fn set_emergency_price(asset_id: CurrencyId, price: Price) {
 		// set price direct

@@ -44,6 +44,8 @@ pub const VSKSM: CurrencyId = CurrencyId::VSToken(TokenSymbol::KSM);
 pub const PHA: CurrencyId = CurrencyId::Token(TokenSymbol::PHA);
 pub const VPHA: CurrencyId = CurrencyId::VToken(TokenSymbol::PHA);
 pub const ZLK: CurrencyId = CurrencyId::Token(TokenSymbol::ZLK);
+pub const KUSD: CurrencyId = CurrencyId::Stable(TokenSymbol::KUSD);
+pub const ASG: CurrencyId = CurrencyId::Native(TokenSymbol::ASG);
 
 pub const DOT_TOKEN_ID: u8 = 0u8;
 pub const DOT: CurrencyId = CurrencyId::Token2(DOT_TOKEN_ID);

@@ -128,8 +128,8 @@ use pallet_xcm::{EnsureResponse, QueryStatus};
 use sp_runtime::traits::{IdentityLookup, Verify};
 use xcm::{v3::MultiLocation, v4::prelude::*};
 pub use xcm_config::{
-	parachains, AccountId32Aliases, BifrostTreasuryAccount, ExistentialDeposits, MultiCurrency,
-	Sibling, SiblingParachainConvertsVia, XcmConfig, XcmRouter,
+	AccountId32Aliases, BifrostTreasuryAccount, ExistentialDeposits, MultiCurrency, Sibling,
+	SiblingParachainConvertsVia, XcmConfig, XcmRouter,
 };
 use xcm_executor::{traits::QueryHandler, XcmExecutor};
 
@@ -1040,7 +1040,7 @@ impl bifrost_flexible_fee::Config for Runtime {
 	type RelaychainCurrencyId = RelayCurrencyId;
 	type XcmRouter = XcmRouter;
 	type PalletId = FlexibleFeePalletId;
-	type PriceFeeder = Prices;
+	type OraclePriceProvider = Prices;
 }
 
 parameter_types! {
@@ -1053,7 +1053,7 @@ pub fn create_x2_multilocation(index: u16, currency_id: CurrencyId) -> xcm::v3::
 		CurrencyId::Token(TokenSymbol::MOVR) => xcm::v3::Location::new(
 			1,
 			xcm::v3::Junctions::X2(
-				xcm::v3::Junction::Parachain(parachains::moonriver::ID.into()),
+				xcm::v3::Junction::Parachain(MoonriverChainId::get()),
 				xcm::v3::Junction::AccountKey20 {
 					network: None,
 					key: Slp::derivative_account_id_20(
@@ -1147,7 +1147,6 @@ parameter_types! {
 }
 
 impl bifrost_salp::Config for Runtime {
-	type BancorPool = ();
 	type RuntimeEvent = RuntimeEvent;
 	type RuntimeOrigin = RuntimeOrigin;
 	type RuntimeCall = RuntimeCall;
@@ -1163,17 +1162,12 @@ impl bifrost_salp::Config for Runtime {
 	type VSBondValidPeriod = VSBondValidPeriod;
 	type WeightInfo = weights::bifrost_salp::BifrostWeight<Runtime>;
 	type EnsureConfirmAsGovernance = EitherOfDiverse<TechAdminOrCouncil, SALPAdmin>;
-	type XcmInterface = XcmInterface;
 	type TreasuryAccount = BifrostTreasuryAccount;
 	type BuybackPalletId = BuybackPalletId;
-	type DexOperator = ZenlinkProtocol;
 	type CurrencyIdConversion = AssetIdMaps<Runtime>;
 	type CurrencyIdRegister = AssetIdMaps<Runtime>;
-	type ParachainId = ParachainInfo;
 	type StablePool = StablePool;
 	type VtokenMinting = VtokenMinting;
-	type LockId = SalpLockId;
-	type BatchLimit = BatchLimit;
 }
 
 parameter_types! {
@@ -1325,27 +1319,13 @@ impl bifrost_system_staking::Config for Runtime {
 	type MaxFarmingPoolIdLen = MaxFarmingPoolIdLen;
 }
 
-impl bifrost_system_maker::Config for Runtime {
-	type RuntimeEvent = RuntimeEvent;
-	type MultiCurrency = Currencies;
-	type ControlOrigin = TechAdminOrCouncil;
-	type WeightInfo = weights::bifrost_system_maker::BifrostWeight<Runtime>;
-	type DexOperator = ZenlinkProtocol;
-	type CurrencyIdConversion = AssetIdMaps<Runtime>;
-	type TreasuryAccount = BifrostTreasuryAccount;
-	type RelayChainToken = RelayCurrencyId;
-	type SystemMakerPalletId = SystemMakerPalletId;
-	type ParachainId = ParachainInfo;
-	type VtokenMintingInterface = VtokenMinting;
-}
-
 impl bifrost_fee_share::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type MultiCurrency = Currencies;
 	type ControlOrigin = CoreAdminOrCouncil;
 	type WeightInfo = weights::bifrost_fee_share::BifrostWeight<Runtime>;
 	type FeeSharePalletId = FeeSharePalletId;
-	type PriceFeeder = Prices;
+	type OraclePriceProvider = Prices;
 }
 
 impl bifrost_cross_in_out::Config for Runtime {
@@ -1640,7 +1620,7 @@ impl pallet_prices::Config for Runtime {
 impl lend_market::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type PalletId = LendMarketPalletId;
-	type PriceFeeder = Prices;
+	type OraclePriceProvider = Prices;
 	type ReserveOrigin = TechAdminOrCouncil;
 	type UpdateOrigin = TechAdminOrCouncil;
 	type WeightInfo = lend_market::weights::BifrostWeight<Runtime>;
@@ -1871,7 +1851,6 @@ construct_runtime! {
 		VstokenConversion: bifrost_vstoken_conversion = 118,
 		Farming: bifrost_farming = 119,
 		SystemStaking: bifrost_system_staking = 120,
-		SystemMaker: bifrost_system_maker = 121,
 		FeeShare: bifrost_fee_share = 122,
 		CrossInOut: bifrost_cross_in_out = 123,
 		Slpx: bifrost_slpx = 125,
@@ -1939,15 +1918,23 @@ impl cumulus_pallet_xcmp_queue::migration::v5::V5Config for Runtime {
 /// upgrades in case governance decides to do so. THE ORDER IS IMPORTANT.
 pub type Migrations = migrations::Unreleased;
 
+parameter_types! {
+	pub const SystemMakerName: &'static str = "SystemMaker";
+}
+
 /// The runtime migrations per release.
 pub mod migrations {
 	#![allow(unused_imports)]
 	use super::*;
+	use migration::system_maker::SystemMakerClearPalletId;
 
 	/// Unreleased migrations. Add new ones here:
 	pub type Unreleased = (
 		// permanent migration, do not remove
 		pallet_xcm::migration::MigrateToLatestXcmVersion<Runtime>,
+		bifrost_cross_in_out::migrations::v3::MigrateToV2<Runtime>,
+		SystemMakerClearPalletId<Runtime>,
+		frame_support::migrations::RemovePallet<SystemMakerName, RocksDbWeight>,
 	);
 }
 
@@ -1973,11 +1960,9 @@ mod benches {
 		[bifrost_farming, Farming]
 		[bifrost_fee_share, FeeShare]
 		[bifrost_flexible_fee, FlexibleFee]
-		[bifrost_salp, Salp]
 		[bifrost_slp, Slp]
 		[bifrost_slpx, Slpx]
 		[bifrost_stable_pool, StablePool]
-		[bifrost_system_maker, SystemMaker]
 		[bifrost_system_staking, SystemStaking]
 		[bifrost_token_issuer, TokenIssuer]
 		[bifrost_vsbond_auction, VSBondAuction]
@@ -1987,6 +1972,7 @@ mod benches {
 		[lend_market, LendMarket]
 		[leverage_staking, LeverageStaking]
 		[bifrost_vbnc_convert, VBNCConvert]
+		[bifrost_xcm_interface, XcmInterface]
 		// [bifrost_channel_commission, ChannelCommission]
 	);
 }

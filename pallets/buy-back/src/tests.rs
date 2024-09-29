@@ -21,6 +21,7 @@
 #![cfg(test)]
 
 use crate::{mock::*, *};
+use bifrost_primitives::IncentivePalletId;
 use frame_support::{assert_noop, assert_ok};
 use sp_arithmetic::per_things::Permill;
 

@@ -16,7 +16,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 use crate::{mock::*, AssetIdOf, AtLeast64BitUnsignedOf, Error};
-use bifrost_primitives::VtokenMintingOperator;
+use bifrost_primitives::{StableAssetPalletId, VtokenMintingOperator};
 use bifrost_stable_asset::{PoolCount, Pools, StableAssetPoolInfo};
 use frame_support::{assert_noop, assert_ok, BoundedVec};
 use orml_traits::MultiCurrency;

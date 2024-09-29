@@ -196,7 +196,7 @@ fn update_reward() {
 		assert_eq!(BbBNC::balance_of(&BOB, None), Ok(25407883680));
 		assert_eq!(BbBNC::balance_of_position_current_block(0), Ok(25407883680));
 		assert_ok!(BbBNC::deposit_for(&BOB, 0, 100_000_000_000));
-		assert_ok!(BbBNC::update_reward(VE_MINTING_SYSTEM_POOL_ID, Some(&BOB), None)); // TODO
+		assert_ok!(BbBNC::update_reward(BB_BNC_SYSTEM_POOL_ID, Some(&BOB), None)); // TODO
 
 		assert_eq!(BbBNC::balance_of(&BOB, None), Ok(50818438500));
 		assert_eq!(BbBNC::balance_of(&BOB, Some(System::block_number())), Ok(50818438500));
@@ -253,7 +253,7 @@ fn notify_reward_amount() {
 		assert_ok!(BbBNC::get_rewards(RuntimeOrigin::signed(BOB)));
 		assert_eq!(Tokens::free_balance(KSM, &BOB), 396819);
 		System::set_block_number(System::block_number() + 7 * 86400 / 12);
-		assert_ok!(BbBNC::get_rewards_inner(VE_MINTING_SYSTEM_POOL_ID, &BOB, None));
+		assert_ok!(BbBNC::get_rewards_inner(BB_BNC_SYSTEM_POOL_ID, &BOB, None));
 		assert_eq!(Tokens::free_balance(KSM, &BOB), 999986398);
 		assert_ok!(BbBNC::notify_rewards(
 			RuntimeOrigin::root(),
@@ -267,14 +267,14 @@ fn notify_reward_amount() {
 			(4 * 365 * 86400 - 7 * 86400) / 12
 		));
 		System::set_block_number(System::block_number() + 1 * 86400 / 12);
-		assert_ok!(BbBNC::get_rewards_inner(VE_MINTING_SYSTEM_POOL_ID, &BOB, None));
+		assert_ok!(BbBNC::get_rewards_inner(BB_BNC_SYSTEM_POOL_ID, &BOB, None));
 		assert_eq!(Tokens::free_balance(KSM, &BOB), 1071241763);
-		assert_ok!(BbBNC::get_rewards_inner(VE_MINTING_SYSTEM_POOL_ID, &CHARLIE, None));
+		assert_ok!(BbBNC::get_rewards_inner(BB_BNC_SYSTEM_POOL_ID, &CHARLIE, None));
 		assert_eq!(Tokens::free_balance(KSM, &CHARLIE), 71599834);
 		System::set_block_number(System::block_number() + 7 * 86400 / 12);
-		assert_ok!(BbBNC::get_rewards_inner(VE_MINTING_SYSTEM_POOL_ID, &CHARLIE, None));
+		assert_ok!(BbBNC::get_rewards_inner(BB_BNC_SYSTEM_POOL_ID, &CHARLIE, None));
 		assert_eq!(Tokens::free_balance(KSM, &CHARLIE), 501203849);
-		assert_ok!(BbBNC::get_rewards_inner(VE_MINTING_SYSTEM_POOL_ID, &BOB, None));
+		assert_ok!(BbBNC::get_rewards_inner(BB_BNC_SYSTEM_POOL_ID, &BOB, None));
 		assert_eq!(Tokens::free_balance(KSM, &BOB), 1498768947);
 	});
 }
@@ -780,7 +780,7 @@ fn refresh_should_work() {
 			UserPointHistory::<Runtime>::get(POSITIONID0, U256::from(2)),
 			Point { bias: 0, slope: 0, block: 0, amount: 0 }
 		);
-		assert_ok!(BbBNC::refresh_inner(RuntimeOrigin::signed(BOB), VBNC));
+		assert_ok!(BbBNC::refresh_inner(VBNC));
 		assert_eq!(
 			UserPointHistory::<Runtime>::get(POSITIONID0, U256::one()),
 			Point { bias: 2796030953200, slope: 1046740, block: 20, amount: 11003333333333 }

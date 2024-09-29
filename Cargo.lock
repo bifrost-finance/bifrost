@@ -727,9 +727,9 @@ checksum = "8b75356056920673b02621b35afd0f7dda9306d03c79a30f5c56c44cf256e3de"
 
 [[package]]
 name = "async-trait"
-version = "0.1.81"
+version = "0.1.82"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6e0c28dcc82d7c8ead5cb13beb15405b57b8546e93215673ff8ca0349a028107"
+checksum = "a27b8a3a6e1a44fa4c8baf1f653e4172e81486d4941f2237e20dc2d0cf4ddff1"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -1441,6 +1441,7 @@ dependencies = [
 name = "bifrost-parachain-staking"
 version = "3.0.1"
 dependencies = [
+ "bifrost-primitives",
  "frame-benchmarking",
  "frame-support",
  "frame-system",
@@ -1620,6 +1621,7 @@ version = "0.8.0"
 dependencies = [
  "bstringify",
  "frame-support",
+ "hex-literal 0.4.1",
  "orml-oracle",
  "orml-traits",
  "parity-scale-codec",
@@ -2376,11 +2378,13 @@ name = "bifrost-xcm-interface"
 version = "0.8.0"
 dependencies = [
  "bifrost-asset-registry",
+ "bifrost-currencies",
  "bifrost-primitives",
  "cumulus-primitives-core",
  "frame-benchmarking",
  "frame-support",
  "frame-system",
+ "orml-tokens",
  "orml-traits",
  "pallet-balances",
  "pallet-xcm",
@@ -14437,9 +14441,9 @@ dependencies = [
 
 [[package]]
 name = "similar-asserts"
-version = "1.5.0"
+version = "1.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e041bb827d1bfca18f213411d51b665309f1afb37a04a5d1464530e13779fc0f"
+checksum = "cfe85670573cd6f0fa97940f26e7e6601213c3b0555246c24234131f88c5709e"
 dependencies = [
  "console",
  "similar",

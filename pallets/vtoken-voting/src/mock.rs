@@ -23,7 +23,7 @@ use crate::{BalanceOf, DerivativeAccountHandler, DerivativeIndex, DispatchResult
 use bifrost_primitives::{
 	currency::{KSM, VBNC, VKSM},
 	traits::XcmDestWeightAndFeeHandler,
-	CurrencyId, MockXcmRouter, TokenSymbol, VTokenSupplyProvider, XcmOperationType,
+	CurrencyId, MockXcmRouter, VTokenSupplyProvider, XcmOperationType, BNC,
 };
 use cumulus_primitives_core::ParaId;
 use frame_support::{
@@ -80,7 +80,7 @@ impl frame_system::Config for Runtime {
 }
 
 parameter_types! {
-	pub const NativeCurrencyId: CurrencyId = CurrencyId::Native(TokenSymbol::BNC);
+	pub const NativeCurrencyId: CurrencyId = BNC;
 }
 
 pub type AdaptedBasicCurrency =
