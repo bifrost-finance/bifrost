@@ -1220,17 +1220,17 @@ impl bifrost_cross_in_out::Config for Runtime {
 
 impl bifrost_slpx::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
+	type RuntimeOrigin = RuntimeOrigin;
 	type ControlOrigin = TechAdminOrCouncil;
 	type MultiCurrency = Currencies;
-	type DexOperator = ZenlinkProtocol;
 	type VtokenMintingInterface = VtokenMinting;
-	type StablePoolHandler = StablePool;
 	type XcmTransfer = XTokens;
 	type XcmSender = XcmRouter;
 	type CurrencyIdConvert = AssetIdMaps<Runtime>;
 	type TreasuryAccount = BifrostTreasuryAccount;
 	type ParachainId = ParachainInfo;
 	type WeightInfo = weights::bifrost_slpx::BifrostWeight<Runtime>;
+	type MaxOrderSize = ConstU32<500>;
 }
 
 pub struct EnsurePoolAssetId;
