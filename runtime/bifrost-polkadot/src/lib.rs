@@ -1686,7 +1686,7 @@ construct_runtime! {
 		PhragmenElection: pallet_elections_phragmen = 33,
 		CouncilMembership: pallet_membership::<Instance1> = 34,
 		TechnicalMembership: pallet_membership::<Instance2> = 35,
-		ConvictionVoting: pallet_conviction_voting::{Pallet, Call, Event<T>} = 36,
+		ConvictionVoting: pallet_conviction_voting = 36,
 		Referenda: pallet_referenda = 37,
 		Origins: custom_origins = 38,
 		Whitelist: pallet_whitelist = 39,

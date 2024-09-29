@@ -2276,10 +2276,10 @@ impl<T: Config, F: Contains<CurrencyIdOf<T>>>
 		derivative_index: DerivativeIndex,
 	) -> Option<AccountIdOf<T>> {
 		Self::get_multilocation(token, derivative_index).and_then(|location| {
-			if let Some(AccountId32 { id, .. }) = location.interior.last() {
-				return T::AccountId::decode(&mut &id[..]).ok();
-			}
-			None
+			location.interior.last().and_then(|interior| match interior {
+				AccountId32 { id, .. } => T::AccountId::decode(&mut &id[..]).ok(),
+				_ => None,
+			})
 		})
 	}
 

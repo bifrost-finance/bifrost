@@ -65,7 +65,7 @@ frame_support::construct_runtime!(
 		Currencies: bifrost_currencies,
 		PolkadotXcm: pallet_xcm,
 		VtokenVoting: vtoken_voting,
-		ConvictionVoting: pallet_conviction_voting::{Pallet, Call, Storage, Event<T>} = 36,
+		ConvictionVoting: pallet_conviction_voting = 36,
 	}
 );
 

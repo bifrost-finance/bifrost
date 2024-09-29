@@ -27,7 +27,7 @@ use frame_support::{
 	},
 };
 
-const TOKENS: [CurrencyId; 1] = [VBNC];
+const TOKENS: &[CurrencyId] = if cfg!(feature = "polkadot") { &[VBNC] } else { &[] };
 
 fn aye(amount: Balance, conviction: u8) -> AccountVote<Balance> {
 	let vote = Vote { aye: true, conviction: conviction.try_into().unwrap() };
@@ -51,7 +51,7 @@ fn usable_balance(vtoken: CurrencyId, who: &AccountId) -> Balance {
 
 #[test]
 fn basic_voting_works() {
-	for &vtoken in &TOKENS {
+	for &vtoken in TOKENS {
 		new_test_ext().execute_with(|| {
 			let poll_index = 3;
 
@@ -81,7 +81,7 @@ fn basic_voting_works() {
 
 #[test]
 fn voting_balance_gets_locked() {
-	for &vtoken in &TOKENS {
+	for &vtoken in TOKENS {
 		new_test_ext().execute_with(|| {
 			let poll_index = 3;
 
@@ -105,7 +105,7 @@ fn voting_balance_gets_locked() {
 
 #[test]
 fn successful_but_zero_conviction_vote_balance_can_be_unlocked() {
-	for &vtoken in &TOKENS {
+	for &vtoken in TOKENS {
 		new_test_ext().execute_with(|| {
 			let poll_index = 3;
 
@@ -152,7 +152,7 @@ fn successful_but_zero_conviction_vote_balance_can_be_unlocked() {
 
 #[test]
 fn unsuccessful_conviction_vote_balance_can_be_unlocked() {
-	for &vtoken in &TOKENS {
+	for &vtoken in TOKENS {
 		new_test_ext().execute_with(|| {
 			let poll_index = 3;
 			let locking_period = 10;
@@ -191,7 +191,7 @@ fn unsuccessful_conviction_vote_balance_can_be_unlocked() {
 
 #[test]
 fn ensure_balance_after_unlock() {
-	for &vtoken in &TOKENS {
+	for &vtoken in TOKENS {
 		new_test_ext().execute_with(|| {
 			let poll_index = 3;
 			let poll_index_2 = 4;
@@ -232,7 +232,7 @@ fn ensure_balance_after_unlock() {
 
 #[test]
 fn ensure_comprehensive_balance_after_unlock() {
-	for &vtoken in &TOKENS {
+	for &vtoken in TOKENS {
 		new_test_ext().execute_with(|| {
 			let poll_index = 3;
 			let poll_index_2 = 4;
@@ -291,7 +291,7 @@ fn ensure_comprehensive_balance_after_unlock() {
 
 #[test]
 fn successful_conviction_vote_balance_stays_locked_for_correct_time() {
-	for &vtoken in &TOKENS {
+	for &vtoken in TOKENS {
 		new_test_ext().execute_with(|| {
 			let poll_index = 3;
 			let locking_period = 10;
@@ -328,7 +328,7 @@ fn successful_conviction_vote_balance_stays_locked_for_correct_time() {
 
 #[test]
 fn lock_amalgamation_valid_with_multiple_removed_votes() {
-	for &vtoken in &TOKENS {
+	for &vtoken in TOKENS {
 		new_test_ext().execute_with(|| {
 			assert_ok!(VtokenVoting::vote(RuntimeOrigin::signed(ALICE), vtoken, 0, aye(5, 1)));
 			assert_eq!(
@@ -432,7 +432,7 @@ fn lock_amalgamation_valid_with_multiple_removed_votes() {
 
 #[test]
 fn removed_votes_when_referendum_killed() {
-	for &vtoken in &TOKENS {
+	for &vtoken in TOKENS {
 		new_test_ext().execute_with(|| {
 			assert_ok!(VtokenVoting::vote(RuntimeOrigin::signed(ALICE), vtoken, 0, aye(5, 1)));
 			assert_ok!(VtokenVoting::vote(RuntimeOrigin::signed(ALICE), vtoken, 1, aye(10, 1)));
@@ -496,7 +496,7 @@ fn removed_votes_when_referendum_killed() {
 
 #[test]
 fn errors_with_vote_works() {
-	for &vtoken in &TOKENS {
+	for &vtoken in TOKENS {
 		new_test_ext().execute_with(|| {
 			assert_noop!(
 				VtokenVoting::vote(RuntimeOrigin::signed(1), VPHA, 0, aye(10, 0)),
@@ -525,7 +525,7 @@ fn errors_with_vote_works() {
 
 #[test]
 fn kill_referendum_works() {
-	for &vtoken in &TOKENS {
+	for &vtoken in TOKENS {
 		new_test_ext().execute_with(|| {
 			let poll_index = 3;
 
@@ -552,7 +552,7 @@ fn kill_referendum_works() {
 
 #[test]
 fn kill_referendum_with_origin_signed_fails() {
-	for &vtoken in &TOKENS {
+	for &vtoken in TOKENS {
 		new_test_ext().execute_with(|| {
 			let poll_index = 3;
 
@@ -578,7 +578,7 @@ fn kill_referendum_with_origin_signed_fails() {
 
 #[test]
 fn compute_delegator_total_vote_works() {
-	for &vtoken in &TOKENS {
+	for &vtoken in TOKENS {
 		new_test_ext().execute_with(|| {
 			assert_eq!(
 				VtokenVoting::compute_delegator_total_vote(vtoken, aye(10, 0)),
@@ -767,7 +767,7 @@ fn compute_delegator_total_vote_works() {
 
 #[test]
 fn compute_delegator_total_vote_with_low_value_will_loss() {
-	for &vtoken in &TOKENS {
+	for &vtoken in TOKENS {
 		new_test_ext().execute_with(|| {
 			assert_eq!(
 				VtokenVoting::compute_delegator_total_vote(vtoken, aye(9, 0)),
@@ -783,7 +783,7 @@ fn compute_delegator_total_vote_with_low_value_will_loss() {
 
 #[test]
 fn allocate_delegator_votes_works() {
-	for &vtoken in &TOKENS {
+	for &vtoken in TOKENS {
 		new_test_ext().execute_with(|| {
 			let poll_index = 3;
 
