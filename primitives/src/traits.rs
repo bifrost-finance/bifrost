@@ -387,13 +387,15 @@ where
 	}
 }
 
-pub trait DerivativeAccountHandler<CurrencyId, Balance> {
+pub trait DerivativeAccountHandler<CurrencyId, Balance, AccountId> {
 	fn check_derivative_index_exists(token: CurrencyId, derivative_index: DerivativeIndex) -> bool;
 
 	fn get_multilocation(
 		token: CurrencyId,
 		derivative_index: DerivativeIndex,
 	) -> Option<xcm::v3::MultiLocation>;
+
+	fn get_account_id(token: CurrencyId, derivative_index: DerivativeIndex) -> Option<AccountId>;
 
 	fn get_stake_info(
 		token: CurrencyId,

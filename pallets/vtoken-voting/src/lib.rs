@@ -27,41 +27,48 @@ mod mock;
 #[cfg(test)]
 mod tests;
 
-mod call;
+mod agents;
 mod vote;
 
 // pub mod migration;
+pub mod traits;
 pub mod weights;
 
-use crate::vote::{Casting, Tally, Voting};
-pub use crate::{
-	call::*,
-	vote::{AccountVote, PollStatus, ReferendumInfo, ReferendumStatus, VoteRole},
+pub use crate::vote::{AccountVote, PollStatus, ReferendumInfo, ReferendumStatus, VoteRole};
+use crate::{
+	agents::{BifrostAgent, RelaychainAgent},
+	traits::VotingAgent,
+	vote::{Casting, Tally, Voting},
 };
 use bifrost_primitives::{
-	currency::{VDOT, VKSM},
+	currency::{BNC, DOT, KSM, VBNC, VDOT, VKSM},
 	traits::{DerivativeAccountHandler, VTokenSupplyProvider, XcmDestWeightAndFeeHandler},
 	CurrencyId, DerivativeIndex, XcmOperationType,
 };
 use cumulus_primitives_core::{ParaId, QueryId, Response};
 use frame_support::{
-	dispatch::GetDispatchInfo,
+	dispatch::{GetDispatchInfo, PostDispatchInfo},
 	pallet_prelude::*,
 	traits::{Get, LockIdentifier},
 };
-use frame_system::pallet_prelude::{BlockNumberFor, *};
+use frame_system::{
+	pallet_prelude::{BlockNumberFor, *},
+	RawOrigin,
+};
 use orml_traits::{MultiCurrency, MultiLockableCurrency};
 pub use pallet::*;
+pub use pallet_conviction_voting::AccountVote as ConvictionVotingAccountVote;
 use pallet_conviction_voting::{Conviction, UnvoteScope, Vote};
 use sp_runtime::{
 	traits::{
-		BlockNumberProvider, Bounded, CheckedDiv, CheckedMul, Saturating, UniqueSaturatedInto, Zero,
+		BlockNumberProvider, Bounded, CheckedDiv, CheckedMul, Dispatchable, Saturating,
+		UniqueSaturatedInto, Zero,
 	},
 	ArithmeticError, Perbill,
 };
-use sp_std::prelude::*;
+use sp_std::{boxed::Box, vec::Vec};
 pub use weights::WeightInfo;
-use xcm::v4::{prelude::*, Weight as XcmWeight};
+use xcm::v4::{prelude::*, Location, Weight as XcmWeight};
 
 const CONVICTION_VOTING_ID: LockIdentifier = *b"vtvoting";
 
@@ -82,9 +89,12 @@ type VotingOf<T> =
 
 pub type ReferendumInfoOf<T> = ReferendumInfo<BlockNumberFor<T>, TallyOf<T>>;
 
+type VotingAgentBoxType<T> = Box<dyn VotingAgent<T>>;
+
 #[frame_support::pallet]
 pub mod pallet {
 	use super::*;
+	use frame_support::traits::CallerTrait;
 
 	/// The current storage version.
 	const STORAGE_VERSION: StorageVersion = StorageVersion::new(3);
@@ -102,7 +112,11 @@ pub mod pallet {
 
 		type RuntimeCall: IsType<<Self as pallet_xcm::Config>::RuntimeCall>
 			+ From<Call<Self>>
-			+ GetDispatchInfo;
+			+ GetDispatchInfo
+			+ Dispatchable<
+				RuntimeOrigin = <Self as Config>::RuntimeOrigin,
+				PostInfo = PostDispatchInfo,
+			> + Parameter;
 
 		type MultiCurrency: MultiLockableCurrency<AccountIdOf<Self>, CurrencyId = CurrencyId>;
 
@@ -110,12 +124,16 @@ pub mod pallet {
 
 		type ResponseOrigin: EnsureOrigin<
 			<Self as frame_system::Config>::RuntimeOrigin,
-			Success = xcm::v4::Location,
+			Success = Location,
 		>;
 
 		type XcmDestWeightAndFee: XcmDestWeightAndFeeHandler<CurrencyIdOf<Self>, BalanceOf<Self>>;
 
-		type DerivativeAccount: DerivativeAccountHandler<CurrencyIdOf<Self>, BalanceOf<Self>>;
+		type DerivativeAccount: DerivativeAccountHandler<
+			CurrencyIdOf<Self>,
+			BalanceOf<Self>,
+			AccountIdOf<Self>,
+		>;
 
 		type RelaychainBlockNumberProvider: BlockNumberProvider<BlockNumber = BlockNumberFor<Self>>;
 
@@ -136,11 +154,20 @@ pub mod pallet {
 
 		/// Weight information for extrinsics in this pallet.
 		type WeightInfo: WeightInfo;
+
+		type PalletsOrigin: CallerTrait<Self::AccountId>;
 	}
 
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
+		/// A vote has been cast.
+		///
+		/// - `who`: The account that cast the vote.
+		/// - `vtoken`: The token used for voting.
+		/// - `poll_index`: The index of the poll being voted on.
+		/// - `token_vote`: The vote cast using the token.
+		/// - `delegator_vote`: The vote cast by a delegator.
 		Voted {
 			who: AccountIdOf<T>,
 			vtoken: CurrencyIdOf<T>,
@@ -148,61 +175,101 @@ pub mod pallet {
 			token_vote: AccountVote<BalanceOf<T>>,
 			delegator_vote: AccountVote<BalanceOf<T>>,
 		},
-		Unlocked {
-			who: AccountIdOf<T>,
-			vtoken: CurrencyIdOf<T>,
-			poll_index: PollIndex,
-		},
+
+		/// A user's vote has been unlocked, allowing them to retrieve their tokens.
+		///
+		/// - `who`: The account whose tokens are unlocked.
+		/// - `vtoken`: The token that was locked during voting.
+		/// - `poll_index`: The index of the poll associated with the unlocking.
+		Unlocked { who: AccountIdOf<T>, vtoken: CurrencyIdOf<T>, poll_index: PollIndex },
+
+		/// A delegator's vote has been removed.
+		///
+		/// - `who`: The account that dispatched remove_delegator_vote.
+		/// - `vtoken`: The token associated with the delegator's vote.
+		/// - `derivative_index`: The index of the derivative.
 		DelegatorVoteRemoved {
 			who: AccountIdOf<T>,
 			vtoken: CurrencyIdOf<T>,
 			derivative_index: DerivativeIndex,
 		},
-		DelegatorAdded {
-			vtoken: CurrencyIdOf<T>,
-			derivative_index: DerivativeIndex,
-		},
+
+		/// A delegator has been added.
+		///
+		/// - `vtoken`: The token associated with the delegator.
+		/// - `derivative_index`: The index of the derivative being added for the delegator.
+		DelegatorAdded { vtoken: CurrencyIdOf<T>, derivative_index: DerivativeIndex },
+
+		/// A new referendum information has been created.
+		///
+		/// - `vtoken`: The token associated with the referendum.
+		/// - `poll_index`: The index of the poll.
+		/// - `info`: The referendum information (details about the poll).
 		ReferendumInfoCreated {
 			vtoken: CurrencyIdOf<T>,
 			poll_index: PollIndex,
 			info: ReferendumInfoOf<T>,
 		},
+
+		/// Referendum information has been updated.
+		///
+		/// - `vtoken`: The token associated with the referendum.
+		/// - `poll_index`: The index of the poll.
+		/// - `info`: The updated referendum information.
 		ReferendumInfoSet {
 			vtoken: CurrencyIdOf<T>,
 			poll_index: PollIndex,
 			info: ReferendumInfoOf<T>,
 		},
-		VoteLockingPeriodSet {
-			vtoken: CurrencyIdOf<T>,
-			locking_period: BlockNumberFor<T>,
-		},
-		UndecidingTimeoutSet {
-			vtoken: CurrencyIdOf<T>,
-			undeciding_timeout: BlockNumberFor<T>,
-		},
-		ReferendumKilled {
-			vtoken: CurrencyIdOf<T>,
-			poll_index: PollIndex,
-		},
-		VoteNotified {
-			vtoken: CurrencyIdOf<T>,
-			poll_index: PollIndex,
-			success: bool,
-		},
+
+		/// The vote locking period has been set.
+		///
+		/// - `vtoken`: The token for which the locking period is being set.
+		/// - `locking_period`: The period for which votes will be locked (in block numbers).
+		VoteLockingPeriodSet { vtoken: CurrencyIdOf<T>, locking_period: BlockNumberFor<T> },
+
+		/// The undeciding timeout period has been set.
+		///
+		/// - `vtoken`: The token associated with the timeout.
+		/// - `undeciding_timeout`: The period of time before a poll is considered undecided.
+		UndecidingTimeoutSet { vtoken: CurrencyIdOf<T>, undeciding_timeout: BlockNumberFor<T> },
+
+		/// A referendum has been killed (cancelled or ended).
+		///
+		/// - `vtoken`: The token associated with the referendum.
+		/// - `poll_index`: The index of the poll being killed.
+		ReferendumKilled { vtoken: CurrencyIdOf<T>, poll_index: PollIndex },
+
+		/// A notification about the result of a vote has been sent.
+		///
+		/// - `vtoken`: The token associated with the poll.
+		/// - `poll_index`: The index of the poll.
+		/// - `success`: Whether the notification was successful or not.
+		VoteNotified { vtoken: CurrencyIdOf<T>, poll_index: PollIndex, success: bool },
+
+		/// A notification about the removal of a delegator's vote has been sent.
+		///
+		/// - `vtoken`: The token associated with the poll.
+		/// - `poll_index`: The index of the poll.
+		/// - `success`: Whether the notification was successful or not.
 		DelegatorVoteRemovedNotified {
 			vtoken: CurrencyIdOf<T>,
 			poll_index: PollIndex,
 			success: bool,
 		},
-		ResponseReceived {
-			responder: xcm::v4::Location,
-			query_id: QueryId,
-			response: Response,
-		},
-		VoteCapRatioSet {
-			vtoken: CurrencyIdOf<T>,
-			vote_cap_ratio: Perbill,
-		},
+
+		/// A response has been received from a specific location.
+		///
+		/// - `responder`: The location that sent the response.
+		/// - `query_id`: The ID of the query that was responded to.
+		/// - `response`: The content of the response.
+		ResponseReceived { responder: Location, query_id: QueryId, response: Response },
+
+		/// The vote cap ratio has been set.
+		///
+		/// - `vtoken`: The token associated with the cap.
+		/// - `vote_cap_ratio`: The maximum allowed ratio for the vote.
+		VoteCapRatioSet { vtoken: CurrencyIdOf<T>, vote_cap_ratio: Perbill },
 	}
 
 	#[pallet::error]
@@ -247,6 +314,8 @@ pub mod pallet {
 		InvalidConviction,
 		/// The given value is out of range.
 		OutOfRange,
+		InvalidCallDispatch,
+		CallDecodeFailed,
 	}
 
 	/// Information concerning any given referendum.
@@ -366,20 +435,25 @@ pub mod pallet {
 	#[pallet::genesis_config]
 	#[derive(frame_support::DefaultNoBound)]
 	pub struct GenesisConfig<T: Config> {
-		pub delegators: (CurrencyIdOf<T>, Vec<DerivativeIndex>),
+		pub delegators: Vec<(CurrencyIdOf<T>, Vec<DerivativeIndex>)>,
 		pub undeciding_timeouts: Vec<(CurrencyIdOf<T>, BlockNumberFor<T>)>,
-		pub vote_cap_ratio: (CurrencyIdOf<T>, Perbill),
+		pub vote_cap_ratio: Vec<(CurrencyIdOf<T>, Perbill)>,
 	}
 
 	#[pallet::genesis_build]
 	impl<T: Config> BuildGenesisConfig for GenesisConfig<T> {
 		fn build(&self) {
-			let (vtoken, delegators) = &self.delegators;
-			Delegators::<T>::insert(vtoken, BoundedVec::truncate_from(delegators.clone()));
+			self.delegators.iter().for_each(|(vtoken, delegators)| {
+				Delegators::<T>::insert(vtoken, BoundedVec::truncate_from(delegators.clone()));
+			});
+
 			self.undeciding_timeouts.iter().for_each(|(vtoken, undeciding_timeout)| {
 				UndecidingTimeout::<T>::insert(vtoken, undeciding_timeout);
 			});
-			VoteCapRatio::<T>::insert(self.vote_cap_ratio.0, self.vote_cap_ratio.1);
+
+			self.vote_cap_ratio.iter().for_each(|(vtoken, cap_ratio)| {
+				VoteCapRatio::<T>::insert(vtoken, cap_ratio);
+			});
 		}
 	}
 
@@ -435,7 +509,7 @@ pub mod pallet {
 		pub fn vote(
 			origin: OriginFor<T>,
 			vtoken: CurrencyIdOf<T>,
-			#[pallet::compact] poll_index: PollIndex,
+			poll_index: PollIndex,
 			vtoken_vote: AccountVote<BalanceOf<T>>,
 		) -> DispatchResult {
 			let who = ensure_signed(origin)?;
@@ -479,42 +553,14 @@ pub mod pallet {
 				Ok(())
 			})?;
 
-			// send XCM message
-			let vote_calls = new_delegator_votes
-				.iter()
-				.map(|(_derivative_index, vote)| {
-					<RelayCall<T> as ConvictionVotingCall<T>>::vote(poll_index, *vote)
-				})
-				.collect::<Vec<_>>();
-			let vote_call = if vote_calls.len() == 1 {
-				vote_calls.into_iter().nth(0).ok_or(Error::<T>::NoData)?
-			} else {
-				ensure!(false, Error::<T>::NoPermissionYet);
-				<RelayCall<T> as UtilityCall<RelayCall<T>>>::batch_all(vote_calls)
-			};
-			let notify_call = Call::<T>::notify_vote { query_id: 0, response: Default::default() };
-			let (weight, extra_fee) = T::XcmDestWeightAndFee::get_operation_weight_and_fee(
-				CurrencyId::to_token(&vtoken).map_err(|_| Error::<T>::NoData)?,
-				XcmOperationType::Vote,
-			)
-			.ok_or(Error::<T>::NoData)?;
-
-			let derivative_index = new_delegator_votes[0].0;
-			Self::send_xcm_with_notify(
-				derivative_index,
-				vote_call,
-				notify_call,
-				weight,
-				extra_fee,
-				|query_id| {
-					if !submitted {
-						PendingReferendumInfo::<T>::insert(query_id, (vtoken, poll_index));
-					}
-					PendingVotingInfo::<T>::insert(
-						query_id,
-						(vtoken, poll_index, derivative_index, who.clone(), maybe_old_vote),
-					)
-				},
+			let voting_agent = Self::get_voting_agent(&vtoken)?;
+			voting_agent.delegate_vote(
+				who.clone(),
+				vtoken,
+				poll_index,
+				submitted,
+				new_delegator_votes.clone(),
+				maybe_old_vote,
 			)?;
 
 			Self::deposit_event(Event::<T>::Voted {
@@ -567,29 +613,12 @@ pub mod pallet {
 			ensure!(DelegatorVotes::<T>::get(vtoken, poll_index).len() > 0, Error::<T>::NoData);
 			Self::ensure_referendum_expired(vtoken, poll_index)?;
 
-			let notify_call = Call::<T>::notify_remove_delegator_vote {
-				query_id: 0,
-				response: Default::default(),
-			};
-			let remove_vote_call =
-				<RelayCall<T> as ConvictionVotingCall<T>>::remove_vote(Some(class), poll_index);
-			let (weight, extra_fee) = T::XcmDestWeightAndFee::get_operation_weight_and_fee(
-				CurrencyId::to_token(&vtoken).map_err(|_| Error::<T>::NoData)?,
-				XcmOperationType::RemoveVote,
-			)
-			.ok_or(Error::<T>::NoData)?;
-			Self::send_xcm_with_notify(
+			let voting_agent = Self::get_voting_agent(&vtoken)?;
+			voting_agent.delegate_remove_delegator_vote(
+				vtoken,
+				poll_index,
+				class,
 				derivative_index,
-				remove_vote_call,
-				notify_call,
-				weight,
-				extra_fee,
-				|query_id| {
-					PendingRemoveDelegatorVote::<T>::insert(
-						query_id,
-						(vtoken, poll_index, derivative_index),
-					);
-				},
 			)?;
 
 			Self::deposit_event(Event::<T>::DelegatorVoteRemoved { who, vtoken, derivative_index });
@@ -710,33 +739,15 @@ pub mod pallet {
 			if let Some((vtoken, poll_index, derivative_index, who, maybe_old_vote)) =
 				PendingVotingInfo::<T>::get(query_id)
 			{
-				if !success {
-					// rollback vote
-					let _ = PendingDelegatorVotes::<T>::clear(u32::MAX, None);
-					Self::try_remove_vote(&who, vtoken, poll_index, UnvoteScope::Any)?;
-					Self::update_lock(&who, vtoken)?;
-					if let Some((old_vote, vtoken_balance)) = maybe_old_vote {
-						Self::try_vote(&who, vtoken, poll_index, old_vote, vtoken_balance)?;
-					}
-				} else {
-					if !VoteDelegatorFor::<T>::contains_key((&who, vtoken, poll_index)) {
-						VoteDelegatorFor::<T>::insert((&who, vtoken, poll_index), derivative_index);
-					}
-					DelegatorVotes::<T>::remove(vtoken, poll_index);
-					DelegatorVotes::<T>::try_mutate(
-						vtoken,
-						poll_index,
-						|item| -> DispatchResult {
-							for (derivative_index, vote) in
-								PendingDelegatorVotes::<T>::take(vtoken, poll_index).iter()
-							{
-								item.try_push((*derivative_index, *vote))
-									.map_err(|_| Error::<T>::TooMany)?;
-							}
-							Ok(())
-						},
-					)?;
-				}
+				Self::handle_vote_result(
+					success,
+					who,
+					vtoken,
+					poll_index,
+					maybe_old_vote,
+					derivative_index,
+				)?;
+
 				PendingVotingInfo::<T>::remove(query_id);
 				Self::deposit_event(Event::<T>::VoteNotified { vtoken, poll_index, success });
 			}
@@ -797,7 +808,7 @@ pub mod pallet {
 			{
 				let success = Response::DispatchResult(MaybeErrorCode::Success) == response;
 				if success {
-					DelegatorVotes::<T>::remove(vtoken, poll_index);
+					Self::handle_remove_delegator_vote_success(vtoken, poll_index);
 				}
 				PendingRemoveDelegatorVote::<T>::remove(query_id);
 				Self::deposit_event(Event::<T>::DelegatorVoteRemovedNotified {
@@ -828,6 +839,201 @@ pub mod pallet {
 	}
 
 	impl<T: Config> Pallet<T> {
+		pub(crate) fn handle_remove_delegator_vote_success(
+			vtoken: CurrencyIdOf<T>,
+			poll_index: PollIndex,
+		) {
+			DelegatorVotes::<T>::remove(vtoken, poll_index);
+		}
+
+		pub(crate) fn handle_vote_result(
+			success: bool,
+			who: AccountIdOf<T>,
+			vtoken: CurrencyIdOf<T>,
+			poll_index: PollIndex,
+			maybe_old_vote: Option<(AccountVote<BalanceOf<T>>, BalanceOf<T>)>,
+			derivative_index: DerivativeIndex,
+		) -> DispatchResult {
+			if !success {
+				// rollback vote
+				let _ = PendingDelegatorVotes::<T>::clear(u32::MAX, None);
+				Self::try_remove_vote(&who, vtoken, poll_index, UnvoteScope::Any)?;
+				Self::update_lock(&who, vtoken)?;
+				if let Some((old_vote, vtoken_balance)) = maybe_old_vote {
+					Self::try_vote(&who, vtoken, poll_index, old_vote, vtoken_balance)?;
+				}
+			} else {
+				if !VoteDelegatorFor::<T>::contains_key((&who, vtoken, poll_index)) {
+					VoteDelegatorFor::<T>::insert((&who, vtoken, poll_index), derivative_index);
+				}
+				DelegatorVotes::<T>::remove(vtoken, poll_index);
+				DelegatorVotes::<T>::try_mutate(vtoken, poll_index, |item| -> DispatchResult {
+					for (derivative_index, vote) in
+						PendingDelegatorVotes::<T>::take(vtoken, poll_index).iter()
+					{
+						item.try_push((*derivative_index, *vote))
+							.map_err(|_| Error::<T>::TooMany)?;
+					}
+					Ok(())
+				})?;
+			}
+
+			Ok(())
+		}
+
+		pub(crate) fn send_xcm_vote_message(
+			who: AccountIdOf<T>,
+			vtoken: CurrencyIdOf<T>,
+			poll_index: PollIndex,
+			submitted: bool,
+			new_delegator_votes: Vec<(DerivativeIndex, AccountVote<BalanceOf<T>>)>,
+			maybe_old_vote: Option<(AccountVote<BalanceOf<T>>, BalanceOf<T>)>,
+		) -> DispatchResult {
+			let notify_call = Call::<T>::notify_vote { query_id: 0, response: Default::default() };
+			let (weight, extra_fee) = T::XcmDestWeightAndFee::get_operation_weight_and_fee(
+				CurrencyId::to_token(&vtoken).map_err(|_| Error::<T>::NoData)?,
+				XcmOperationType::Vote,
+			)
+			.ok_or(Error::<T>::NoData)?;
+
+			let derivative_index = new_delegator_votes[0].0;
+
+			let voting_agent = Self::get_voting_agent(&vtoken)?;
+			let encode_call = voting_agent.vote_call_encode(
+				new_delegator_votes.clone(),
+				poll_index,
+				derivative_index,
+			)?;
+
+			Self::send_xcm_with_notify(
+				voting_agent.location(),
+				encode_call,
+				notify_call,
+				weight,
+				extra_fee,
+				|query_id| {
+					if !submitted {
+						PendingReferendumInfo::<T>::insert(query_id, (vtoken, poll_index));
+					}
+					PendingVotingInfo::<T>::insert(
+						query_id,
+						(vtoken, poll_index, derivative_index, who.clone(), maybe_old_vote),
+					)
+				},
+			)?;
+
+			Ok(())
+		}
+
+		pub(crate) fn send_xcm_remove_delegator_vote_message(
+			vtoken: CurrencyIdOf<T>,
+			poll_index: PollIndex,
+			class: PollClass,
+			derivative_index: DerivativeIndex,
+		) -> DispatchResult {
+			let voting_agent = Self::get_voting_agent(&vtoken)?;
+			let encode_call = voting_agent.remove_delegator_vote_call_encode(
+				class,
+				poll_index,
+				derivative_index,
+			)?;
+			let notify_call = Call::<T>::notify_remove_delegator_vote {
+				query_id: 0,
+				response: Default::default(),
+			};
+
+			let (weight, extra_fee) = T::XcmDestWeightAndFee::get_operation_weight_and_fee(
+				CurrencyId::to_token(&vtoken).map_err(|_| Error::<T>::NoData)?,
+				XcmOperationType::RemoveVote,
+			)
+			.ok_or(Error::<T>::NoData)?;
+
+			Self::send_xcm_with_notify(
+				voting_agent.location(),
+				encode_call,
+				notify_call,
+				weight,
+				extra_fee,
+				|query_id| {
+					PendingRemoveDelegatorVote::<T>::insert(
+						query_id,
+						(vtoken, poll_index, derivative_index),
+					);
+				},
+			)?;
+
+			Ok(())
+		}
+
+		pub(crate) fn send_xcm_with_notify(
+			responder_location: Location,
+			encode_call: Vec<u8>,
+			notify_call: Call<T>,
+			transact_weight: XcmWeight,
+			extra_fee: BalanceOf<T>,
+			f: impl FnOnce(QueryId) -> (),
+		) -> DispatchResult {
+			let now = frame_system::Pallet::<T>::block_number();
+			let timeout = now.saturating_add(T::QueryTimeout::get());
+			let notify_runtime_call = <T as Config>::RuntimeCall::from(notify_call);
+			let notify_call_weight = notify_runtime_call.get_dispatch_info().weight;
+			let query_id = pallet_xcm::Pallet::<T>::new_notify_query(
+				responder_location.clone(),
+				notify_runtime_call,
+				timeout,
+				xcm::v4::Junctions::Here,
+			);
+			f(query_id);
+
+			let xcm_message = Self::construct_xcm_message(
+				encode_call,
+				extra_fee,
+				transact_weight,
+				notify_call_weight,
+				query_id,
+			)?;
+
+			xcm::v4::send_xcm::<T::XcmRouter>(responder_location, xcm_message)
+				.map_err(|_| Error::<T>::XcmFailure)?;
+
+			Ok(())
+		}
+
+		pub(crate) fn construct_xcm_message(
+			call: Vec<u8>,
+			extra_fee: BalanceOf<T>,
+			transact_weight: XcmWeight,
+			notify_call_weight: XcmWeight,
+			query_id: QueryId,
+		) -> Result<Xcm<()>, Error<T>> {
+			let para_id = T::ParachainId::get().into();
+			let asset = Asset {
+				id: AssetId(Location::here()),
+				fun: Fungible(UniqueSaturatedInto::<u128>::unique_saturated_into(extra_fee)),
+			};
+			let xcm_message = sp_std::vec![
+				WithdrawAsset(asset.clone().into()),
+				BuyExecution { fees: asset, weight_limit: Unlimited },
+				Transact {
+					origin_kind: OriginKind::SovereignAccount,
+					require_weight_at_most: transact_weight,
+					call: call.into(),
+				},
+				ReportTransactStatus(QueryResponseInfo {
+					destination: Location::from(Parachain(para_id)),
+					query_id,
+					max_weight: notify_call_weight,
+				}),
+				RefundSurplus,
+				DepositAsset {
+					assets: All.into(),
+					beneficiary: Location::new(0, [Parachain(para_id)]),
+				},
+			];
+
+			Ok(Xcm(xcm_message))
+		}
+
 		fn try_vote(
 			who: &AccountIdOf<T>,
 			vtoken: CurrencyIdOf<T>,
@@ -1004,79 +1210,8 @@ pub mod pallet {
 			}
 		}
 
-		fn send_xcm_with_notify(
-			derivative_index: DerivativeIndex,
-			call: RelayCall<T>,
-			notify_call: Call<T>,
-			transact_weight: XcmWeight,
-			extra_fee: BalanceOf<T>,
-			f: impl FnOnce(QueryId) -> (),
-		) -> DispatchResult {
-			let responder = xcm::v4::Location::parent();
-			let now = frame_system::Pallet::<T>::block_number();
-			let timeout = now.saturating_add(T::QueryTimeout::get());
-			let notify_runtime_call = <T as Config>::RuntimeCall::from(notify_call);
-			let notify_call_weight = notify_runtime_call.get_dispatch_info().weight;
-			let query_id = pallet_xcm::Pallet::<T>::new_notify_query(
-				responder,
-				notify_runtime_call,
-				timeout,
-				xcm::v4::Junctions::Here,
-			);
-			f(query_id);
-
-			let xcm_message = Self::construct_xcm_message(
-				<RelayCall<T> as UtilityCall<RelayCall<T>>>::as_derivative(derivative_index, call)
-					.encode(),
-				extra_fee,
-				transact_weight,
-				notify_call_weight,
-				query_id,
-			)?;
-
-			xcm::v4::send_xcm::<T::XcmRouter>(Parent.into(), xcm_message)
-				.map_err(|_e| Error::<T>::XcmFailure)?;
-
-			Ok(())
-		}
-
-		fn construct_xcm_message(
-			call: Vec<u8>,
-			extra_fee: BalanceOf<T>,
-			transact_weight: XcmWeight,
-			notify_call_weight: XcmWeight,
-			query_id: QueryId,
-		) -> Result<Xcm<()>, Error<T>> {
-			let para_id = T::ParachainId::get().into();
-			let asset = Asset {
-				id: AssetId(Location::here()),
-				fun: Fungible(UniqueSaturatedInto::<u128>::unique_saturated_into(extra_fee)),
-			};
-			let xcm_message = sp_std::vec![
-				WithdrawAsset(asset.clone().into()),
-				BuyExecution { fees: asset, weight_limit: Unlimited },
-				Transact {
-					origin_kind: OriginKind::SovereignAccount,
-					require_weight_at_most: transact_weight,
-					call: call.into(),
-				},
-				ReportTransactStatus(QueryResponseInfo {
-					destination: Location::from(Parachain(para_id)),
-					query_id,
-					max_weight: notify_call_weight,
-				}),
-				RefundSurplus,
-				DepositAsset {
-					assets: All.into(),
-					beneficiary: Location::new(0, [Parachain(para_id)]),
-				},
-			];
-
-			Ok(Xcm(xcm_message))
-		}
-
 		fn ensure_vtoken(vtoken: &CurrencyIdOf<T>) -> Result<(), DispatchError> {
-			ensure!([VKSM, VDOT].contains(vtoken), Error::<T>::VTokenNotSupport);
+			ensure!([VKSM, VDOT, VBNC].contains(vtoken), Error::<T>::VTokenNotSupport);
 			Ok(())
 		}
 
@@ -1156,7 +1291,7 @@ pub mod pallet {
 
 		fn ensure_xcm_response_or_governance(
 			origin: OriginFor<T>,
-		) -> Result<xcm::v4::Location, DispatchError> {
+		) -> Result<Location, DispatchError> {
 			let responder = T::ResponseOrigin::ensure_origin(origin.clone()).or_else(|_| {
 				T::ControlOrigin::ensure_origin(origin).map(|_| xcm::v4::Junctions::Here.into())
 			})?;
@@ -1292,6 +1427,27 @@ pub mod pallet {
 			}
 
 			Ok(delegator_votes)
+		}
+
+		pub(crate) fn get_voting_agent(
+			currency_id: &CurrencyIdOf<T>,
+		) -> Result<VotingAgentBoxType<T>, Error<T>> {
+			match *currency_id {
+				VKSM | VDOT => Ok(Box::new(RelaychainAgent::<T>::new(*currency_id)?)),
+				VBNC => Ok(Box::new(BifrostAgent::<T>::new(*currency_id)?)),
+				_ => Err(Error::<T>::VTokenNotSupport),
+			}
+		}
+
+		pub(crate) fn convert_vtoken_to_dest_location(
+			vtoken: CurrencyId,
+		) -> Result<Location, Error<T>> {
+			let token = CurrencyId::to_token(&vtoken).map_err(|_| Error::<T>::NoData)?;
+			match token {
+				KSM | DOT => Ok(Location::parent()),
+				BNC => Ok(Location::new(1, [Parachain(T::ParachainId::get().into())])),
+				_ => Err(Error::<T>::VTokenNotSupport),
+			}
 		}
 	}
 }

@@ -1261,6 +1261,7 @@ impl bifrost_vtoken_voting::Config for Runtime {
 	type QueryTimeout = QueryTimeout;
 	type ReferendumCheckInterval = ReferendumCheckInterval;
 	type WeightInfo = weights::bifrost_vtoken_voting::BifrostWeight<Runtime>;
+	type PalletsOrigin = OriginCaller;
 }
 
 // Bifrost modules end
