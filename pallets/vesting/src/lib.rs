@@ -198,18 +198,15 @@ pub mod pallet {
 
 	/// Start at
 	#[pallet::storage]
-	// #[pallet::getter(fn vesting_start_at)]
 	pub(super) type VestingStartAt<T: Config> = StorageValue<_, BlockNumberFor<T>>;
 
 	/// Cliff vesting
 	#[pallet::storage]
-	// #[pallet::getter(fn cliffs)]
 	pub(super) type Cliff<T: Config> =
 		StorageMap<_, Blake2_128Concat, T::AccountId, BlockNumberFor<T>>;
 
 	/// Information regarding the vesting of a given account.
 	#[pallet::storage]
-	// #[pallet::getter(fn vesting)]
 	pub type Vesting<T: Config> = StorageMap<
 		_,
 		Blake2_128Concat,
