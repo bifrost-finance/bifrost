@@ -198,18 +198,15 @@ pub mod pallet {
 
 	/// Start at
 	#[pallet::storage]
-	#[pallet::getter(fn vesting_start_at)]
 	pub(super) type VestingStartAt<T: Config> = StorageValue<_, BlockNumberFor<T>>;
 
 	/// Cliff vesting
 	#[pallet::storage]
-	#[pallet::getter(fn cliffs)]
 	pub(super) type Cliff<T: Config> =
 		StorageMap<_, Blake2_128Concat, T::AccountId, BlockNumberFor<T>>;
 
 	/// Information regarding the vesting of a given account.
 	#[pallet::storage]
-	#[pallet::getter(fn vesting)]
 	pub type Vesting<T: Config> = StorageMap<
 		_,
 		Blake2_128Concat,
@@ -425,7 +422,7 @@ pub mod pallet {
 			let target = T::Lookup::lookup(target)?;
 			let index = index as usize;
 			Self::do_vest(target.clone())?;
-			let schedules = Self::vesting(&target).ok_or(Error::<T>::NotVesting)?;
+			let schedules = Vesting::<T>::get(&target).ok_or(Error::<T>::NotVesting)?;
 			ensure!(schedules.len() > index, Error::<T>::ScheduleIndexOutOfBounds);
 			ensure!(schedules[index].per_block() != per_block, Error::<T>::SamePerBlock);
 
@@ -509,7 +506,7 @@ pub mod pallet {
 			let schedule1_index = schedule1_index as usize;
 			let schedule2_index = schedule2_index as usize;
 
-			let schedules = Self::vesting(&who).ok_or(Error::<T>::NotVesting)?;
+			let schedules = Vesting::<T>::get(&who).ok_or(Error::<T>::NotVesting)?;
 			let merge_action =
 				VestingAction::Merge { index1: schedule1_index, index2: schedule2_index };
 
@@ -542,9 +539,9 @@ impl<T: Config> Pallet<T> {
 		schedule2: VestingInfo<BalanceOf<T>, BlockNumberFor<T>>,
 	) -> Option<VestingInfo<BalanceOf<T>, BlockNumberFor<T>>> {
 		let schedule1_start_at =
-			Self::vesting_start_at().map(|st| st.saturating_add(schedule1.starting_block()));
+			VestingStartAt::<T>::get().map(|st| st.saturating_add(schedule1.starting_block()));
 		let schedule2_start_at =
-			Self::vesting_start_at().map(|st| st.saturating_add(schedule2.starting_block()));
+			VestingStartAt::<T>::get().map(|st| st.saturating_add(schedule2.starting_block()));
 		let schedule1_ending_block = schedule1.ending_block_as_balance::<T::BlockNumberToBalance>();
 		let schedule2_ending_block = schedule2.ending_block_as_balance::<T::BlockNumberToBalance>();
 		let now_as_balance = T::BlockNumberToBalance::convert(now);
@@ -650,8 +647,8 @@ impl<T: Config> Pallet<T> {
 		let filtered_schedules = action
 			.pick_schedules::<T>(schedules)
 			.filter(|schedule| {
-				let start_at =
-					Self::vesting_start_at().map(|st| st.saturating_add(schedule.starting_block()));
+				let start_at = VestingStartAt::<T>::get()
+					.map(|st| st.saturating_add(schedule.starting_block()));
 				let locked_now = schedule.locked_at::<T::BlockNumberToBalance>(now, start_at);
 				let keep = !locked_now.is_zero();
 				if keep {
@@ -700,7 +697,7 @@ impl<T: Config> Pallet<T> {
 
 	/// Unlock any vested funds of `who`.
 	fn do_vest(who: T::AccountId) -> DispatchResult {
-		let schedules = Self::vesting(&who).ok_or(Error::<T>::NotVesting)?;
+		let schedules = Vesting::<T>::get(&who).ok_or(Error::<T>::NotVesting)?;
 
 		let (schedules, locked_now) =
 			Self::exec_action(schedules.to_vec(), VestingAction::Passive)?;
@@ -736,7 +733,7 @@ impl<T: Config> Pallet<T> {
 					// 1) need to add it to the accounts vesting schedule collection,
 					schedules.push(new_schedule);
 					// (we use `locked_at` in case this is a schedule that started in the past)
-					let start_at = Self::vesting_start_at()
+					let start_at = VestingStartAt::<T>::get()
 						.map(|st| st.saturating_add(new_schedule.starting_block()));
 					let new_schedule_locked =
 						new_schedule.locked_at::<T::BlockNumberToBalance>(now, start_at);
@@ -767,11 +764,11 @@ where
 
 	/// Get the amount that is currently being vested and cannot be transferred out of this account.
 	fn vesting_balance(who: &T::AccountId) -> Option<BalanceOf<T>> {
-		if let Some(v) = Self::vesting(who) {
+		if let Some(v) = Vesting::<T>::get(who) {
 			let now = <frame_system::Pallet<T>>::block_number();
 			let total_locked_now = v.iter().fold(Zero::zero(), |total, schedule| {
-				let start_at =
-					Self::vesting_start_at().map(|st| st.saturating_add(schedule.starting_block()));
+				let start_at = VestingStartAt::<T>::get()
+					.map(|st| st.saturating_add(schedule.starting_block()));
 				schedule
 					.locked_at::<T::BlockNumberToBalance>(now, start_at)
 					.saturating_add(total)
@@ -810,7 +807,7 @@ where
 			return Err(Error::<T>::InvalidScheduleParams.into());
 		};
 
-		let mut schedules = Self::vesting(who).unwrap_or_default();
+		let mut schedules = Vesting::<T>::get(who).unwrap_or_default();
 
 		// NOTE: we must push the new schedule so that `exec_action`
 		// will give the correct new locked amount.
@@ -848,7 +845,7 @@ where
 
 	/// Remove a vesting schedule for a given account.
 	fn remove_vesting_schedule(who: &T::AccountId, schedule_index: u32) -> DispatchResult {
-		let schedules = Self::vesting(who).ok_or(Error::<T>::NotVesting)?;
+		let schedules = Vesting::<T>::get(who).ok_or(Error::<T>::NotVesting)?;
 		let remove_action = VestingAction::Remove { index: schedule_index as usize };
 
 		let (schedules, locked_now) = Self::exec_action(schedules.to_vec(), remove_action)?;
