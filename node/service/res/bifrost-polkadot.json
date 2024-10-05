@@ -6,7 +6,9 @@
     "/dns4/jp.bifrost-polkadot.liebi.com/tcp/30333/p2p/12D3KooWHaTVz5iv5jvWaT5WaJWxV5bP4VQXNUN8uvJCQnKMW5Gg",
     "/dns4/hk.bifrost-polkadot.liebi.com/tcp/30333/p2p/12D3KooWA3Vz7a9kCF4qv7sukd3AGySwxzS98zTGVft1oHjW5enm",
     "/dns4/eu.bifrost-polkadot.liebi.com/tcp/30333/p2p/12D3KooWJLuZb3ZTSiCr35QaNVTrxtjB5FjNWXWWTUEEt7vvGtyz",
-    "/dns4/us.bifrost-polkadot.liebi.com/tcp/30333/p2p/12D3KooWHo4jh4YUptet3dDRRdfMLpZmynebu75FF2NQWyVMwp3f"
+    "/dns4/us.bifrost-polkadot.liebi.com/tcp/30333/p2p/12D3KooWHo4jh4YUptet3dDRRdfMLpZmynebu75FF2NQWyVMwp3f",
+    "/dns/bifrost-polkadot.boot.stake.plus/tcp/30332/wss/p2p/12D3KooWGLQjiEWEbyd1fS4fAtdoX8Rs3r9h514jEZbo2XEpknSH",
+    "/dns/bifrost-polkadot.boot.stake.plus/tcp/31332/wss/p2p/12D3KooWG5HfoCTyd62p1Km7u269zxLNX8PoRuYVA8gwjwtdTLYy"
   ],
   "telemetryEndpoints": [
     [
