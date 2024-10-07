@@ -329,7 +329,7 @@ num_enum              = { version = "0.7.3", default-features = false }
 parity-scale-codec    = { version = "3.6.12", default-features = false }
 paste                 = { version = "1.0.15" }
 primitive-types       = { version = "0.12.0", default-features = false }
-proc-macro2           = { version = "1.0.40" }
+proc-macro2           = { version = "1.0.87" }
 quote                 = { version = "1.0.20" }
 scale-info            = { version = "2.11.3", default-features = false }
 serde                 = { version = "1.0.205", default-features = false }
