@@ -213,7 +213,7 @@ wget https://snapshot-1258776962.cos.ap-hongkong.myqcloud.com/bifrost-kusama/rel
 # download zst data
 aria2c -x10 https://snapshot-1258776962.cos.ap-hongkong.myqcloud.com/bifrost-kusama/relay.tar.zst
 
-# decompress: node is basepath, you can replace any dicrectory you like
+# decompress: node is basepath, you can replace any directory you like
 mkdir node
 tar -I 'zstd -vd -T0 -D relay.dict' -xvf relay.tar.zst -C node/.
 ```
