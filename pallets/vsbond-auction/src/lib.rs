@@ -253,10 +253,46 @@ pub mod pallet {
 
 	#[pallet::call]
 	impl<T: Config<I>, I: 'static> Pallet<T, I> {
-		/// Create a sell order or buy order to sell `vsbond`.
-		#[pallet::call_index(0)]
-		#[pallet::weight(T::WeightInfo::create_order())]
-		pub fn create_order(
+		/// Revoke a sell or buy order in trade by the order creator.
+		#[pallet::call_index(1)]
+		#[pallet::weight(T::WeightInfo::revoke_order())]
+		pub fn revoke_order(
+			origin: OriginFor<T>,
+			#[pallet::compact] order_id: OrderId,
+		) -> DispatchResultWithPostInfo {
+			// Check origin
+			let from = ensure_signed(origin)?;
+
+			// Check OrderInfo
+			let order_info =
+				TotalOrderInfos::<T, I>::get(order_id).ok_or(Error::<T, I>::NotFindOrderInfo)?;
+
+			// Check OrderOwner
+			ensure!(order_info.owner == from, Error::<T, I>::ForbidRevokeOrderWithoutOwnership);
+
+			Self::do_order_revoke(order_id)?;
+
+			Ok(().into())
+		}
+
+		/// Revoke a sell or buy order in trade by the order creator.
+		#[pallet::call_index(2)]
+		#[pallet::weight(T::WeightInfo::revoke_order())]
+		pub fn force_revoke(
+			origin: OriginFor<T>,
+			#[pallet::compact] order_id: OrderId,
+		) -> DispatchResultWithPostInfo {
+			// Check origin
+			T::ControlOrigin::ensure_origin(origin)?;
+
+			Self::do_order_revoke(order_id)?;
+
+			Ok(().into())
+		}
+	}
+
+	impl<T: Config<I>, I: 'static> Pallet<T, I> {
+		pub(crate) fn create_order(
 			origin: OriginFor<T>,
 			#[pallet::compact] index: ParaId,
 			token_symbol: TokenSymbol,
@@ -372,62 +408,7 @@ pub mod pallet {
 			Ok(().into())
 		}
 
-		/// Revoke a sell or buy order in trade by the order creator.
-		#[pallet::call_index(1)]
-		#[pallet::weight(T::WeightInfo::revoke_order())]
-		pub fn revoke_order(
-			origin: OriginFor<T>,
-			#[pallet::compact] order_id: OrderId,
-		) -> DispatchResultWithPostInfo {
-			// Check origin
-			let from = ensure_signed(origin)?;
-
-			// Check OrderInfo
-			let order_info =
-				TotalOrderInfos::<T, I>::get(order_id).ok_or(Error::<T, I>::NotFindOrderInfo)?;
-
-			// Check OrderOwner
-			ensure!(order_info.owner == from, Error::<T, I>::ForbidRevokeOrderWithoutOwnership);
-
-			Self::do_order_revoke(order_id)?;
-
-			Ok(().into())
-		}
-
-		/// Revoke a sell or buy order in trade by the order creator.
-		#[pallet::call_index(2)]
-		#[pallet::weight(T::WeightInfo::revoke_order())]
-		pub fn force_revoke(
-			origin: OriginFor<T>,
-			#[pallet::compact] order_id: OrderId,
-		) -> DispatchResultWithPostInfo {
-			// Check origin
-			T::ControlOrigin::ensure_origin(origin)?;
-
-			Self::do_order_revoke(order_id)?;
-
-			Ok(().into())
-		}
-
-		/// Users(non-order-creator) buy the remaining `vsbond` of a sell order.
-		#[pallet::call_index(3)]
-		#[pallet::weight(T::WeightInfo::clinch_order())]
-		pub fn clinch_order(
-			origin: OriginFor<T>,
-			#[pallet::compact] order_id: OrderId,
-		) -> DispatchResultWithPostInfo {
-			let order_info =
-				TotalOrderInfos::<T, I>::get(order_id).ok_or(Error::<T, I>::NotFindOrderInfo)?;
-
-			Self::partial_clinch_order(origin, order_id, order_info.remain)?;
-
-			Ok(().into())
-		}
-
-		/// Users(non-order-creator) buys some of the remaining `vsbond` of a sell or buy order.
-		#[pallet::call_index(4)]
-		#[pallet::weight(T::WeightInfo::partial_clinch_order())]
-		pub fn partial_clinch_order(
+		pub(crate) fn partial_clinch_order(
 			origin: OriginFor<T>,
 			#[pallet::compact] order_id: OrderId,
 			#[pallet::compact] quantity: BalanceOf<T, I>,
@@ -602,43 +583,12 @@ pub mod pallet {
 			Ok(().into())
 		}
 
-		// edit token release start and end block
-		// input number used as perthousand rate, so it should be less or equal than 1000.
-		#[pallet::call_index(5)]
-		#[pallet::weight(T::WeightInfo::set_buy_and_sell_transaction_fee_rate())]
-		pub fn set_buy_and_sell_transaction_fee_rate(
-			origin: OriginFor<T>,
-			buy_rate: u32,
-			sell_rate: u32,
-		) -> DispatchResult {
-			// Check origin
-			T::ControlOrigin::ensure_origin(origin)?;
-
-			// number input should be less than 10_000, since it is used as x * 1/10_000
-			ensure!(buy_rate <= 10_000u32, Error::<T, I>::InvalidRateInput);
-			ensure!(sell_rate <= 10_000u32, Error::<T, I>::InvalidRateInput);
-
-			let b_rate = buy_rate.checked_mul(100).ok_or(Error::<T, I>::Overflow)?;
-			let s_rate = sell_rate.checked_mul(100).ok_or(Error::<T, I>::Overflow)?;
-
-			let buy_fee_rate = Permill::from_parts(b_rate);
-			let sell_fee_rate = Permill::from_parts(s_rate);
-
-			TransactionFee::<T, I>::mutate(|fee| *fee = (buy_fee_rate, sell_fee_rate));
-
-			Self::deposit_event(Event::TransactionFeeRateSet(buy_fee_rate, sell_fee_rate));
-
-			Ok(())
-		}
-	}
-
-	impl<T: Config<I>, I: 'static> Pallet<T, I> {
-		pub(crate) fn next_order_id() -> OrderId {
-			// let next_order_id = Self::order_id();
-			let next_order_id = NextOrderId::<T, I>::get();
-			NextOrderId::<T, I>::mutate(|current| *current += 1);
-			next_order_id
-		}
+		// pub(crate) fn next_order_id() -> OrderId {
+		// 	// let next_order_id = Self::order_id();
+		// 	let next_order_id = NextOrderId::<T, I>::get();
+		// 	NextOrderId::<T, I>::mutate(|current| *current += 1);
+		// 	next_order_id
+		// }
 
 		pub(crate) fn try_to_remove_order_id(
 			account: AccountIdOf<T>,
@@ -718,5 +668,3 @@ pub mod pallet {
 		}
 	}
 }
-
-// TODO: Maybe impl Auction trait for vsbond-auction

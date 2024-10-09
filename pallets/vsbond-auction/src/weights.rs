@@ -53,38 +53,11 @@ use sp_std::marker::PhantomData;
 
 /// Weight functions needed for bifrost_vsbond_auction.
 pub trait WeightInfo {
-	fn create_order() -> Weight;
 	fn revoke_order() -> Weight;
-	fn clinch_order() -> Weight;
-	fn partial_clinch_order() -> Weight;
-	fn set_buy_and_sell_transaction_fee_rate() -> Weight;
 }
 
 // For backwards compatibility and tests
 impl WeightInfo for () {
-	/// Storage: VSBondAuction TransactionFee (r:1 w:0)
-	/// Proof Skipped: VSBondAuction TransactionFee (max_values: Some(1), max_size: None, mode: Measured)
-	/// Storage: Tokens Accounts (r:2 w:2)
-	/// Proof: Tokens Accounts (max_values: None, max_size: Some(118), added: 2593, mode: MaxEncodedLen)
-	/// Storage: VSBondAuction UserOrderIds (r:1 w:1)
-	/// Proof Skipped: VSBondAuction UserOrderIds (max_values: None, max_size: None, mode: Measured)
-	/// Storage: VSBondAuction NextOrderId (r:1 w:1)
-	/// Proof Skipped: VSBondAuction NextOrderId (max_values: Some(1), max_size: None, mode: Measured)
-	/// Storage: AssetRegistry CurrencyMetadatas (r:1 w:0)
-	/// Proof Skipped: AssetRegistry CurrencyMetadatas (max_values: None, max_size: None, mode: Measured)
-	/// Storage: System Account (r:1 w:1)
-	/// Proof: System Account (max_values: None, max_size: Some(128), added: 2603, mode: MaxEncodedLen)
-	/// Storage: VSBondAuction TotalOrderInfos (r:0 w:1)
-	/// Proof Skipped: VSBondAuction TotalOrderInfos (max_values: None, max_size: None, mode: Measured)
-	fn create_order() -> Weight {
-		// Proof Size summary in bytes:
-		//  Measured:  `1789`
-		//  Estimated: `6176`
-		// Minimum execution time: 175_480_000 picoseconds.
-		Weight::from_parts(178_938_000, 6176)
-			.saturating_add(RocksDbWeight::get().reads(7_u64))
-			.saturating_add(RocksDbWeight::get().writes(6_u64))
-	}
 	/// Storage: VSBondAuction TotalOrderInfos (r:1 w:1)
 	/// Proof Skipped: VSBondAuction TotalOrderInfos (max_values: None, max_size: None, mode: Measured)
 	/// Storage: AssetRegistry CurrencyMetadatas (r:1 w:0)
@@ -103,56 +76,5 @@ impl WeightInfo for () {
 		Weight::from_parts(162_287_000, 6176)
 			.saturating_add(RocksDbWeight::get().reads(6_u64))
 			.saturating_add(RocksDbWeight::get().writes(5_u64))
-	}
-	/// Storage: VSBondAuction TotalOrderInfos (r:1 w:1)
-	/// Proof Skipped: VSBondAuction TotalOrderInfos (max_values: None, max_size: None, mode: Measured)
-	/// Storage: VSBondAuction TransactionFee (r:1 w:0)
-	/// Proof Skipped: VSBondAuction TransactionFee (max_values: Some(1), max_size: None, mode: Measured)
-	/// Storage: Tokens Accounts (r:4 w:4)
-	/// Proof: Tokens Accounts (max_values: None, max_size: Some(118), added: 2593, mode: MaxEncodedLen)
-	/// Storage: AssetRegistry CurrencyMetadatas (r:1 w:0)
-	/// Proof Skipped: AssetRegistry CurrencyMetadatas (max_values: None, max_size: None, mode: Measured)
-	/// Storage: System Account (r:1 w:1)
-	/// Proof: System Account (max_values: None, max_size: Some(128), added: 2603, mode: MaxEncodedLen)
-	/// Storage: VSBondAuction UserOrderIds (r:1 w:1)
-	/// Proof Skipped: VSBondAuction UserOrderIds (max_values: None, max_size: None, mode: Measured)
-	fn clinch_order() -> Weight {
-		// Proof Size summary in bytes:
-		//  Measured:  `2383`
-		//  Estimated: `11362`
-		// Minimum execution time: 231_797_000 picoseconds.
-		Weight::from_parts(235_426_000, 11362)
-			.saturating_add(RocksDbWeight::get().reads(9_u64))
-			.saturating_add(RocksDbWeight::get().writes(7_u64))
-	}
-	/// Storage: VSBondAuction TotalOrderInfos (r:1 w:1)
-	/// Proof Skipped: VSBondAuction TotalOrderInfos (max_values: None, max_size: None, mode: Measured)
-	/// Storage: VSBondAuction TransactionFee (r:1 w:0)
-	/// Proof Skipped: VSBondAuction TransactionFee (max_values: Some(1), max_size: None, mode: Measured)
-	/// Storage: Tokens Accounts (r:4 w:4)
-	/// Proof: Tokens Accounts (max_values: None, max_size: Some(118), added: 2593, mode: MaxEncodedLen)
-	/// Storage: AssetRegistry CurrencyMetadatas (r:1 w:0)
-	/// Proof Skipped: AssetRegistry CurrencyMetadatas (max_values: None, max_size: None, mode: Measured)
-	/// Storage: System Account (r:1 w:0)
-	/// Proof: System Account (max_values: None, max_size: Some(128), added: 2603, mode: MaxEncodedLen)
-	fn partial_clinch_order() -> Weight {
-		// Proof Size summary in bytes:
-		//  Measured:  `2291`
-		//  Estimated: `11362`
-		// Minimum execution time: 205_639_000 picoseconds.
-		Weight::from_parts(208_525_000, 11362)
-			.saturating_add(RocksDbWeight::get().reads(8_u64))
-			.saturating_add(RocksDbWeight::get().writes(5_u64))
-	}
-	/// Storage: VSBondAuction TransactionFee (r:1 w:1)
-	/// Proof Skipped: VSBondAuction TransactionFee (max_values: Some(1), max_size: None, mode: Measured)
-	fn set_buy_and_sell_transaction_fee_rate() -> Weight {
-		// Proof Size summary in bytes:
-		//  Measured:  `4`
-		//  Estimated: `1489`
-		// Minimum execution time: 26_001_000 picoseconds.
-		Weight::from_parts(26_868_000, 1489)
-			.saturating_add(RocksDbWeight::get().reads(1_u64))
-			.saturating_add(RocksDbWeight::get().writes(1_u64))
 	}
 }
