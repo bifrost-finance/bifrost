@@ -153,7 +153,6 @@ pub mod pallet {
 			who: AccountIdOf<T>,
 			pid: PoolId,
 			add_value: BalanceOf<T>,
-			gauge_info: Option<(BalanceOf<T>, BlockNumberFor<T>)>,
 		},
 		Withdrawn {
 			who: AccountIdOf<T>,
@@ -211,28 +210,46 @@ pub mod pallet {
 
 	#[pallet::error]
 	pub enum Error<T> {
+		/// The field tokens_proportion cannot be empty.
 		NotNullable,
+		/// The pool does not exist.
 		PoolDoesNotExist,
+		/// The gauge pool does not exist.
 		GaugePoolNotExist,
+		/// The gauge info does not exist.
 		GaugeInfoNotExist,
+		/// The pool is not in the correct state.
 		InvalidPoolState,
-		LastGaugeNotClaim,
 		/// claim_limit_time exceeded
 		CanNotClaim,
 		/// gauge pool max_block exceeded
 		GaugeMaxBlockOverflow,
 		/// withdraw_limit_time exceeded
 		WithdrawLimitCountExceeded,
+		/// User's personal share info does not exist
 		ShareInfoNotExists,
+		/// The current block height needs to be greater than the field after_block_to_start in
+		/// order to execute deposit.
 		CanNotDeposit,
+		/// Whitelist cannot be empty
 		WhitelistEmpty,
+		/// When starting a round, the field end_round needs to be 0 to indicate that the previous
+		/// round has ended.
 		RoundNotOver,
+		/// The round length needs to be set when starting a round
 		RoundLengthNotSet,
+		/// Whitelist maximum limit exceeded
 		WhitelistLimitExceeded,
+		/// No one voted for this pool.
 		NobodyVoting,
+		/// The pool is not in the whitelist
 		NotInWhitelist,
+		/// The total voting percentage of users cannot exceed 100%.
 		PercentOverflow,
+		/// The pool cannot be cleaned completely
 		PoolNotCleared,
+		/// Invalid remove amount
+		InvalidRemoveAmount,
 	}
 
 	#[pallet::storage]
@@ -482,7 +499,6 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			pid: PoolId,
 			add_value: BalanceOf<T>,
-			gauge_info: Option<(BalanceOf<T>, BlockNumberFor<T>)>,
 		) -> DispatchResult {
 			// Check origin
 			let exchanger = ensure_signed(origin)?;
@@ -516,7 +532,7 @@ pub mod pallet {
 			Self::add_share(&exchanger, pid, &mut pool_info, add_value);
 			Self::update_reward(&exchanger, pid)?;
 
-			Self::deposit_event(Event::Deposited { who: exchanger, pid, add_value, gauge_info });
+			Self::deposit_event(Event::Deposited { who: exchanger, pid, add_value });
 			Ok(())
 		}
 
@@ -851,7 +867,8 @@ pub mod pallet {
 			whitelist: Vec<PoolId>,
 		) -> DispatchResult {
 			T::ControlOrigin::ensure_origin(origin)?;
-			let _ = BoostNextRoundWhitelist::<T>::clear(u32::max_value(), None);
+			let res = BoostNextRoundWhitelist::<T>::clear(u32::max_value(), None);
+			ensure!(res.maybe_cursor.is_none(), Error::<T>::PoolNotCleared);
 			whitelist.iter().for_each(|pid| {
 				BoostNextRoundWhitelist::<T>::insert(pid, ());
 			});
