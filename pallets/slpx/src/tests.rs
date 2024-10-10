@@ -190,7 +190,7 @@ fn test_execution_fee_work() {
 		assert_eq!(ExecutionFee::<Test>::get(CurrencyId::Token2(0)), Some(10 * 1_000_000_000));
 
 		let balance_exclude_fee =
-			Slpx::charge_execution_fee(CurrencyId::Token2(0), &ALICE).unwrap();
+			Slpx::charge_execution_fee(CurrencyId::Token2(0), 50 * 1_000_000_000, &ALICE).unwrap();
 		assert_eq!(balance_exclude_fee, 40 * 1_000_000_000);
 
 		assert_ok!(Slpx::set_transfer_to_fee(
