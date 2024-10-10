@@ -566,7 +566,6 @@ impl Contains<AccountId> for DustRemovalWhitelist {
 			SystemMakerPalletId::get().into_account_truncating(),
 			ZenklinkFeeAccount::get(),
 			CommissionPalletId::get().into_account_truncating(),
-			VsbondAuctionPalletId::get().into_account_truncating(),
 			ParachainStakingPalletId::get().into_account_truncating(),
 			SystemStakingPalletId::get().into_account_truncating(),
 			VBNCConvertPalletId::get().into_account_truncating(),
