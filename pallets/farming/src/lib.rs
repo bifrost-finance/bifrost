@@ -153,7 +153,6 @@ pub mod pallet {
 			who: AccountIdOf<T>,
 			pid: PoolId,
 			add_value: BalanceOf<T>,
-			gauge_info: Option<(BalanceOf<T>, BlockNumberFor<T>)>,
 		},
 		Withdrawn {
 			who: AccountIdOf<T>,
@@ -211,28 +210,46 @@ pub mod pallet {
 
 	#[pallet::error]
 	pub enum Error<T> {
+		/// The field tokens_proportion cannot be empty.
 		NotNullable,
+		/// The pool does not exist.
 		PoolDoesNotExist,
+		/// The gauge pool does not exist.
 		GaugePoolNotExist,
+		/// The gauge info does not exist.
 		GaugeInfoNotExist,
+		/// The pool is not in the correct state.
 		InvalidPoolState,
-		LastGaugeNotClaim,
 		/// claim_limit_time exceeded
 		CanNotClaim,
 		/// gauge pool max_block exceeded
 		GaugeMaxBlockOverflow,
 		/// withdraw_limit_time exceeded
 		WithdrawLimitCountExceeded,
+		/// User's personal share info does not exist
 		ShareInfoNotExists,
+		/// The current block height needs to be greater than the field after_block_to_start in
+		/// order to execute deposit.
 		CanNotDeposit,
+		/// Whitelist cannot be empty
 		WhitelistEmpty,
+		/// When starting a round, the field end_round needs to be 0 to indicate that the previous
+		/// round has ended.
 		RoundNotOver,
+		/// The round length needs to be set when starting a round
 		RoundLengthNotSet,
+		/// Whitelist maximum limit exceeded
 		WhitelistLimitExceeded,
+		/// No one voted for this pool.
 		NobodyVoting,
+		/// The pool is not in the whitelist
 		NotInWhitelist,
+		/// The total voting percentage of users cannot exceed 100%.
 		PercentOverflow,
+		/// The pool cannot be cleaned completely
 		PoolNotCleared,
+		/// Invalid remove amount
+		InvalidRemoveAmount,
 	}
 
 	#[pallet::storage]
@@ -371,6 +388,20 @@ pub mod pallet {
 		BlockNumberFor<T>: AtLeast32BitUnsigned + Copy,
 		BalanceOf<T>: AtLeast32BitUnsigned + Copy,
 	{
+		/// Create a farming pool.
+		///
+		/// The state of the pool will be set to `Ongoing` if the current block number is greater
+		/// than or equal to the field `after_block_to_start` or the total shares of the pool is
+		/// greater than or equal to the field `min_deposit_to_start`.
+		///
+		/// - `tokens_proportion`: The proportion of each token in the pool.
+		/// - `basic_rewards`: The basic reward of each token in the pool.
+		/// - `gauge_init`: The initial gauge pool info.
+		/// - `min_deposit_to_start`: The minimum deposit to start the pool.
+		/// - `after_block_to_start`: The block number to start the pool.
+		/// - `withdraw_limit_time`: The block number to limit the withdraw.
+		/// - `claim_limit_time`: The block number to limit the claim.
+		/// - `withdraw_limit_count`: The count to limit the withdraw.
 		#[pallet::call_index(0)]
 		#[pallet::weight(T::WeightInfo::create_farming_pool())]
 		pub fn create_farming_pool(
@@ -426,6 +457,15 @@ pub mod pallet {
 			Ok(())
 		}
 
+		/// Charge the pool.
+		///
+		/// Transfer the rewards from the exchanger to the pool. It will charge the rewards to the
+		/// gauge pool if the `if_gauge` is true, otherwise it will charge the rewards to the
+		/// farming pool.
+		///
+		/// - `pid`: The pool id.
+		/// - `rewards`: The rewards to charge.
+		/// - `if_gauge`: If the rewards are for the gauge pool.
 		#[pallet::call_index(1)]
 		#[pallet::weight(T::WeightInfo::charge())]
 		pub fn charge(
@@ -476,13 +516,20 @@ pub mod pallet {
 			Ok(())
 		}
 
+		/// Deposit the pool.
+		///
+		/// Mint the share to the exchanger and transfer the tokens to the pool. The state of the
+		/// pool should be `Ongoing` or `Charged`. The current block number should be greater than
+		/// or equal to the field `after_block_to_start` if the state of the pool is `Charged`.
+		///
+		/// - `pid`: The pool id.
+		/// - `add_value`: The value to deposit.
 		#[pallet::call_index(2)]
 		#[pallet::weight(T::WeightInfo::deposit())]
 		pub fn deposit(
 			origin: OriginFor<T>,
 			pid: PoolId,
 			add_value: BalanceOf<T>,
-			gauge_info: Option<(BalanceOf<T>, BlockNumberFor<T>)>,
 		) -> DispatchResult {
 			// Check origin
 			let exchanger = ensure_signed(origin)?;
@@ -516,10 +563,19 @@ pub mod pallet {
 			Self::add_share(&exchanger, pid, &mut pool_info, add_value);
 			Self::update_reward(&exchanger, pid)?;
 
-			Self::deposit_event(Event::Deposited { who: exchanger, pid, add_value, gauge_info });
+			Self::deposit_event(Event::Deposited { who: exchanger, pid, add_value });
 			Ok(())
 		}
 
+		/// Withdraw from the pool.
+		///
+		/// The state of the pool should be `Ongoing`, `Charged` or `Dead`.
+		/// User's withdraw limit count should be less than the field `withdraw_limit_count`.
+		/// It will remove the share from the user, but not transfer the tokens to the user
+		/// immediately.
+		///
+		/// - `pid`: The pool id.
+		/// - `remove_value`: The value to withdraw.
 		#[pallet::call_index(3)]
 		#[pallet::weight(T::WeightInfo::withdraw())]
 		pub fn withdraw(
@@ -551,6 +607,13 @@ pub mod pallet {
 			Ok(())
 		}
 
+		/// Claim the rewards from the pool.
+		///
+		/// The state of the pool should be `Ongoing` or `Dead`.
+		/// The user should not claim the rewards within the field `claim_limit_time`.
+		/// It will claim the rewards to the user, and transfer the tokens to the user immediately.
+		///
+		/// - `pid`: The pool id.
 		#[pallet::call_index(4)]
 		#[pallet::weight(T::WeightInfo::claim())]
 		pub fn claim(origin: OriginFor<T>, pid: PoolId) -> DispatchResult {
@@ -579,6 +642,11 @@ pub mod pallet {
 			Ok(())
 		}
 
+		/// Withdraw the claim from the pool.
+		///
+		/// It will immediately transfer the withdrawable tokens to the user.
+		///
+		/// - `pid`: The pool id.
 		#[pallet::call_index(5)]
 		#[pallet::weight(T::WeightInfo::withdraw_claim())]
 		pub fn withdraw_claim(origin: OriginFor<T>, pid: PoolId) -> DispatchResult {
@@ -592,6 +660,12 @@ pub mod pallet {
 			Ok(())
 		}
 
+		/// Force retire the pool.
+		///
+		/// The state of the pool should be `Dead`.
+		/// It will retire the pool and transfer the withdrawable tokens to the users.
+		///
+		/// - `pid`: The pool id.
 		#[pallet::call_index(6)]
 		#[pallet::weight(T::WeightInfo::force_retire_pool())]
 		pub fn force_retire_pool(origin: OriginFor<T>, pid: PoolId) -> DispatchResult {
@@ -630,6 +704,9 @@ pub mod pallet {
 			Ok(())
 		}
 
+		/// Set the retire limit.
+		///
+		/// - `limit`: The retire limit.
 		#[pallet::call_index(7)]
 		#[pallet::weight(T::WeightInfo::set_retire_limit())]
 		pub fn set_retire_limit(origin: OriginFor<T>, limit: u32) -> DispatchResult {
@@ -643,6 +720,11 @@ pub mod pallet {
 			Ok(())
 		}
 
+		/// Close the pool.
+		///
+		/// Change the state of the pool to `Dead` before retiring the pool.
+		///
+		/// - `pid`: The pool id.
 		#[pallet::call_index(8)]
 		#[pallet::weight(T::WeightInfo::close_pool())]
 		pub fn close_pool(origin: OriginFor<T>, pid: PoolId) -> DispatchResult {
@@ -657,6 +739,16 @@ pub mod pallet {
 			Ok(())
 		}
 
+		/// Reuse retired pools
+		///
+		/// - `pid`: The pool id.
+		/// - `basic_rewards`: The basic reward of each token in the pool.
+		/// - `min_deposit_to_start`: The minimum deposit to start the pool.
+		/// - `after_block_to_start`: The block number to start the pool.
+		/// - `withdraw_limit_time`: The block number to limit the withdraw.
+		/// - `claim_limit_time`: The block number to limit the claim.
+		/// - `withdraw_limit_count`: The count to limit the withdraw.
+		/// - `gauge_init`: The initial gauge pool info.
 		#[pallet::call_index(9)]
 		#[pallet::weight(T::WeightInfo::reset_pool())]
 		pub fn reset_pool(
@@ -710,6 +802,9 @@ pub mod pallet {
 			Ok(())
 		}
 
+		/// Kill the pool after retired.
+		///
+		/// - `pid`: The pool id.
 		#[pallet::call_index(10)]
 		#[pallet::weight(T::WeightInfo::kill_pool())]
 		pub fn kill_pool(origin: OriginFor<T>, pid: PoolId) -> DispatchResult {
@@ -728,6 +823,7 @@ pub mod pallet {
 			Ok(())
 		}
 
+		/// Edit the pool at the state of `Retired`, `Ongoing`, `Charged` or `UnCharged`.
 		#[pallet::call_index(11)]
 		#[pallet::weight(T::WeightInfo::edit_pool())]
 		pub fn edit_pool(
@@ -782,6 +878,9 @@ pub mod pallet {
 			Ok(())
 		}
 
+		/// Withdraw the rewards from the gauge pool.
+		///
+		/// - `gid`: The gauge pool id.
 		#[pallet::call_index(12)]
 		#[pallet::weight(T::WeightInfo::gauge_withdraw())]
 		pub fn gauge_withdraw(origin: OriginFor<T>, gid: PoolId) -> DispatchResult {
@@ -797,6 +896,11 @@ pub mod pallet {
 			Ok(())
 		}
 
+		/// Force claim the rewards from the gauge pool.
+		///
+		/// Control origin can force claim the rewards from the gauge pool to the users.
+		///
+		/// - `gid`: The gauge pool id.
 		#[pallet::call_index(13)]
 		#[pallet::weight(T::WeightInfo::force_gauge_claim())]
 		pub fn force_gauge_claim(origin: OriginFor<T>, gid: PoolId) -> DispatchResult {
@@ -829,7 +933,9 @@ pub mod pallet {
 			Ok(())
 		}
 
-		// Add whitelist and take effect immediately
+		/// Add whitelist and take effect immediately
+		///
+		/// - `whitelist`: The whitelist to add
 		#[pallet::call_index(14)]
 		#[pallet::weight(T::WeightInfo::add_boost_pool_whitelist())]
 		pub fn add_boost_pool_whitelist(
@@ -843,7 +949,9 @@ pub mod pallet {
 			Ok(())
 		}
 
-		// Whitelist for next round in effect
+		/// Whitelist for next round in effect
+		///
+		/// - `whitelist`: The whitelist for the next round
 		#[pallet::call_index(15)]
 		#[pallet::weight(T::WeightInfo::set_next_round_whitelist())]
 		pub fn set_next_round_whitelist(
@@ -851,13 +959,17 @@ pub mod pallet {
 			whitelist: Vec<PoolId>,
 		) -> DispatchResult {
 			T::ControlOrigin::ensure_origin(origin)?;
-			let _ = BoostNextRoundWhitelist::<T>::clear(u32::max_value(), None);
+			let res = BoostNextRoundWhitelist::<T>::clear(u32::max_value(), None);
+			ensure!(res.maybe_cursor.is_none(), Error::<T>::PoolNotCleared);
 			whitelist.iter().for_each(|pid| {
 				BoostNextRoundWhitelist::<T>::insert(pid, ());
 			});
 			Ok(())
 		}
 
+		/// Vote for the pool
+		///
+		/// - `vote_list`: The vote list for the pool
 		#[pallet::call_index(16)]
 		#[pallet::weight(T::WeightInfo::claim())]
 		pub fn vote(origin: OriginFor<T>, vote_list: Vec<(PoolId, Percent)>) -> DispatchResult {
@@ -867,6 +979,9 @@ pub mod pallet {
 			Ok(())
 		}
 
+		/// Start the boost round
+		///
+		/// - `round_length`: The length of the round
 		#[pallet::call_index(17)]
 		#[pallet::weight(T::WeightInfo::claim())]
 		pub fn start_boost_round(
@@ -878,6 +993,7 @@ pub mod pallet {
 			Ok(())
 		}
 
+		/// Force end of boost round
 		#[pallet::call_index(18)]
 		#[pallet::weight(T::WeightInfo::claim())]
 		pub fn end_boost_round(origin: OriginFor<T>) -> DispatchResult {
@@ -886,6 +1002,9 @@ pub mod pallet {
 			Ok(())
 		}
 
+		/// Charge the boost rewards to the FarmingBoost account
+		///
+		/// - `rewards`: The rewards to charge
 		#[pallet::call_index(19)]
 		#[pallet::weight(T::WeightInfo::claim())]
 		pub fn charge_boost(
