@@ -352,12 +352,6 @@ impl Contains<RuntimeCall> for SafeCallFilter {
 			RuntimeCall::Salp(
 				bifrost_salp::Call::redeem { .. }
 			) |
-			RuntimeCall::VSBondAuction(
-				bifrost_vsbond_auction::Call::clinch_order { .. } |
-				bifrost_vsbond_auction::Call::create_order { .. } |
-				bifrost_vsbond_auction::Call::partial_clinch_order { .. } |
-				bifrost_vsbond_auction::Call::revoke_order { .. }
-			) |
 			RuntimeCall::VstokenConversion(
 				bifrost_vstoken_conversion::Call::vsbond_convert_to_vstoken { .. } |
 				bifrost_vstoken_conversion::Call::vstoken_convert_to_vsbond { .. }
