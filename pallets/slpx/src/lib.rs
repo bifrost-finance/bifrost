@@ -25,9 +25,9 @@ use crate::types::{
 use bifrost_asset_registry::AssetMetadata;
 use bifrost_primitives::{
 	currency::{BNC, MOVR, VFIL},
-	AstarChainId, Balance, BifrostKusamaChainId, CurrencyId, CurrencyIdMapping, HydrationChainId,
-	InterlayChainId, MantaChainId, RedeemType, SlpxOperator, TokenInfo, VtokenMintingInterface,
-	GLMR,
+	AstarChainId, AstarEvmChainId, Balance, BifrostKusamaChainId, CurrencyId, CurrencyIdMapping,
+	HydrationChainId, InterlayChainId, MantaChainId, MoonbeamEvmChainId, MoonriverEvmChainId,
+	RedeemType, SlpxOperator, TokenInfo, VtokenMintingInterface, GLMR,
 };
 use cumulus_primitives_core::ParaId;
 use ethereum::TransactionAction;
@@ -82,7 +82,7 @@ pub mod pallet {
 	};
 	use frame_system::ensure_root;
 
-	const STORAGE_VERSION: StorageVersion = StorageVersion::new(1);
+	const STORAGE_VERSION: StorageVersion = StorageVersion::new(2);
 
 	#[pallet::pallet]
 	#[pallet::storage_version(STORAGE_VERSION)]
@@ -351,6 +351,8 @@ pub mod pallet {
 
 			Self::do_create_order(
 				source_chain_caller,
+				Default::default(),
+				None,
 				bifrost_chain_caller,
 				currency_id,
 				Default::default(),
@@ -390,6 +392,8 @@ pub mod pallet {
 
 			Self::do_create_order(
 				source_chain_caller,
+				Default::default(),
+				None,
 				bifrost_chain_caller,
 				vtoken_id,
 				Default::default(),
@@ -627,6 +631,8 @@ pub mod pallet {
 			ensure_root(origin)?;
 			Self::do_create_order(
 				source_chain_caller,
+				Default::default(),
+				None,
 				bifrost_chain_caller,
 				currency_id,
 				Default::default(),
@@ -658,12 +664,62 @@ pub mod pallet {
 
 			Self::do_create_order(
 				source_chain_caller,
+				Default::default(),
+				None,
 				bifrost_chain_caller,
 				currency_id,
 				Default::default(),
 				remark,
 				channel_id,
 				target_chain,
+			)
+		}
+
+		/// EVM create order
+		/// Parameters:
+		/// - `source_chain_caller`: The caller of the source chain
+		/// - `source_chain_id`: The source chain id
+		/// - `source_chain_block_number`: The source chain block number
+		/// - `currency_id`: The currency id of the token
+		/// - `currency_amount`: The currency amount of the token
+		/// - `send_to`: The target chain to transfer the token to
+		/// - `remark`: The remark of the order
+		/// - `channel_id`: The channel id of the order
+		#[pallet::call_index(14)]
+		#[pallet::weight(<T as Config>::WeightInfo::mint())]
+		pub fn evm_create_order(
+			origin: OriginFor<T>,
+			source_chain_caller: H160,
+			source_chain_id: u64,
+			source_chain_block_number: u128,
+			currency_id: CurrencyId,
+			currency_amount: BalanceOf<T>,
+			send_to: TargetChain<T::AccountId>,
+			remark: BoundedVec<u8, ConstU32<32>>,
+			channel_id: u32,
+		) -> DispatchResultWithPostInfo {
+			let bifrost_chain_caller = ensure_signed(origin)?;
+
+			let support_chain =
+				Self::match_source_chain_id(source_chain_id).ok_or(Error::<T>::Unsupported)?;
+
+			ensure!(
+				WhitelistAccountId::<T>::get(support_chain).contains(&bifrost_chain_caller),
+				Error::<T>::AccountNotFound
+			);
+
+			let source_chain_caller = OrderCaller::Evm(source_chain_caller);
+
+			Self::do_create_order(
+				source_chain_caller,
+				source_chain_id,
+				Some(source_chain_block_number),
+				bifrost_chain_caller,
+				currency_id,
+				currency_amount,
+				remark,
+				channel_id,
+				send_to,
 			)
 		}
 
@@ -696,6 +752,18 @@ pub mod pallet {
 }
 
 impl<T: Config> Pallet<T> {
+	fn match_source_chain_id(source_chain_id: u64) -> Option<SupportChain> {
+		if source_chain_id == AstarEvmChainId::get() {
+			Some(SupportChain::Astar)
+		} else if source_chain_id == MoonriverEvmChainId::get() ||
+			source_chain_id == MoonbeamEvmChainId::get()
+		{
+			Some(SupportChain::Moonbeam)
+		} else {
+			None
+		}
+	}
+
 	/// According to currency_id, return the order type
 	fn order_type(currency_id: CurrencyId) -> Result<OrderType, Error<T>> {
 		match currency_id {
@@ -753,6 +821,8 @@ impl<T: Config> Pallet<T> {
 
 	fn do_create_order(
 		source_chain_caller: OrderCaller<T::AccountId>,
+		source_chain_id: u64,
+		source_chain_block_number: Option<u128>,
 		bifrost_chain_caller: T::AccountId,
 		currency_id: CurrencyId,
 		currency_amount: BalanceOf<T>,
@@ -769,6 +839,8 @@ impl<T: Config> Pallet<T> {
 			currency_amount,
 			remark,
 			source_chain_caller,
+			source_chain_id,
+			source_chain_block_number,
 			bifrost_chain_caller,
 			derivative_account,
 			target_chain,
@@ -897,9 +969,9 @@ impl<T: Config> Pallet<T> {
 	/// Charge an execution fee
 	fn charge_execution_fee(
 		currency_id: CurrencyIdOf<T>,
+		currency_amount: BalanceOf<T>,
 		evm_caller_account_id: &AccountIdOf<T>,
 	) -> Result<BalanceOf<T>, DispatchError> {
-		let free_balance = T::MultiCurrency::free_balance(currency_id, evm_caller_account_id);
 		let execution_fee = ExecutionFee::<T>::get(currency_id)
 			.unwrap_or_else(|| Self::get_default_fee(currency_id));
 
@@ -910,8 +982,9 @@ impl<T: Config> Pallet<T> {
 			execution_fee,
 		)?;
 
-		let balance_exclude_fee =
-			free_balance.checked_sub(&execution_fee).ok_or(Error::<T>::FreeBalanceTooLow)?;
+		let balance_exclude_fee = currency_amount
+			.checked_sub(&execution_fee)
+			.ok_or(Error::<T>::FreeBalanceTooLow)?;
 		Ok(balance_exclude_fee)
 	}
 
@@ -1016,11 +1089,24 @@ impl<T: Config> Pallet<T> {
 	pub fn handle_order(
 		order: &Order<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>, BlockNumberFor<T>>,
 	) -> DispatchResult {
-		let currency_amount =
-			Self::charge_execution_fee(order.currency_id, &order.derivative_account)
-				.map_err(|_| Error::<T>::ErrorChargeFee)?;
+		let currency_amount = Self::charge_execution_fee(
+			order.currency_id,
+			order.currency_amount,
+			&order.derivative_account,
+		)
+		.map_err(|_| Error::<T>::ErrorChargeFee)?;
 		match order.order_type {
 			OrderType::Mint => {
+				let vtoken_id =
+					order.currency_id.to_vtoken().map_err(|_| Error::<T>::ErrorConvertVtoken)?;
+
+				let vtoken_amount = T::VtokenMintingInterface::token_to_vtoken(
+					order.currency_id,
+					vtoken_id,
+					currency_amount,
+				)
+				.map_err(|_| Error::<T>::ErrorVtokenMiting)?;
+
 				T::VtokenMintingInterface::mint(
 					order.derivative_account.clone(),
 					order.currency_id,
@@ -1029,10 +1115,6 @@ impl<T: Config> Pallet<T> {
 					Some(order.channel_id),
 				)
 				.map_err(|_| Error::<T>::ErrorVtokenMiting)?;
-				let vtoken_id =
-					order.currency_id.to_vtoken().map_err(|_| Error::<T>::ErrorConvertVtoken)?;
-				let vtoken_amount =
-					T::MultiCurrency::free_balance(vtoken_id, &order.derivative_account);
 
 				Self::transfer_to(
 					order.derivative_account.clone(),
@@ -1079,11 +1161,19 @@ impl<T: Config> Pallet<T> {
 
 			if current_block_number - order_queue[0].create_block_number >= DelayBlock::<T>::get() {
 				let mut order = order_queue.remove(0);
+				// For compatibility with older versions
 				if order.currency_amount == Default::default() {
 					order.currency_amount = T::MultiCurrency::free_balance(
 						order.currency_id,
 						&order.derivative_account,
 					);
+				} else {
+					// Ensure that the currency amount is not greater than the free balance
+					let free_balance = T::MultiCurrency::free_balance(
+						order.currency_id,
+						&order.derivative_account,
+					);
+					order.currency_amount = order.currency_amount.min(free_balance);
 				}
 				match Self::handle_order(&order) {
 					Ok(_) => {
