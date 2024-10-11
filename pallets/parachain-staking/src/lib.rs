@@ -593,9 +593,9 @@ pub mod pallet {
 		/// Inflation configuration
 		pub inflation_config: InflationInfo<BalanceOf<T>>,
 		/// Default fixed percent a collator takes off the top of due rewards
-		collator_commission: Perbill,
+		pub collator_commission: Perbill,
 		/// Default percent of inflation set aside for parachain bond every round
-		parachain_bond_reserve_percent: Percent,
+		pub parachain_bond_reserve_percent: Percent,
 		/// Default number of blocks in a round
 		pub blocks_per_round: u32,
 	}

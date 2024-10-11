@@ -18,8 +18,8 @@
 
 use crate::chain_spec::{get_account_id_from_seed, get_from_seed, RelayExtensions};
 use bifrost_kusama_runtime::{
-	constants::currency::DOLLARS, AccountId, Balance, BalancesConfig, BlockNumber,
-	InflationInfo, Range, SS58Prefix, VestingConfig,
+	constants::currency::DOLLARS, AccountId, Balance, BalancesConfig, BlockNumber, InflationInfo,
+	Range, SS58Prefix, VestingConfig,
 };
 use bifrost_primitives::{
 	BifrostKusamaChainId, CurrencyId, CurrencyId::*, TokenInfo, TokenSymbol::*,

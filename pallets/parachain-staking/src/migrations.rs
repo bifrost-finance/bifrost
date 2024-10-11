@@ -34,7 +34,10 @@ use alloc::{format, string::ToString};
 use frame_system::pallet_prelude::BlockNumberFor;
 #[cfg(feature = "try-runtime")]
 use scale_info::prelude::string::String;
-use sp_runtime::{traits::{AccountIdConversion, Saturating, Zero}, Perbill, Percent, TryRuntimeError};
+use sp_runtime::{
+	traits::{AccountIdConversion, Saturating, Zero},
+	Perbill, Percent, TryRuntimeError,
+};
 use sp_std::{convert::TryInto, vec::Vec};
 
 #[allow(deprecated)]
