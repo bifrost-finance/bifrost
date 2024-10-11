@@ -431,7 +431,7 @@ pub mod system_maker {
 
 pub mod vsbond_auction {
 	use super::*;
-	pub use bifrost_primitives::currency::KSM;
+	pub use bifrost_primitives::currency::{BNC, KSM};
 	use bifrost_primitives::VsbondAuctionPalletId;
 	use frame_support::{pallet_prelude::PhantomData, traits::OnRuntimeUpgrade};
 	use sp_core::Get;
@@ -449,86 +449,245 @@ pub mod vsbond_auction {
 			log::info!("Bifrost VSBondAuctionClearPalletId `on_runtime_upgrade`...");
 
 			let account_id = VsbondAuctionPalletId::get().into_account_truncating();
+			let mut count: u64 = 0;
+
+			let bnc_balance = T::MultiCurrency::free_balance(BNC, &account_id);
+			if !bnc_balance.is_zero() {
+				match T::MultiCurrency::transfer(
+					BNC,
+					&account_id,
+					&TreasuryPalletId::get().into_account_truncating(),
+					bnc_balance,
+				) {
+					Ok(_) => {
+						count += 1;
+						log::info!("Transfer successful: {:?} of BNC transferred", bnc_balance);
+					},
+					Err(e) => {
+						log::error!("Failed to transfer {:?} of BNC: {:?}", bnc_balance, e);
+					},
+				}
+			} else {
+				log::info!("No transfer needed for BNC as the balance is 0");
+			}
 
 			let ksm_balance = T::MultiCurrency::free_balance(KSM, &account_id);
-			T::MultiCurrency::transfer(
-				KSM,
-				&account_id,
-				&TreasuryPalletId::get().into_account_truncating(),
-				ksm_balance,
-			)
-			.ok();
+			if !ksm_balance.is_zero() {
+				match T::MultiCurrency::transfer(
+					KSM,
+					&account_id,
+					&TreasuryPalletId::get().into_account_truncating(),
+					ksm_balance,
+				) {
+					Ok(_) => {
+						count += 1;
+						log::info!("Transfer successful: {:?} of KSM transferred", ksm_balance);
+					},
+					Err(e) => {
+						log::error!("Failed to transfer {:?} of KSM: {:?}", ksm_balance, e);
+					},
+				}
+			} else {
+				log::info!("No transfer needed for KSM as the balance is 0");
+			}
 
 			let vs_bond_1 = CurrencyId::VSBond(TokenSymbol::KSM, 2092, 15, 22);
 			let vs_bond_1_balance = T::MultiCurrency::free_balance(vs_bond_1, &account_id);
-			T::MultiCurrency::transfer(
-				vs_bond_1,
-				&account_id,
-				&TreasuryPalletId::get().into_account_truncating(),
-				vs_bond_1_balance,
-			)
-			.ok();
+			if !vs_bond_1_balance.is_zero() {
+				match T::MultiCurrency::transfer(
+					vs_bond_1,
+					&account_id,
+					&TreasuryPalletId::get().into_account_truncating(),
+					vs_bond_1_balance,
+				) {
+					Ok(_) => {
+						count += 1;
+						log::info!(
+							"Transfer successful: {:?} of VSBond(TokenSymbol::KSM, 2092, 15, 22); transferred",
+							vs_bond_1_balance
+						);
+					},
+					Err(e) => {
+						log::error!(
+							"Failed to transfer {:?} of VSBond(TokenSymbol::KSM, 2092, 15, 22);: {:?}",
+							vs_bond_1_balance,
+							e
+						);
+					},
+				}
+			} else {
+				log::info!("No transfer needed for VSBond(TokenSymbol::KSM, 2092, 15, 22) as the balance is 0");
+			}
 
 			let vs_bond_2 = CurrencyId::VSBond(TokenSymbol::KSM, 2096, 17, 24);
 			let vs_bond_2_balance = T::MultiCurrency::free_balance(vs_bond_2, &account_id);
-			T::MultiCurrency::transfer(
-				vs_bond_2,
-				&account_id,
-				&TreasuryPalletId::get().into_account_truncating(),
-				vs_bond_2_balance,
-			)
-			.ok();
+			if !vs_bond_2_balance.is_zero() {
+				match T::MultiCurrency::transfer(
+					vs_bond_2,
+					&account_id,
+					&TreasuryPalletId::get().into_account_truncating(),
+					vs_bond_2_balance,
+				) {
+					Ok(_) => {
+						count += 1;
+						log::info!(
+							"Transfer successful: {:?} of VSBond(TokenSymbol::KSM, 2096, 17, 24) transferred",
+							vs_bond_2_balance
+						);
+					},
+					Err(e) => {
+						log::error!(
+							"Failed to transfer {:?} of VSBond(TokenSymbol::KSM, 2096, 17, 24): {:?}",
+							vs_bond_2_balance,
+							e
+						);
+					},
+				}
+			} else {
+				log::info!("No transfer needed for VSBond(TokenSymbol::KSM, 2096, 17, 24) as the balance is 0");
+			}
 
 			let vs_bond_3 = CurrencyId::VSBond(TokenSymbol::KSM, 2100, 18, 25);
 			let vs_bond_3_balance = T::MultiCurrency::free_balance(vs_bond_3, &account_id);
-			T::MultiCurrency::transfer(
-				vs_bond_3,
-				&account_id,
-				&TreasuryPalletId::get().into_account_truncating(),
-				vs_bond_3_balance,
-			)
-			.ok();
+			if !vs_bond_3_balance.is_zero() {
+				match T::MultiCurrency::transfer(
+					vs_bond_3,
+					&account_id,
+					&TreasuryPalletId::get().into_account_truncating(),
+					vs_bond_3_balance,
+				) {
+					Ok(_) => {
+						count += 1;
+						log::info!(
+							"Transfer successful: {:?} of VSBond(TokenSymbol::KSM, 2100, 18, 25) transferred",
+							vs_bond_3_balance
+						);
+					},
+					Err(e) => {
+						log::error!(
+							"Failed to transfer {:?} of VSBond(TokenSymbol::KSM, 2100, 18, 25): {:?}",
+							vs_bond_3_balance,
+							e
+						);
+					},
+				}
+			} else {
+				log::info!("No transfer needed for VSBond(TokenSymbol::KSM, 2100, 18, 25) as the balance is 0");
+			}
 
 			let vs_bond_4 = CurrencyId::VSBond(TokenSymbol::KSM, 2125, 23, 30);
 			let vs_bond_4_balance = T::MultiCurrency::free_balance(vs_bond_4, &account_id);
-			T::MultiCurrency::transfer(
-				vs_bond_4,
-				&account_id,
-				&TreasuryPalletId::get().into_account_truncating(),
-				vs_bond_4_balance,
-			)
-			.ok();
+			if !vs_bond_4_balance.is_zero() {
+				match T::MultiCurrency::transfer(
+					vs_bond_4,
+					&account_id,
+					&TreasuryPalletId::get().into_account_truncating(),
+					vs_bond_4_balance,
+				) {
+					Ok(_) => {
+						count += 1;
+						log::info!(
+							"Transfer successful: {:?} of VSBond(TokenSymbol::KSM, 2125, 23, 30) transferred",
+							vs_bond_4_balance
+						);
+					},
+					Err(e) => {
+						log::error!(
+							"Failed to transfer {:?} of VSBond(TokenSymbol::KSM, 2125, 23, 30): {:?}",
+							vs_bond_4_balance,
+							e
+						);
+					},
+				}
+			} else {
+				log::info!("No transfer needed for VSBond(TokenSymbol::KSM, 2125, 23, 30) as the balance is 0");
+			}
 
 			let vs_bond_5 = CurrencyId::VSBond(TokenSymbol::KSM, 2114, 20, 27);
 			let vs_bond_5_balance = T::MultiCurrency::free_balance(vs_bond_5, &account_id);
-			T::MultiCurrency::transfer(
-				vs_bond_5,
-				&account_id,
-				&TreasuryPalletId::get().into_account_truncating(),
-				vs_bond_5_balance,
-			)
-			.ok();
+			if !vs_bond_5_balance.is_zero() {
+				match T::MultiCurrency::transfer(
+					vs_bond_5,
+					&account_id,
+					&TreasuryPalletId::get().into_account_truncating(),
+					vs_bond_5_balance,
+				) {
+					Ok(_) => {
+						count += 1;
+						log::info!(
+							"Transfer successful: {:?} of VSBond(TokenSymbol::KSM, 2114, 20, 27) transferred",
+							vs_bond_5_balance
+						);
+					},
+					Err(e) => {
+						log::error!(
+							"Failed to transfer {:?} of VSBond(TokenSymbol::KSM, 2114, 20, 27): {:?}",
+							vs_bond_5_balance,
+							e
+						);
+					},
+				}
+			} else {
+				log::info!("No transfer needed for VSBond(TokenSymbol::KSM, 2114, 20, 27) as the balance is 0");
+			}
 
 			let vs_bond_6 = CurrencyId::VSBond(TokenSymbol::KSM, 2118, 22, 29);
 			let vs_bond_6_balance = T::MultiCurrency::free_balance(vs_bond_6, &account_id);
-			T::MultiCurrency::transfer(
-				vs_bond_6,
-				&account_id,
-				&TreasuryPalletId::get().into_account_truncating(),
-				vs_bond_6_balance,
-			)
-			.ok();
+			if !vs_bond_6_balance.is_zero() {
+				match T::MultiCurrency::transfer(
+					vs_bond_6,
+					&account_id,
+					&TreasuryPalletId::get().into_account_truncating(),
+					vs_bond_6_balance,
+				) {
+					Ok(_) => {
+						count += 1;
+						log::info!(
+							"Transfer successful: {:?} of VSBond(TokenSymbol::KSM, 2118, 22, 29) transferred",
+							vs_bond_6_balance
+						);
+					},
+					Err(e) => {
+						log::error!(
+							"Failed to transfer {:?} of VSBond(TokenSymbol::KSM, 2118, 22, 29): {:?}",
+							vs_bond_6_balance,
+							e
+						);
+					},
+				}
+			} else {
+				log::info!("No transfer needed for VSBond(TokenSymbol::KSM, 2118, 22, 29) as the balance is 0");
+			}
 
 			let vs_bond_7 = CurrencyId::VSBond(TokenSymbol::BNC, 2001, 13, 20);
 			let vs_bond_7_balance = T::MultiCurrency::free_balance(vs_bond_7, &account_id);
-			T::MultiCurrency::transfer(
-				vs_bond_7,
-				&account_id,
-				&TreasuryPalletId::get().into_account_truncating(),
-				vs_bond_7_balance,
-			)
-			.ok();
+			if !vs_bond_7_balance.is_zero() {
+				match T::MultiCurrency::transfer(
+					vs_bond_7,
+					&account_id,
+					&TreasuryPalletId::get().into_account_truncating(),
+					vs_bond_7_balance,
+				) {
+					Ok(_) => {
+						count += 1;
+						log::info!(
+							"Transfer successful: {:?} of VSBond(TokenSymbol::BNC, 2001, 13, 20) transferred",
+							vs_bond_7_balance
+						);
+					},
+					Err(e) => {
+						log::error!(
+							"Failed to transfer {:?} of VSBond(TokenSymbol::BNC, 2001, 13, 20): {:?}",
+							vs_bond_7_balance,
+							e
+						);
+					},
+				}
+			} else {
+				log::info!("No transfer needed for VSBond(TokenSymbol::BNC, 2001, 13, 20) as the balance is 0");
+			}
 
+			log::info!("BNC balance: {:?}", bnc_balance);
 			log::info!("KSM balance: {:?}", ksm_balance);
 			log::info!("vs_bond_1_balance balance: {:?}", vs_bond_1_balance);
 			log::info!("vs_bond_2_balance balance: {:?}", vs_bond_2_balance);
@@ -540,13 +699,16 @@ pub mod vsbond_auction {
 
 			log::info!("Bifrost VSBondAuctionClearPalletId `on_runtime_upgrade finished`");
 
-			Weight::from(T::DbWeight::get().reads_writes(8, 8))
+			Weight::from(T::DbWeight::get().reads_writes(count + 1, 10))
 		}
 
 		#[cfg(feature = "try-runtime")]
 		fn post_upgrade(_: sp_std::prelude::Vec<u8>) -> Result<(), sp_runtime::DispatchError> {
 			log::info!("Bifrost VSBondAuctionClearPalletId `post_upgrade`...");
 			let account_id = VsbondAuctionPalletId::get().into_account_truncating();
+
+			let bnc_balance = T::MultiCurrency::free_balance(BNC, &account_id);
+			assert_eq!(bnc_balance, Zero::zero());
 
 			let ksm_balance = T::MultiCurrency::free_balance(KSM, &account_id);
 			assert_eq!(ksm_balance, Zero::zero());
