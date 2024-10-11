@@ -158,6 +158,9 @@ pub mod pallet {
 		},
 	}
 
+	/// The current storage version, we set to 2 our new version.
+	const STORAGE_VERSION: StorageVersion = StorageVersion::new(2);
+
 	/// Universal fee currency order list for all users
 	#[pallet::storage]
 	pub type UniversalFeeCurrencyOrderList<T: Config> =
@@ -180,6 +183,7 @@ pub mod pallet {
 	>;
 
 	#[pallet::pallet]
+	#[pallet::storage_version(STORAGE_VERSION)]
 	pub struct Pallet<T>(_);
 
 	#[pallet::error]

@@ -14,7 +14,6 @@ members = [
 	"pallets/salp",
 	"pallets/token-issuer",
 	"pallets/vesting",
-	"pallets/vsbond-auction",
 	"pallets/cross-in-out",
 	"pallets/evm-accounts",
 	"pallets/xcm-interface",
@@ -92,7 +91,6 @@ bifrost-vbnc-convert                   = { path = "pallets/vbnc-convert", defaul
 bb-bnc                                 = { path = "pallets/bb-bnc", default-features = false }
 bb-bnc-rpc-runtime-api                 = { path = "pallets/bb-bnc/rpc/runtime-api", default-features = false }
 bifrost-vesting                        = { path = "pallets/vesting", default-features = false }
-bifrost-vsbond-auction                 = { path = "pallets/vsbond-auction", default-features = false }
 bifrost-vstoken-conversion             = { path = "pallets/vstoken-conversion", default-features = false }
 bifrost-vtoken-minting                 = { path = "pallets/vtoken-minting", default-features = false }
 bifrost-vtoken-minting-rpc-runtime-api = { path = "pallets/vtoken-minting/rpc/runtime-api", default-features = false }
@@ -309,9 +307,9 @@ xcm-emulator                                  = { git = "https://github.com/pari
 xcm-simulator                                 = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.13.0" }
 
 # Other
-async-trait           = { version = "0.1.82" }
+async-trait           = { version = "0.1.83" }
 bstringify            = { version = "0.1.2" }
-clap                  = { version = "4.5.17" }
+clap                  = { version = "4.5.18" }
 env_logger            = { version = "0.10.2" }
 ethabi                = { version = "18.0.0", default-features = false }
 ethereum              = { version = "0.14.0", default-features = false, features = ["with-codec"] }

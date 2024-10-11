@@ -1211,7 +1211,7 @@ pub mod pallet {
 		}
 
 		fn ensure_vtoken(vtoken: &CurrencyIdOf<T>) -> Result<(), DispatchError> {
-			ensure!([VKSM, VDOT].contains(vtoken), Error::<T>::VTokenNotSupport);
+			ensure!([VKSM, VDOT, VBNC].contains(vtoken), Error::<T>::VTokenNotSupport);
 			Ok(())
 		}
 

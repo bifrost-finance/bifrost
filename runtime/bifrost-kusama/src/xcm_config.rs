@@ -352,12 +352,6 @@ impl Contains<RuntimeCall> for SafeCallFilter {
 			RuntimeCall::Salp(
 				bifrost_salp::Call::redeem { .. }
 			) |
-			RuntimeCall::VSBondAuction(
-				bifrost_vsbond_auction::Call::clinch_order { .. } |
-				bifrost_vsbond_auction::Call::create_order { .. } |
-				bifrost_vsbond_auction::Call::partial_clinch_order { .. } |
-				bifrost_vsbond_auction::Call::revoke_order { .. }
-			) |
 			RuntimeCall::VstokenConversion(
 				bifrost_vstoken_conversion::Call::vsbond_convert_to_vstoken { .. } |
 				bifrost_vstoken_conversion::Call::vstoken_convert_to_vsbond { .. }
@@ -559,14 +553,13 @@ impl Contains<AccountId> for DustRemovalWhitelist {
 		let whitelist: Vec<AccountId> = vec![
 			TreasuryPalletId::get().into_account_truncating(),
 			BifrostCrowdloanId::get().into_account_truncating(),
-			BifrostVsbondPalletId::get().into_account_truncating(),
+			BifrostVsbondAccount::get().into_account_truncating(),
 			SlpEntrancePalletId::get().into_account_truncating(),
 			SlpExitPalletId::get().into_account_truncating(),
 			BuybackPalletId::get().into_account_truncating(),
 			SystemMakerPalletId::get().into_account_truncating(),
 			ZenklinkFeeAccount::get(),
 			CommissionPalletId::get().into_account_truncating(),
-			VsbondAuctionPalletId::get().into_account_truncating(),
 			ParachainStakingPalletId::get().into_account_truncating(),
 			SystemStakingPalletId::get().into_account_truncating(),
 			VBNCConvertPalletId::get().into_account_truncating(),

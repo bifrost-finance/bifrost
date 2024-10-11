@@ -22,22 +22,22 @@ use crate::{
 	types::{EthereumXcmCall, EthereumXcmTransaction, EthereumXcmTransactionV2, MoonbeamCall},
 	*,
 };
-use bifrost_primitives::{TokenSymbol, TryConvertFrom, DOT, VDOT};
+use bifrost_primitives::{TokenSymbol, DOT, VDOT};
 use ethereum::TransactionAction;
-use frame_support::{assert_noop, assert_ok, dispatch::RawOrigin, traits::Hooks};
+use frame_support::{assert_noop, assert_ok, dispatch::RawOrigin, traits::OnIdle};
 use hex_literal::hex;
-use sp_core::{bounded::BoundedVec, ConstU32, U256};
-use sp_io;
+use sp_core::{bounded::BoundedVec, crypto::Ss58Codec, U256};
 use tiny_keccak::Hasher;
-use zenlink_protocol::AssetId;
 
 const EVM_ADDR: [u8; 20] = hex!["573394b77fC17F91E9E67F147A9ECe24d67C5073"];
+const ASTAR_SLPX_ADDR: [u8; 20] = hex!["c6bf0C5C78686f1D0E2E54b97D6de6e2cEFAe9fD"];
+const MOONBEAM_SLPX_ADDR: [u8; 20] = hex!["F1d4797E51a4640a76769A50b57abE7479ADd3d8"];
 
 #[test]
 fn test_account_convert_work() {
-	sp_io::TestExternalities::default().execute_with(|| {
+	new_test_ext().execute_with(|| {
 		let address = H160::from_slice(&EVM_ADDR);
-		let account_id: AccountId = Slpx::h160_to_account_id(address);
+		let account_id: AccountId = Slpx::h160_to_account_id(&address);
 		assert_eq!(
 			account_id,
 			sp_runtime::AccountId32::new(hex!(
@@ -53,57 +53,133 @@ fn test_account_convert_work() {
 }
 
 #[test]
-fn test_whitelist_work() {
-	sp_io::TestExternalities::default().execute_with(|| {
-		assert_ok!(Slpx::add_whitelist(RuntimeOrigin::root(), SupportChain::Astar, ALICE));
-		assert_ok!(Slpx::add_whitelist(RuntimeOrigin::root(), SupportChain::Astar, BOB));
+fn xcm_derivative_account() {
+	new_test_ext().execute_with(|| {
+		let address = H160::from_slice(&ASTAR_SLPX_ADDR);
+		let derivative_account =
+			Slpx::xcm_derivative_account(SupportChain::Astar, address).unwrap();
 		assert_eq!(
-			WhitelistAccountId::<Test>::get(SupportChain::Astar),
-			BoundedVec::<AccountId, ConstU32<10>>::try_from(vec![ALICE, BOB]).unwrap()
-		);
-		assert_noop!(
-			Slpx::add_whitelist(RuntimeOrigin::root(), SupportChain::Astar, ALICE),
-			Error::<Test>::AccountIdAlreadyInWhitelist
-		);
-		assert_ok!(Slpx::remove_whitelist(RuntimeOrigin::root(), SupportChain::Astar, ALICE));
-		assert_eq!(
-			WhitelistAccountId::<Test>::get(SupportChain::Astar),
-			BoundedVec::<AccountId, ConstU32<10>>::try_from(vec![BOB]).unwrap()
+			derivative_account,
+			sp_runtime::AccountId32::from_ss58check(
+				"g96o4GVpsAop1MJiArnmUYtXUjEisfkbfcpsuqmXrS28MEr"
+			)
+			.unwrap()
 		);
 
-		// Astar && Moonbeam
-		let evm_caller = H160::from_slice(&EVM_ADDR);
-		let target_chain = TargetChain::Astar(evm_caller);
-		let (order_caller, derivative_account, _) =
-			Slpx::ensure_singer_on_whitelist(RuntimeOrigin::signed(BOB), evm_caller, &target_chain)
-				.unwrap();
-		assert_noop!(
-			Slpx::ensure_singer_on_whitelist(
-				RuntimeOrigin::signed(ALICE),
-				evm_caller,
-				&target_chain
-			),
-			Error::<Test>::AccountIdNotInWhitelist
+		let address = H160::from_slice(&MOONBEAM_SLPX_ADDR);
+		let derivative_account =
+			Slpx::xcm_derivative_account(SupportChain::Moonbeam, address).unwrap();
+		assert_eq!(
+			derivative_account,
+			sp_runtime::AccountId32::from_ss58check(
+				"gWEvf2EDMzxR7JHyrEHXf3nqxKLGvHaFbk7HUkJnNPUxDts"
+			)
+			.unwrap()
 		);
-		assert_eq!(order_caller, OrderCaller::Evm(evm_caller));
-		assert_eq!(derivative_account, Slpx::h160_to_account_id(evm_caller));
+	});
+}
 
-		// Hydradx No whitelist checking
-		let target_chain = TargetChain::Hydradx(ALICE);
-		let (order_caller, derivative_account, _) = Slpx::ensure_singer_on_whitelist(
-			RuntimeOrigin::signed(ALICE),
-			evm_caller,
-			&target_chain,
+#[test]
+fn add_whitelist() {
+	new_test_ext().execute_with(|| {
+		let astar_slpx_addr = H160::from_slice(&ASTAR_SLPX_ADDR);
+		let moonbeam_slpx_addr = H160::from_slice(&MOONBEAM_SLPX_ADDR);
+		let astar_slpx_account_id = sp_runtime::AccountId32::from_ss58check(
+			"g96o4GVpsAop1MJiArnmUYtXUjEisfkbfcpsuqmXrS28MEr",
 		)
 		.unwrap();
-		assert_eq!(order_caller, OrderCaller::Substrate(ALICE));
-		assert_eq!(derivative_account, ALICE);
+		let moonbeam_slpx_account_id = sp_runtime::AccountId32::from_ss58check(
+			"gWEvf2EDMzxR7JHyrEHXf3nqxKLGvHaFbk7HUkJnNPUxDts",
+		)
+		.unwrap();
+		assert_ok!(Slpx::add_whitelist(
+			RuntimeOrigin::root(),
+			SupportChain::Astar,
+			astar_slpx_addr
+		));
+		assert_eq!(
+			WhitelistAccountId::<Test>::get(SupportChain::Astar).to_vec(),
+			vec![astar_slpx_account_id]
+		);
+
+		assert_ok!(Slpx::add_whitelist(
+			RuntimeOrigin::root(),
+			SupportChain::Moonbeam,
+			moonbeam_slpx_addr
+		));
+		assert_eq!(
+			WhitelistAccountId::<Test>::get(SupportChain::Moonbeam).to_vec(),
+			vec![moonbeam_slpx_account_id]
+		);
+	});
+}
+
+#[test]
+fn add_whitelist_account_id_already_in_whitelist() {
+	new_test_ext().execute_with(|| {
+		let astar_slpx_addr = H160::from_slice(&ASTAR_SLPX_ADDR);
+		let astar_slpx_account_id = sp_runtime::AccountId32::from_ss58check(
+			"g96o4GVpsAop1MJiArnmUYtXUjEisfkbfcpsuqmXrS28MEr",
+		)
+		.unwrap();
+		assert_ok!(Slpx::add_whitelist(
+			RuntimeOrigin::root(),
+			SupportChain::Astar,
+			astar_slpx_addr
+		));
+		assert_eq!(
+			WhitelistAccountId::<Test>::get(SupportChain::Astar).to_vec(),
+			vec![astar_slpx_account_id]
+		);
+
+		assert_noop!(
+			Slpx::add_whitelist(RuntimeOrigin::root(), SupportChain::Astar, astar_slpx_addr),
+			Error::<Test>::AccountAlreadyExists
+		);
+	});
+}
+
+#[test]
+fn remove_whitelist() {
+	new_test_ext().execute_with(|| {
+		let astar_slpx_addr = H160::from_slice(&ASTAR_SLPX_ADDR);
+		let astar_slpx_account_id = sp_runtime::AccountId32::from_ss58check(
+			"g96o4GVpsAop1MJiArnmUYtXUjEisfkbfcpsuqmXrS28MEr",
+		)
+		.unwrap();
+		assert_ok!(Slpx::add_whitelist(
+			RuntimeOrigin::root(),
+			SupportChain::Astar,
+			astar_slpx_addr
+		));
+		assert_eq!(
+			WhitelistAccountId::<Test>::get(SupportChain::Astar).to_vec(),
+			vec![astar_slpx_account_id]
+		);
+
+		assert_ok!(Slpx::remove_whitelist(
+			RuntimeOrigin::root(),
+			SupportChain::Astar,
+			astar_slpx_addr
+		));
+		assert_eq!(WhitelistAccountId::<Test>::get(SupportChain::Astar).to_vec(), vec![]);
+	});
+}
+
+#[test]
+fn remove_whitelist_account_id_not_in_whitelist() {
+	new_test_ext().execute_with(|| {
+		let astar_slpx_addr = H160::from_slice(&ASTAR_SLPX_ADDR);
+		assert_noop!(
+			Slpx::remove_whitelist(RuntimeOrigin::root(), SupportChain::Astar, astar_slpx_addr),
+			Error::<Test>::AccountNotFound
+		);
 	});
 }
 
 #[test]
 fn test_execution_fee_work() {
-	sp_io::TestExternalities::default().execute_with(|| {
+	new_test_ext().execute_with(|| {
 		assert_ok!(Currencies::deposit(CurrencyId::Token2(0), &ALICE, 50 * 1_000_000_000));
 
 		assert_ok!(Slpx::set_execution_fee(
@@ -114,7 +190,7 @@ fn test_execution_fee_work() {
 		assert_eq!(ExecutionFee::<Test>::get(CurrencyId::Token2(0)), Some(10 * 1_000_000_000));
 
 		let balance_exclude_fee =
-			Slpx::charge_execution_fee(CurrencyId::Token2(0), &ALICE).unwrap();
+			Slpx::charge_execution_fee(CurrencyId::Token2(0), 50 * 1_000_000_000, &ALICE).unwrap();
 		assert_eq!(balance_exclude_fee, 40 * 1_000_000_000);
 
 		assert_ok!(Slpx::set_transfer_to_fee(
@@ -127,66 +203,8 @@ fn test_execution_fee_work() {
 }
 
 #[test]
-fn test_zenlink() {
-	sp_io::TestExternalities::default().execute_with(|| {
-		assert_ok!(Currencies::deposit(
-			CurrencyId::Native(TokenSymbol::BNC),
-			&ALICE,
-			50 * 1_000_000_000
-		));
-		assert_ok!(Currencies::deposit(
-			CurrencyId::Token(TokenSymbol::KSM),
-			&ALICE,
-			50 * 1_000_000_000
-		));
-
-		let bnc_token: AssetId =
-			AssetId::try_convert_from(CurrencyId::Native(TokenSymbol::BNC), 2001).unwrap();
-		let ksm_token: AssetId =
-			AssetId::try_convert_from(CurrencyId::Token(TokenSymbol::KSM), 2001).unwrap();
-
-		assert_ok!(ZenlinkProtocol::create_pair(
-			RawOrigin::Root.into(),
-			bnc_token,
-			ksm_token,
-			ALICE
-		));
-		assert_ok!(ZenlinkProtocol::add_liquidity(
-			RawOrigin::Signed(ALICE).into(),
-			bnc_token,
-			ksm_token,
-			20u128 * 1_000_000_000,
-			20u128 * 1_000_000_000,
-			0,
-			0,
-			100
-		));
-		assert_eq!(
-			Currencies::free_balance(CurrencyId::Native(TokenSymbol::BNC), &ALICE),
-			30u128 * 1_000_000_000
-		);
-		assert_eq!(
-			Currencies::free_balance(CurrencyId::Token(TokenSymbol::KSM), &ALICE),
-			30u128 * 1_000_000_000
-		);
-
-		let path = vec![bnc_token, ksm_token];
-		let balance = Currencies::free_balance(CurrencyId::Native(TokenSymbol::BNC), &ALICE);
-		let minimum_balance = Currencies::minimum_balance(CurrencyId::Native(TokenSymbol::BNC));
-		assert_ok!(ZenlinkProtocol::swap_exact_assets_for_assets(
-			RawOrigin::Signed(ALICE).into(),
-			balance - minimum_balance,
-			0,
-			path,
-			ALICE,
-			100
-		));
-	});
-}
-
-#[test]
 fn test_get_default_fee() {
-	sp_io::TestExternalities::default().execute_with(|| {
+	new_test_ext().execute_with(|| {
 		assert_eq!(Slpx::get_default_fee(BNC), 10_000_000_000u128);
 		assert_eq!(Slpx::get_default_fee(CurrencyId::Token(TokenSymbol::KSM)), 10_000_000_000u128);
 		assert_eq!(
@@ -203,7 +221,7 @@ fn test_get_default_fee() {
 
 #[test]
 fn test_ed() {
-	sp_io::TestExternalities::default().execute_with(|| {
+	new_test_ext().execute_with(|| {
 		assert_ok!(Currencies::deposit(
 			CurrencyId::Native(TokenSymbol::BNC),
 			&ALICE,
@@ -254,7 +272,7 @@ fn test_selector() {
 
 #[test]
 fn test_ethereum_call() {
-	sp_io::TestExternalities::default().execute_with(|| {
+	new_test_ext().execute_with(|| {
 		// b"setTokenAmount(bytes2,uint256,bytes2,uint256)"
 		assert_eq!("9a41b9240001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000007b00000000000000000000000000000000000000000000000000000000000001c8", hex::encode(Slpx::encode_ethereum_call(BNC, 123u128, 456u128)));
 
@@ -269,28 +287,28 @@ fn test_ethereum_call() {
 		});
 		let call = MoonbeamCall::EthereumXcm(EthereumXcmCall::Transact(r));
 		println!("{}", hex::encode(call.encode()));
-		assert_eq!("6d000180fc0a000000000000000000000000000000000000000000000000000000000000ae0daa9bfc50f03ce23d30c796709a58470b5f42000000000000000000000000000000000000000000000000000000000000000091019a41b9240001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000007b00000000000000000000000000000000000000000000000000000000000001c800", hex::encode(Slpx::encode_transact_call(H160::from(addr), BNC, 123u128, 456u128)));
+		assert_eq!("6d000180fc0a000000000000000000000000000000000000000000000000000000000000ae0daa9bfc50f03ce23d30c796709a58470b5f42000000000000000000000000000000000000000000000000000000000000000091019a41b9240001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000007b00000000000000000000000000000000000000000000000000000000000001c800", hex::encode(Slpx::encode_transact_call(H160::from(addr), BNC, 123u128, 456u128).unwrap()));
 	})
 }
 
 #[test]
 fn test_set_currency_ethereum_call_switch() {
-	sp_io::TestExternalities::default().execute_with(|| {
-		assert_ok!(Slpx::set_currency_ethereum_call_switch(RuntimeOrigin::root(), BNC, true));
+	new_test_ext().execute_with(|| {
+		assert_ok!(Slpx::support_xcm_oracle(RuntimeOrigin::root(), BNC, true));
 		assert_eq!(CurrencyIdList::<Test>::get().to_vec(), vec![BNC]);
 
-		assert_ok!(Slpx::set_currency_ethereum_call_switch(RuntimeOrigin::root(), KSM, true));
+		assert_ok!(Slpx::support_xcm_oracle(RuntimeOrigin::root(), KSM, true));
 		assert_eq!(CurrencyIdList::<Test>::get().to_vec(), vec![BNC, KSM]);
 
-		assert_ok!(Slpx::set_currency_ethereum_call_switch(RuntimeOrigin::root(), BNC, false));
+		assert_ok!(Slpx::support_xcm_oracle(RuntimeOrigin::root(), BNC, false));
 		assert_eq!(CurrencyIdList::<Test>::get().to_vec(), vec![KSM]);
 	})
 }
 
 #[test]
 fn test_set_ethereum_call_configration() {
-	sp_io::TestExternalities::default().execute_with(|| {
-		assert_ok!(Slpx::set_ethereum_call_configration(
+	new_test_ext().execute_with(|| {
+		assert_ok!(Slpx::set_xcm_oracle_configuration(
 			RuntimeOrigin::root(),
 			1_000_000_000_000_000_000u128,
 			Weight::default(),
@@ -309,7 +327,7 @@ fn test_set_ethereum_call_configration() {
 			}
 		);
 
-		assert_ok!(Slpx::set_ethereum_call_configration(
+		assert_ok!(Slpx::set_xcm_oracle_configuration(
 			RuntimeOrigin::root(),
 			1u128,
 			Weight::default(),
@@ -332,7 +350,7 @@ fn test_set_ethereum_call_configration() {
 
 #[test]
 fn test_set_currency_to_support_xcm_fee() {
-	sp_io::TestExternalities::default().execute_with(|| {
+	new_test_ext().execute_with(|| {
 		assert_ok!(Slpx::set_currency_support_xcm_fee(RuntimeOrigin::root(), BNC, true));
 		assert_eq!(SupportXcmFeeList::<Test>::get().to_vec(), vec![BNC]);
 
@@ -346,8 +364,12 @@ fn test_set_currency_to_support_xcm_fee() {
 
 #[test]
 fn test_add_order() {
-	sp_io::TestExternalities::default().execute_with(|| {
-		assert_ok!(Slpx::add_whitelist(RuntimeOrigin::root(), SupportChain::Astar, ALICE));
+	new_test_ext().execute_with(|| {
+		WhitelistAccountId::<Test>::insert(
+			SupportChain::Astar,
+			BoundedVec::try_from(vec![ALICE]).unwrap(),
+		);
+
 		let source_chain_caller = H160::default();
 		assert_ok!(Slpx::mint(
 			RuntimeOrigin::signed(ALICE),
@@ -366,12 +388,12 @@ fn test_add_order() {
 		assert_eq!(OrderQueue::<Test>::get().len(), 2usize);
 		assert_ok!(Slpx::force_add_order(
 			RuntimeOrigin::root(),
+			OrderCaller::Evm(source_chain_caller),
 			ALICE,
-			source_chain_caller,
 			VDOT,
 			TargetChain::Astar(source_chain_caller),
 			BoundedVec::default(),
-			OrderType::Mint
+			0
 		));
 		assert_eq!(OrderQueue::<Test>::get().len(), 3usize);
 
@@ -381,8 +403,12 @@ fn test_add_order() {
 
 #[test]
 fn test_mint_with_channel_id() {
-	sp_io::TestExternalities::default().execute_with(|| {
-		assert_ok!(Slpx::add_whitelist(RuntimeOrigin::root(), SupportChain::Astar, ALICE));
+	new_test_ext().execute_with(|| {
+		WhitelistAccountId::<Test>::insert(
+			SupportChain::Astar,
+			BoundedVec::try_from(vec![ALICE]).unwrap(),
+		);
+
 		let source_chain_caller = H160::default();
 		assert_ok!(Slpx::mint_with_channel_id(
 			RuntimeOrigin::signed(ALICE),
@@ -405,8 +431,11 @@ fn test_mint_with_channel_id() {
 
 #[test]
 fn test_hook() {
-	sp_io::TestExternalities::default().execute_with(|| {
-		assert_ok!(Slpx::add_whitelist(RuntimeOrigin::root(), SupportChain::Astar, ALICE));
+	new_test_ext().execute_with(|| {
+		WhitelistAccountId::<Test>::insert(
+			SupportChain::Astar,
+			BoundedVec::try_from(vec![ALICE]).unwrap(),
+		);
 		let source_chain_caller = H160::default();
 		assert_ok!(Slpx::mint(
 			RuntimeOrigin::signed(ALICE),

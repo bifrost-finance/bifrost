@@ -186,30 +186,9 @@ pub trait CurrencyIdRegister<CurrencyId> {
 		last_slot: crate::LeasePeriod,
 	) -> bool;
 	fn register_vtoken_metadata(token_symbol: TokenSymbol) -> DispatchResult;
-	fn register_vstoken_metadata(token_symbol: TokenSymbol) -> DispatchResult;
-	fn register_vsbond_metadata(
-		token_symbol: TokenSymbol,
-		para_id: crate::ParaId,
-		first_slot: crate::LeasePeriod,
-		last_slot: crate::LeasePeriod,
-	) -> DispatchResult;
 	fn check_token2_registered(token_id: TokenId) -> bool;
 	fn check_vtoken2_registered(token_id: TokenId) -> bool;
-	fn check_vstoken2_registered(token_id: TokenId) -> bool;
-	fn check_vsbond2_registered(
-		token_id: TokenId,
-		para_id: crate::ParaId,
-		first_slot: crate::LeasePeriod,
-		last_slot: crate::LeasePeriod,
-	) -> bool;
 	fn register_vtoken2_metadata(token_id: TokenId) -> DispatchResult;
-	fn register_vstoken2_metadata(token_id: TokenId) -> DispatchResult;
-	fn register_vsbond2_metadata(
-		token_id: TokenId,
-		para_id: crate::ParaId,
-		first_slot: crate::LeasePeriod,
-		last_slot: crate::LeasePeriod,
-	) -> DispatchResult;
 	fn register_blp_metadata(pool_id: PoolId, decimals: u8) -> DispatchResult;
 }
 
@@ -239,19 +218,6 @@ impl<CurrencyId> CurrencyIdRegister<CurrencyId> for () {
 		Ok(())
 	}
 
-	fn register_vstoken_metadata(_token_symbol: TokenSymbol) -> DispatchResult {
-		Ok(())
-	}
-
-	fn register_vsbond_metadata(
-		_token_symbol: TokenSymbol,
-		_para_id: ParaId,
-		_first_slot: LeasePeriod,
-		_last_slot: LeasePeriod,
-	) -> DispatchResult {
-		Ok(())
-	}
-
 	fn check_token2_registered(_token_id: TokenId) -> bool {
 		false
 	}
@@ -260,33 +226,7 @@ impl<CurrencyId> CurrencyIdRegister<CurrencyId> for () {
 		false
 	}
 
-	fn check_vstoken2_registered(_token_id: TokenId) -> bool {
-		false
-	}
-
-	fn check_vsbond2_registered(
-		_token_id: TokenId,
-		_para_id: ParaId,
-		_first_slot: LeasePeriod,
-		_last_slot: LeasePeriod,
-	) -> bool {
-		false
-	}
-
 	fn register_vtoken2_metadata(_token_id: TokenId) -> DispatchResult {
-		Ok(())
-	}
-
-	fn register_vstoken2_metadata(_token_id: TokenId) -> DispatchResult {
-		Ok(())
-	}
-
-	fn register_vsbond2_metadata(
-		_token_id: TokenId,
-		_para_id: ParaId,
-		_first_slot: LeasePeriod,
-		_last_slot: LeasePeriod,
-	) -> DispatchResult {
 		Ok(())
 	}
 

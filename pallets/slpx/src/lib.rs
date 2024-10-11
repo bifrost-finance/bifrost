@@ -24,9 +24,10 @@ use crate::types::{
 };
 use bifrost_asset_registry::AssetMetadata;
 use bifrost_primitives::{
-	currency::{BNC, VFIL},
-	AstarChainId, CurrencyId, CurrencyIdMapping, HydrationChainId, InterlayChainId, MantaChainId,
-	RedeemType, SlpxOperator, TokenInfo, VtokenMintingInterface,
+	currency::{BNC, MOVR, VFIL},
+	AstarChainId, AstarEvmChainId, Balance, BifrostKusamaChainId, CurrencyId, CurrencyIdMapping,
+	HydrationChainId, InterlayChainId, MantaChainId, MoonbeamEvmChainId, MoonriverEvmChainId,
+	RedeemType, SlpxOperator, TokenInfo, VtokenMintingInterface, GLMR,
 };
 use cumulus_primitives_core::ParaId;
 use ethereum::TransactionAction;
@@ -53,7 +54,8 @@ use sp_runtime::{
 };
 use sp_std::{vec, vec::Vec};
 use xcm::v4::{prelude::*, Location};
-use zenlink_protocol::AssetBalance;
+use xcm_builder::{DescribeAllTerminal, DescribeFamily, HashedDescription};
+use xcm_executor::traits::ConvertLocation;
 
 pub mod migration;
 pub mod types;
@@ -73,17 +75,14 @@ mod benchmarking;
 #[frame_support::pallet]
 pub mod pallet {
 	use super::*;
-	use crate::types::{Order, OrderType};
-	use bifrost_primitives::{currency::MOVR, BifrostKusamaChainId, GLMR};
-	use bifrost_stable_pool::{traits::StablePoolHandler, PoolTokenIndex, StableAssetPoolId};
+	use crate::types::Order;
 	use frame_support::{
 		pallet_prelude::{ValueQuery, *},
 		weights::WeightMeter,
 	};
 	use frame_system::ensure_root;
-	use zenlink_protocol::{AssetId, ExportZenlink};
 
-	const STORAGE_VERSION: StorageVersion = StorageVersion::new(1);
+	const STORAGE_VERSION: StorageVersion = StorageVersion::new(2);
 
 	#[pallet::pallet]
 	#[pallet::storage_version(STORAGE_VERSION)]
@@ -92,10 +91,12 @@ pub mod pallet {
 	#[pallet::config]
 	pub trait Config: frame_system::Config {
 		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
+		type RuntimeOrigin: From<pallet_xcm::Origin>
+			+ From<<Self as frame_system::Config>::RuntimeOrigin>
+			+ Into<Result<pallet_xcm::Origin, <Self as Config>::RuntimeOrigin>>;
+		type WeightInfo: WeightInfo;
 		type ControlOrigin: EnsureOrigin<<Self as frame_system::Config>::RuntimeOrigin>;
 		type MultiCurrency: MultiCurrency<AccountIdOf<Self>, CurrencyId = CurrencyId>;
-
-		type DexOperator: ExportZenlink<Self::AccountId, AssetId>;
 
 		/// The interface to call VtokenMinting module functions.
 		type VtokenMintingInterface: VtokenMintingInterface<
@@ -104,163 +105,152 @@ pub mod pallet {
 			BalanceOf<Self>,
 		>;
 
-		/// The interface to call StablePool module functions.
-		type StablePoolHandler: StablePoolHandler<
-			Balance = BalanceOf<Self>,
-			AccountId = AccountIdOf<Self>,
-			CurrencyId = CurrencyIdOf<Self>,
-		>;
-
 		/// xtokens xcm transfer interface
 		type XcmTransfer: XcmTransfer<AccountIdOf<Self>, BalanceOf<Self>, CurrencyIdOf<Self>>;
-
-		///
+		/// Send Xcm
 		type XcmSender: SendXcm;
-
 		/// Convert Location to `T::CurrencyId`.
 		type CurrencyIdConvert: CurrencyIdMapping<
 			CurrencyId,
 			xcm::v3::MultiLocation,
 			AssetMetadata<BalanceOf<Self>>,
 		>;
-
 		/// TreasuryAccount
 		#[pallet::constant]
 		type TreasuryAccount: Get<AccountIdOf<Self>>;
-
+		/// ParaId of the parachain
 		#[pallet::constant]
 		type ParachainId: Get<ParaId>;
-
-		type WeightInfo: WeightInfo;
+		/// The maximum number of order is 500
+		#[pallet::constant]
+		type MaxOrderSize: Get<u32>;
 	}
 
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
+		/// Add the contract account to the whitelist
 		AddWhitelistAccountId {
+			/// The support chain of Slpx
 			support_chain: SupportChain,
+			/// The contract address of the contract
+			contract_address: H160,
+			/// Xcm derivative account id
 			evm_contract_account_id: AccountIdOf<T>,
 		},
+		/// Remove the contract account from the whitelist
 		RemoveWhitelistAccountId {
+			/// The support chain of Slpx
 			support_chain: SupportChain,
+			/// The contract address of the contract
+			contract_address: H160,
+			/// Xcm derivative account id
 			evm_contract_account_id: AccountIdOf<T>,
 		},
-		XcmMint {
-			evm_caller: H160,
-			currency_id: CurrencyIdOf<T>,
-			token_amount: BalanceOf<T>,
-			target_chain: TargetChain<AccountIdOf<T>>,
-		},
-		XcmMintFailed {
-			evm_caller: H160,
-			currency_id: CurrencyIdOf<T>,
-			token_amount: BalanceOf<T>,
-			target_chain: TargetChain<AccountIdOf<T>>,
-		},
-		XcmZenlinkSwap {
-			evm_caller: H160,
-			currency_id_in: CurrencyIdOf<T>,
-			currency_id_out: CurrencyIdOf<T>,
-			currency_id_out_amount: BalanceOf<T>,
-			target_chain: TargetChain<AccountIdOf<T>>,
-		},
-		XcmZenlinkSwapFailed {
-			evm_caller: H160,
-			currency_id_in: CurrencyIdOf<T>,
-			currency_id_out: CurrencyIdOf<T>,
-			currency_id_in_amount: BalanceOf<T>,
-			target_chain: TargetChain<AccountIdOf<T>>,
-		},
-		XcmStablePoolSwap {
-			evm_caller: H160,
-			pool_token_index_in: PoolTokenIndex,
-			pool_token_index_out: PoolTokenIndex,
-			currency_id_out_amount: BalanceOf<T>,
-			target_chain: TargetChain<AccountIdOf<T>>,
-		},
-		XcmStablePoolSwapFailed {
-			evm_caller: H160,
-			pool_token_index_in: PoolTokenIndex,
-			pool_token_index_out: PoolTokenIndex,
-			currency_id_in_amount: BalanceOf<T>,
-			target_chain: TargetChain<AccountIdOf<T>>,
-		},
-		XcmRedeem {
-			evm_caller: H160,
-			vtoken_id: CurrencyIdOf<T>,
-			vtoken_amount: BalanceOf<T>,
-			target_chain: TargetChain<AccountIdOf<T>>,
-		},
-		XcmRedeemFailed {
-			evm_caller: H160,
-			vtoken_id: CurrencyIdOf<T>,
-			vtoken_amount: BalanceOf<T>,
-			target_chain: TargetChain<AccountIdOf<T>>,
-		},
+		/// Set the transfer fee for the currency, only for Moonbeam
 		SetTransferToFee {
+			/// The support chain of Slpx
 			support_chain: SupportChain,
+			/// The transfer fee of the token
 			transfer_to_fee: BalanceOf<T>,
 		},
+		/// Set the execution fee for the order
 		SetExecutionFee {
+			/// The currency id of the token
 			currency_id: CurrencyId,
+			/// The execution fee of the order
 			execution_fee: BalanceOf<T>,
 		},
-		SetCurrencyEthereumCallSwitch {
+		/// Support currency to xcm oracle
+		SupportXcmOracle {
+			/// The currency id of the token
 			currency_id: CurrencyId,
+			/// Whether to support the xcm oracle
 			is_support: bool,
 		},
-		SetEthereumCallConfiguration {
-			xcm_fee: u128,
+		/// Set the xcm oracle configuration
+		SetXcmOracleConfiguration {
+			/// The XCM fee of Sending Xcm
+			xcm_fee: Balance,
+			/// The XCM weight of Sending Xcm
 			xcm_weight: Weight,
+			/// The period of Sending Xcm
 			period: BlockNumberFor<T>,
+			/// The address of XcmOracle
 			contract: H160,
 		},
-		XcmSetTokenAmount {
+		/// Send Xcm message
+		XcmOracle {
+			/// The currency id of the token
 			currency_id: CurrencyId,
-			token_amount: BalanceOf<T>,
-			vcurrency_id: CurrencyId,
-			vtoken_amount: BalanceOf<T>,
+			/// The currency amount of staking
+			staking_currency_amount: BalanceOf<T>,
+			/// The currency id of the vtoken
+			v_currency_id: CurrencyId,
+			/// The currency total supply of vtoken
+			v_currency_total_supply: BalanceOf<T>,
 		},
+		/// Set the currency to support the XCM fee
 		SetCurrencyToSupportXcmFee {
+			/// The currency id of the token
 			currency_id: CurrencyId,
+			/// Whether to support the XCM fee
 			is_support: bool,
 		},
+		/// Set the delay block
 		SetDelayBlock {
+			/// The delay block
 			delay_block: BlockNumberFor<T>,
 		},
+		/// Create order
 		CreateOrder {
 			order: Order<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>, BlockNumberFor<T>>,
 		},
+		/// Order handled
 		OrderHandled {
 			order: Order<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>, BlockNumberFor<T>>,
 		},
+		/// Order failed
 		OrderFailed {
 			order: Order<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>, BlockNumberFor<T>>,
 		},
+		/// Xcm oracle failed
+		XcmOracleFailed { error: DispatchError },
+		/// Withdraw xcm fee
 		InsufficientAssets,
 	}
 
 	#[pallet::error]
+	#[derive(Clone, PartialEq)]
 	pub enum Error<T> {
-		/// Token not found in vtoken minting
-		TokenNotFoundInVtokenMinting,
-		/// Token not found in zenlink
-		TokenNotFoundInZenlink,
 		/// Contract Account already exists in the whitelist
-		AccountIdAlreadyInWhitelist,
+		AccountAlreadyExists,
+		/// Currency already exists in the whitelist
+		CurrencyAlreadyExists,
 		/// Contract Account is not in the whitelist
-		AccountIdNotInWhitelist,
+		AccountNotFound,
+		/// Currency is not in the whitelist
+		CurrencyNotFound,
 		/// The maximum number of whitelist addresses is 10
-		ExceededWhitelistMaxNumber,
+		WhitelistOverflow,
 		/// Execution fee not set
 		NotSetExecutionFee,
 		/// Insufficient balance to execute the fee
 		FreeBalanceTooLow,
-		/// ArgumentsError
-		ArgumentsError,
+		/// The maximum number of order is 500
+		OrderQueueOverflow,
+		/// The maximum number of currency id is 10
+		CurrencyListOverflow,
+		/// Convert vtoken error
 		ErrorConvertVtoken,
+		/// Error encode
+		ErrorEncode,
 		ErrorValidating,
 		ErrorDelivering,
+		ErrorVtokenMiting,
+		ErrorTransferTo,
+		ErrorChargeFee,
+		ErrorArguments,
 		Unsupported,
 	}
 
@@ -284,28 +274,33 @@ pub mod pallet {
 	pub type TransferToFee<T: Config> =
 		StorageMap<_, Blake2_128Concat, SupportChain, BalanceOf<T>, OptionQuery>;
 
+	/// Xcm Oracle configuration
 	#[pallet::storage]
 	pub type XcmEthereumCallConfiguration<T: Config> =
 		StorageValue<_, EthereumCallConfiguration<BlockNumberFor<T>>>;
 
+	/// Currency to support xcm oracle
 	#[pallet::storage]
 	pub type CurrencyIdList<T: Config> =
 		StorageValue<_, BoundedVec<CurrencyId, ConstU32<10>>, ValueQuery>;
 
+	/// Currency to support xcm fee
 	#[pallet::storage]
 	pub type SupportXcmFeeList<T: Config> =
 		StorageValue<_, BoundedVec<CurrencyId, ConstU32<100>>, ValueQuery>;
 
+	/// Order queue
 	#[pallet::storage]
 	pub type OrderQueue<T: Config> = StorageValue<
 		_,
 		BoundedVec<
 			Order<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>, BlockNumberFor<T>>,
-			ConstU32<1000>,
+			T::MaxOrderSize,
 		>,
 		ValueQuery,
 	>;
 
+	/// Delay block
 	#[pallet::storage]
 	pub type DelayBlock<T: Config> = StorageValue<_, BlockNumberFor<T>, ValueQuery>;
 
@@ -315,7 +310,7 @@ pub mod pallet {
 			let mut weight = Weight::default();
 
 			if WeightMeter::with_limit(limit)
-				.try_consume(T::DbWeight::get().reads_writes(4, 2))
+				.try_consume(T::DbWeight::get().reads_writes(14, 8))
 				.is_err()
 			{
 				return weight;
@@ -323,105 +318,12 @@ pub mod pallet {
 
 			let mut is_handle_xcm_oracle = false;
 
-			let mut currency_list = CurrencyIdList::<T>::get().to_vec();
-			if currency_list.len() < 1 {
-				weight = weight.saturating_add(T::DbWeight::get().reads_writes(1, 0));
-			} else {
-				let configuration = XcmEthereumCallConfiguration::<T>::get();
-				match configuration {
-					Some(mut configuration) => {
-						let currency_id = currency_list[0];
-						let token_amount = T::VtokenMintingInterface::get_token_pool(currency_id);
-						// It's impossible to go wrong.
-						let vcurrency_id = T::VtokenMintingInterface::vtoken_id(currency_id)
-							.expect("Error convert vcurrency_id");
-						let vtoken_amount = T::MultiCurrency::total_issuance(vcurrency_id);
-
-						if configuration.last_block + configuration.period < n {
-							let encoded_call = Self::encode_transact_call(
-								configuration.contract,
-								currency_id,
-								token_amount,
-								vtoken_amount,
-							);
-
-							let result = Self::send_xcm_to_set_token_amount(
-								encoded_call,
-								configuration.xcm_weight,
-								configuration.xcm_fee,
-							);
-
-							if result.is_err() {
-								return weight
-									.saturating_add(T::DbWeight::get().reads_writes(4, 0));
-							}
-							Self::deposit_event(Event::XcmSetTokenAmount {
-								currency_id,
-								token_amount,
-								vcurrency_id,
-								vtoken_amount,
-							});
-
-							let mut target_fee_currency_id = GLMR;
-							if T::ParachainId::get() == Id::from(BifrostKusamaChainId::get()) {
-								target_fee_currency_id = MOVR;
-							}
-
-							// Will not check results and will be sent regardless of the success of
-							// the burning
-							let result = T::MultiCurrency::withdraw(
-								target_fee_currency_id,
-								&T::TreasuryAccount::get(),
-								BalanceOf::<T>::unique_saturated_from(configuration.xcm_fee),
-							);
-							if result.is_err() {
-								Self::deposit_event(Event::InsufficientAssets);
-							}
-
-							configuration.last_block = n;
-							XcmEthereumCallConfiguration::<T>::put(configuration);
-							currency_list.rotate_left(1);
-							CurrencyIdList::<T>::put(BoundedVec::try_from(currency_list).unwrap());
-
-							weight = weight.saturating_add(T::DbWeight::get().reads_writes(4, 2));
-
-							is_handle_xcm_oracle = true;
-						}
-					},
-					None => {
-						weight = weight.saturating_add(T::DbWeight::get().reads_writes(2, 0));
-					},
-				};
+			if let Err(error) = Self::handle_xcm_oracle(n, &mut is_handle_xcm_oracle, &mut weight) {
+				Self::deposit_event(Event::<T>::XcmOracleFailed { error });
 			}
 
 			if !is_handle_xcm_oracle {
-				OrderQueue::<T>::mutate(|order_queue| -> DispatchResult {
-					if let Some(order) = order_queue.get(0) {
-						if n - order.create_block_number >= DelayBlock::<T>::get() {
-							let mut order = order_queue.remove(0);
-							let balance = T::MultiCurrency::free_balance(
-								order.currency_id,
-								&order.derivative_account,
-							);
-							if balance > T::MultiCurrency::minimum_balance(order.currency_id) {
-								order.currency_amount = balance;
-								Self::handle_order(&order)
-									.map_err(|_| Error::<T>::ArgumentsError)?;
-								Self::deposit_event(Event::<T>::OrderHandled {
-									order: order.clone(),
-								});
-								weight =
-									weight.saturating_add(T::DbWeight::get().reads_writes(14, 8));
-							} else {
-								Self::deposit_event(Event::<T>::OrderFailed { order });
-								weight =
-									weight.saturating_add(T::DbWeight::get().reads_writes(4, 1));
-							}
-						};
-					};
-					Ok(())
-				})
-				.ok();
+				let _ = Self::handle_order_queue(n, &mut weight);
 			}
 			weight
 		}
@@ -430,6 +332,11 @@ pub mod pallet {
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
 		/// vtoken mint and transfer to target chain
+		/// Parameters:
+		/// - `evm_caller`: The caller of the EVM contract
+		/// - `currency_id`: The currency id of the token to be minted
+		/// - `target_chain`: The target chain to transfer the token to
+		/// - `remark`: The remark of the order
 		#[pallet::call_index(0)]
 		#[pallet::weight(<T as Config>::WeightInfo::mint())]
 		pub fn mint(
@@ -439,47 +346,28 @@ pub mod pallet {
 			target_chain: TargetChain<AccountIdOf<T>>,
 			remark: BoundedVec<u8, ConstU32<32>>,
 		) -> DispatchResultWithPostInfo {
-			let (source_chain_caller, derivative_account, bifrost_chain_caller) =
+			let (source_chain_caller, _, bifrost_chain_caller) =
 				Self::ensure_singer_on_whitelist(origin.clone(), evm_caller, &target_chain)?;
 
-			let order = Order {
-				create_block_number: <frame_system::Pallet<T>>::block_number(),
-				order_type: OrderType::Mint,
-				currency_amount: Default::default(),
+			Self::do_create_order(
 				source_chain_caller,
+				Default::default(),
+				None,
 				bifrost_chain_caller,
-				derivative_account,
 				currency_id,
+				Default::default(),
 				remark,
+				0u32,
 				target_chain,
-				// default to 0
-				channel_id: 0u32,
-			};
-
-			OrderQueue::<T>::mutate(|order_queue| -> DispatchResultWithPostInfo {
-				order_queue.try_push(order.clone()).map_err(|_| Error::<T>::ArgumentsError)?;
-				Self::deposit_event(Event::<T>::CreateOrder { order });
-				Ok(().into())
-			})
+			)
 		}
 
-		/// Swap and transfer to target chain
-		#[pallet::call_index(1)]
-		#[pallet::weight(<T as Config>::WeightInfo::zenlink_swap())]
-		pub fn zenlink_swap(
-			origin: OriginFor<T>,
-			_evm_caller: H160,
-			_currency_id_in: CurrencyIdOf<T>,
-			_currency_id_out: CurrencyIdOf<T>,
-			_currency_id_out_min: AssetBalance,
-			_target_chain: TargetChain<AccountIdOf<T>>,
-		) -> DispatchResultWithPostInfo {
-			ensure_signed(origin)?;
-			ensure!(false, Error::<T>::Unsupported);
-			Ok(().into())
-		}
-
-		/// Redeem
+		/// vtoken redeem and transfer to target chain
+		/// Parameters:
+		/// - `evm_caller`: The caller of the EVM contract
+		/// - `vtoken_id`: The currency id of the vtoken to be redeemed
+		/// - `target_chain`: The target chain to transfer the token to
+		/// - `remark`: The remark of the order
 		#[pallet::call_index(2)]
 		#[pallet::weight(<T as Config>::WeightInfo::redeem())]
 		pub fn redeem(
@@ -489,110 +377,98 @@ pub mod pallet {
 			target_chain: TargetChain<AccountIdOf<T>>,
 		) -> DispatchResultWithPostInfo {
 			let evm_contract_account_id = ensure_signed(origin.clone())?;
-			let (source_chain_caller, derivative_account, bifrost_chain_caller) =
+			let (source_chain_caller, frontier_derivative_account, bifrost_chain_caller) =
 				Self::ensure_singer_on_whitelist(origin, evm_caller, &target_chain)?;
 
 			if vtoken_id == VFIL {
-				let fee_amount = TransferToFee::<T>::get(SupportChain::Moonbeam)
-					.unwrap_or_else(|| Self::get_default_fee(BNC));
+				let fee_amount = Self::get_moonbeam_transfer_to_fee();
 				T::MultiCurrency::transfer(
 					BNC,
 					&evm_contract_account_id,
-					&derivative_account,
+					&frontier_derivative_account,
 					fee_amount,
 				)?;
 			}
 
-			let order = Order {
-				create_block_number: <frame_system::Pallet<T>>::block_number(),
-				order_type: OrderType::Redeem,
-				currency_id: vtoken_id,
-				currency_amount: Default::default(),
-				remark: Default::default(),
+			Self::do_create_order(
 				source_chain_caller,
+				Default::default(),
+				None,
 				bifrost_chain_caller,
-				derivative_account,
+				vtoken_id,
+				Default::default(),
+				Default::default(),
+				0u32,
 				target_chain,
-				// default to 0
-				channel_id: 0u32,
-			};
-
-			OrderQueue::<T>::mutate(|order_queue| -> DispatchResultWithPostInfo {
-				order_queue.try_push(order.clone()).map_err(|_| Error::<T>::ArgumentsError)?;
-				Self::deposit_event(Event::<T>::CreateOrder { order });
-				Ok(().into())
-			})
+			)
 		}
 
-		/// Stable pool swap
-		#[pallet::call_index(3)]
-		#[pallet::weight(<T as Config>::WeightInfo::stable_pool_swap())]
-		pub fn stable_pool_swap(
-			origin: OriginFor<T>,
-			_evm_caller: H160,
-			_pool_id: StableAssetPoolId,
-			_currency_id_in: CurrencyIdOf<T>,
-			_currency_id_out: CurrencyIdOf<T>,
-			_min_dy: BalanceOf<T>,
-			_target_chain: TargetChain<AccountIdOf<T>>,
-		) -> DispatchResult {
-			ensure_signed(origin)?;
-			ensure!(false, Error::<T>::Unsupported);
-			Ok(())
-		}
-
+		/// Add the contract account to the whitelist
+		/// Parameters:
+		/// - `support_chain`: The support chain of Slpx
+		/// - `contract_address`: The contract address of the contract
 		#[pallet::call_index(4)]
 		#[pallet::weight(<T as Config>::WeightInfo::add_whitelist())]
 		pub fn add_whitelist(
 			origin: OriginFor<T>,
 			support_chain: SupportChain,
-			evm_contract_account_id: T::AccountId,
+			contract_address: H160,
 		) -> DispatchResultWithPostInfo {
 			// Check the validity of origin
 			T::ControlOrigin::ensure_origin(origin)?;
 
-			let mut whitelist_account_ids = WhitelistAccountId::<T>::get(&support_chain);
-
-			ensure!(
-				!whitelist_account_ids.contains(&evm_contract_account_id),
-				Error::<T>::AccountIdAlreadyInWhitelist
-			);
-			whitelist_account_ids
-				.try_push(evm_contract_account_id.clone())
-				.map_err(|_| Error::<T>::ExceededWhitelistMaxNumber)?;
-			WhitelistAccountId::<T>::insert(support_chain, whitelist_account_ids);
-			Self::deposit_event(Event::AddWhitelistAccountId {
+			WhitelistAccountId::<T>::mutate(
 				support_chain,
-				evm_contract_account_id,
-			});
-			Ok(().into())
+				|whitelist| -> DispatchResultWithPostInfo {
+					let account = Self::xcm_derivative_account(support_chain, contract_address)?;
+					ensure!(!whitelist.contains(&account), Error::<T>::AccountAlreadyExists);
+					whitelist
+						.try_push(account.clone())
+						.map_err(|_| Error::<T>::WhitelistOverflow)?;
+					Self::deposit_event(Event::<T>::AddWhitelistAccountId {
+						support_chain,
+						contract_address,
+						evm_contract_account_id: account,
+					});
+					Ok(().into())
+				},
+			)
 		}
 
+		/// Remove the contract account from the whitelist
+		/// Parameters:
+		/// - `support_chain`: The support chain of Slpx
+		/// - `contract_address`: The contract address of the contract
 		#[pallet::call_index(5)]
 		#[pallet::weight(<T as Config>::WeightInfo::remove_whitelist())]
 		pub fn remove_whitelist(
 			origin: OriginFor<T>,
 			support_chain: SupportChain,
-			evm_contract_account_id: T::AccountId,
+			contract_address: H160,
 		) -> DispatchResultWithPostInfo {
 			// Check the validity of origin
 			T::ControlOrigin::ensure_origin(origin)?;
 
-			let mut whitelist_account_ids = WhitelistAccountId::<T>::get(&support_chain);
-
-			ensure!(
-				whitelist_account_ids.contains(&evm_contract_account_id),
-				Error::<T>::AccountIdNotInWhitelist
-			);
-			whitelist_account_ids.retain(|x| *x != evm_contract_account_id);
-			WhitelistAccountId::<T>::insert(support_chain, whitelist_account_ids);
-			Self::deposit_event(Event::RemoveWhitelistAccountId {
+			WhitelistAccountId::<T>::mutate(
 				support_chain,
-				evm_contract_account_id,
-			});
-			Ok(().into())
+				|whitelist| -> DispatchResultWithPostInfo {
+					let account = Self::xcm_derivative_account(support_chain, contract_address)?;
+					ensure!(whitelist.contains(&account), Error::<T>::AccountNotFound);
+					whitelist.retain(|x| *x != account);
+					Self::deposit_event(Event::<T>::RemoveWhitelistAccountId {
+						support_chain,
+						contract_address,
+						evm_contract_account_id: account,
+					});
+					Ok(().into())
+				},
+			)
 		}
 
+		/// Set the execution fee for the currency
+		/// Parameters:
+		/// - `currency_id`: The currency id of the token
+		/// - `execution_fee`: The execution fee of the token
 		#[pallet::call_index(6)]
 		#[pallet::weight(<T as Config>::WeightInfo::set_execution_fee())]
 		pub fn set_execution_fee(
@@ -607,6 +483,10 @@ pub mod pallet {
 			Ok(().into())
 		}
 
+		/// Set the transfer fee for the currency
+		/// Parameters:
+		/// - `support_chain`: The support chain of Slpx
+		/// - `transfer_to_fee`: The transfer fee of the token
 		#[pallet::call_index(7)]
 		#[pallet::weight(<T as Config>::WeightInfo::set_transfer_to_fee())]
 		pub fn set_transfer_to_fee(
@@ -621,9 +501,13 @@ pub mod pallet {
 			Ok(().into())
 		}
 
+		/// Set the currency to support the Ethereum call switch
+		/// Parameters:
+		/// - `currency_id`: The currency id of the token
+		/// - `is_support`: Whether to support the Ethereum call switch
 		#[pallet::call_index(8)]
 		#[pallet::weight(<T as Config>::WeightInfo::set_transfer_to_fee())]
-		pub fn set_currency_ethereum_call_switch(
+		pub fn support_xcm_oracle(
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
 			is_support: bool,
@@ -634,28 +518,31 @@ pub mod pallet {
 			T::VtokenMintingInterface::vtoken_id(currency_id)
 				.ok_or(Error::<T>::ErrorConvertVtoken)?;
 			let mut currency_list = CurrencyIdList::<T>::get();
-			match is_support {
-				true => {
-					ensure!(!currency_list.contains(&currency_id), Error::<T>::ArgumentsError);
-					currency_list
-						.try_push(currency_id)
-						.map_err(|_| Error::<T>::ExceededWhitelistMaxNumber)?;
-				},
-				false => {
-					ensure!(currency_list.contains(&currency_id), Error::<T>::ArgumentsError);
-					currency_list.retain(|&x| x != currency_id);
-				},
-			};
+			if is_support {
+				ensure!(!currency_list.contains(&currency_id), Error::<T>::CurrencyAlreadyExists);
+				currency_list
+					.try_push(currency_id)
+					.map_err(|_| Error::<T>::CurrencyListOverflow)?;
+			} else {
+				ensure!(currency_list.contains(&currency_id), Error::<T>::CurrencyNotFound);
+				currency_list.retain(|&x| x != currency_id);
+			}
 			CurrencyIdList::<T>::put(currency_list);
-			Self::deposit_event(Event::SetCurrencyEthereumCallSwitch { currency_id, is_support });
+			Self::deposit_event(Event::SupportXcmOracle { currency_id, is_support });
 			Ok(().into())
 		}
 
+		/// Set the Ethereum call configuration
+		/// Parameters:
+		/// - `xcm_fee`: The XCM fee of Sending Xcm
+		/// - `xcm_weight`: The XCM weight of Sending Xcm
+		/// - `period`: The period of Sending Xcm
+		/// - `contract`: The address of XcmOracle
 		#[pallet::call_index(9)]
 		#[pallet::weight(<T as Config>::WeightInfo::set_transfer_to_fee())]
-		pub fn set_ethereum_call_configration(
+		pub fn set_xcm_oracle_configuration(
 			origin: OriginFor<T>,
-			xcm_fee: u128,
+			xcm_fee: Balance,
 			xcm_weight: Weight,
 			period: BlockNumberFor<T>,
 			contract: H160,
@@ -668,7 +555,7 @@ pub mod pallet {
 				last_block: frame_system::Pallet::<T>::block_number(),
 				contract,
 			});
-			Self::deposit_event(Event::SetEthereumCallConfiguration {
+			Self::deposit_event(Event::SetXcmOracleConfiguration {
 				xcm_fee,
 				xcm_weight,
 				period,
@@ -677,6 +564,10 @@ pub mod pallet {
 			Ok(().into())
 		}
 
+		/// Set the currency to support the XCM fee
+		/// Parameters:
+		/// - `currency_id`: The currency id of the token
+		/// - `is_support`: Whether to support the XCM fee
 		#[pallet::call_index(10)]
 		#[pallet::weight(T::DbWeight::get().reads(1) + T::DbWeight::get().writes(1))]
 		pub fn set_currency_support_xcm_fee(
@@ -688,21 +579,23 @@ pub mod pallet {
 			T::ControlOrigin::ensure_origin(origin)?;
 
 			let mut currency_list = SupportXcmFeeList::<T>::get();
-			match is_support {
-				true => {
-					ensure!(!currency_list.contains(&currency_id), Error::<T>::ArgumentsError);
-					currency_list.try_push(currency_id).map_err(|_| Error::<T>::ArgumentsError)?;
-				},
-				false => {
-					ensure!(currency_list.contains(&currency_id), Error::<T>::ArgumentsError);
-					currency_list.retain(|&x| x != currency_id);
-				},
-			};
+			if is_support {
+				ensure!(!currency_list.contains(&currency_id), Error::<T>::CurrencyAlreadyExists);
+				currency_list
+					.try_push(currency_id)
+					.map_err(|_| Error::<T>::CurrencyListOverflow)?;
+			} else {
+				ensure!(currency_list.contains(&currency_id), Error::<T>::CurrencyNotFound);
+				currency_list.retain(|&x| x != currency_id);
+			}
 			SupportXcmFeeList::<T>::put(currency_list);
 			Self::deposit_event(Event::SetCurrencyToSupportXcmFee { currency_id, is_support });
 			Ok(().into())
 		}
 
+		/// Set the delay block, Order will be executed after the delay block.
+		/// Parameters:
+		/// - `delay_block`: The delay block
 		#[pallet::call_index(11)]
 		#[pallet::weight(T::DbWeight::get().reads(1) + T::DbWeight::get().writes(1))]
 		pub fn set_delay_block(
@@ -716,39 +609,46 @@ pub mod pallet {
 			Ok(().into())
 		}
 
+		/// Force add order
+		/// Parameters:
+		/// - `source_chain_caller`: The caller of the source chain
+		/// - `bifrost_chain_caller`: The caller of the bifrost chain
+		/// - `currency_id`: The currency id of the token
+		/// - `target_chain`: The target chain to transfer the token to
+		/// - `remark`: The remark of the order
+		/// - `channel_id`: The channel id of the order
 		#[pallet::call_index(12)]
 		#[pallet::weight(T::DbWeight::get().reads(1) + T::DbWeight::get().writes(1))]
 		pub fn force_add_order(
 			origin: OriginFor<T>,
-			slpx_contract_derivative_account: AccountIdOf<T>,
-			evm_caller: H160,
+			source_chain_caller: OrderCaller<T::AccountId>,
+			bifrost_chain_caller: T::AccountId,
 			currency_id: CurrencyIdOf<T>,
 			target_chain: TargetChain<AccountIdOf<T>>,
 			remark: BoundedVec<u8, ConstU32<32>>,
-			order_type: OrderType,
+			channel_id: u32,
 		) -> DispatchResultWithPostInfo {
 			ensure_root(origin)?;
-			let order = Order {
-				create_block_number: <frame_system::Pallet<T>>::block_number(),
-				currency_amount: Default::default(),
-				source_chain_caller: OrderCaller::Evm(evm_caller),
-				bifrost_chain_caller: slpx_contract_derivative_account,
-				derivative_account: Self::h160_to_account_id(evm_caller),
-				order_type,
+			Self::do_create_order(
+				source_chain_caller,
+				Default::default(),
+				None,
+				bifrost_chain_caller,
 				currency_id,
+				Default::default(),
 				remark,
+				channel_id,
 				target_chain,
-				// default to 0
-				channel_id: 0u32,
-			};
-
-			OrderQueue::<T>::mutate(|order_queue| -> DispatchResultWithPostInfo {
-				order_queue.try_push(order.clone()).map_err(|_| Error::<T>::ArgumentsError)?;
-				Self::deposit_event(Event::<T>::CreateOrder { order });
-				Ok(().into())
-			})
+			)
 		}
 
+		/// vtoken mint and transfer to target chain
+		/// Parameters:
+		/// - `evm_caller`: The caller of the EVM contract
+		/// - `currency_id`: The currency id of the token to be minted
+		/// - `target_chain`: The target chain to transfer the token to
+		/// - `remark`: The remark of the order
+		/// - `channel_id`: The channel id of the order
 		#[pallet::call_index(13)]
 		#[pallet::weight(<T as Config>::WeightInfo::mint_with_channel_id())]
 		pub fn mint_with_channel_id(
@@ -759,32 +659,203 @@ pub mod pallet {
 			remark: BoundedVec<u8, ConstU32<32>>,
 			channel_id: u32,
 		) -> DispatchResultWithPostInfo {
-			let (source_chain_caller, derivative_account, bifrost_chain_caller) =
+			let (source_chain_caller, _, bifrost_chain_caller) =
 				Self::ensure_singer_on_whitelist(origin.clone(), evm_caller, &target_chain)?;
 
-			let order = Order {
-				create_block_number: <frame_system::Pallet<T>>::block_number(),
-				order_type: OrderType::Mint,
-				currency_amount: Default::default(),
+			Self::do_create_order(
 				source_chain_caller,
+				Default::default(),
+				None,
 				bifrost_chain_caller,
-				derivative_account,
 				currency_id,
+				Default::default(),
 				remark,
-				target_chain,
 				channel_id,
-			};
-
-			OrderQueue::<T>::mutate(|order_queue| -> DispatchResultWithPostInfo {
-				order_queue.try_push(order.clone()).map_err(|_| Error::<T>::ArgumentsError)?;
-				Self::deposit_event(Event::<T>::CreateOrder { order });
-				Ok(().into())
-			})
+				target_chain,
+			)
 		}
+
+		/// EVM create order
+		/// Parameters:
+		/// - `source_chain_caller`: The caller of the source chain
+		/// - `source_chain_id`: The source chain id
+		/// - `source_chain_block_number`: The source chain block number
+		/// - `currency_id`: The currency id of the token
+		/// - `currency_amount`: The currency amount of the token
+		/// - `send_to`: The target chain to transfer the token to
+		/// - `remark`: The remark of the order
+		/// - `channel_id`: The channel id of the order
+		#[pallet::call_index(14)]
+		#[pallet::weight(<T as Config>::WeightInfo::mint())]
+		pub fn evm_create_order(
+			origin: OriginFor<T>,
+			source_chain_caller: H160,
+			source_chain_id: u64,
+			source_chain_block_number: u128,
+			currency_id: CurrencyId,
+			currency_amount: BalanceOf<T>,
+			send_to: TargetChain<T::AccountId>,
+			remark: BoundedVec<u8, ConstU32<32>>,
+			channel_id: u32,
+		) -> DispatchResultWithPostInfo {
+			let bifrost_chain_caller = ensure_signed(origin)?;
+
+			let support_chain =
+				Self::match_source_chain_id(source_chain_id).ok_or(Error::<T>::Unsupported)?;
+
+			ensure!(
+				WhitelistAccountId::<T>::get(support_chain).contains(&bifrost_chain_caller),
+				Error::<T>::AccountNotFound
+			);
+
+			let source_chain_caller = OrderCaller::Evm(source_chain_caller);
+
+			Self::do_create_order(
+				source_chain_caller,
+				source_chain_id,
+				Some(source_chain_block_number),
+				bifrost_chain_caller,
+				currency_id,
+				currency_amount,
+				remark,
+				channel_id,
+				send_to,
+			)
+		}
+
+		// TODO: Substrate user create order
+		// #[pallet::call_index(14)]
+		// #[pallet::weight(<T as Config>::WeightInfo::mint())]
+		// pub fn substrate_create_order(
+		// 	origin: OriginFor<T>,
+		// 	currency_id: CurrencyId,
+		// 	amount: BalanceOf<T>,
+		// 	target_chain: TargetChain<T::AccountId>,
+		// 	remark: BoundedVec<u8, ConstU32<32>>,
+		// 	channel_id: u32,
+		// ) -> DispatchResultWithPostInfo {
+		// 	// let who = ensure_signed(origin)?;
+		// 	let location = ensure_xcm(<T as Config>::RuntimeOrigin::from(origin))?;
+		//
+		// 	let account_id = match location.unpack() {
+		// 		(1, [Parachain(para_id), AccountId32 { network: _, id }]) => {
+		// 			let account_id = T::AccountId::decode(&mut &id[..]).map_err(|_|
+		// Error::<T>::Unsupported)?; 			Ok(account_id)
+		// 		},
+		// 		_ => {
+		// 			Err(Error::<T>::Unsupported)
+		// 		},
+		// 	};
+		// 	Ok(().into())
+		// }
 	}
 }
 
 impl<T: Config> Pallet<T> {
+	fn match_source_chain_id(source_chain_id: u64) -> Option<SupportChain> {
+		if source_chain_id == AstarEvmChainId::get() {
+			Some(SupportChain::Astar)
+		} else if source_chain_id == MoonriverEvmChainId::get() ||
+			source_chain_id == MoonbeamEvmChainId::get()
+		{
+			Some(SupportChain::Moonbeam)
+		} else {
+			None
+		}
+	}
+
+	/// According to currency_id, return the order type
+	fn order_type(currency_id: CurrencyId) -> Result<OrderType, Error<T>> {
+		match currency_id {
+			CurrencyId::Native(_) | CurrencyId::Token(_) | CurrencyId::Token2(_) =>
+				Ok(OrderType::Mint),
+			CurrencyId::VToken(_) | CurrencyId::VToken2(_) => Ok(OrderType::Redeem),
+			_ => Err(Error::<T>::Unsupported),
+		}
+	}
+
+	/// According to frontier, return the derivative account
+	fn frontier_derivative_account(order_caller: &OrderCaller<T::AccountId>) -> T::AccountId {
+		match order_caller {
+			OrderCaller::Substrate(account_id) => account_id.clone(),
+			OrderCaller::Evm(h160) => Self::h160_to_account_id(h160),
+		}
+	}
+
+	/// According to Xcm, return the account id
+	fn xcm_derivative_account(
+		support_chain: SupportChain,
+		contract_address: H160,
+	) -> Result<T::AccountId, Error<T>> {
+		let location = match support_chain {
+			SupportChain::Astar => {
+				let account_id = Self::h160_to_account_id(&contract_address);
+				let id: [u8; 32] =
+					account_id.encode().try_into().map_err(|_| Error::<T>::ErrorEncode)?;
+				Location::new(
+					1,
+					[Parachain(AstarChainId::get()), AccountId32 { network: None, id }],
+				)
+			},
+			SupportChain::Moonbeam => Location::new(
+				1,
+				[
+					Parachain(T::VtokenMintingInterface::get_moonbeam_parachain_id()),
+					AccountKey20 { network: None, key: contract_address.to_fixed_bytes() },
+				],
+			),
+			_ => {
+				ensure!(false, Error::<T>::Unsupported);
+				Location::default()
+			},
+		};
+		let raw_account =
+			HashedDescription::<[u8; 32], DescribeFamily<DescribeAllTerminal>>::convert_location(
+				&location,
+			)
+			.ok_or(Error::<T>::Unsupported)?;
+		let account =
+			T::AccountId::decode(&mut &raw_account[..]).map_err(|_| Error::<T>::ErrorEncode)?;
+		Ok(account)
+	}
+
+	fn do_create_order(
+		source_chain_caller: OrderCaller<T::AccountId>,
+		source_chain_id: u64,
+		source_chain_block_number: Option<u128>,
+		bifrost_chain_caller: T::AccountId,
+		currency_id: CurrencyId,
+		currency_amount: BalanceOf<T>,
+		remark: BoundedVec<u8, ConstU32<32>>,
+		channel_id: u32,
+		target_chain: TargetChain<T::AccountId>,
+	) -> DispatchResultWithPostInfo {
+		let order_type = Self::order_type(currency_id)?;
+		let derivative_account = Self::frontier_derivative_account(&source_chain_caller);
+		let order = Order {
+			create_block_number: <frame_system::Pallet<T>>::block_number(),
+			order_type,
+			currency_id,
+			currency_amount,
+			remark,
+			source_chain_caller,
+			source_chain_id,
+			source_chain_block_number,
+			bifrost_chain_caller,
+			derivative_account,
+			target_chain,
+			channel_id,
+		};
+
+		OrderQueue::<T>::mutate(|order_queue| -> DispatchResultWithPostInfo {
+			order_queue
+				.try_push(order.clone())
+				.map_err(|_| Error::<T>::OrderQueueOverflow)?;
+			Self::deposit_event(Event::<T>::CreateOrder { order });
+			Ok(().into())
+		})
+	}
+
 	fn send_xcm_to_set_token_amount(
 		call: Vec<u8>,
 		xcm_weight: Weight,
@@ -853,16 +924,16 @@ impl<T: Config> Pallet<T> {
 		currency_id: CurrencyId,
 		token_amount: BalanceOf<T>,
 		vtoken_amount: BalanceOf<T>,
-	) -> Vec<u8> {
+	) -> Result<Vec<u8>, Error<T>> {
 		let ethereum_call = Self::encode_ethereum_call(currency_id, token_amount, vtoken_amount);
 		let transaction = EthereumXcmTransaction::V2(EthereumXcmTransactionV2 {
 			gas_limit: U256::from(MAX_GAS_LIMIT),
 			action: TransactionAction::Call(contract),
 			value: U256::zero(),
-			input: BoundedVec::try_from(ethereum_call).unwrap(),
+			input: BoundedVec::try_from(ethereum_call).map_err(|_| Error::<T>::ErrorEncode)?,
 			access_list: None,
 		});
-		return MoonbeamCall::EthereumXcm(EthereumXcmCall::Transact(transaction)).encode();
+		Ok(MoonbeamCall::EthereumXcm(EthereumXcmCall::Transact(transaction)).encode())
 	}
 
 	/// Check if the signer is in the whitelist
@@ -872,13 +943,6 @@ impl<T: Config> Pallet<T> {
 		target_chain: &TargetChain<AccountIdOf<T>>,
 	) -> Result<(OrderCaller<AccountIdOf<T>>, AccountIdOf<T>, AccountIdOf<T>), DispatchError> {
 		let bifrost_chain_caller = ensure_signed(origin)?;
-		let support_chain = match target_chain {
-			TargetChain::Astar(_) => SupportChain::Astar,
-			TargetChain::Moonbeam(_) => SupportChain::Moonbeam,
-			TargetChain::Hydradx(_) => SupportChain::Hydradx,
-			TargetChain::Interlay(_) => SupportChain::Interlay,
-			TargetChain::Manta(_) => SupportChain::Manta,
-		};
 
 		match target_chain {
 			TargetChain::Hydradx(_) | TargetChain::Manta(_) | TargetChain::Interlay(_) => Ok((
@@ -887,14 +951,15 @@ impl<T: Config> Pallet<T> {
 				bifrost_chain_caller,
 			)),
 			_ => {
-				let whitelist_account_ids = WhitelistAccountId::<T>::get(&support_chain);
+				let whitelist_account_ids =
+					WhitelistAccountId::<T>::get(target_chain.support_chain());
 				ensure!(
 					whitelist_account_ids.contains(&bifrost_chain_caller),
-					Error::<T>::AccountIdNotInWhitelist
+					Error::<T>::AccountNotFound
 				);
 				Ok((
 					OrderCaller::Evm(evm_caller),
-					Self::h160_to_account_id(evm_caller),
+					Self::h160_to_account_id(&evm_caller),
 					bifrost_chain_caller,
 				))
 			},
@@ -904,9 +969,9 @@ impl<T: Config> Pallet<T> {
 	/// Charge an execution fee
 	fn charge_execution_fee(
 		currency_id: CurrencyIdOf<T>,
+		currency_amount: BalanceOf<T>,
 		evm_caller_account_id: &AccountIdOf<T>,
 	) -> Result<BalanceOf<T>, DispatchError> {
-		let free_balance = T::MultiCurrency::free_balance(currency_id, evm_caller_account_id);
 		let execution_fee = ExecutionFee::<T>::get(currency_id)
 			.unwrap_or_else(|| Self::get_default_fee(currency_id));
 
@@ -917,8 +982,9 @@ impl<T: Config> Pallet<T> {
 			execution_fee,
 		)?;
 
-		let balance_exclude_fee =
-			free_balance.checked_sub(&execution_fee).ok_or(Error::<T>::FreeBalanceTooLow)?;
+		let balance_exclude_fee = currency_amount
+			.checked_sub(&execution_fee)
+			.ok_or(Error::<T>::FreeBalanceTooLow)?;
 		Ok(balance_exclude_fee)
 	}
 
@@ -929,76 +995,75 @@ impl<T: Config> Pallet<T> {
 		amount: BalanceOf<T>,
 		target_chain: &TargetChain<AccountIdOf<T>>,
 	) -> DispatchResult {
-		match target_chain {
-			TargetChain::Astar(receiver) => {
-				let receiver = Self::h160_to_account_id(*receiver);
-				let dest = Location::new(
-					1,
-					[
-						Parachain(AstarChainId::get()),
-						AccountId32 { network: None, id: receiver.encode().try_into().unwrap() },
-					],
-				);
-
-				T::XcmTransfer::transfer(caller, currency_id, amount, dest, Unlimited)?;
-			},
-			TargetChain::Hydradx(receiver) => {
-				let dest = Location::new(
-					1,
-					[
-						Parachain(HydrationChainId::get()),
-						AccountId32 { network: None, id: receiver.encode().try_into().unwrap() },
-					],
-				);
-
-				T::XcmTransfer::transfer(caller, currency_id, amount, dest, Unlimited)?;
-			},
-			TargetChain::Interlay(receiver) => {
-				let dest = Location::new(
-					1,
-					[
-						Parachain(InterlayChainId::get()),
-						AccountId32 { network: None, id: receiver.encode().try_into().unwrap() },
-					],
-				);
-
-				T::XcmTransfer::transfer(caller, currency_id, amount, dest, Unlimited)?;
-			},
-			TargetChain::Manta(receiver) => {
-				let dest = Location::new(
-					1,
-					[
-						Parachain(MantaChainId::get()),
-						AccountId32 { network: None, id: receiver.encode().try_into().unwrap() },
-					],
-				);
-
-				T::XcmTransfer::transfer(caller, currency_id, amount, dest, Unlimited)?;
-			},
-			TargetChain::Moonbeam(receiver) => {
-				let dest = Location::new(
-					1,
-					[
-						Parachain(T::VtokenMintingInterface::get_moonbeam_parachain_id()),
-						AccountKey20 { network: None, key: receiver.to_fixed_bytes() },
-					],
-				);
-				if SupportXcmFeeList::<T>::get().contains(&currency_id) {
-					T::XcmTransfer::transfer(caller, currency_id, amount, dest, Unlimited)?;
-				} else {
-					let fee_amount = TransferToFee::<T>::get(SupportChain::Moonbeam)
-						.unwrap_or_else(|| Self::get_default_fee(BNC));
-					T::MultiCurrency::transfer(BNC, evm_contract_account_id, &caller, fee_amount)?;
-					let assets = vec![(currency_id, amount), (BNC, fee_amount)];
-
-					T::XcmTransfer::transfer_multicurrencies(caller, assets, 1, dest, Unlimited)?;
-				}
-			},
+		let dest = match target_chain {
+			TargetChain::Astar(receiver) => Location::new(
+				1,
+				[
+					Parachain(AstarChainId::get()),
+					AccountId32 {
+						network: None,
+						id: Self::h160_to_account_id(receiver)
+							.encode()
+							.try_into()
+							.map_err(|_| Error::<T>::ErrorEncode)?,
+					},
+				],
+			),
+			TargetChain::Moonbeam(receiver) => Location::new(
+				1,
+				[
+					Parachain(T::VtokenMintingInterface::get_moonbeam_parachain_id()),
+					AccountKey20 { network: None, key: receiver.to_fixed_bytes() },
+				],
+			),
+			TargetChain::Hydradx(receiver) => Location::new(
+				1,
+				[
+					Parachain(HydrationChainId::get()),
+					AccountId32 {
+						network: None,
+						id: receiver.encode().try_into().map_err(|_| Error::<T>::ErrorEncode)?,
+					},
+				],
+			),
+			TargetChain::Interlay(receiver) => Location::new(
+				1,
+				[
+					Parachain(InterlayChainId::get()),
+					AccountId32 {
+						network: None,
+						id: receiver.encode().try_into().map_err(|_| Error::<T>::ErrorEncode)?,
+					},
+				],
+			),
+			TargetChain::Manta(receiver) => Location::new(
+				1,
+				[
+					Parachain(MantaChainId::get()),
+					AccountId32 {
+						network: None,
+						id: receiver.encode().try_into().map_err(|_| Error::<T>::ErrorEncode)?,
+					},
+				],
+			),
 		};
+
+		if let TargetChain::Moonbeam(_) = target_chain {
+			if SupportXcmFeeList::<T>::get().contains(&currency_id) {
+				T::XcmTransfer::transfer(caller, currency_id, amount, dest, Unlimited)?;
+			} else {
+				let fee_amount = Self::get_moonbeam_transfer_to_fee();
+				T::MultiCurrency::transfer(BNC, evm_contract_account_id, &caller, fee_amount)?;
+				let assets = vec![(currency_id, amount), (BNC, fee_amount)];
+				T::XcmTransfer::transfer_multicurrencies(caller, assets, 1, dest, Unlimited)?;
+			}
+		} else {
+			T::XcmTransfer::transfer(caller, currency_id, amount, dest, Unlimited)?;
+		}
 		Ok(())
 	}
 
-	fn h160_to_account_id(address: H160) -> AccountIdOf<T> {
+	fn h160_to_account_id(address: &H160) -> AccountIdOf<T> {
 		let mut data = [0u8; 24];
 		data[0..4].copy_from_slice(b"evm:");
 		data[4..24].copy_from_slice(&address[..]);
@@ -1024,10 +1089,24 @@ impl<T: Config> Pallet<T> {
 	pub fn handle_order(
 		order: &Order<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>, BlockNumberFor<T>>,
 	) -> DispatchResult {
-		let currency_amount =
-			Self::charge_execution_fee(order.currency_id, &order.derivative_account).unwrap();
+		let currency_amount = Self::charge_execution_fee(
+			order.currency_id,
+			order.currency_amount,
+			&order.derivative_account,
+		)
+		.map_err(|_| Error::<T>::ErrorChargeFee)?;
 		match order.order_type {
 			OrderType::Mint => {
+				let vtoken_id =
+					order.currency_id.to_vtoken().map_err(|_| Error::<T>::ErrorConvertVtoken)?;
+
+				let vtoken_amount = T::VtokenMintingInterface::token_to_vtoken(
+					order.currency_id,
+					vtoken_id,
+					currency_amount,
+				)
+				.map_err(|_| Error::<T>::ErrorVtokenMiting)?;
+
 				T::VtokenMintingInterface::mint(
 					order.derivative_account.clone(),
 					order.currency_id,
@@ -1035,11 +1114,7 @@ impl<T: Config> Pallet<T> {
 					order.remark.clone(),
 					Some(order.channel_id),
 				)
-				.map_err(|_| Error::<T>::ArgumentsError)?;
-				let vtoken_id = T::VtokenMintingInterface::vtoken_id(order.currency_id)
-					.ok_or(Error::<T>::ArgumentsError)?;
-				let vtoken_amount =
-					T::MultiCurrency::free_balance(vtoken_id, &order.derivative_account);
+				.map_err(|_| Error::<T>::ErrorVtokenMiting)?;
 
 				Self::transfer_to(
 					order.derivative_account.clone(),
@@ -1048,12 +1123,12 @@ impl<T: Config> Pallet<T> {
 					vtoken_amount,
 					&order.target_chain,
 				)
-				.map_err(|_| Error::<T>::ArgumentsError)?;
+				.map_err(|_| Error::<T>::ErrorTransferTo)?;
 			},
 			OrderType::Redeem => {
 				let redeem_type = match order.target_chain.clone() {
 					TargetChain::Astar(receiver) => {
-						let receiver = Self::h160_to_account_id(receiver);
+						let receiver = Self::h160_to_account_id(&receiver);
 						RedeemType::Astar(receiver)
 					},
 					TargetChain::Moonbeam(receiver) => RedeemType::Moonbeam(receiver),
@@ -1067,10 +1142,127 @@ impl<T: Config> Pallet<T> {
 					currency_amount,
 					redeem_type,
 				)
-				.map_err(|_| Error::<T>::ArgumentsError)?;
+				.map_err(|_| Error::<T>::ErrorVtokenMiting)?;
 			},
 		};
 		Ok(())
+	}
+
+	#[transactional]
+	pub fn handle_order_queue(
+		current_block_number: BlockNumberFor<T>,
+		weight: &mut Weight,
+	) -> DispatchResult {
+		OrderQueue::<T>::mutate(|order_queue| -> DispatchResult {
+			if order_queue.is_empty() {
+				*weight = weight.saturating_add(T::DbWeight::get().reads_writes(1, 0));
+				return Ok(());
+			};
+
+			if current_block_number - order_queue[0].create_block_number >= DelayBlock::<T>::get() {
+				let mut order = order_queue.remove(0);
+				// For compatibility with older versions
+				if order.currency_amount == Default::default() {
+					order.currency_amount = T::MultiCurrency::free_balance(
+						order.currency_id,
+						&order.derivative_account,
+					);
+				} else {
+					// Ensure that the currency amount is not greater than the free balance
+					let free_balance = T::MultiCurrency::free_balance(
+						order.currency_id,
+						&order.derivative_account,
+					);
+					order.currency_amount = order.currency_amount.min(free_balance);
+				}
+				match Self::handle_order(&order) {
+					Ok(_) => {
+						Self::deposit_event(Event::<T>::OrderHandled { order: order.clone() });
+					},
+					Err(_) => {
+						Self::deposit_event(Event::<T>::OrderFailed { order });
+					},
+				};
+				*weight = weight.saturating_add(T::DbWeight::get().reads_writes(12, 8));
+			};
+			*weight = weight.saturating_add(T::DbWeight::get().reads_writes(2, 0));
+			Ok(())
+		})
+	}
+
+	#[transactional]
+	pub fn handle_xcm_oracle(
+		current_block_number: BlockNumberFor<T>,
+		is_handle_xcm_oracle: &mut bool,
+		weight: &mut Weight,
+	) -> DispatchResult {
+		let mut currency_list = CurrencyIdList::<T>::get().to_vec();
+		if currency_list.is_empty() {
+			*weight = weight.saturating_add(T::DbWeight::get().reads_writes(1, 0));
+			return Ok(());
+		};
+
+		let configuration = XcmEthereumCallConfiguration::<T>::get();
+		if let Some(mut config) = configuration {
+			let currency_id = currency_list[0];
+			let staking_currency_amount = T::VtokenMintingInterface::get_token_pool(currency_id);
+			let v_currency_id =
+				currency_id.to_vtoken().map_err(|_| Error::<T>::ErrorConvertVtoken)?;
+			let v_currency_total_supply = T::MultiCurrency::total_issuance(v_currency_id);
+
+			if config.last_block + config.period < current_block_number {
+				let encoded_call = Self::encode_transact_call(
+					config.contract,
+					currency_id,
+					staking_currency_amount,
+					v_currency_total_supply,
+				)
+				.map_err(|_| Error::<T>::ErrorEncode)?;
+
+				Self::send_xcm_to_set_token_amount(encoded_call, config.xcm_weight, config.xcm_fee)
+					.map_err(|_| Error::<T>::ErrorDelivering)?;
+
+				Self::deposit_event(Event::XcmOracle {
+					currency_id,
+					staking_currency_amount,
+					v_currency_id,
+					v_currency_total_supply,
+				});
+
+				let mut target_fee_currency_id = GLMR;
+				if T::ParachainId::get() == Id::from(BifrostKusamaChainId::get()) {
+					target_fee_currency_id = MOVR;
+				}
+
+				// Will not check results and will be sent regardless of the success of
+				// the burning
+				if T::MultiCurrency::withdraw(
+					target_fee_currency_id,
+					&T::TreasuryAccount::get(),
+					BalanceOf::<T>::unique_saturated_from(config.xcm_fee),
+				)
+				.is_err()
+				{
+					Self::deposit_event(Event::InsufficientAssets);
+				}
+
+				config.last_block = current_block_number;
+				XcmEthereumCallConfiguration::<T>::put(config);
+				currency_list.rotate_left(1);
+				CurrencyIdList::<T>::put(
+					BoundedVec::try_from(currency_list).map_err(|_| Error::<T>::ErrorEncode)?,
+				);
+
+				*weight = weight.saturating_add(T::DbWeight::get().reads_writes(4, 2));
+
+				*is_handle_xcm_oracle = true;
+			}
+
+			return Ok(());
+		} else {
+			*weight = weight.saturating_add(T::DbWeight::get().reads_writes(2, 0));
+			return Ok(());
+		}
 	}
 }
 

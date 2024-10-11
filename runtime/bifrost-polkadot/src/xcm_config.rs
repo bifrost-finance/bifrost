@@ -118,6 +118,8 @@ pub type Barrier = TrailingSetTopicAsId<(
 		(
 			// If the message is one that immediately attemps to pay for execution, then allow it.
 			AllowTopLevelPaidExecutionFrom<Everything>,
+			// TODO: Messages coming from system parachains need not pay for execution.
+			// AllowExplicitUnpaidExecutionFrom<Everything>,
 			// Subscriptions for version tracking are OK.
 			AllowSubscriptionsFrom<Everything>,
 		),
@@ -441,7 +443,7 @@ impl Contains<AccountId> for DustRemovalWhitelist {
 		let whitelist: Vec<AccountId> = vec![
 			TreasuryPalletId::get().into_account_truncating(),
 			BifrostCrowdloanId::get().into_account_truncating(),
-			BifrostVsbondPalletId::get().into_account_truncating(),
+			BifrostVsbondAccount::get().into_account_truncating(),
 			SlpEntrancePalletId::get().into_account_truncating(),
 			SlpExitPalletId::get().into_account_truncating(),
 			BuybackPalletId::get().into_account_truncating(),
