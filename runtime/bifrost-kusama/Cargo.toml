@@ -134,7 +134,6 @@ bifrost-system-maker = { workspace = true }
 bifrost-system-staking = { workspace = true }
 bifrost-token-issuer = { workspace = true }
 bifrost-vesting = { workspace = true }
-bifrost-vsbond-auction = { workspace = true }
 bifrost-vstoken-conversion = { workspace = true }
 bifrost-vtoken-minting = { workspace = true }
 bifrost-vtoken-voting = { workspace = true, features = [ "kusama" ] }
@@ -260,7 +259,6 @@ std = [
 	"bifrost-system-staking/std",
 	"bifrost-token-issuer/std",
 	"bifrost-vesting/std",
-	"bifrost-vsbond-auction/std",
 	"bifrost-vstoken-conversion/std",
 	"bifrost-vtoken-minting/std",
 	"bifrost-vtoken-voting/std",
@@ -306,7 +304,6 @@ runtime-benchmarks = [
 	"xcm-builder/runtime-benchmarks",
 	"bifrost-flexible-fee/runtime-benchmarks",
 	"bifrost-salp/runtime-benchmarks",
-	"bifrost-vsbond-auction/runtime-benchmarks",
 	"bifrost-token-issuer/runtime-benchmarks",
 	"bifrost-vtoken-minting/runtime-benchmarks",
 	"bifrost-farming/runtime-benchmarks",
@@ -380,7 +377,6 @@ try-runtime = [
 	"bifrost-flexible-fee/try-runtime",
 	"bifrost-salp/try-runtime",
 	"bifrost-token-issuer/try-runtime",
-	"bifrost-vsbond-auction/try-runtime",
 	"bifrost-asset-registry/try-runtime",
 	"bifrost-vtoken-minting/try-runtime",
 	"bifrost-slp/try-runtime",

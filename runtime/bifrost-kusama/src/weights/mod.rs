@@ -36,7 +36,6 @@ pub mod bifrost_system_staking;
 pub mod bifrost_token_issuer;
 pub mod bifrost_vbnc_convert;
 pub mod bifrost_vesting;
-pub mod bifrost_vsbond_auction;
 pub mod bifrost_vstoken_conversion;
 pub mod bifrost_vtoken_minting;
 pub mod bifrost_vtoken_voting;

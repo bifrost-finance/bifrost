@@ -36,7 +36,7 @@ use bifrost_primitives::{
 	FarmingRewardIssuerPalletId, FeeSharePalletId, FlexibleFeePalletId, IncentivePoolAccount,
 	LendMarketPalletId, MerkleDirtributorPalletId, OraclePalletId, ParachainStakingPalletId,
 	SlpEntrancePalletId, SlpExitPalletId, SystemMakerPalletId, SystemStakingPalletId,
-	TreasuryPalletId, VBNCConvertPalletId, VsbondAuctionPalletId,
+	TreasuryPalletId, VBNCConvertPalletId,
 };
 pub use frame_support::{
 	construct_runtime, match_types, parameter_types,
@@ -1159,18 +1159,6 @@ parameter_types! {
 	pub const MinimumSupply: Balance = 0;
 }
 
-impl bifrost_vsbond_auction::Config for Runtime {
-	type RuntimeEvent = RuntimeEvent;
-	type InvoicingCurrency = RelayCurrencyId;
-	type MaximumOrderInTrade = MaximumOrderInTrade;
-	type MinimumAmount = MinimumSupply;
-	type MultiCurrency = Currencies;
-	type WeightInfo = weights::bifrost_vsbond_auction::BifrostWeight<Runtime>;
-	type PalletId = VsbondAuctionPalletId;
-	type TreasuryAccount = BifrostTreasuryAccount;
-	type ControlOrigin = TechAdminOrCouncil;
-}
-
 impl bifrost_token_issuer::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type MultiCurrency = Currencies;
@@ -1828,7 +1816,6 @@ construct_runtime! {
 		FlexibleFee: bifrost_flexible_fee = 100,
 		Salp: bifrost_salp = 105,
 		TokenIssuer: bifrost_token_issuer = 109,
-		VSBondAuction: bifrost_vsbond_auction = 113,
 		AssetRegistry: bifrost_asset_registry = 114,
 		VtokenMinting: bifrost_vtoken_minting = 115,
 		Slp: bifrost_slp = 116,
@@ -1905,13 +1892,16 @@ pub type Migrations = migrations::Unreleased;
 
 parameter_types! {
 	pub const SystemMakerName: &'static str = "SystemMaker";
+	pub const VSBondAuctionName: &'static str = "VSBondAuction";
 }
 
 /// The runtime migrations per release.
 pub mod migrations {
 	#![allow(unused_imports)]
 	use super::*;
-	use migration::system_maker::SystemMakerClearPalletId;
+	use migration::{
+		system_maker::SystemMakerClearPalletId, vsbond_auction::VSBondAuctionClearPalletId,
+	};
 
 	/// Unreleased migrations. Add new ones here:
 	pub type Unreleased = (
@@ -1921,7 +1911,9 @@ pub mod migrations {
 		bifrost_asset_registry::migrations::v1::MigrateToV1<Runtime>,
 		bifrost_slpx::migration::v2::MigrateToV2<Runtime>,
 		SystemMakerClearPalletId<Runtime>,
+		VSBondAuctionClearPalletId<Runtime>,
 		frame_support::migrations::RemovePallet<SystemMakerName, RocksDbWeight>,
+		frame_support::migrations::RemovePallet<VSBondAuctionName, RocksDbWeight>,
 	);
 }
 
@@ -1952,7 +1944,6 @@ mod benches {
 		[bifrost_stable_pool, StablePool]
 		[bifrost_system_staking, SystemStaking]
 		[bifrost_token_issuer, TokenIssuer]
-		[bifrost_vsbond_auction, VSBondAuction]
 		[bifrost_vstoken_conversion, VstokenConversion]
 		[bifrost_vtoken_minting, VtokenMinting]
 		[bifrost_vtoken_voting, VtokenVoting]

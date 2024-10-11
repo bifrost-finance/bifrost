@@ -1333,7 +1333,6 @@ dependencies = [
  "bifrost-token-issuer",
  "bifrost-vbnc-convert",
  "bifrost-vesting",
- "bifrost-vsbond-auction",
  "bifrost-vstoken-conversion",
  "bifrost-vtoken-minting",
  "bifrost-vtoken-minting-rpc-runtime-api",
@@ -2234,26 +2233,6 @@ dependencies = [
  "pallet-balances",
  "parity-scale-codec",
  "scale-info",
- "sp-core",
- "sp-io",
- "sp-runtime",
- "sp-std 14.0.0 (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.13.0)",
-]
-
-[[package]]
-name = "bifrost-vsbond-auction"
-version = "0.8.0"
-dependencies = [
- "bifrost-primitives",
- "frame-benchmarking",
- "frame-support",
- "frame-system",
- "log",
- "orml-tokens",
- "orml-traits",
- "parity-scale-codec",
- "scale-info",
- "sp-arithmetic",
  "sp-core",
  "sp-io",
  "sp-runtime",

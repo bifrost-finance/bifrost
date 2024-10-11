@@ -193,6 +193,7 @@ parameter_types! {
 	pub const TreasuryPalletId: PalletId = PalletId(*b"bf/trsry");
 	pub const VBNCConvertPalletId: PalletId = PalletId(*b"bf/vbncc");
 	pub const VeMintingPalletId: PalletId = PalletId(*b"bf/vemnt");
+	// unused after vsbond_auction pallet removed
 	pub const VsbondAuctionPalletId: PalletId = PalletId(*b"bf/vsbnd");
 	pub const ZenlinkPalletId: PalletId = PalletId(*b"/zenlink");
 }
