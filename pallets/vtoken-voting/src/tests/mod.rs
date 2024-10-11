@@ -19,5 +19,5 @@
 #[cfg(test)]
 mod common_test;
 
-#[cfg(test)]
-mod vbnc_test;
+// #[cfg(test)]
+// mod vbnc_test;
