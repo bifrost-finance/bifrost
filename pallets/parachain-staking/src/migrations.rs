@@ -34,10 +34,7 @@ use alloc::{format, string::ToString};
 use frame_system::pallet_prelude::BlockNumberFor;
 #[cfg(feature = "try-runtime")]
 use scale_info::prelude::string::String;
-use sp_runtime::{
-	traits::{AccountIdConversion, Saturating, Zero},
-	Perbill, TryRuntimeError,
-};
+use sp_runtime::{traits::{AccountIdConversion, Saturating, Zero}, Perbill, Percent, TryRuntimeError};
 use sp_std::{convert::TryInto, vec::Vec};
 
 #[allow(deprecated)]
@@ -52,6 +49,10 @@ use crate::{
 	Event, InflationConfig, Pallet, ParachainBondConfig, ParachainBondInfo, Points, Range, Round,
 	RoundInfo, Staked, TopDelegations, TotalSelected,
 };
+
+const COLLATOR_COMMISSION: Perbill = Perbill::from_percent(10);
+const PARACHAIN_BOND_RESERVE_PERCENT: Percent = Percent::from_percent(0);
+const BLOCKS_PER_ROUND: u32 = 2 * 300;
 
 /// Migration to purge staking storage bloat for `Points` and `AtStake` storage items
 pub struct InitGenesisMigration<T>(PhantomData<T>);
@@ -97,12 +98,12 @@ impl<T: Config> OnRuntimeUpgrade for InitGenesisMigration<T> {
 			}
 		}
 		// Set collator commission to default config
-		<CollatorCommission<T>>::put(T::DefaultCollatorCommission::get());
+		<CollatorCommission<T>>::put(COLLATOR_COMMISSION);
 		// Set parachain bond config to default config
 		<ParachainBondInfo<T>>::put(ParachainBondConfig {
 			// must be set soon; if not => due inflation will be sent to collators/delegators
 			account: T::PalletId::get().into_account_truncating(),
-			percent: T::DefaultParachainBondReservePercent::get(),
+			percent: PARACHAIN_BOND_RESERVE_PERCENT,
 			payment_in_round: T::PaymentInRound::get(),
 		});
 		// Set total selected candidates to minimum config
@@ -111,7 +112,7 @@ impl<T: Config> OnRuntimeUpgrade for InitGenesisMigration<T> {
 		<Pallet<T>>::select_top_candidates(1u32);
 		// Start Round 1 at Block 0
 		let round: RoundInfo<BlockNumberFor<T>> =
-			RoundInfo::new(1u32, 0u32.into(), T::DefaultBlocksPerRound::get());
+			RoundInfo::new(1u32, 0u32.into(), BLOCKS_PER_ROUND);
 		<Round<T>>::put(round);
 		// Snapshot total stake
 		<Staked<T>>::insert(1u32, <Total<T>>::get());
