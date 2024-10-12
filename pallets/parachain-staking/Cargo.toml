@@ -46,6 +46,7 @@ std = [
 	"pallet-authorship/std",
 	"pallet-session/std",
 	"log/std",
+	"bifrost-primitives/std",
 ]
 runtime-benchmarks = ["frame-benchmarking"]
 try-runtime = ["frame-support/try-runtime"]
