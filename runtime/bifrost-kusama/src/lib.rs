@@ -1914,6 +1914,7 @@ pub mod migrations {
 		VSBondAuctionClearPalletId<Runtime>,
 		frame_support::migrations::RemovePallet<SystemMakerName, RocksDbWeight>,
 		frame_support::migrations::RemovePallet<VSBondAuctionName, RocksDbWeight>,
+		bifrost_system_staking::migrations::v1::MigrateToV1<Runtime>,
 	);
 }
 

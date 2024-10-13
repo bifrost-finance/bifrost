@@ -23,6 +23,7 @@ pub use weights::WeightInfo;
 use bifrost_primitives::{CurrencyId, FarmingInfo, PoolId, VtokenMintingInterface};
 pub use frame_support::weights::Weight;
 use frame_support::{dispatch::DispatchResultWithPostInfo, traits::Get, PalletId};
+use frame_system::pallet_prelude::BlockNumberFor;
 use orml_traits::MultiCurrency;
 pub use pallet::*;
 use sp_runtime::{
@@ -40,6 +41,8 @@ mod tests;
 
 #[cfg(feature = "runtime-benchmarks")]
 mod benchmarking;
+
+pub mod migrations;
 
 pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
 
@@ -98,13 +101,18 @@ pub mod pallet {
 		#[pallet::constant]
 		type PalletId: Get<PalletId>;
 
-		/// 1500
+		/// The number of blocks per round, as defined in the runtime.
+		///
+		/// This value is set to 1500 in the runtime configuration.
 		#[pallet::constant]
 		type BlocksPerRound: Get<u32>;
 	}
 
+	const STORAGE_VERSION: StorageVersion = StorageVersion::new(1);
+
 	#[pallet::pallet]
 	#[pallet::without_storage_info]
+	#[pallet::storage_version(STORAGE_VERSION)]
 	pub struct Pallet<T>(PhantomData<T>);
 
 	/// Current Round Information
@@ -113,8 +121,13 @@ pub mod pallet {
 
 	/// The tokenInfo for each currency
 	#[pallet::storage]
-	pub(crate) type TokenStatus<T: Config> =
-		StorageMap<_, Twox64Concat, CurrencyIdOf<T>, TokenInfo<BalanceOf<T>>, OptionQuery>;
+	pub(crate) type TokenStatus<T: Config> = StorageMap<
+		_,
+		Twox64Concat,
+		CurrencyIdOf<T>,
+		TokenInfo<BalanceOf<T>, BlockNumberFor<T>>,
+		OptionQuery,
+	>;
 
 	/// All token sets
 	#[pallet::storage]
@@ -124,20 +137,38 @@ pub mod pallet {
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
-		NewRound {
-			current: RoundIndex,
-			first: BlockNumberFor<T>,
-			length: u32,
-		},
+		/// A new staking round has started.
+		///
+		/// - `current`: The index of the current round.
+		/// - `first`: The block number at which this round started.
+		/// - `length`: The length of the round in blocks.
+		NewRound { current: RoundIndex, first: BlockNumberFor<T>, length: u32 },
+		/// Configuration of a token has been changed.
+		///
+		/// - `token`: The identifier of the token whose configuration changed.
+		/// - `exec_delay`: The delay in blocks before the changes take effect.
+		/// - `system_stakable_farming_rate`: The farming rate applied to system-stakable tokens.
+		/// - `add_or_sub`: Whether to add or subtract from the stakable farming rate.
+		/// - `system_stakable_base`: The base value of system-stakable assets.
+		/// - `farming_poolids`: List of pool IDs related to the token.
+		/// - `lptoken_rates`: List of rates for liquidity provider (LP) tokens.
 		TokenConfigChanged {
 			token: CurrencyIdOf<T>,
-			exec_delay: u32,
+			exec_delay: BlockNumberFor<T>,
 			system_stakable_farming_rate: Permill,
 			add_or_sub: bool,
 			system_stakable_base: BalanceOf<T>,
-			farming_poolids: Vec<PoolId>,
-			lptoken_rates: Vec<Perbill>,
+			farming_poolids: BoundedVec<PoolId, ConstU32<32>>,
+			lptoken_rates: BoundedVec<Perbill, ConstU32<32>>,
 		},
+		/// A deposit operation has failed.
+		///
+		/// - `token`: The identifier of the token being deposited.
+		/// - `amount`: The amount of the token to be deposited.
+		/// - `farming_staking_amount`: The amount staked in the farming pool.
+		/// - `system_stakable_amount`: The amount staked in the system-stakable pool.
+		/// - `system_shadow_amount`: The amount shadow-staked in the system.
+		/// - `pending_redeem_amount`: The amount pending redemption.
 		DepositFailed {
 			token: CurrencyIdOf<T>,
 			amount: BalanceOf<T>,
@@ -146,6 +177,15 @@ pub mod pallet {
 			system_shadow_amount: BalanceOf<T>,
 			pending_redeem_amount: BalanceOf<T>,
 		},
+
+		/// Minting operation succeeded.
+		///
+		/// - `token`: The identifier of the token being minted.
+		/// - `amount`: The amount of the token to be minted.
+		/// - `farming_staking_amount`: The amount staked in the farming pool.
+		/// - `system_stakable_amount`: The amount staked in the system-stakable pool.
+		/// - `system_shadow_amount`: The amount shadow-staked in the system.
+		/// - `pending_redeem_amount`: The amount pending redemption.
 		MintSuccess {
 			token: CurrencyIdOf<T>,
 			amount: BalanceOf<T>,
@@ -154,6 +194,10 @@ pub mod pallet {
 			system_shadow_amount: BalanceOf<T>,
 			pending_redeem_amount: BalanceOf<T>,
 		},
+		/// Minting operation failed.
+		///
+		/// # Parameters
+		/// (Same as MintSuccess)
 		MintFailed {
 			token: CurrencyIdOf<T>,
 			amount: BalanceOf<T>,
@@ -162,6 +206,10 @@ pub mod pallet {
 			system_shadow_amount: BalanceOf<T>,
 			pending_redeem_amount: BalanceOf<T>,
 		},
+		/// Withdrawal operation succeeded.
+		///
+		/// # Parameters
+		/// (Same as MintSuccess)
 		WithdrawSuccess {
 			token: CurrencyIdOf<T>,
 			amount: BalanceOf<T>,
@@ -170,6 +218,10 @@ pub mod pallet {
 			system_shadow_amount: BalanceOf<T>,
 			pending_redeem_amount: BalanceOf<T>,
 		},
+		/// Withdrawal operation failed.
+		///
+		/// # Parameters
+		/// (Same as MintSuccess)
 		WithdrawFailed {
 			token: CurrencyIdOf<T>,
 			amount: BalanceOf<T>,
@@ -178,6 +230,11 @@ pub mod pallet {
 			system_shadow_amount: BalanceOf<T>,
 			pending_redeem_amount: BalanceOf<T>,
 		},
+
+		/// A redemption operation has succeeded.
+		///
+		/// # Parameters
+		/// (Same as MintSuccess)
 		Redeemed {
 			token: CurrencyIdOf<T>,
 			amount: BalanceOf<T>,
@@ -186,6 +243,10 @@ pub mod pallet {
 			system_shadow_amount: BalanceOf<T>,
 			pending_redeem_amount: BalanceOf<T>,
 		},
+		/// A redemption operation has failed.
+		///
+		/// # Parameters
+		/// (Same as MintSuccess)
 		RedeemFailed {
 			token: CurrencyIdOf<T>,
 			amount: BalanceOf<T>,
@@ -194,12 +255,24 @@ pub mod pallet {
 			system_shadow_amount: BalanceOf<T>,
 			pending_redeem_amount: BalanceOf<T>,
 		},
-		VtokenNotFound {
-			token: CurrencyIdOf<T>,
-		},
-		TokenInfoRefreshed {
-			token: CurrencyIdOf<T>,
-		},
+		/// The specified token could not be found.
+		///
+		/// - `token`: The identifier of the token that was not found.
+		VtokenNotFound { token: CurrencyIdOf<T> },
+		/// Token information has been refreshed.
+		///
+		/// - `token`: The identifier of the token whose information was refreshed.
+		TokenInfoRefreshed { token: CurrencyIdOf<T> },
+		/// A payout has been made.
+		///
+		/// - `token`: The identifier of the token involved in the payout.
+		/// - `vtoken`: The identifier of the vtoken involved.
+		/// - `from`: The account from which the payout originated.
+		/// - `to`: The account to which the payout was made.
+		/// - `amount`: The total amount of the payout.
+		/// - `free`: The amount of free balance after the payout.
+		/// - `vfree`: The amount of vtoken free balance after the payout.
+		/// - `shadow`: The shadow balance after the payout.
 		Payout {
 			token: CurrencyIdOf<T>,
 			vtoken: CurrencyIdOf<T>,
@@ -224,6 +297,8 @@ pub mod pallet {
 		TokenInfoNotFound,
 		/// payout error
 		PayoutFailed,
+		/// Error converting Vec to BoundedVec.
+		ConversionError,
 	}
 
 	#[pallet::hooks]
@@ -296,7 +371,7 @@ pub mod pallet {
 		pub fn token_config(
 			origin: OriginFor<T>,
 			token: CurrencyIdOf<T>,
-			exec_delay: Option<u32>, // TODO: blocknum
+			exec_delay: Option<BlockNumberFor<T>>,
 			system_stakable_farming_rate: Option<Permill>,
 			add_or_sub: Option<bool>,
 			system_stakable_base: Option<BalanceOf<T>>,
@@ -311,7 +386,7 @@ pub mod pallet {
 				state
 			} else {
 				new_token = true;
-				<TokenInfo<BalanceOf<T>>>::default()
+				<TokenInfo<BalanceOf<T>, BlockNumberFor<T>>>::default()
 			};
 
 			// Set token_info.new_config
@@ -319,16 +394,12 @@ pub mod pallet {
 
 			// Set token_info.new_config.exec_delay = exec_delay
 			if let Some(exec_delay) = exec_delay {
-				ensure!(exec_delay != 0, Error::<T>::InvalidTokenConfig);
+				ensure!(!exec_delay.is_zero(), Error::<T>::InvalidTokenConfig);
 				token_info.new_config.exec_delay = exec_delay;
 			}
 
 			// Set token_info.new_config.system_stakable_farming_rate = system_stakable_farming_rate
 			if let Some(system_stakable_farming_rate) = system_stakable_farming_rate {
-				ensure!(
-					system_stakable_farming_rate >= Permill::zero(),
-					Error::<T>::InvalidTokenConfig
-				);
 				token_info.new_config.system_stakable_farming_rate = system_stakable_farming_rate;
 			}
 
@@ -349,7 +420,9 @@ pub mod pallet {
 					farming_poolids.len() as u32 <= T::MaxFarmingPoolIdLen::get(),
 					Error::<T>::ExceedMaxFarmingPoolidLen
 				);
-				token_info.new_config.farming_poolids = farming_poolids.clone();
+				token_info.new_config.farming_poolids =
+					BoundedVec::try_from(farming_poolids.clone())
+						.map_err(|_| Error::<T>::ConversionError)?;
 			}
 
 			// Set token_info.new_config.lptoken_rates = lptoken_rates
@@ -359,7 +432,8 @@ pub mod pallet {
 					lptoken_rates.len() as u32 <= T::MaxFarmingPoolIdLen::get(),
 					Error::<T>::ExceedMaxFarmingPoolidLen
 				);
-				token_info.new_config.lptoken_rates = lptoken_rates.clone();
+				token_info.new_config.lptoken_rates = BoundedVec::try_from(lptoken_rates.clone())
+					.map_err(|_| Error::<T>::ConversionError)?;
 			}
 
 			// Update token info
@@ -487,7 +561,7 @@ pub mod pallet {
 impl<T: Config> Pallet<T> {
 	fn process_token_info(
 		account: AccountIdOf<T>,
-		mut token_info: TokenInfo<BalanceOf<T>>,
+		mut token_info: TokenInfo<BalanceOf<T>, BlockNumberFor<T>>,
 		token_id: CurrencyIdOf<T>,
 	) -> DispatchResultWithPostInfo {
 		// Query farming info
@@ -561,11 +635,9 @@ impl<T: Config> Pallet<T> {
 				system_shadow_amount: token_info.system_shadow_amount,
 				pending_redeem_amount: token_info.pending_redeem_amount,
 			});
-		}
-
 		// Check stakable_amount < (system_shadow_amount - pending_redeem_amount) ===> redeem vksm ,
 		// update pending_redeem_amount += token_amount
-		if stakable_amount <
+		} else if stakable_amount <
 			token_info.system_shadow_amount.saturating_sub(token_info.pending_redeem_amount)
 		{
 			// redeem_amount = system_shadow_amount - pending_redeem_amount - stakable_amount
@@ -589,7 +661,7 @@ impl<T: Config> Pallet<T> {
 					let new_token_info = if let Some(state) = <TokenStatus<T>>::get(&token_id) {
 						state
 					} else {
-						<TokenInfo<BalanceOf<T>>>::default()
+						<TokenInfo<BalanceOf<T>, BlockNumberFor<T>>>::default()
 					};
 					token_info.pending_redeem_amount = new_token_info.pending_redeem_amount;
 				}
@@ -618,7 +690,7 @@ impl<T: Config> Pallet<T> {
 		let mut token_info = if let Some(state) = <TokenStatus<T>>::get(&token_id) {
 			state
 		} else {
-			<TokenInfo<BalanceOf<T>>>::default()
+			<TokenInfo<BalanceOf<T>, BlockNumberFor<T>>>::default()
 		};
 
 		// pending_redeem_amount -= token_amount
@@ -682,7 +754,7 @@ impl<T: Config> Pallet<T> {
 		let mut token_info = if let Some(state) = <TokenStatus<T>>::get(&token_id) {
 			state
 		} else {
-			<TokenInfo<BalanceOf<T>>>::default()
+			<TokenInfo<BalanceOf<T>, BlockNumberFor<T>>>::default()
 		};
 
 		// pending_redeem_amount += token_amount

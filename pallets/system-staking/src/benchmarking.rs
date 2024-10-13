@@ -35,7 +35,7 @@ benchmarks! {
 		assert_ok!(SystemStaking::<T>::token_config(
 			RawOrigin::Root.into(),
 			KSM,
-			Some(1),
+			Some(BlockNumberFor::<T>::from(1u32)),
 			Some(Permill::from_percent(80)),
 			Some(false),
 			Some(BalanceOf::<T>::unique_saturated_from(1000u128)),
@@ -45,7 +45,7 @@ benchmarks! {
 		assert_ok!(SystemStaking::<T>::token_config(
 			RawOrigin::Root.into(),
 			MOVR,
-			Some(2),
+			Some(BlockNumberFor::<T>::from(2u32)),
 			Some(Permill::from_percent(80)),
 			Some(false),
 			Some(BalanceOf::<T>::unique_saturated_from(1000u128)),
@@ -66,14 +66,14 @@ benchmarks! {
 		const KSM: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
 		let token_amount = BalanceOf::<T>::unique_saturated_from(1000u128);
 		let pool_id = PoolId::from(1u32);
-	}: _(RawOrigin::Root, KSM, Some(1), Some(Permill::from_percent(80)),Some(false),Some(token_amount),Some(vec![pool_id]),Some(vec![Perbill::from_percent(100)]))
+	}: _(RawOrigin::Root, KSM, Some(BlockNumberFor::<T>::from(1u32)), Some(Permill::from_percent(80)),Some(false),Some(token_amount),Some(vec![pool_id]),Some(vec![Perbill::from_percent(100)]))
 
 	refresh_token_info {
 		const KSM: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
 		assert_ok!(SystemStaking::<T>::token_config(
 			RawOrigin::Root.into(),
 			KSM,
-			Some(1),
+			Some(BlockNumberFor::<T>::from(1u32)),
 			Some(Permill::from_percent(80)),
 			Some(false),
 			Some(BalanceOf::<T>::unique_saturated_from(1000u128)),
@@ -87,7 +87,7 @@ benchmarks! {
 		assert_ok!(SystemStaking::<T>::token_config(
 			RawOrigin::Root.into(),
 			KSM,
-			Some(1),
+			Some(BlockNumberFor::<T>::from(1u32)),
 			Some(Permill::from_percent(80)),
 			Some(false),
 			Some(BalanceOf::<T>::unique_saturated_from(1000u128)),
@@ -104,7 +104,7 @@ benchmarks! {
 		assert_ok!(SystemStaking::<T>::token_config(
 			RawOrigin::Root.into(),
 			KSM,
-			Some(1),
+			Some(BlockNumberFor::<T>::from(1u32)),
 			Some(Permill::from_percent(80)),
 			Some(false),
 			Some(BalanceOf::<T>::unique_saturated_from(1000u128)),
@@ -120,7 +120,7 @@ benchmarks! {
 		assert_ok!(SystemStaking::<T>::token_config(
 			RawOrigin::Root.into(),
 			KSM,
-			Some(1),
+			Some(BlockNumberFor::<T>::from(1u32)),
 			Some(Permill::from_percent(80)),
 			Some(false),
 			Some(BalanceOf::<T>::unique_saturated_from(1000u128)),
@@ -137,7 +137,7 @@ benchmarks! {
 		assert_ok!(SystemStaking::<T>::token_config(
 			RawOrigin::Root.into(),
 			KSM,
-			Some(1),
+			Some(BlockNumberFor::<T>::from(1u32)),
 			Some(Permill::from_percent(80)),
 			Some(false),
 			Some(BalanceOf::<T>::unique_saturated_from(1000u128)),
