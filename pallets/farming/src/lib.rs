@@ -128,82 +128,137 @@ pub mod pallet {
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
+		/// A farming pool is created.
 		FarmingPoolCreated {
+			/// The pool id of the new pool.
 			pid: PoolId,
 		},
+		/// The farming pool is reset.
 		FarmingPoolReset {
+			/// The pool id of the pool to reset.
 			pid: PoolId,
 		},
+		/// The farming pool is closed.
 		FarmingPoolClosed {
+			/// The pool id of the pool to close.
 			pid: PoolId,
 		},
+		/// The farming pool is killed.
 		FarmingPoolKilled {
+			/// The pool id of the pool to kill.
 			pid: PoolId,
 		},
+		/// The farming pool is edited.
 		FarmingPoolEdited {
+			/// The pool id of the pool to edit.
 			pid: PoolId,
 		},
+		/// The pool is charged.
 		Charged {
+			/// The exchanger who charged the pool.
 			who: AccountIdOf<T>,
+			/// Charged pool id.
 			pid: PoolId,
+			/// Charged rewards.
 			rewards: Vec<(CurrencyIdOf<T>, BalanceOf<T>)>,
+			/// Returns true if the reward is for gauge pool, false otherwise.
 			if_gauge: bool,
 		},
+		/// The pool is deposited.
 		Deposited {
+			/// The exchanger who deposited the pool.
 			who: AccountIdOf<T>,
+			/// Deposited pool id.
 			pid: PoolId,
+			/// Deposited value.
 			add_value: BalanceOf<T>,
 		},
+		/// The pool is withdrawn.
 		Withdrawn {
+			/// The exchanger who withdrew the pool.
 			who: AccountIdOf<T>,
+			/// Withdrawn pool id.
 			pid: PoolId,
+			/// Withdrawn value.
 			remove_value: Option<BalanceOf<T>>,
 		},
+		/// The pool is claimed.
 		Claimed {
+			/// The exchanger who claimed the pool.
 			who: AccountIdOf<T>,
+			/// Claimed pool id.
 			pid: PoolId,
 		},
+		/// The pool is withdrawn claimed.
 		WithdrawClaimed {
+			/// The exchanger who withdrew claimed the pool.
 			who: AccountIdOf<T>,
+			/// Withdraw claimed pool id.
 			pid: PoolId,
 		},
+		/// The gauge pool is withdrawn.
 		GaugeWithdrawn {
+			/// The exchanger who withdrew the gauge pool.
 			who: AccountIdOf<T>,
+			/// Withdrawn gauge pool id.
 			gid: PoolId,
 		},
+		/// All gauge pools have been claimed.
 		AllForceGaugeClaimed {
+			/// Last claimed gauge pool id.
 			gid: PoolId,
 		},
+		/// Partially gauge pools have been claimed.
 		PartiallyForceGaugeClaimed {
+			/// Last claimed gauge pool id.
 			gid: PoolId,
 		},
+		/// All pools is retired.
 		AllRetired {
+			/// Last retired pool id.
 			pid: PoolId,
 		},
+		/// Partially pools is retired.
 		PartiallyRetired {
+			/// Last retired pool id.
 			pid: PoolId,
 		},
+		/// The retire limit is set.
 		RetireLimitSet {
+			/// The retire limit.
 			limit: u32,
 		},
+		/// The round has ended.
 		RoundEnd {
 			// voting_pools: BTreeMap<PoolId, BalanceOf<T>>,
 			total_votes: BalanceOf<T>,
+			/// The start block of the round.
 			start_round: BlockNumberFor<T>,
+			/// The end block of the round.
 			end_round: BlockNumberFor<T>,
 		},
+		/// The round has started to fail.
 		RoundStartError {
+			/// The error
 			info: DispatchError,
 		},
+		/// The round has started.
 		RoundStart {
+			/// The length of the round.
 			round_length: BlockNumberFor<T>,
 		},
+		/// The exchanger is voted.
 		Voted {
+			/// The exchanger who voted.
 			who: AccountIdOf<T>,
+			/// Voted pool id.
 			vote_list: Vec<(PoolId, Percent)>,
 		},
+		/// The boost pool is charged.
 		BoostCharged {
+			/// The exchanger who charged the boost pool.
 			who: AccountIdOf<T>,
+			/// Charged boost pool id.
 			rewards: Vec<(CurrencyIdOf<T>, BalanceOf<T>)>,
 		},
 	}
@@ -252,12 +307,15 @@ pub mod pallet {
 		InvalidRemoveAmount,
 	}
 
+	/// Record the id of the new pool.
 	#[pallet::storage]
 	pub type PoolNextId<T: Config> = StorageValue<_, PoolId, ValueQuery>;
 
+	/// Record the id of the new gauge pool.
 	#[pallet::storage]
 	pub type GaugePoolNextId<T: Config> = StorageValue<_, PoolId, ValueQuery>;
 
+	/// The upper limit of a single retirement pool
 	#[pallet::storage]
 	pub type RetireLimit<T: Config> = StorageValue<_, u32, ValueQuery>;
 
@@ -283,6 +341,7 @@ pub mod pallet {
 		GaugePoolInfo<BalanceOf<T>, CurrencyIdOf<T>, AccountIdOf<T>, BlockNumberFor<T>>,
 	>;
 
+	/// Record gauge config
 	#[pallet::storage]
 	pub type GaugeInfos<T: Config> = StorageDoubleMap<
 		_,
@@ -307,23 +366,29 @@ pub mod pallet {
 		ShareInfo<BalanceOf<T>, CurrencyIdOf<T>, BlockNumberFor<T>, AccountIdOf<T>>,
 	>;
 
+	/// Record all voting pool information.
 	#[pallet::storage]
 	pub type BoostPoolInfos<T: Config> =
 		StorageValue<_, BoostPoolInfo<BalanceOf<T>, BlockNumberFor<T>>, ValueQuery>;
 
+	/// Record the voting pool id and the voting percentage of the user.
 	#[pallet::storage]
 	pub type UserBoostInfos<T: Config> =
 		StorageMap<_, Blake2_128Concat, T::AccountId, UserBoostInfo<T>>;
 
+	/// Record the pools which the user can voted for.
 	#[pallet::storage]
 	pub type BoostWhitelist<T: Config> = StorageMap<_, Twox64Concat, PoolId, ()>;
 
+	/// Record the pools which the user can voted for in the next round.
 	#[pallet::storage]
 	pub type BoostNextRoundWhitelist<T: Config> = StorageMap<_, Twox64Concat, PoolId, ()>;
 
+	/// Record the voting amount for each pool.
 	#[pallet::storage]
 	pub type BoostVotingPools<T: Config> = StorageMap<_, Twox64Concat, PoolId, BalanceOf<T>>;
 
+	/// Voting rewards for corresponding currency.
 	#[pallet::storage]
 	pub type BoostBasicRewards<T: Config> =
 		StorageDoubleMap<_, Twox64Concat, PoolId, Twox64Concat, CurrencyIdOf<T>, BalanceOf<T>>;
