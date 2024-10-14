@@ -56,7 +56,7 @@ impl<T: Config> OnRuntimeUpgrade for MigrateToV1<T> {
 					new_token_info.current_config.lptoken_rates =
 						BoundedVec::try_from(old_token_info.current_config.lptoken_rates)
 							.map_err(|e| { log::error!("Failed to convert old current_config.lptoken_rates into BoundedVec during migration for {:?}: {:?}", k, e) })
-							.unwrap_or_default();
+							.unwrap();
 					new_token_info.current_config.add_or_sub =
 						old_token_info.current_config.add_or_sub;
 					new_token_info.current_config.system_stakable_base =
@@ -64,7 +64,7 @@ impl<T: Config> OnRuntimeUpgrade for MigrateToV1<T> {
 					new_token_info.current_config.farming_poolids =
 						BoundedVec::try_from(old_token_info.current_config.farming_poolids)
 							.map_err(|e| { log::error!("Failed to convert old current_config.farming_poolids into BoundedVec during migration for {:?}: {:?}", k, e) })
-							.unwrap_or_default();
+							.unwrap();
 
 					new_token_info.new_config.exec_delay =
 						BlockNumberFor::<T>::from(old_token_info.new_config.exec_delay);
@@ -73,14 +73,14 @@ impl<T: Config> OnRuntimeUpgrade for MigrateToV1<T> {
 					new_token_info.new_config.lptoken_rates =
 						BoundedVec::try_from(old_token_info.new_config.lptoken_rates)
 							.map_err(|e| { log::error!("Failed to convert old new_config.lptoken_rates into BoundedVec during migration for {:?}: {:?}", k, e) })
-							.unwrap_or_default();
+							.unwrap();
 					new_token_info.new_config.add_or_sub = old_token_info.new_config.add_or_sub;
 					new_token_info.new_config.system_stakable_base =
 						old_token_info.new_config.system_stakable_base;
 					new_token_info.new_config.farming_poolids =
 						BoundedVec::try_from(old_token_info.new_config.farming_poolids)
 							.map_err(|e| { log::error!("Failed to convert old new_config.farming_poolids into BoundedVec during migration for {:?}: {:?}", k, e) })
-							.unwrap_or_default();
+							.unwrap();
 
 					Some(new_token_info)
 				},
