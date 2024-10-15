@@ -437,7 +437,7 @@ impl OraclePriceProvider for MockOraclePriceProvider {
 parameter_types! {
 	pub const RewardAssetId: CurrencyId = BNC;
 	pub const LiquidationFreeAssetId: CurrencyId = DOT;
-		pub const MaxLengthLimit: u32 = 500;
+	pub const MaxLengthLimit: u32 = 500;
 }
 
 impl lend_market::Config for Test {
