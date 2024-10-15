@@ -30,14 +30,23 @@ use crate::*;
 
 #[derive(Clone, Encode, Decode, PartialEq, Eq, RuntimeDebug, TypeInfo)]
 pub struct GaugeInfo<BalanceOf: HasCompact, BlockNumberFor, AccountIdOf> {
+	/// Gauge pool controller
 	pub who: AccountIdOf,
+	/// The amount of the user deposited in the gauge pool.
 	pub gauge_amount: BalanceOf,
+	/// Total time factor
 	pub total_time_factor: u128,
+	/// The latest time factor when the user deposit/withdraw.
 	pub latest_time_factor: u128,
+	/// The time factor when the user claimed the rewards last time.
 	pub claimed_time_factor: u128,
+	/// The block number when the pool started to gauge.
 	pub gauge_start_block: BlockNumberFor,
+	/// The block number when the pool stopped to gauge.
 	pub gauge_stop_block: BlockNumberFor,
+	/// The block number when the user deposit/withdraw last time.
 	pub gauge_last_block: BlockNumberFor,
+	/// The block number when the user claimed the rewards last time.
 	pub last_claim_block: BlockNumberFor,
 }
 
