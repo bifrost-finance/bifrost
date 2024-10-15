@@ -308,6 +308,7 @@ impl pallet_prices::Config for Test {
 parameter_types! {
 	pub const RewardAssetId: CurrencyId = BNC;
 	pub const LiquidationFreeAssetId: CurrencyId = DOT;
+	pub const MaxLengthLimit: u32 = 500;
 }
 
 impl Config for Test {
@@ -321,6 +322,7 @@ impl Config for Test {
 	type Assets = Currencies;
 	type RewardAssetId = RewardAssetId;
 	type LiquidationFreeAssetId = LiquidationFreeAssetId;
+	type MaxLengthLimit = MaxLengthLimit;
 }
 
 pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
