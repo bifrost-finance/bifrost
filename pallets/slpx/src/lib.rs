@@ -515,8 +515,7 @@ pub mod pallet {
 			// Check the validity of origin
 			T::ControlOrigin::ensure_origin(origin)?;
 			// Check in advance to avoid hook errors
-			T::VtokenMintingInterface::vtoken_id(currency_id)
-				.ok_or(Error::<T>::ErrorConvertVtoken)?;
+			currency_id.to_vtoken().map_err(|_| Error::<T>::ErrorConvertVtoken)?;
 			let mut currency_list = CurrencyIdList::<T>::get();
 			if is_support {
 				ensure!(!currency_list.contains(&currency_id), Error::<T>::CurrencyAlreadyExists);
@@ -1100,12 +1099,13 @@ impl<T: Config> Pallet<T> {
 				let vtoken_id =
 					order.currency_id.to_vtoken().map_err(|_| Error::<T>::ErrorConvertVtoken)?;
 
-				let vtoken_amount = T::VtokenMintingInterface::token_to_vtoken(
-					order.currency_id,
-					vtoken_id,
-					currency_amount,
-				)
-				.map_err(|_| Error::<T>::ErrorVtokenMiting)?;
+				let vtoken_amount =
+					T::VtokenMintingInterface::get_v_currency_amount_by_currency_amount(
+						order.currency_id,
+						vtoken_id,
+						currency_amount,
+					)
+					.map_err(|_| Error::<T>::ErrorVtokenMiting)?;
 
 				T::VtokenMintingInterface::mint(
 					order.derivative_account.clone(),

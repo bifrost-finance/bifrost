@@ -241,9 +241,6 @@ impl bifrost_vtoken_minting::Config for Test {
 	type FeeAccount = BifrostFeeAccount;
 	type RedeemFeeAccount = BifrostFeeAccount;
 	type RelayChainToken = RelayCurrencyId;
-	type CurrencyIdConversion = AssetIdMaps<Test>;
-	type CurrencyIdRegister = AssetIdMaps<Test>;
-	type BifrostSlp = MockSlp;
 	type BifrostSlpx = SlpxInterface;
 	type WeightInfo = ();
 	type OnRedeemSuccess = ();
@@ -253,7 +250,6 @@ impl bifrost_vtoken_minting::Config for Test {
 	type MaxLockRecords = ConstU32<100>;
 	type IncentivePoolAccount = IncentivePoolAccount;
 	type BbBNC = ();
-	type AssetIdMaps = AssetIdMaps<Test>;
 }
 
 parameter_types! {

@@ -188,11 +188,8 @@ impl bifrost_vtoken_minting::Config for Runtime {
 	type ExitAccount = BifrostExitAccount;
 	type FeeAccount = BifrostFeeAccount;
 	type RedeemFeeAccount = BifrostFeeAccount;
-	type BifrostSlp = Slp;
 	type BifrostSlpx = SlpxInterface;
 	type RelayChainToken = RelayCurrencyId;
-	type CurrencyIdConversion = AssetIdMaps<Runtime>;
-	type CurrencyIdRegister = AssetIdMaps<Runtime>;
 	type WeightInfo = ();
 	type OnRedeemSuccess = ();
 	type XcmTransfer = XTokens;
@@ -201,7 +198,6 @@ impl bifrost_vtoken_minting::Config for Runtime {
 	type MaxLockRecords = ConstU32<100>;
 	type IncentivePoolAccount = IncentivePoolAccount;
 	type BbBNC = ();
-	type AssetIdMaps = AssetIdMaps<Runtime>;
 }
 
 ord_parameter_types! {

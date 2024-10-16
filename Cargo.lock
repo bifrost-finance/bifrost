@@ -2272,7 +2272,6 @@ dependencies = [
  "bifrost-currencies",
  "bifrost-primitives",
  "bifrost-runtime-common",
- "bifrost-slp",
  "cumulus-primitives-core",
  "env_logger",
  "frame-benchmarking",

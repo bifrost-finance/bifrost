@@ -690,7 +690,7 @@ pub mod pallet {
 					)?;
 				},
 				cid if cid == relay_vtoken_id => {
-					let token_value = T::VtokenMinting::vtoken_to_token(
+					let token_value = T::VtokenMinting::get_currency_amount_by_v_currency_amount(
 						relay_currency_id,
 						relay_vtoken_id,
 						value,

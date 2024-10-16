@@ -136,9 +136,13 @@ impl<T: Config> Pallet<T> {
 		let account_borrows = lend_market::Pallet::<T>::get_current_borrow_balance(&who, asset_id)?;
 
 		// Formula
-		// current_rate = account_borrows / ( vtoken_to_token(account_deposits) - account_borrows )
-		let deposits_token_value =
-			T::VtokenMinting::vtoken_to_token(asset_id, vtoken_id, account_deposits)?;
+		// current_rate = account_borrows / (
+		// get_currency_amount_by_v_currency_amount(account_deposits) - account_borrows )
+		let deposits_token_value = T::VtokenMinting::get_currency_amount_by_v_currency_amount(
+			asset_id,
+			vtoken_id,
+			account_deposits,
+		)?;
 		let base_token_value = deposits_token_value
 			.checked_sub(account_borrows)
 			.ok_or(ArithmeticError::Overflow)?;

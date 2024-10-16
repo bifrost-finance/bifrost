@@ -38,7 +38,6 @@ xcm-executor = { workspace = true }
 xcm-builder = { workspace = true }
 pallet-xcm = { workspace = true }
 xcm = { workspace = true }
-bifrost-slp = { workspace = true }
 bifrost-asset-registry = { workspace = true }
 bifrost-runtime-common = { workspace = true }
 env_logger = { workspace = true }
@@ -54,7 +53,6 @@ std = [
 	"bifrost-primitives/std",
 	"orml-traits/std",
 	"orml-xtokens/std",
-	"bifrost-slp/std",
 	"bifrost-asset-registry/std",
 	"bifrost-runtime-common/std",
 ]

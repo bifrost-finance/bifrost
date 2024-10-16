@@ -20,7 +20,7 @@
 #![cfg(feature = "runtime-benchmarks")]
 
 use crate::{Pallet as VtokenMinting, *};
-use bifrost_primitives::{CurrencyId, TokenSymbol, VKSM};
+use bifrost_primitives::{CurrencyId, TokenSymbol, VtokenMintingOperator, VKSM};
 use frame_benchmarking::v1::{benchmarks, whitelisted_caller, BenchmarkError};
 use frame_support::{assert_ok, sp_runtime::traits::UniqueSaturatedFrom};
 use frame_system::RawOrigin;
@@ -73,7 +73,7 @@ benchmarks! {
 		let token = CurrencyId::Token(TokenSymbol::KSM);
 	}: _<T::RuntimeOrigin>(origin, token, TimeUnit::Era(1))
 
-	recreate_currency_ongoing_time_unit {
+	set_ongoing_time_unit {
 		let origin = T::ControlOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?;
 		let token = CurrencyId::Token(TokenSymbol::KSM);
 	}: _<T::RuntimeOrigin>(origin, token, TimeUnit::Era(1))

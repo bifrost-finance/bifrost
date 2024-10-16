@@ -981,7 +981,7 @@ fn refund_meanwhile_issue_should_work() {
 			Salp::buyback_vstoken_by_stable_pool(Some(ALICE).into(), 1, KSM, 100),
 			orml_tokens::Error::<Test>::BalanceTooLow
 		);
-		let token_value = VtokenMinting::token_to_vtoken(KSM, VKSM, 100);
+		let token_value = VtokenMinting::get_v_currency_amount_by_currency_amount(KSM, VKSM, 100);
 		assert_eq!(token_value, Ok(100));
 		assert_eq!(Tokens::free_balance(KSM, &ALICE), 95000);
 		assert_ok!(Tokens::set_balance(RuntimeOrigin::root(), buyback_account, KSM, 100, 0));

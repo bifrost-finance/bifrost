@@ -121,13 +121,6 @@ pub trait VtokenMintingOperator<CurrencyId, Balance, AccountId, TimeUnit> {
 		time_unit: TimeUnit,
 	) -> Option<(Balance, Vec<u32>)>;
 
-	/// Revise the currency indexed unlocking record by some amount.
-	fn deduct_unlock_amount(
-		currency_id: CurrencyId,
-		index: u32,
-		deduct_amount: Balance,
-	) -> DispatchResult;
-
 	/// Get currency Entrance and Exit accounts.【entrance_account, exit_account】
 	fn get_entrance_and_exit_accounts() -> (AccountId, AccountId);
 
@@ -260,18 +253,16 @@ pub trait VtokenMintingInterface<AccountId, CurrencyId, Balance> {
 		vtoken_amount: Balance,
 		redeem: RedeemType<AccountId>,
 	) -> DispatchResultWithPostInfo;
-	fn token_to_vtoken(
+	fn get_v_currency_amount_by_currency_amount(
 		token_id: CurrencyId,
 		vtoken_id: CurrencyId,
 		token_amount: Balance,
 	) -> Result<Balance, DispatchError>;
-	fn vtoken_to_token(
+	fn get_currency_amount_by_v_currency_amount(
 		token_id: CurrencyId,
 		vtoken_id: CurrencyId,
 		vtoken_amount: Balance,
 	) -> Result<Balance, DispatchError>;
-	fn vtoken_id(token_id: CurrencyId) -> Option<CurrencyId>;
-	fn token_id(vtoken_id: CurrencyId) -> Option<CurrencyId>;
 	fn get_token_pool(currency_id: CurrencyId) -> Balance;
 	fn get_minimums_redeem(vtoken_id: CurrencyId) -> Balance;
 	fn get_moonbeam_parachain_id() -> u32;
@@ -307,7 +298,7 @@ impl<AccountId, CurrencyId, Balance: Zero> VtokenMintingInterface<AccountId, Cur
 		Ok(().into())
 	}
 
-	fn token_to_vtoken(
+	fn get_v_currency_amount_by_currency_amount(
 		_token_id: CurrencyId,
 		_vtoken_id: CurrencyId,
 		_token_amount: Balance,
@@ -315,20 +306,12 @@ impl<AccountId, CurrencyId, Balance: Zero> VtokenMintingInterface<AccountId, Cur
 		Ok(Zero::zero())
 	}
 
-	fn vtoken_to_token(
+	fn get_currency_amount_by_v_currency_amount(
 		_token_id: CurrencyId,
 		_vtoken_id: CurrencyId,
 		_vtoken_amount: Balance,
 	) -> Result<Balance, DispatchError> {
 		Ok(Zero::zero())
-	}
-
-	fn vtoken_id(_token_id: CurrencyId) -> Option<CurrencyId> {
-		None
-	}
-
-	fn token_id(_vtoken_id: CurrencyId) -> Option<CurrencyId> {
-		None
 	}
 
 	fn get_token_pool(_currency_id: CurrencyId) -> Balance {
