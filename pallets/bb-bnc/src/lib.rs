@@ -62,7 +62,7 @@ pub type CurrencyIdOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<
 
 const BB_LOCK_ID: LockIdentifier = *b"bbbnclck";
 const MARKUP_LOCK_ID: LockIdentifier = *b"bbbncmkp";
-const BB_BNC_SYSTEM_POOL_ID: PoolId = u32::MAX;
+pub const BB_BNC_SYSTEM_POOL_ID: PoolId = u32::MAX;
 #[derive(Clone, Encode, Decode, PartialEq, Eq, RuntimeDebug, TypeInfo, Default)]
 pub struct BbConfig<Balance, BlockNumber> {
 	/// Minimum number of TokenType that users can lock
