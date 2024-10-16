@@ -498,6 +498,8 @@ fn start_boost_round() {
 #[test]
 fn vote() {
 	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
+		env_logger::try_init().unwrap_or(());
+
 		BbBNC::set_incentive(0, Some(7 * 86400 / 12), Some(ALICE.clone()));
 
 		let (pid, _tokens) = init_gauge();
@@ -512,17 +514,16 @@ fn vote() {
 			whitelist.clone()
 		));
 
-		let charge_rewards = vec![(KSM, 300000)];
-		assert_ok!(Farming::charge_boost(RuntimeOrigin::signed(BOB), charge_rewards));
+		let charge_rewards = vec![(KSM, 300_000)];
+		assert_ok!(Farming::charge_boost(RuntimeOrigin::signed(CHARLIE), charge_rewards));
+		assert_eq!(BoostVotingPools::<Runtime>::iter().count(), 1);
 		assert_ok!(Farming::start_boost_round(RuntimeOrigin::signed(ALICE), 100));
 		let boost_pool_info =
 			BoostPoolInfo { total_votes: 0, end_round: 100, start_round: 0, round_length: 100 };
 		assert_eq!(BoostPoolInfos::<Runtime>::get(), boost_pool_info);
 
 		assert_ok!(Farming::vote(RuntimeOrigin::signed(ALICE), vote_list.clone()));
-		assert_eq!(BoostVotingPools::<Runtime>::iter().count(), 1);
 		assert_ok!(Farming::vote(RuntimeOrigin::signed(BOB), vote_list.clone()));
-		assert_eq!(BoostVotingPools::<Runtime>::iter().count(), 1);
 		assert_ok!(Farming::vote(RuntimeOrigin::signed(CHARLIE), vote_list.clone()));
 		assert_eq!(BoostVotingPools::<Runtime>::iter().count(), 1);
 		assert_eq!(UserBoostInfos::<Runtime>::iter().count(), 3);
@@ -544,6 +545,17 @@ fn vote() {
 		// vote again to refresh the vote amount of CHARLIE
 		assert_ok!(Farming::vote(RuntimeOrigin::signed(CHARLIE), vote_list.clone()));
 		assert_eq!(BoostPoolInfos::<Runtime>::get().total_votes, 124645248000);
+
+		assert_eq!(BoostBasicRewards::<Runtime>::get(pid, KSM), Some(3000));
+		Farming::on_initialize(0);
+		Farming::on_initialize(1);
+		Farming::on_initialize(2);
+		assert_ok!(Farming::claim(RuntimeOrigin::signed(ALICE), pid));
+		assert_eq!(Tokens::free_balance(KSM, &ALICE), 10000);
+		System::set_block_number(System::block_number() + 100);
+		assert_ok!(Farming::claim(RuntimeOrigin::signed(ALICE), pid));
+		assert_eq!(Tokens::free_balance(KSM, &ALICE), 11519);
+
 		assert_ok!(Farming::end_boost_round(RuntimeOrigin::signed(ALICE)));
 		assert_eq!(BoostPoolInfos::<Runtime>::get().end_round, 0);
 	})
