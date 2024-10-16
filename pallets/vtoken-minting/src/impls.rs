@@ -177,9 +177,7 @@ impl<T: Config> Pallet<T> {
 			match operation {
 				Operation::Set | Operation::Add => match unlocking_ledger {
 					Some((total_locked, ledger_list, _token_id)) => {
-						ledger_list
-							.try_push(unlock_id.clone())
-							.map_err(|_| Error::<T>::TooManyRedeems)?;
+						ledger_list.try_push(*unlock_id).map_err(|_| Error::<T>::TooManyRedeems)?;
 
 						*total_locked = total_locked
 							.checked_add(&currency_amount)
@@ -188,7 +186,7 @@ impl<T: Config> Pallet<T> {
 					None =>
 						*unlocking_ledger = Some((
 							*currency_amount,
-							BoundedVec::try_from(vec![unlock_id.clone()])
+							BoundedVec::try_from(vec![*unlock_id])
 								.map_err(|_| Error::<T>::TooManyRedeems)?,
 							*currency_id,
 						)),
@@ -234,9 +232,7 @@ impl<T: Config> Pallet<T> {
 			match operation {
 				Operation::Set | Operation::Add => match user_unlock_ledger {
 					Some((total_locked, ledger_list)) => {
-						ledger_list
-							.try_push(unlock_id.clone())
-							.map_err(|_| Error::<T>::TooManyRedeems)?;
+						ledger_list.try_push(*unlock_id).map_err(|_| Error::<T>::TooManyRedeems)?;
 
 						*total_locked = total_locked
 							.checked_add(&currency_amount)
@@ -245,7 +241,7 @@ impl<T: Config> Pallet<T> {
 					None => {
 						*user_unlock_ledger = Some((
 							*currency_amount,
-							BoundedVec::try_from(vec![unlock_id.clone()])
+							BoundedVec::try_from(vec![*unlock_id])
 								.map_err(|_| Error::<T>::TooManyRedeems)?,
 						));
 					},
@@ -691,7 +687,7 @@ impl<T: Config> Pallet<T> {
 				v_currency_amount,
 				currency_amount,
 				redeem_fee,
-				unlock_id: next_id.clone(),
+				unlock_id: *next_id,
 			});
 
 			// Increase the next unlock id
