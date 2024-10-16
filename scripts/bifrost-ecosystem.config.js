@@ -13,7 +13,7 @@ module.exports = {
       "host" : ["192.168.0.13", "192.168.0.14", "192.168.0.15"],
       "key": "~/.ssh/deploy_rsa.pub",
       "ref"  : "origin/develop",
-      "repo" : "git@github.com/bifrost-finance/bifrost.git",
+      "repo" : "git@github.com/bifrost-io/bifrost.git",
       "path" : "/home/bifrost/app",
       "post-setup": "make build-bifrost-release",
       'post-deploy' : 'pm2 reload scripts/bifost-ecosystem.config.js --env production'

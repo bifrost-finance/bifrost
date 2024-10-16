@@ -1093,7 +1093,7 @@ dependencies = [
  "frame-system",
  "orml-tokens",
  "orml-traits",
- "orml-utilities",
+ "orml-utilities 0.13.0 (git+https://github.com/bifrost-io/open-runtime-module-library?branch=release-polkadot-v1.13.0)",
  "pallet-balances",
  "parity-scale-codec",
  "scale-info",
@@ -1504,8 +1504,8 @@ dependencies = [
  "cumulus-primitives-utility",
  "ethabi",
  "evm",
- "fp-account",
- "fp-evm",
+ "fp-account 1.0.0-dev (git+https://github.com/bifrost-io/frontier?branch=release-polkadot-v1.13.0)",
+ "fp-evm 3.0.0-dev (git+https://github.com/bifrost-finance/frontier?branch=release-polkadot-v1.13.0)",
  "fp-rpc",
  "fp-self-contained",
  "frame-benchmarking",
@@ -1656,7 +1656,7 @@ dependencies = [
  "cumulus-primitives-core",
  "cumulus-primitives-parachain-inherent",
  "cumulus-test-relay-sproof-builder",
- "fc-api",
+ "fc-api 1.0.0-dev (git+https://github.com/bifrost-io/frontier?branch=release-polkadot-v1.13.0)",
  "fc-db",
  "fc-mapping-sync",
  "fc-rpc",
@@ -1849,12 +1849,12 @@ dependencies = [
  "fc-rpc-core",
  "fc-storage",
  "flume",
- "fp-account",
+ "fp-account 1.0.0-dev (git+https://github.com/bifrost-io/frontier?branch=release-polkadot-v1.13.0)",
  "fp-consensus",
- "fp-dynamic-fee",
- "fp-evm",
+ "fp-dynamic-fee 1.0.0 (git+https://github.com/bifrost-io/frontier?branch=release-polkadot-v1.13.0)",
+ "fp-evm 3.0.0-dev (git+https://github.com/bifrost-finance/frontier?branch=release-polkadot-v1.13.0)",
  "fp-rpc",
- "fp-storage",
+ "fp-storage 2.0.0 (git+https://github.com/bifrost-io/frontier?branch=release-polkadot-v1.13.0)",
  "frame-benchmarking",
  "frame-benchmarking-cli",
  "frame-system-rpc-runtime-api",
@@ -4739,7 +4739,19 @@ version = "1.0.0-dev"
 source = "git+https://github.com/bifrost-finance/frontier?branch=release-polkadot-v1.13.0#24a48ebc221399d129712eff41787ad800dc8a26"
 dependencies = [
  "async-trait",
- "fp-storage",
+ "fp-storage 2.0.0 (git+https://github.com/bifrost-finance/frontier?branch=release-polkadot-v1.13.0)",
+ "parity-scale-codec",
+ "sp-core",
+ "sp-runtime",
+]
+
+[[package]]
+name = "fc-api"
+version = "1.0.0-dev"
+source = "git+https://github.com/bifrost-io/frontier?branch=release-polkadot-v1.13.0#24a48ebc221399d129712eff41787ad800dc8a26"
+dependencies = [
+ "async-trait",
+ "fp-storage 2.0.0 (git+https://github.com/bifrost-io/frontier?branch=release-polkadot-v1.13.0)",
  "parity-scale-codec",
  "sp-core",
  "sp-runtime",
@@ -4768,11 +4780,11 @@ source = "git+https://github.com/bifrost-finance/frontier?branch=release-polkado
 dependencies = [
  "async-trait",
  "ethereum 0.15.0",
- "fc-api",
+ "fc-api 1.0.0-dev (git+https://github.com/bifrost-finance/frontier?branch=release-polkadot-v1.13.0)",
  "fc-storage",
  "fp-consensus",
  "fp-rpc",
- "fp-storage",
+ "fp-storage 2.0.0 (git+https://github.com/bifrost-finance/frontier?branch=release-polkadot-v1.13.0)",
  "futures 0.3.30",
  "kvdb-rocksdb",
  "log",
@@ -4822,13 +4834,13 @@ dependencies = [
  "ethereum 0.15.0",
  "ethereum-types",
  "evm",
- "fc-api",
+ "fc-api 1.0.0-dev (git+https://github.com/bifrost-finance/frontier?branch=release-polkadot-v1.13.0)",
  "fc-mapping-sync",
  "fc-rpc-core",
  "fc-storage",
- "fp-evm",
+ "fp-evm 3.0.0-dev (git+https://github.com/bifrost-finance/frontier?branch=release-polkadot-v1.13.0)",
  "fp-rpc",
- "fp-storage",
+ "fp-storage 2.0.0 (git+https://github.com/bifrost-finance/frontier?branch=release-polkadot-v1.13.0)",
  "futures 0.3.30",
  "hex",
  "jsonrpsee",
@@ -4891,7 +4903,7 @@ dependencies = [
  "ethereum 0.15.0",
  "ethereum-types",
  "fp-rpc",
- "fp-storage",
+ "fp-storage 2.0.0 (git+https://github.com/bifrost-finance/frontier?branch=release-polkadot-v1.13.0)",
  "parity-scale-codec",
  "sc-client-api",
  "sp-api",
@@ -5104,6 +5116,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "fp-account"
+version = "1.0.0-dev"
+source = "git+https://github.com/bifrost-io/frontier?branch=release-polkadot-v1.13.0#24a48ebc221399d129712eff41787ad800dc8a26"
+dependencies = [
+ "hex",
+ "impl-serde",
+ "libsecp256k1",
+ "log",
+ "parity-scale-codec",
+ "scale-info",
+ "serde",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-runtime-interface 24.0.0 (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.13.0)",
+]
+
+[[package]]
 name = "fp-consensus"
 version = "2.0.0-dev"
 source = "git+https://github.com/bifrost-finance/frontier?branch=release-polkadot-v1.13.0#24a48ebc221399d129712eff41787ad800dc8a26"
@@ -5125,13 +5155,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "fp-dynamic-fee"
+version = "1.0.0"
+source = "git+https://github.com/bifrost-io/frontier?branch=release-polkadot-v1.13.0#24a48ebc221399d129712eff41787ad800dc8a26"
+dependencies = [
+ "async-trait",
+ "sp-core",
+ "sp-inherents",
+]
+
+[[package]]
 name = "fp-ethereum"
 version = "1.0.0-dev"
 source = "git+https://github.com/bifrost-finance/frontier?branch=release-polkadot-v1.13.0#24a48ebc221399d129712eff41787ad800dc8a26"
 dependencies = [
  "ethereum 0.15.0",
  "ethereum-types",
- "fp-evm",
+ "fp-evm 3.0.0-dev (git+https://github.com/bifrost-finance/frontier?branch=release-polkadot-v1.13.0)",
  "frame-support",
  "parity-scale-codec",
 ]
@@ -5152,13 +5192,28 @@ dependencies = [
 ]
 
 [[package]]
+name = "fp-evm"
+version = "3.0.0-dev"
+source = "git+https://github.com/bifrost-io/frontier?branch=release-polkadot-v1.13.0#24a48ebc221399d129712eff41787ad800dc8a26"
+dependencies = [
+ "evm",
+ "frame-support",
+ "num_enum",
+ "parity-scale-codec",
+ "scale-info",
+ "serde",
+ "sp-core",
+ "sp-runtime",
+]
+
+[[package]]
 name = "fp-rpc"
 version = "3.0.0-dev"
 source = "git+https://github.com/bifrost-finance/frontier?branch=release-polkadot-v1.13.0#24a48ebc221399d129712eff41787ad800dc8a26"
 dependencies = [
  "ethereum 0.15.0",
  "ethereum-types",
- "fp-evm",
+ "fp-evm 3.0.0-dev (git+https://github.com/bifrost-finance/frontier?branch=release-polkadot-v1.13.0)",
  "parity-scale-codec",
  "scale-info",
  "sp-api",
@@ -5170,7 +5225,7 @@ dependencies = [
 [[package]]
 name = "fp-self-contained"
 version = "1.0.0-dev"
-source = "git+https://github.com/bifrost-finance/frontier?branch=release-polkadot-v1.13.0#24a48ebc221399d129712eff41787ad800dc8a26"
+source = "git+https://github.com/bifrost-io/frontier?branch=release-polkadot-v1.13.0#24a48ebc221399d129712eff41787ad800dc8a26"
 dependencies = [
  "frame-support",
  "parity-scale-codec",
@@ -5183,6 +5238,15 @@ dependencies = [
 name = "fp-storage"
 version = "2.0.0"
 source = "git+https://github.com/bifrost-finance/frontier?branch=release-polkadot-v1.13.0#24a48ebc221399d129712eff41787ad800dc8a26"
+dependencies = [
+ "parity-scale-codec",
+ "serde",
+]
+
+[[package]]
+name = "fp-storage"
+version = "2.0.0"
+source = "git+https://github.com/bifrost-io/frontier?branch=release-polkadot-v1.13.0#24a48ebc221399d129712eff41787ad800dc8a26"
 dependencies = [
  "parity-scale-codec",
  "serde",
@@ -7549,7 +7613,7 @@ dependencies = [
 [[package]]
 name = "merkle-distributor"
 version = "0.1.0"
-source = "git+https://github.com/bifrost-finance/Zenlink-DEX-Module?branch=release-polkadot-v1.13.0#64e75422be893afe8b5029ce831b7318748a99c6"
+source = "git+https://github.com/bifrost-io/Zenlink-DEX-Module?branch=release-polkadot-v1.13.0#64e75422be893afe8b5029ce831b7318748a99c6"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -8433,7 +8497,7 @@ dependencies = [
  "frame-support",
  "frame-system",
  "orml-traits",
- "orml-utilities",
+ "orml-utilities 0.13.0 (git+https://github.com/bifrost-finance/open-runtime-module-library?branch=release-polkadot-v1.13.0)",
  "parity-scale-codec",
  "scale-info",
  "serde",
@@ -8468,7 +8532,7 @@ dependencies = [
  "frame-support",
  "impl-trait-for-tuples",
  "num-traits",
- "orml-utilities",
+ "orml-utilities 0.13.0 (git+https://github.com/bifrost-finance/open-runtime-module-library?branch=release-polkadot-v1.13.0)",
  "parity-scale-codec",
  "paste",
  "scale-info",
@@ -8511,9 +8575,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "orml-utilities"
+version = "0.13.0"
+source = "git+https://github.com/bifrost-io/open-runtime-module-library?branch=release-polkadot-v1.13.0#a7ea052e958275502022b25f1fc1e5b0e146fe51"
+dependencies = [
+ "frame-support",
+ "parity-scale-codec",
+ "scale-info",
+ "serde",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std 14.0.0 (git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot-v1.13.0)",
+]
+
+[[package]]
 name = "orml-xcm"
 version = "0.13.0"
-source = "git+https://github.com/bifrost-finance/open-runtime-module-library?branch=release-polkadot-v1.13.0#a7ea052e958275502022b25f1fc1e5b0e146fe51"
+source = "git+https://github.com/bifrost-io/open-runtime-module-library?branch=release-polkadot-v1.13.0#a7ea052e958275502022b25f1fc1e5b0e146fe51"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -8745,9 +8824,9 @@ dependencies = [
 [[package]]
 name = "pallet-base-fee"
 version = "1.0.0"
-source = "git+https://github.com/bifrost-finance/frontier?branch=release-polkadot-v1.13.0#24a48ebc221399d129712eff41787ad800dc8a26"
+source = "git+https://github.com/bifrost-io/frontier?branch=release-polkadot-v1.13.0#24a48ebc221399d129712eff41787ad800dc8a26"
 dependencies = [
- "fp-evm",
+ "fp-evm 3.0.0-dev (git+https://github.com/bifrost-io/frontier?branch=release-polkadot-v1.13.0)",
  "frame-support",
  "frame-system",
  "parity-scale-codec",
@@ -8948,8 +9027,8 @@ name = "pallet-dynamic-fee"
 version = "4.0.0-dev"
 source = "git+https://github.com/bifrost-finance/frontier?branch=release-polkadot-v1.13.0#24a48ebc221399d129712eff41787ad800dc8a26"
 dependencies = [
- "fp-dynamic-fee",
- "fp-evm",
+ "fp-dynamic-fee 1.0.0 (git+https://github.com/bifrost-finance/frontier?branch=release-polkadot-v1.13.0)",
+ "fp-evm 3.0.0-dev (git+https://github.com/bifrost-finance/frontier?branch=release-polkadot-v1.13.0)",
  "frame-support",
  "frame-system",
  "parity-scale-codec",
@@ -9024,9 +9103,9 @@ dependencies = [
  "evm",
  "fp-consensus",
  "fp-ethereum",
- "fp-evm",
+ "fp-evm 3.0.0-dev (git+https://github.com/bifrost-finance/frontier?branch=release-polkadot-v1.13.0)",
  "fp-rpc",
- "fp-storage",
+ "fp-storage 2.0.0 (git+https://github.com/bifrost-finance/frontier?branch=release-polkadot-v1.13.0)",
  "frame-support",
  "frame-system",
  "pallet-evm",
@@ -9043,8 +9122,8 @@ source = "git+https://github.com/bifrost-finance/frontier?branch=release-polkado
 dependencies = [
  "environmental",
  "evm",
- "fp-account",
- "fp-evm",
+ "fp-account 1.0.0-dev (git+https://github.com/bifrost-finance/frontier?branch=release-polkadot-v1.13.0)",
+ "fp-evm 3.0.0-dev (git+https://github.com/bifrost-finance/frontier?branch=release-polkadot-v1.13.0)",
  "frame-benchmarking",
  "frame-support",
  "frame-system",
@@ -9089,7 +9168,7 @@ dependencies = [
 [[package]]
 name = "pallet-evm-chain-id"
 version = "1.0.0-dev"
-source = "git+https://github.com/bifrost-finance/frontier?branch=release-polkadot-v1.13.0#24a48ebc221399d129712eff41787ad800dc8a26"
+source = "git+https://github.com/bifrost-io/frontier?branch=release-polkadot-v1.13.0#24a48ebc221399d129712eff41787ad800dc8a26"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -9102,7 +9181,7 @@ name = "pallet-evm-precompile-blake2"
 version = "2.0.0-dev"
 source = "git+https://github.com/bifrost-finance/frontier?branch=release-polkadot-v1.13.0#24a48ebc221399d129712eff41787ad800dc8a26"
 dependencies = [
- "fp-evm",
+ "fp-evm 3.0.0-dev (git+https://github.com/bifrost-finance/frontier?branch=release-polkadot-v1.13.0)",
 ]
 
 [[package]]
@@ -9110,7 +9189,7 @@ name = "pallet-evm-precompile-bn128"
 version = "2.0.0-dev"
 source = "git+https://github.com/bifrost-finance/frontier?branch=release-polkadot-v1.13.0#24a48ebc221399d129712eff41787ad800dc8a26"
 dependencies = [
- "fp-evm",
+ "fp-evm 3.0.0-dev (git+https://github.com/bifrost-finance/frontier?branch=release-polkadot-v1.13.0)",
  "sp-core",
  "substrate-bn",
 ]
@@ -9120,7 +9199,7 @@ name = "pallet-evm-precompile-dispatch"
 version = "2.0.0-dev"
 source = "git+https://github.com/bifrost-finance/frontier?branch=release-polkadot-v1.13.0#24a48ebc221399d129712eff41787ad800dc8a26"
 dependencies = [
- "fp-evm",
+ "fp-evm 3.0.0-dev (git+https://github.com/bifrost-finance/frontier?branch=release-polkadot-v1.13.0)",
  "frame-support",
  "pallet-evm",
  "parity-scale-codec",
@@ -9132,16 +9211,16 @@ name = "pallet-evm-precompile-modexp"
 version = "2.0.0-dev"
 source = "git+https://github.com/bifrost-finance/frontier?branch=release-polkadot-v1.13.0#24a48ebc221399d129712eff41787ad800dc8a26"
 dependencies = [
- "fp-evm",
+ "fp-evm 3.0.0-dev (git+https://github.com/bifrost-finance/frontier?branch=release-polkadot-v1.13.0)",
  "num",
 ]
 
 [[package]]
 name = "pallet-evm-precompile-sha3fips"
 version = "2.0.0-dev"
-source = "git+https://github.com/bifrost-finance/frontier?branch=release-polkadot-v1.13.0#24a48ebc221399d129712eff41787ad800dc8a26"
+source = "git+https://github.com/bifrost-io/frontier?branch=release-polkadot-v1.13.0#24a48ebc221399d129712eff41787ad800dc8a26"
 dependencies = [
- "fp-evm",
+ "fp-evm 3.0.0-dev (git+https://github.com/bifrost-io/frontier?branch=release-polkadot-v1.13.0)",
  "tiny-keccak",
 ]
 
@@ -9150,7 +9229,7 @@ name = "pallet-evm-precompile-simple"
 version = "2.0.0-dev"
 source = "git+https://github.com/bifrost-finance/frontier?branch=release-polkadot-v1.13.0#24a48ebc221399d129712eff41787ad800dc8a26"
 dependencies = [
- "fp-evm",
+ "fp-evm 3.0.0-dev (git+https://github.com/bifrost-finance/frontier?branch=release-polkadot-v1.13.0)",
  "ripemd",
  "sp-io",
 ]

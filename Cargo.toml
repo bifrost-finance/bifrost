@@ -106,7 +106,7 @@ pallet-prices                          = { path = "pallets/prices", default-feat
 pallet-traits                          = { path = "pallets/traits", default-features = false }
 
 # Zenlink
-merkle-distributor             = { git = "https://github.com/bifrost-finance/Zenlink-DEX-Module", branch = "release-polkadot-v1.13.0", default-features = false }
+merkle-distributor             = { git = "https://github.com/bifrost-io/Zenlink-DEX-Module", branch = "release-polkadot-v1.13.0", default-features = false }
 zenlink-protocol               = { git = "https://github.com/bifrost-finance/Zenlink-DEX-Module", branch = "release-polkadot-v1.13.0", default-features = false }
 zenlink-protocol-rpc           = { git = "https://github.com/bifrost-finance/Zenlink-DEX-Module", branch = "release-polkadot-v1.13.0" }
 zenlink-protocol-runtime-api   = { git = "https://github.com/bifrost-finance/Zenlink-DEX-Module", branch = "release-polkadot-v1.13.0", default-features = false }
@@ -119,37 +119,37 @@ zenlink-swap-router            = { git = "https://github.com/bifrost-finance/Zen
 orml-tokens         = { git = "https://github.com/bifrost-finance/open-runtime-module-library", branch = "release-polkadot-v1.13.0", default-features = false }
 orml-traits         = { git = "https://github.com/bifrost-finance/open-runtime-module-library", branch = "release-polkadot-v1.13.0", default-features = false }
 orml-unknown-tokens = { git = "https://github.com/bifrost-finance/open-runtime-module-library", branch = "release-polkadot-v1.13.0", default-features = false }
-orml-utilities      = { git = "https://github.com/bifrost-finance/open-runtime-module-library", branch = "release-polkadot-v1.13.0", default-features = false }
-orml-xcm            = { git = "https://github.com/bifrost-finance/open-runtime-module-library", branch = "release-polkadot-v1.13.0", default-features = false }
+orml-utilities      = { git = "https://github.com/bifrost-io/open-runtime-module-library", branch = "release-polkadot-v1.13.0", default-features = false }
+orml-xcm            = { git = "https://github.com/bifrost-io/open-runtime-module-library", branch = "release-polkadot-v1.13.0", default-features = false }
 orml-xcm-support    = { git = "https://github.com/bifrost-finance/open-runtime-module-library", branch = "release-polkadot-v1.13.0", default-features = false }
 orml-xtokens        = { git = "https://github.com/bifrost-finance/open-runtime-module-library", branch = "release-polkadot-v1.13.0", default-features = false }
 orml-oracle         = { git = "https://github.com/bifrost-finance/open-runtime-module-library", branch = "release-polkadot-v1.13.0", default-features = false }
 
 # Frontier
-fc-api                         = { git = "https://github.com/bifrost-finance/frontier", branch = "release-polkadot-v1.13.0", default-features = false }
+fc-api                         = { git = "https://github.com/bifrost-io/frontier", branch = "release-polkadot-v1.13.0", default-features = false }
 fc-consensus                   = { git = "https://github.com/bifrost-finance/frontier", branch = "release-polkadot-v1.13.0", default-features = false }
 fc-db                          = { git = "https://github.com/bifrost-finance/frontier", branch = "release-polkadot-v1.13.0", default-features = false }
 fc-mapping-sync                = { git = "https://github.com/bifrost-finance/frontier", branch = "release-polkadot-v1.13.0", default-features = false }
 fc-rpc                         = { git = "https://github.com/bifrost-finance/frontier", branch = "release-polkadot-v1.13.0", default-features = false }
 fc-rpc-core                    = { git = "https://github.com/bifrost-finance/frontier", branch = "release-polkadot-v1.13.0", default-features = false }
 fc-storage                     = { git = "https://github.com/bifrost-finance/frontier", branch = "release-polkadot-v1.13.0", default-features = false }
-fp-account                     = { git = "https://github.com/bifrost-finance/frontier", branch = "release-polkadot-v1.13.0", default-features = false }
+fp-account                     = { git = "https://github.com/bifrost-io/frontier", branch = "release-polkadot-v1.13.0", default-features = false }
 fp-consensus                   = { git = "https://github.com/bifrost-finance/frontier", branch = "release-polkadot-v1.13.0", default-features = false }
-fp-dynamic-fee                 = { git = "https://github.com/bifrost-finance/frontier", branch = "release-polkadot-v1.13.0", default-features = false }
+fp-dynamic-fee                 = { git = "https://github.com/bifrost-io/frontier", branch = "release-polkadot-v1.13.0", default-features = false }
 fp-evm                         = { git = "https://github.com/bifrost-finance/frontier", branch = "release-polkadot-v1.13.0", default-features = false }
 fp-rpc                         = { git = "https://github.com/bifrost-finance/frontier", branch = "release-polkadot-v1.13.0", default-features = false }
-fp-self-contained              = { git = "https://github.com/bifrost-finance/frontier", branch = "release-polkadot-v1.13.0", default-features = false }
-fp-storage                     = { git = "https://github.com/bifrost-finance/frontier", branch = "release-polkadot-v1.13.0", default-features = false }
-pallet-base-fee                = { git = "https://github.com/bifrost-finance/frontier", branch = "release-polkadot-v1.13.0", default-features = false }
+fp-self-contained              = { git = "https://github.com/bifrost-io/frontier", branch = "release-polkadot-v1.13.0", default-features = false }
+fp-storage                     = { git = "https://github.com/bifrost-io/frontier", branch = "release-polkadot-v1.13.0", default-features = false }
+pallet-base-fee                = { git = "https://github.com/bifrost-io/frontier", branch = "release-polkadot-v1.13.0", default-features = false }
 pallet-dynamic-fee             = { git = "https://github.com/bifrost-finance/frontier", branch = "release-polkadot-v1.13.0", default-features = false }
 pallet-ethereum                = { git = "https://github.com/bifrost-finance/frontier", branch = "release-polkadot-v1.13.0", default-features = false }
 pallet-evm                     = { git = "https://github.com/bifrost-finance/frontier", branch = "release-polkadot-v1.13.0", default-features = false }
-pallet-evm-chain-id            = { git = "https://github.com/bifrost-finance/frontier", branch = "release-polkadot-v1.13.0", default-features = false }
+pallet-evm-chain-id            = { git = "https://github.com/bifrost-io/frontier", branch = "release-polkadot-v1.13.0", default-features = false }
 pallet-evm-precompile-blake2   = { git = "https://github.com/bifrost-finance/frontier", branch = "release-polkadot-v1.13.0", default-features = false }
 pallet-evm-precompile-bn128    = { git = "https://github.com/bifrost-finance/frontier", branch = "release-polkadot-v1.13.0", default-features = false }
 pallet-evm-precompile-dispatch = { git = "https://github.com/bifrost-finance/frontier", branch = "release-polkadot-v1.13.0", default-features = false }
 pallet-evm-precompile-modexp   = { git = "https://github.com/bifrost-finance/frontier", branch = "release-polkadot-v1.13.0", default-features = false }
-pallet-evm-precompile-sha3fips = { git = "https://github.com/bifrost-finance/frontier", branch = "release-polkadot-v1.13.0", default-features = false }
+pallet-evm-precompile-sha3fips = { git = "https://github.com/bifrost-io/frontier", branch = "release-polkadot-v1.13.0", default-features = false }
 pallet-evm-precompile-simple   = { git = "https://github.com/bifrost-finance/frontier", branch = "release-polkadot-v1.13.0", default-features = false }
 
 # polkadot-sdk (wasm)
