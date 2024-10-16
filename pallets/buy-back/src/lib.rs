@@ -30,7 +30,7 @@ mod benchmarking;
 
 pub mod weights;
 
-use bb_bnc::BbBNCInterface;
+use bb_bnc::{BbBNCInterface, BB_BNC_SYSTEM_POOL_ID};
 use bifrost_primitives::{currency::BNC, CurrencyId, CurrencyIdRegister, TryConvertFrom};
 use cumulus_primitives_core::ParaId;
 use frame_support::{
@@ -414,9 +414,8 @@ pub mod pallet {
 				T::MultiCurrency::withdraw(BNC, &buyback_address, destruction_amount)?;
 			}
 			let bnc_balance = T::MultiCurrency::free_balance(BNC, &buyback_address);
-			let pool_id = 0;
 			T::BbBNC::notify_reward(
-				pool_id,
+				BB_BNC_SYSTEM_POOL_ID,
 				&Some(buyback_address.clone()),
 				vec![(BNC, bnc_balance)],
 			)
