@@ -57,7 +57,7 @@ pub use pallet_balances::Call as BalancesCall;
 pub use pallet_timestamp::Call as TimestampCall;
 use sp_api::impl_runtime_apis;
 use sp_arithmetic::Percent;
-use sp_core::{ConstBool, OpaqueMetadata, U256};
+use sp_core::{ConstBool, OpaqueMetadata};
 use sp_runtime::{
 	create_runtime_str, generic, impl_opaque_keys,
 	traits::{
@@ -1448,20 +1448,16 @@ impl bifrost_vtoken_minting::Config for Runtime {
 	type ExitAccount = SlpExitPalletId;
 	type FeeAccount = BifrostFeeAccount;
 	type RedeemFeeAccount = BifrostFeeAccount;
-	type BifrostSlp = Slp;
 	type BifrostSlpx = Slpx;
 	type WeightInfo = weights::bifrost_vtoken_minting::BifrostWeight<Runtime>;
 	type OnRedeemSuccess = OnRedeemSuccess;
 	type RelayChainToken = RelayCurrencyId;
-	type CurrencyIdConversion = AssetIdMaps<Runtime>;
-	type CurrencyIdRegister = AssetIdMaps<Runtime>;
 	type XcmTransfer = XTokens;
 	type MoonbeamChainId = MoonriverChainId;
 	type ChannelCommission = ChannelCommission;
 	type MaxLockRecords = ConstU32<100>;
 	type IncentivePoolAccount = IncentivePoolAccount;
 	type BbBNC = ();
-	type AssetIdMaps = AssetIdMaps<Runtime>;
 }
 
 impl bifrost_slpx::Config for Runtime {
@@ -2254,9 +2250,13 @@ impl_runtime_apis! {
 		}
 	}
 
-	impl bifrost_vtoken_minting_rpc_runtime_api::VtokenMintingRuntimeApi<Block, CurrencyId> for Runtime {
-		fn get_exchange_rate(token_id: Option<CurrencyId>) -> Vec<(CurrencyId, U256)> {
-			VtokenMinting::get_exchange_rate(token_id).unwrap_or(Vec::new())
+	impl bifrost_vtoken_minting_rpc_runtime_api::VtokenMintingRuntimeApi<Block, CurrencyId, Balance> for Runtime {
+		fn get_currency_amount_by_v_currency_amount(currnecy_id: CurrencyId, v_currency_id: CurrencyId, v_currency_amount: Balance) -> Balance {
+			VtokenMinting::get_currency_amount_by_v_currency_amount(currnecy_id, v_currency_id, v_currency_amount).unwrap_or(0)
+		}
+
+		fn get_v_currency_amount_by_currency_amount(currnecy_id: CurrencyId, v_currency_id: CurrencyId, currency_amount: Balance) -> Balance {
+			VtokenMinting::get_v_currency_amount_by_currency_amount(currnecy_id, v_currency_id, currency_amount).unwrap_or(0)
 		}
 	}
 

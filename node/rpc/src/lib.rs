@@ -110,7 +110,7 @@ where
 	C::Api: SalpRuntimeApi<Block, ParaId, AccountId>,
 	C::Api: StablePoolRuntimeApi<Block>,
 	C::Api: LendMarketApi<Block, AccountId, Balance>,
-	C::Api: VtokenMintingRuntimeApi<Block, CurrencyId>,
+	C::Api: VtokenMintingRuntimeApi<Block, CurrencyId, Balance>,
 	C::Api: ZenlinkProtocolRuntimeApi<Block, AccountId, AssetId>,
 	C::Api:
 		zenlink_stable_amm_runtime_api::StableAmmApi<Block, CurrencyId, Balance, AccountId, PoolId>,
@@ -154,7 +154,7 @@ where
 	C::Api: SalpRuntimeApi<Block, ParaId, AccountId>,
 	C::Api: BbBNCRuntimeApi<Block, AccountId>,
 	C::Api: LendMarketApi<Block, AccountId, Balance>,
-	C::Api: VtokenMintingRuntimeApi<Block, CurrencyId>,
+	C::Api: VtokenMintingRuntimeApi<Block, CurrencyId, Balance>,
 	C::Api: ZenlinkProtocolRuntimeApi<Block, AccountId, AssetId>,
 	C::Api: StablePoolRuntimeApi<Block>,
 	C::Api: BlockBuilder<Block>,

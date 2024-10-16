@@ -26,26 +26,17 @@ use bifrost_asset_registry::AssetIdMaps;
 use bifrost_primitives::{
 	currency::{BNC, DOT, FIL, KSM, MOVR, VBNC, VFIL, VKSM, VMOVR},
 	BifrostEntranceAccount, BifrostExitAccount, BifrostFeeAccount, CurrencyId, CurrencyIdMapping,
-	IncentivePoolAccount, MoonbeamChainId, SlpxOperator, KUSD,
+	IncentivePoolAccount, MockXcmTransfer, MoonbeamChainId, SlpxOperator, KUSD,
 };
 use bifrost_runtime_common::{micro, milli};
-use bifrost_slp::{QueryId, QueryResponseManager};
-pub use cumulus_primitives_core::ParaId;
-use frame_support::{
-	derive_impl, ord_parameter_types,
-	pallet_prelude::Get,
-	parameter_types,
-	traits::{Everything, Nothing},
-};
-use frame_system::{EnsureRoot, EnsureSignedBy};
-use orml_traits::{location::RelativeReserveProvider, parameter_type_with_key};
+use frame_support::{derive_impl, ord_parameter_types, parameter_types, traits::Nothing};
+use frame_system::EnsureSignedBy;
+use orml_traits::parameter_type_with_key;
 use sp_runtime::{
 	traits::{ConstU32, IdentityLookup},
 	AccountId32, BuildStorage, DispatchError, DispatchResult,
 };
-use xcm::{prelude::*, v3::Weight};
-use xcm_builder::{FixedWeightBounds, FrameTransactionalProcessor};
-use xcm_executor::XcmExecutor;
+use xcm::prelude::*;
 
 use crate as vtoken_minting;
 
@@ -63,13 +54,10 @@ frame_support::construct_runtime!(
 	pub enum Runtime {
 		System: frame_system,
 		Tokens: orml_tokens,
-		XTokens: orml_xtokens,
 		Balances: pallet_balances,
 		Currencies: bifrost_currencies,
 		VtokenMinting: vtoken_minting,
-		Slp: bifrost_slp,
 		AssetRegistry: bifrost_asset_registry,
-		PolkadotXcm: pallet_xcm,
 	}
 );
 
@@ -165,31 +153,6 @@ parameter_type_with_key! {
 }
 
 parameter_types! {
-	pub SelfRelativeLocation: Location = Location::here();
-	pub const BaseXcmWeight: Weight = Weight::from_parts(1000_000_000u64, 0);
-	pub const MaxAssetsForTransfer: usize = 2;
-}
-
-impl orml_xtokens::Config for Runtime {
-	type RuntimeEvent = RuntimeEvent;
-	type Balance = Balance;
-	type CurrencyId = CurrencyId;
-	type CurrencyIdConvert = ();
-	type AccountIdToLocation = ();
-	type UniversalLocation = UniversalLocation;
-	type SelfLocation = SelfRelativeLocation;
-	type XcmExecutor = XcmExecutor<XcmConfig>;
-	type Weigher = FixedWeightBounds<UnitWeightCost, RuntimeCall, MaxInstructions>;
-	type BaseXcmWeight = BaseXcmWeight;
-	type MaxAssetsForTransfer = MaxAssetsForTransfer;
-	type MinXcmFee = ParachainMinFee;
-	type LocationsFilter = Everything;
-	type ReserveProvider = RelativeReserveProvider;
-	type RateLimiter = ();
-	type RateLimiterId = ();
-}
-
-parameter_types! {
 	pub const MaximumUnlockIdOfUser: u32 = 1_000;
 	pub const MaximumUnlockIdOfTimeUnit: u32 = 1_000;
 	pub const MaxLockRecords: u32 = 64;
@@ -212,18 +175,14 @@ impl vtoken_minting::Config for Runtime {
 	type FeeAccount = BifrostFeeAccount;
 	type RedeemFeeAccount = BifrostFeeAccount;
 	type IncentivePoolAccount = IncentivePoolAccount;
-	type BifrostSlp = Slp;
 	type BifrostSlpx = SlpxInterface;
 	type BbBNC = BbBNC;
 	type RelayChainToken = RelayCurrencyId;
-	type CurrencyIdConversion = AssetIdMaps<Runtime>;
-	type CurrencyIdRegister = AssetIdMaps<Runtime>;
 	type WeightInfo = ();
 	type OnRedeemSuccess = ();
-	type XcmTransfer = XTokens;
+	type XcmTransfer = MockXcmTransfer;
 	type MoonbeamChainId = MoonbeamChainId;
 	type ChannelCommission = ();
-	type AssetIdMaps = AssetIdMaps<Runtime>;
 }
 
 ord_parameter_types! {
@@ -235,140 +194,12 @@ impl bifrost_asset_registry::Config for Runtime {
 	type RegisterOrigin = EnsureSignedBy<CouncilAccount, AccountId>;
 	type WeightInfo = ();
 }
-pub struct ParachainId;
-impl Get<ParaId> for ParachainId {
-	fn get() -> ParaId {
-		2001.into()
-	}
-}
-
-parameter_types! {
-	pub const MaxTypeEntryPerBlock: u32 = 10;
-	pub const MaxRefundPerBlock: u32 = 10;
-	pub const MaxLengthLimit: u32 = 100;
-}
-
-pub struct SubstrateResponseManager;
-impl QueryResponseManager<QueryId, Location, u64, RuntimeCall> for SubstrateResponseManager {
-	fn get_query_response_record(_query_id: QueryId) -> bool {
-		Default::default()
-	}
-	fn create_query_record(
-		_responder: Location,
-		_call_back: Option<RuntimeCall>,
-		_timeout: u64,
-	) -> u64 {
-		Default::default()
-	}
-	fn remove_query_record(_query_id: QueryId) -> bool {
-		Default::default()
-	}
-}
 
 pub struct SlpxInterface;
 impl SlpxOperator<Balance> for SlpxInterface {
 	fn get_moonbeam_transfer_to_fee() -> Balance {
 		Default::default()
 	}
-}
-
-pub const TREASURY_ACCOUNT: AccountId = AccountId32::new([9u8; 32]);
-parameter_types! {
-	pub const TreasuryAccount: AccountId32 = TREASURY_ACCOUNT;
-}
-
-impl bifrost_slp::Config for Runtime {
-	type RuntimeEvent = RuntimeEvent;
-	type RuntimeOrigin = RuntimeOrigin;
-	type RuntimeCall = RuntimeCall;
-	type MultiCurrency = Currencies;
-	type ControlOrigin = EnsureSignedBy<One, AccountId>;
-	type WeightInfo = ();
-	type VtokenMinting = VtokenMinting;
-	type AccountConverter = ();
-	type ParachainId = ParachainId;
-	type SubstrateResponseManager = SubstrateResponseManager;
-	type MaxTypeEntryPerBlock = MaxTypeEntryPerBlock;
-	type MaxRefundPerBlock = MaxRefundPerBlock;
-	type ParachainStaking = ();
-	type XcmTransfer = XTokens;
-	type MaxLengthLimit = MaxLengthLimit;
-	type XcmWeightAndFeeHandler = ();
-	type ChannelCommission = ();
-	type StablePoolHandler = ();
-	type AssetIdMaps = AssetIdMaps<Runtime>;
-	type TreasuryAccount = TreasuryAccount;
-}
-
-parameter_types! {
-	// One XCM operation is 200_000_000 XcmWeight, cross-chain transfer ~= 2x of transfer = 3_000_000_000
-	pub UnitWeightCost: Weight = Weight::from_parts(200_000_000, 0);
-	pub const MaxInstructions: u32 = 100;
-	pub UniversalLocation: InteriorLocation = Parachain(2001).into();
-}
-
-pub struct XcmConfig;
-impl xcm_executor::Config for XcmConfig {
-	type AssetClaims = PolkadotXcm;
-	type AssetTransactor = ();
-	type AssetTrap = PolkadotXcm;
-	type Barrier = ();
-	type RuntimeCall = RuntimeCall;
-	type IsReserve = ();
-	type IsTeleporter = ();
-	type UniversalLocation = UniversalLocation;
-	type OriginConverter = ();
-	type ResponseHandler = PolkadotXcm;
-	type SubscriptionService = PolkadotXcm;
-	type Trader = ();
-	type Weigher = FixedWeightBounds<UnitWeightCost, RuntimeCall, MaxInstructions>;
-	type XcmSender = ();
-	type PalletInstancesInfo = AllPalletsWithSystem;
-	type MaxAssetsIntoHolding = ConstU32<64>;
-	type FeeManager = ();
-	type MessageExporter = ();
-	type UniversalAliases = Nothing;
-	type CallDispatcher = RuntimeCall;
-	type SafeCallFilter = Everything;
-	type AssetLocker = ();
-	type AssetExchanger = ();
-	type Aliasers = Nothing;
-	type TransactionalProcessor = FrameTransactionalProcessor;
-	type HrmpNewChannelOpenRequestHandler = ();
-	type HrmpChannelAcceptedHandler = ();
-	type HrmpChannelClosingHandler = ();
-	type XcmRecorder = ();
-}
-
-#[cfg(feature = "runtime-benchmarks")]
-parameter_types! {
-	pub ReachableDest: Option<Location> = Some(Parent.into());
-}
-
-impl pallet_xcm::Config for Runtime {
-	type RuntimeEvent = RuntimeEvent;
-	type ExecuteXcmOrigin = xcm_builder::EnsureXcmOrigin<RuntimeOrigin, ()>;
-	type UniversalLocation = UniversalLocation;
-	type SendXcmOrigin = xcm_builder::EnsureXcmOrigin<RuntimeOrigin, ()>;
-	type Weigher = FixedWeightBounds<UnitWeightCost, RuntimeCall, MaxInstructions>;
-	type XcmExecuteFilter = Nothing;
-	type XcmExecutor = XcmExecutor<XcmConfig>;
-	type XcmReserveTransferFilter = Everything;
-	type XcmRouter = ();
-	type XcmTeleportFilter = Nothing;
-	type RuntimeOrigin = RuntimeOrigin;
-	type RuntimeCall = RuntimeCall;
-	const VERSION_DISCOVERY_QUEUE_SIZE: u32 = 100;
-	type AdvertisedXcmVersion = ConstU32<2>;
-	type Currency = Balances;
-	type CurrencyMatcher = ();
-	type TrustedLockers = ();
-	type SovereignAccountOf = ();
-	type MaxLockers = ConstU32<8>;
-	type WeightInfo = pallet_xcm::TestWeightInfo;
-	type AdminOrigin = EnsureRoot<AccountId>;
-	type MaxRemoteLockConsumers = ConstU32<0>;
-	type RemoteLockConsumerIdentifier = ();
 }
 
 pub struct ExtBuilder {
