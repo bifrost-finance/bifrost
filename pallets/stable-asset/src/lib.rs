@@ -41,7 +41,7 @@ use scale_info::TypeInfo;
 use sp_core::{U256, U512};
 use sp_runtime::{
 	traits::{AccountIdConversion, CheckedAdd, CheckedDiv, CheckedMul, CheckedSub, One, Zero},
-	DispatchError, SaturatedConversion,
+	ArithmeticError, DispatchError, SaturatedConversion,
 };
 use sp_std::prelude::*;
 
@@ -400,9 +400,11 @@ pub mod pallet {
 	#[pallet::without_storage_info]
 	pub struct Pallet<T>(_);
 
+	/// The last pool id.
 	#[pallet::storage]
 	pub type PoolCount<T: Config> = StorageValue<_, StableAssetPoolId, ValueQuery>;
 
+	/// The pool info.
 	#[pallet::storage]
 	pub type Pools<T: Config> = StorageMap<
 		_,
@@ -417,6 +419,7 @@ pub mod pallet {
 		>,
 	>;
 
+	/// Price anchor used to bind the corresponding pool and currency.
 	#[pallet::storage]
 	pub type TokenRateCaches<T: Config> = StorageDoubleMap<
 		_,
@@ -427,193 +430,340 @@ pub mod pallet {
 		(T::AtLeast64BitUnsigned, T::AtLeast64BitUnsigned),
 	>;
 
+	/// Record the maximum percentage that can exceed the token rate.
 	#[pallet::storage]
 	pub type TokenRateHardcap<T: Config> = StorageMap<_, Twox64Concat, T::AssetId, Permill>;
 
 	#[pallet::event]
 	#[pallet::generate_deposit(pub fn deposit_event)]
 	pub enum Event<T: Config> {
+		/// A new pool is created.
 		CreatePool {
+			/// The pool id.
 			pool_id: StableAssetPoolId,
+			/// Amplification coefficient of the pool.
 			a: T::AtLeast64BitUnsigned,
+			/// The system account of the pool.
 			swap_id: T::AccountId,
+			/// Pallet id.
 			pallet_id: T::AccountId,
 		},
+		/// Liquidity is added to the pool.
 		LiquidityAdded {
+			/// The account who added the liquidity.
 			minter: T::AccountId,
+			/// The pool id.
 			pool_id: StableAssetPoolId,
+			/// Amplification coefficient of the pool.
 			a: T::AtLeast64BitUnsigned,
+			/// The input amounts of the assets.
 			input_amounts: Vec<T::Balance>,
+			/// Expected minimum output amount.
 			min_output_amount: T::Balance,
+			/// Balances data.
 			balances: Vec<T::Balance>,
+			/// The total supply of the pool asset.
 			total_supply: T::Balance,
+			/// fee amount of the pool asset.
 			fee_amount: T::Balance,
+			/// Actual minimum output amount.
 			output_amount: T::Balance,
 		},
+		/// Token is swapped.
 		TokenSwapped {
+			/// The account who swapped the token.
 			swapper: T::AccountId,
+			/// The pool id.
 			pool_id: StableAssetPoolId,
+			/// Amplification coefficient of the pool.
 			a: T::AtLeast64BitUnsigned,
+			/// The input asset type.
 			input_asset: T::AssetId,
+			/// The output asset type.
 			output_asset: T::AssetId,
+			/// The input amount of the input asset.
 			input_amount: T::Balance,
+			/// The expected minimum output amount of the output asset.
 			min_output_amount: T::Balance,
+			/// Balances data.
 			balances: Vec<T::Balance>,
+			/// The total supply of the pool asset.
 			total_supply: T::Balance,
+			/// Actual output amount of the output asset.
 			output_amount: T::Balance,
 		},
+		/// Token is redeemed by proportion.
 		RedeemedProportion {
+			/// The account who redeemed the token.
 			redeemer: T::AccountId,
+			/// The pool id.
 			pool_id: StableAssetPoolId,
+			/// Amplification coefficient of the pool.
 			a: T::AtLeast64BitUnsigned,
+			/// The input amount of the pool asset.
 			input_amount: T::Balance,
+			/// The expected minimum output amounts of the assets.
 			min_output_amounts: Vec<T::Balance>,
+			/// Balances data.
 			balances: Vec<T::Balance>,
+			/// The total supply of the pool asset.
 			total_supply: T::Balance,
+			/// fee amount of the pool asset.
 			fee_amount: T::Balance,
+			/// Actual output amounts of the assets.
 			output_amounts: Vec<T::Balance>,
 		},
+		/// Token is redeemed by single asset.
 		RedeemedSingle {
+			/// The account who redeemed the token.
 			redeemer: T::AccountId,
+			/// The pool id.
 			pool_id: StableAssetPoolId,
+			/// Amplification coefficient of the pool.
 			a: T::AtLeast64BitUnsigned,
+			/// The input asset type.
 			input_amount: T::Balance,
+			/// The output asset type.
 			output_asset: T::AssetId,
+			/// The expected minimum output amount of the output asset.
 			min_output_amount: T::Balance,
+			/// Balances data.
 			balances: Vec<T::Balance>,
+			/// The total supply of the pool asset.
 			total_supply: T::Balance,
+			/// fee amount of the pool asset.
 			fee_amount: T::Balance,
+			/// Actual output amount of the output asset.
 			output_amount: T::Balance,
 		},
+		/// Token is redeemed by multiple assets.
 		RedeemedMulti {
+			/// The account who redeemed the token.
 			redeemer: T::AccountId,
+			/// The pool id.
 			pool_id: StableAssetPoolId,
+			/// Amplification coefficient of the pool.
 			a: T::AtLeast64BitUnsigned,
+			/// The expected output amounts.
 			output_amounts: Vec<T::Balance>,
+			/// The maximum input amount of the pool asset to get the output amounts.
 			max_input_amount: T::Balance,
+			/// Balances data.
 			balances: Vec<T::Balance>,
+			/// The total supply of the pool asset.
 			total_supply: T::Balance,
+			/// fee amount of the pool asset.
 			fee_amount: T::Balance,
+			/// Actual input amount of the pool asset.
 			input_amount: T::Balance,
 		},
+		/// The pool field balances is updated.
 		BalanceUpdated {
+			/// The pool id.
 			pool_id: StableAssetPoolId,
+			/// The old balances.
 			old_balances: Vec<T::Balance>,
+			/// The new balances.
 			new_balances: Vec<T::Balance>,
 		},
+		/// Yield is collected.
 		YieldCollected {
+			/// The pool id.
 			pool_id: StableAssetPoolId,
+			/// Amplification coefficient of the pool.
 			a: T::AtLeast64BitUnsigned,
+			/// The old total supply of the pool asset.
 			old_total_supply: T::Balance,
+			/// The new total supply of the pool asset.
 			new_total_supply: T::Balance,
+			/// The account who collected the yield.
 			who: T::AccountId,
+			/// The amount of the pool asset collected.
 			amount: T::Balance,
 		},
+		/// Fee is collected.
 		FeeCollected {
+			/// The pool id.
 			pool_id: StableAssetPoolId,
+			/// Amplification coefficient of the pool.
 			a: T::AtLeast64BitUnsigned,
+			/// The old balances.
 			old_balances: Vec<T::Balance>,
+			/// The new balances.
 			new_balances: Vec<T::Balance>,
+			/// The old total supply of the pool asset.
 			old_total_supply: T::Balance,
+			/// The new total supply of the pool asset.
 			new_total_supply: T::Balance,
+			/// The account who has been collected the fee.
 			who: T::AccountId,
+			/// The fee amount of the pool asset.
 			amount: T::Balance,
 		},
+		/// The pool amplification coefficient is modified.
 		AModified {
+			/// The pool id.
 			pool_id: StableAssetPoolId,
+			/// The new amplification coefficient.
 			value: T::AtLeast64BitUnsigned,
+			/// The block number when the new amplification coefficient will be effective.
 			time: BlockNumberFor<T>,
 		},
+		/// The pool fees are modified.
 		FeeModified {
+			/// The pool id.
 			pool_id: StableAssetPoolId,
+			/// The new mint fee.
 			mint_fee: T::AtLeast64BitUnsigned,
+			/// The new swap fee.
 			swap_fee: T::AtLeast64BitUnsigned,
+			/// The new redeem fee.
 			redeem_fee: T::AtLeast64BitUnsigned,
 		},
+		/// The pool recipients are modified.
 		RecipientModified {
+			/// The pool id.
 			pool_id: StableAssetPoolId,
+			/// The new fee recipient.
 			fee_recipient: T::AccountId,
+			/// The new yield recipient.
 			yield_recipient: T::AccountId,
 		},
+		/// The token rate is set.
 		TokenRateSet {
+			/// The pool id.
 			pool_id: StableAssetPoolId,
+			/// The token rate info[(currency_id, (denominator, numerator))].
 			token_rate: Vec<(T::AssetId, (T::AtLeast64BitUnsigned, T::AtLeast64BitUnsigned))>,
 		},
+		/// The hardcap of the token rate is configured.
 		TokenRateHardcapConfigured {
+			/// The token type.
 			vtoken: T::AssetId,
+			/// The hardcap of the token rate.
 			hardcap: Permill,
 		},
+		/// The hardcap of the token rate is removed.
 		TokenRateHardcapRemoved {
+			/// The token type.
 			vtoken: T::AssetId,
 		},
+		/// The token rate is refreshed.
 		TokenRateRefreshFailed {
+			/// The pool id.
 			pool_id: StableAssetPoolId,
 		},
 	}
 
 	#[pallet::error]
 	pub enum Error<T> {
+		/// The pool is existed, cannot create again.
 		InconsistentStorage,
+		/// The pool asset is invalid.
 		InvalidPoolAsset,
+		/// The arguments are mismatch, not match the expected length.
 		ArgumentsMismatch,
+		/// The arguments are error.
 		ArgumentsError,
+		/// The pool is not found, cannot modify.
 		PoolNotFound,
+		/// make mistakes in calculation.
 		Math,
+		/// The new invariant of the pool is invalid.
 		InvalidPoolValue,
+		/// The actual output amount is less than the expected minimum output amount when add
+		/// liquidity.
 		MintUnderMin,
+		/// The actual output amount is less than the expected minimum output amount when swap.
 		SwapUnderMin,
+		/// The actual output amount is less than the expected minimum output amount when redeem.
 		RedeemUnderMin,
+		/// The actual input amount is more than the expected maximum input amount when redeem
+		/// multi.
 		RedeemOverMax,
+		/// The old token rate is not cleared.
 		TokenRateNotCleared,
 	}
 
+	/// The add liquidity result.
 	#[derive(Encode, Decode, Clone, Default, PartialEq, Eq, Debug)]
 	pub struct MintResult<T: Config> {
+		/// The amount of the pool asset that the user will get.
 		pub mint_amount: T::Balance,
+		/// The fee amount of the pool asset that the user will pay.
 		pub fee_amount: T::Balance,
+		/// The balances data.
 		pub balances: Vec<T::Balance>,
+		/// The total supply of the pool asset.
 		pub total_supply: T::Balance,
 	}
 
+	/// The swap result.
 	#[derive(Encode, Decode, Clone, Default, PartialEq, Eq, Debug)]
 	pub struct SwapResult<Balance> {
+		/// the input amount.
 		pub dx: Balance,
+		/// the output amount.
 		pub dy: Balance,
+		/// the output amount in balances field.
 		pub y: Balance,
+		/// the input amount in balances field.
 		pub balance_i: Balance,
 	}
 
+	/// The redeem proportion result.
 	#[derive(Encode, Decode, Clone, Default, PartialEq, Eq, Debug)]
 	pub struct RedeemProportionResult<Balance> {
+		/// The amounts of the assets that the user will get.
 		pub amounts: Vec<Balance>,
+		/// Balances data.
 		pub balances: Vec<Balance>,
+		/// The fee amount of the pool asset that the user will pay.
 		pub fee_amount: Balance,
+		/// The total supply of the pool asset.
 		pub total_supply: Balance,
+		/// The amount of the pool asset that the user want to redeem.
 		pub redeem_amount: Balance,
 	}
 
+	/// The redeem single result.
 	#[derive(Encode, Decode, Clone, Default, PartialEq, Eq, Debug)]
 	pub struct RedeemSingleResult<T: Config> {
+		/// The amount of the token index i that the user will get.
 		pub dy: T::Balance,
+		/// The fee amount of the pool asset that the user will pay.
 		pub fee_amount: T::Balance,
+		/// The total supply of the pool asset.
 		pub total_supply: T::Balance,
+		/// The balances data.
 		pub balances: Vec<T::Balance>,
+		/// The amount of the pool asset that the user want to redeem.
 		pub redeem_amount: T::Balance,
 	}
 
+	/// The redeem multi result.
 	#[derive(Encode, Decode, Clone, Default, PartialEq, Eq, Debug)]
 	pub struct RedeemMultiResult<T: Config> {
+		/// The amount of the pool asset that the user should redeemed.
 		pub redeem_amount: T::Balance,
+		/// The fee amount of the pool asset that the user will pay.
 		pub fee_amount: T::Balance,
+		/// The balances data.
 		pub balances: Vec<T::Balance>,
+		/// The total supply of the pool asset.
 		pub total_supply: T::Balance,
+		/// The amount of the pool asset that the user should redeemed except fee amount.
 		pub burn_amount: T::Balance,
 	}
 
+	/// The pending fee result.
 	#[derive(Encode, Decode, Clone, Default, PartialEq, Eq, Debug)]
 	pub struct PendingFeeResult<T: Config> {
+		/// The fee amount of the pool asset that the user will pay.
 		pub fee_amount: T::Balance,
+		/// The balances data.
 		pub balances: Vec<T::Balance>,
+		/// The total supply of the pool asset.
 		pub total_supply: T::Balance,
 	}
 
@@ -1814,7 +1964,7 @@ impl<T: Config> StableAsset for Pallet<T> {
 				Ok(())
 			})?;
 
-			*pool_count = pool_id.checked_add(1).ok_or(Error::<T>::InconsistentStorage)?;
+			*pool_count = pool_id.checked_add(1).ok_or(ArithmeticError::Overflow)?;
 
 			Self::deposit_event(Event::CreatePool {
 				pool_id,

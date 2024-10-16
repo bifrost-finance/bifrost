@@ -38,7 +38,7 @@ use frame_system::{EnsureRoot, EnsureSignedBy};
 use orml_traits::{location::RelativeReserveProvider, parameter_type_with_key};
 use sp_core::ConstU32;
 use sp_runtime::{
-	traits::{ConvertInto, IdentityLookup},
+	traits::{AccountIdConversion, ConvertInto, IdentityLookup},
 	AccountId32, BuildStorage,
 };
 use sp_std::vec;
@@ -47,6 +47,7 @@ use xcm_builder::{FixedWeightBounds, FrameTransactionalProcessor};
 use xcm_executor::XcmExecutor;
 
 use crate as system_staking;
+use crate::Config;
 
 pub type BlockNumber = u64;
 pub type Amount = i128;
@@ -403,6 +404,7 @@ impl ExtBuilder {
 	}
 
 	pub fn one_hundred_for_alice_n_bob(self) -> Self {
+		let pallet_account = <Runtime as Config>::PalletId::get().into_account_truncating();
 		self.balances(vec![
 			(ALICE, BNC, 100),
 			(BOB, BNC, 100),
@@ -413,6 +415,7 @@ impl ExtBuilder {
 			(BOB, VKSM, 1000),
 			(BOB, KSM, 10000000000),
 			(BOB, MOVR, 1000000000000000000000),
+			(pallet_account, VKSM, 100),
 		])
 	}
 

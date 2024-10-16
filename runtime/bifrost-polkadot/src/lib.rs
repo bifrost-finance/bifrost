@@ -1831,6 +1831,7 @@ pub mod migrations {
 		bifrost_asset_registry::migrations::v1::MigrateToV1<Runtime>,
 		bifrost_slpx::migration::v2::MigrateToV2<Runtime>,
 		frame_support::migrations::RemovePallet<SystemMakerName, RocksDbWeight>,
+		bifrost_system_staking::migrations::v1::MigrateToV1<Runtime>,
 	);
 }
 
