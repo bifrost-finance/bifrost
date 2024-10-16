@@ -1592,6 +1592,7 @@ impl lend_market::Config for Runtime {
 	type Assets = Currencies;
 	type RewardAssetId = NativeCurrencyId;
 	type LiquidationFreeAssetId = RelayCurrencyId;
+	type MaxLengthLimit = MaxLengthLimit;
 }
 
 parameter_types! {
@@ -1906,6 +1907,7 @@ pub mod migrations {
 		frame_support::migrations::RemovePallet<SystemMakerName, RocksDbWeight>,
 		frame_support::migrations::RemovePallet<VSBondAuctionName, RocksDbWeight>,
 		bifrost_system_staking::migrations::v1::MigrateToV1<Runtime>,
+		lend_market::migrations::v1::MigrateToV1<Runtime>,
 	);
 }
 
