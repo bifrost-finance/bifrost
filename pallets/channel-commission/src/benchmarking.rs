@@ -27,7 +27,6 @@ use frame_system::RawOrigin;
 use sp_runtime::traits::UniqueSaturatedFrom;
 
 use super::*;
-#[allow(unused_imports)]
 use crate::Pallet as ChannelCommission;
 
 benchmarks! {
