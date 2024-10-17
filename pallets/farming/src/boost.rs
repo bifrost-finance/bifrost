@@ -103,12 +103,12 @@ impl<T: Config> Pallet<T> {
 			ensure!(BoostWhitelist::<T>::iter_keys().count() != 0, Error::<T>::WhitelistEmpty);
 		}
 
-		boost_pool_info.round_length = round_length;
-		Self::send_boost_rewards(&boost_pool_info)?;
 		let current_block_number: BlockNumberFor<T> = frame_system::Pallet::<T>::block_number();
 		boost_pool_info.start_round = current_block_number;
 		boost_pool_info.end_round = current_block_number.saturating_add(round_length);
 		boost_pool_info.total_votes = Zero::zero();
+		boost_pool_info.round_length = round_length;
+		Self::send_boost_rewards(&boost_pool_info)?;
 		BoostPoolInfos::<T>::set(boost_pool_info);
 		let _ = BoostVotingPools::<T>::clear(u32::max_value(), None);
 		Self::deposit_event(Event::RoundStart { round_length });
