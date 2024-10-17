@@ -31,7 +31,7 @@ use crate::{
 	LedgerByStakingProtocolAndDelegator, NextDelegatorIndexByStakingProtocol,
 	ValidatorsByStakingProtocolAndDelegator,
 };
-use bifrost_primitives::{TimeUnit, VtokenMintingOperator, VASTR};
+use bifrost_primitives::{CommissionPalletId, TimeUnit, VtokenMintingOperator, VASTR};
 use cumulus_primitives_core::Weight;
 use frame_support::{assert_noop, assert_ok, traits::fungibles::Mutate};
 use orml_traits::MultiCurrency;

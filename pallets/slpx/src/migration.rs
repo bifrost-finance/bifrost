@@ -106,9 +106,33 @@ mod v0 {
 }
 
 pub mod v1 {
-	use frame_support::pallet_prelude::StorageVersion;
+	use frame_support::pallet_prelude::{StorageVersion, ValueQuery};
 
 	use super::*;
+
+	#[derive(Encode, Decode, Clone)]
+	pub struct Order<AccountId, CurrencyId, Balance, BlockNumber> {
+		pub source_chain_caller: OrderCaller<AccountId>,
+		pub bifrost_chain_caller: AccountId,
+		pub derivative_account: AccountId,
+		pub create_block_number: BlockNumber,
+		pub currency_id: CurrencyId,
+		pub currency_amount: Balance,
+		pub order_type: OrderType,
+		pub remark: BoundedVec<u8, ConstU32<32>>,
+		pub target_chain: TargetChain<AccountId>,
+		pub channel_id: u32,
+	}
+
+	#[storage_alias]
+	pub(super) type OrderQueue<T: Config> = StorageValue<
+		Pallet<T>,
+		BoundedVec<
+			Order<AccountIdOf<T>, CurrencyIdOf<T>, BalanceOf<T>, BlockNumberFor<T>>,
+			ConstU32<1000>,
+		>,
+		ValueQuery,
+	>;
 
 	pub struct MigrateToV1<T>(sp_std::marker::PhantomData<T>);
 	impl<T: Config> OnRuntimeUpgrade for MigrateToV1<T> {
@@ -142,12 +166,47 @@ pub mod v1 {
 	}
 }
 
+pub mod v2 {
+	use super::*;
+	use frame_support::traits::GetStorageVersion;
+
+	pub struct MigrateToV2<T>(sp_std::marker::PhantomData<T>);
+	impl<T: Config> OnRuntimeUpgrade for MigrateToV2<T> {
+		fn on_runtime_upgrade() -> Weight {
+			let on_chain_storage_version = Pallet::<T>::on_chain_storage_version();
+			let in_code_storage_version = Pallet::<T>::in_code_storage_version();
+			if on_chain_storage_version == 1 && in_code_storage_version == 2 {
+				let weight_consumed = migrate_to_v2::<T>();
+				log::info!("Migrating slpx storage to v2");
+				in_code_storage_version.put::<Pallet<T>>();
+				weight_consumed.saturating_add(T::DbWeight::get().writes(1))
+			} else {
+				log::warn!("slpx migration should be removed.");
+				T::DbWeight::get().reads(1)
+			}
+		}
+
+		#[cfg(feature = "try-runtime")]
+		fn post_upgrade(_: Vec<u8>) -> Result<(), sp_runtime::DispatchError> {
+			ensure!(
+				Pallet::<T>::on_chain_storage_version() == 2,
+				"on_chain_storage_version should be 2"
+			);
+			ensure!(
+				Pallet::<T>::in_code_storage_version() == 2,
+				"in_code_storage_version should be 2"
+			);
+			Ok(())
+		}
+	}
+}
+
 pub fn migrate_to_v1<T: Config>() -> Weight {
 	let mut weight: Weight = Weight::zero();
 
 	let old_orders = v0::OrderQueue::<T>::get();
 	for old_order in old_orders.into_iter() {
-		let order = Order {
+		let order = v1::Order {
 			source_chain_caller: old_order.source_chain_caller,
 			bifrost_chain_caller: old_order.bifrost_chain_caller,
 			derivative_account: old_order.derivative_account,
@@ -161,8 +220,40 @@ pub fn migrate_to_v1<T: Config>() -> Weight {
 			channel_id: 0u32,
 		};
 
+		v1::OrderQueue::<T>::mutate(|order_queue| -> DispatchResultWithPostInfo {
+			order_queue.try_push(order.clone()).map_err(|_| Error::<T>::ErrorArguments)?;
+			Ok(().into())
+		})
+		.expect("BoundedVec should not overflow");
+
+		weight = weight.saturating_add(T::DbWeight::get().writes(1));
+	}
+
+	weight
+}
+
+pub fn migrate_to_v2<T: Config>() -> Weight {
+	let mut weight: Weight = Weight::zero();
+
+	let old_order_queue = v1::OrderQueue::<T>::take();
+	for old_order in old_order_queue.into_iter() {
+		let order = Order {
+			source_chain_caller: old_order.source_chain_caller,
+			source_chain_id: 0,
+			source_chain_block_number: None,
+			bifrost_chain_caller: old_order.bifrost_chain_caller,
+			derivative_account: old_order.derivative_account,
+			create_block_number: old_order.create_block_number,
+			currency_id: old_order.currency_id,
+			currency_amount: old_order.currency_amount,
+			order_type: old_order.order_type,
+			remark: old_order.remark,
+			target_chain: old_order.target_chain,
+			channel_id: old_order.channel_id,
+		};
+
 		OrderQueue::<T>::mutate(|order_queue| -> DispatchResultWithPostInfo {
-			order_queue.try_push(order.clone()).map_err(|_| Error::<T>::ArgumentsError)?;
+			order_queue.try_push(order.clone()).map_err(|_| Error::<T>::ErrorArguments)?;
 			Ok(().into())
 		})
 		.expect("BoundedVec should not overflow");

@@ -34,6 +34,11 @@ use crate::{
 	COLLATOR_LOCK_ID, DELEGATOR_LOCK_ID,
 };
 
+pub struct CountedDelegations<T: Config> {
+	pub uncounted_stake: BalanceOf<T>,
+	pub rewardable_delegations: Vec<Bond<T::AccountId, BalanceOf<T>>>,
+}
+
 #[derive(Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
 pub struct Bond<AccountId, Balance> {
 	pub owner: AccountId,

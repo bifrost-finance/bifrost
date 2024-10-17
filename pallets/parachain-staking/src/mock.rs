@@ -18,7 +18,6 @@
 use frame_support::{
 	construct_runtime, derive_impl, parameter_types,
 	traits::{LockIdentifier, LockableCurrency, OnFinalize, OnInitialize, ReservableCurrency},
-	PalletId,
 };
 use sp_core::ConstU32;
 use sp_runtime::{traits::IdentityLookup, Perbill, Percent};
@@ -29,6 +28,7 @@ use crate::{
 	DelegatorReserveToLockMigrations, DelegatorState, InflationInfo, Points, Range,
 	COLLATOR_LOCK_ID, DELEGATOR_LOCK_ID,
 };
+use bifrost_primitives::ParachainStakingPalletId;
 use sp_runtime::BuildStorage;
 
 pub type AccountId = u64;
@@ -96,7 +96,6 @@ parameter_types! {
 	pub const MinDelegation: u128 = 3;
 	pub AllowInflation: bool = true;
 	pub PaymentInRound: u128 = 10;
-	pub const ParachainStakingPalletId: PalletId = PalletId(*b"bf/stake");
 	pub ToMigrateInvulnables: Vec<AccountId> = vec![
 		0,1
 	];
@@ -107,7 +106,6 @@ impl Config for Test {
 	type Currency = Balances;
 	type MonetaryGovernanceOrigin = frame_system::EnsureRoot<AccountId>;
 	type MinBlocksPerRound = MinBlocksPerRound;
-	type DefaultBlocksPerRound = DefaultBlocksPerRound;
 	type LeaveCandidatesDelay = LeaveCandidatesDelay;
 	type CandidateBondLessDelay = CandidateBondLessDelay;
 	type LeaveDelegatorsDelay = LeaveDelegatorsDelay;
@@ -118,8 +116,6 @@ impl Config for Test {
 	type MaxTopDelegationsPerCandidate = MaxTopDelegationsPerCandidate;
 	type MaxBottomDelegationsPerCandidate = MaxBottomDelegationsPerCandidate;
 	type MaxDelegationsPerDelegator = MaxDelegationsPerDelegator;
-	type DefaultCollatorCommission = DefaultCollatorCommission;
-	type DefaultParachainBondReservePercent = DefaultParachainBondReservePercent;
 	type MinCollatorStk = MinCollatorStk;
 	type MinCandidateStk = MinCollatorStk;
 	type MinDelegatorStk = MinDelegatorStk;
@@ -207,6 +203,9 @@ impl ExtBuilder {
 			candidates: self.collators,
 			delegations: self.delegations,
 			inflation_config: self.inflation,
+			collator_commission: DefaultCollatorCommission::get(),
+			parachain_bond_reserve_percent: DefaultParachainBondReservePercent::get(),
+			blocks_per_round: DefaultBlocksPerRound::get(),
 		}
 		.assimilate_storage(&mut t)
 		.expect("Parachain Staking's storage can be assimilated");

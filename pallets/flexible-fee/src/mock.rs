@@ -19,9 +19,9 @@
 #![cfg(test)]
 
 use super::*;
-use crate::{self as flexible_fee, mock_price::MockPriceFeeder};
+use crate::{self as flexible_fee, mock_price::MockOraclePriceProvider};
 use bifrost_currencies::BasicCurrencyAdapter;
-use bifrost_primitives::{Balance, CurrencyId, TokenSymbol};
+use bifrost_primitives::{Balance, CurrencyId, FlexibleFeePalletId, TokenSymbol, ZenlinkPalletId};
 use cumulus_primitives_core::ParaId as Pid;
 use frame_support::{
 	derive_impl, parameter_types,
@@ -149,7 +149,6 @@ impl orml_tokens::Config for Test {
 parameter_types! {
 	pub const TreasuryAccount: AccountId32 = TREASURY_ACCOUNT;
 	pub const MaxFeeCurrencyOrderListLen: u32 = 50;
-	pub const FlexibleFeePalletId: PalletId = PalletId(*b"bf/flexi");
 }
 
 impl crate::Config for Test {
@@ -167,7 +166,7 @@ impl crate::Config for Test {
 	type RelaychainCurrencyId = RelayCurrencyId;
 	type XcmRouter = ();
 	type PalletId = FlexibleFeePalletId;
-	type PriceFeeder = MockPriceFeeder;
+	type OraclePriceProvider = MockOraclePriceProvider;
 }
 
 pub struct XcmDestWeightAndFee;
@@ -196,7 +195,7 @@ impl Get<Pid> for ParaInfo {
 }
 
 parameter_types! {
-	pub const GetNativeCurrencyId: CurrencyId = CurrencyId::Native(TokenSymbol::BNC);
+	pub const GetNativeCurrencyId: CurrencyId = BNC;
 }
 
 impl bifrost_currencies::Config for Test {
@@ -207,7 +206,6 @@ impl bifrost_currencies::Config for Test {
 }
 
 parameter_types! {
-	pub const ZenlinkPalletId: PalletId = PalletId(*b"/zenlink");
 	pub const GetExchangeFee: (u32, u32) = (3, 1000);   // 0.3%
 	pub const SelfParaId: u32 = 2001;
 }

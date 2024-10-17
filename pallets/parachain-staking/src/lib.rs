@@ -131,9 +131,6 @@ pub mod pallet {
 		/// Minimum number of blocks per round
 		#[pallet::constant]
 		type MinBlocksPerRound: Get<u32>;
-		/// Default number of blocks per round at genesis
-		#[pallet::constant]
-		type DefaultBlocksPerRound: Get<u32>;
 		/// Number of rounds that candidates remain bonded before exit request is executable
 		#[pallet::constant]
 		type LeaveCandidatesDelay: Get<RoundIndex>;
@@ -164,12 +161,6 @@ pub mod pallet {
 		/// Maximum delegations per delegator
 		#[pallet::constant]
 		type MaxDelegationsPerDelegator: Get<u32>;
-		/// Default commission due to collators, is `CollatorCommission` storage value in genesis
-		#[pallet::constant]
-		type DefaultCollatorCommission: Get<Perbill>;
-		/// Default percent of inflation set aside for parachain bond account
-		#[pallet::constant]
-		type DefaultParachainBondReservePercent: Get<Percent>;
 		/// Minimum stake required for any candidate to be in `SelectedCandidates` for the round
 		#[pallet::constant]
 		type MinCollatorStk: Get<BalanceOf<Self>>;
@@ -591,18 +582,41 @@ pub mod pallet {
 	>;
 
 	#[pallet::genesis_config]
-	#[derive(frame_support::DefaultNoBound)]
 	pub struct GenesisConfig<T: Config> {
+		/// Initialize balance and register all as collators: `(collator AccountId, balance
+		/// Amount)`
 		pub candidates: Vec<(AccountIdOf<T>, BalanceOf<T>)>,
-		/// Vec of tuples of the format (delegator AccountId, collator AccountId, delegation
-		/// Amount)
+		/// Initialize balance and make delegations:
+		/// `(delegator AccountId, collator AccountId, delegation Amount, auto-compounding
+		/// Percent)`
 		pub delegations: Vec<(AccountIdOf<T>, AccountIdOf<T>, BalanceOf<T>)>,
+		/// Inflation configuration
 		pub inflation_config: InflationInfo<BalanceOf<T>>,
+		/// Default fixed percent a collator takes off the top of due rewards
+		pub collator_commission: Perbill,
+		/// Default percent of inflation set aside for parachain bond every round
+		pub parachain_bond_reserve_percent: Percent,
+		/// Default number of blocks in a round
+		pub blocks_per_round: u32,
+	}
+
+	impl<T: Config> Default for GenesisConfig<T> {
+		fn default() -> Self {
+			Self {
+				candidates: vec![],
+				delegations: vec![],
+				inflation_config: Default::default(),
+				collator_commission: Default::default(),
+				parachain_bond_reserve_percent: Default::default(),
+				blocks_per_round: 1u32,
+			}
+		}
 	}
 
 	#[pallet::genesis_build]
 	impl<T: Config> BuildGenesisConfig for GenesisConfig<T> {
 		fn build(&self) {
+			assert!(self.blocks_per_round > 0, "Blocks per round must be > 0");
 			<InflationConfig<T>>::put(self.inflation_config.clone());
 			let mut candidate_count = 0u32;
 			// Initialize the candidates
@@ -656,7 +670,7 @@ pub mod pallet {
 				}
 			}
 			// Set collator commission to default config
-			<CollatorCommission<T>>::put(T::DefaultCollatorCommission::get());
+			<CollatorCommission<T>>::put(self.collator_commission);
 			// Set parachain bond config to default config
 			<ParachainBondInfo<T>>::put(ParachainBondConfig {
 				// must be set soon; if not => due inflation will be sent to collators/delegators
@@ -664,7 +678,7 @@ pub mod pallet {
 					&mut sp_runtime::traits::TrailingZeroInput::zeroes(),
 				)
 				.expect("infinite length input; no invalid inputs for type; qed"),
-				percent: T::DefaultParachainBondReservePercent::get(),
+				percent: self.parachain_bond_reserve_percent,
 				payment_in_round: T::PaymentInRound::get(),
 			});
 			// Set total selected candidates to minimum config
@@ -673,7 +687,7 @@ pub mod pallet {
 			let (v_count, _, total_staked) = <Pallet<T>>::select_top_candidates(1u32);
 			// Start Round 1 at Block 0
 			let round: RoundInfo<BlockNumberFor<T>> =
-				RoundInfo::new(1u32, 0u32.into(), T::DefaultBlocksPerRound::get());
+				RoundInfo::new(1u32, 0u32.into(), self.blocks_per_round);
 			<Round<T>>::put(round);
 			// Snapshot total stake
 			<Staked<T>>::insert(1u32, <Total<T>>::get());
@@ -1134,18 +1148,21 @@ pub mod pallet {
 			)
 		}
 
-		#[pallet::call_index(18)]
-		#[pallet::weight(<T as Config>::WeightInfo::schedule_leave_delegators())]
+		/// DEPRECATED use batch util with schedule_revoke_delegation for all delegations
 		/// Request to leave the set of delegators. If successful, the caller is scheduled to be
 		/// allowed to exit via a [DelegationAction::Revoke] towards all existing delegations.
 		/// Success forbids future delegation requests until the request is invoked or cancelled.
+		#[pallet::call_index(18)]
+		#[pallet::weight(<T as Config>::WeightInfo::schedule_leave_delegators())]
 		pub fn schedule_leave_delegators(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
 			let delegator = ensure_signed(origin)?;
 			Self::delegator_schedule_revoke_all(delegator)
 		}
+
+		/// DEPRECATED use batch util with execute_delegation_request for all delegations
+		/// Execute the right to exit the set of delegators and revoke all ongoing delegations.
 		#[pallet::call_index(19)]
 		#[pallet::weight(<T as Config>::WeightInfo::execute_leave_delegators(*delegation_count))]
-		/// Execute the right to exit the set of delegators and revoke all ongoing delegations.
 		pub fn execute_leave_delegators(
 			origin: OriginFor<T>,
 			delegator: AccountIdOf<T>,
@@ -1154,10 +1171,12 @@ pub mod pallet {
 			ensure_signed(origin)?;
 			Self::delegator_execute_scheduled_revoke_all(delegator, delegation_count)
 		}
-		#[pallet::call_index(20)]
-		#[pallet::weight(<T as Config>::WeightInfo::cancel_leave_delegators())]
+
+		/// DEPRECATED use batch util with cancel_delegation_request for all delegations
 		/// Cancel a pending request to exit the set of delegators. Success clears the pending exit
 		/// request (thereby resetting the delay upon another `leave_delegators` call).
+		#[pallet::call_index(20)]
+		#[pallet::weight(<T as Config>::WeightInfo::cancel_leave_delegators())]
 		pub fn cancel_leave_delegators(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
 			let delegator = ensure_signed(origin)?;
 			Self::delegator_cancel_scheduled_revoke_all(delegator)
@@ -1710,19 +1729,21 @@ pub mod pallet {
 				collator_count = collator_count.saturating_add(1u32);
 				delegation_count = delegation_count.saturating_add(state.delegation_count);
 				total = total.saturating_add(state.total_counted);
-				let snapshot_total = state.total_counted;
-				let top_rewardable_delegations = Self::get_rewardable_delegators(account);
+
+				let CountedDelegations { uncounted_stake, rewardable_delegations } =
+					Self::get_rewardable_delegators(&account);
+				let total_counted = state.total_counted.saturating_sub(uncounted_stake);
 
 				let snapshot = CollatorSnapshot {
 					bond: state.bond,
-					delegations: top_rewardable_delegations,
-					total: state.total_counted,
+					delegations: rewardable_delegations,
+					total: total_counted,
 				};
 				<AtStake<T>>::insert(now, account, snapshot);
 				Self::deposit_event(Event::CollatorChosen {
 					round: now,
 					collator_account: account.clone(),
-					total_exposed_amount: snapshot_total,
+					total_exposed_amount: state.total_counted,
 				});
 			}
 			// insert canonical collator set
@@ -1739,15 +1760,14 @@ pub mod pallet {
 		/// - else, do nothing
 		///
 		/// The intended bond amounts will be used while calculating rewards.
-		fn get_rewardable_delegators(
-			collator: &AccountIdOf<T>,
-		) -> Vec<Bond<AccountIdOf<T>, BalanceOf<T>>> {
+		fn get_rewardable_delegators(collator: &AccountIdOf<T>) -> CountedDelegations<T> {
 			let requests = <DelegationScheduledRequests<T>>::get(collator)
 				.into_iter()
 				.map(|x| (x.delegator, x.action))
 				.collect::<BTreeMap<_, _>>();
 
-			<TopDelegations<T>>::get(collator)
+			let mut uncounted_stake = BalanceOf::<T>::zero();
+			let rewardable_delegations = <TopDelegations<T>>::get(collator)
 				.expect("all members of CandidateQ must be candidates")
 				.delegations
 				.into_iter()
@@ -1760,6 +1780,7 @@ pub mod pallet {
 								revoke request",
 								bond.owner
 							);
+							uncounted_stake = uncounted_stake.saturating_add(bond.amount);
 							BalanceOf::<T>::zero()
 						},
 						Some(DelegationAction::Decrease(amount)) => {
@@ -1768,13 +1789,15 @@ pub mod pallet {
 								decrease request",
 								bond.owner
 							);
+							uncounted_stake = uncounted_stake.saturating_add(*amount);
 							bond.amount.saturating_sub(*amount)
 						},
 					};
 
 					bond
 				})
-				.collect()
+				.collect();
+			CountedDelegations { uncounted_stake, rewardable_delegations }
 		}
 
 		/// Temporary JIT migration of a single delegator's reserve -> lock. This will query

@@ -31,7 +31,7 @@ use sp_runtime::{
 	traits::{
 		AccountIdConversion, AtLeast32BitUnsigned, ConstU32, MaybeSerializeDeserialize, Zero,
 	},
-	BoundedVec, DispatchError, DispatchResult, TokenError, TypeId,
+	BoundedVec, DispatchError, DispatchResult, TypeId,
 };
 use sp_std::{cmp::Ordering, fmt::Debug, vec::Vec};
 
@@ -81,16 +81,6 @@ pub trait MultiCurrencyExt<AccountId> {
 	) -> DispatchResult;
 }
 
-pub trait BancorHandler<Balance> {
-	fn add_token(currency_id: super::CurrencyId, amount: Balance) -> DispatchResult;
-}
-
-impl<Balance> BancorHandler<Balance> for () {
-	fn add_token(_currency_id: super::CurrencyId, _amount: Balance) -> DispatchResult {
-		DispatchResult::from(DispatchError::Token(TokenError::FundsUnavailable))
-	}
-}
-
 pub trait CheckSubAccount<T: Encode + Decode> {
 	fn check_sub_account<S: Decode>(&self, account: &T) -> bool;
 }
@@ -130,13 +120,6 @@ pub trait VtokenMintingOperator<CurrencyId, Balance, AccountId, TimeUnit> {
 		currency_id: CurrencyId,
 		time_unit: TimeUnit,
 	) -> Option<(Balance, Vec<u32>)>;
-
-	/// Revise the currency indexed unlocking record by some amount.
-	fn deduct_unlock_amount(
-		currency_id: CurrencyId,
-		index: u32,
-		deduct_amount: Balance,
-	) -> DispatchResult;
 
 	/// Get currency Entrance and Exit accounts.【entrance_account, exit_account】
 	fn get_entrance_and_exit_accounts() -> (AccountId, AccountId);
@@ -196,30 +179,9 @@ pub trait CurrencyIdRegister<CurrencyId> {
 		last_slot: crate::LeasePeriod,
 	) -> bool;
 	fn register_vtoken_metadata(token_symbol: TokenSymbol) -> DispatchResult;
-	fn register_vstoken_metadata(token_symbol: TokenSymbol) -> DispatchResult;
-	fn register_vsbond_metadata(
-		token_symbol: TokenSymbol,
-		para_id: crate::ParaId,
-		first_slot: crate::LeasePeriod,
-		last_slot: crate::LeasePeriod,
-	) -> DispatchResult;
 	fn check_token2_registered(token_id: TokenId) -> bool;
 	fn check_vtoken2_registered(token_id: TokenId) -> bool;
-	fn check_vstoken2_registered(token_id: TokenId) -> bool;
-	fn check_vsbond2_registered(
-		token_id: TokenId,
-		para_id: crate::ParaId,
-		first_slot: crate::LeasePeriod,
-		last_slot: crate::LeasePeriod,
-	) -> bool;
 	fn register_vtoken2_metadata(token_id: TokenId) -> DispatchResult;
-	fn register_vstoken2_metadata(token_id: TokenId) -> DispatchResult;
-	fn register_vsbond2_metadata(
-		token_id: TokenId,
-		para_id: crate::ParaId,
-		first_slot: crate::LeasePeriod,
-		last_slot: crate::LeasePeriod,
-	) -> DispatchResult;
 	fn register_blp_metadata(pool_id: PoolId, decimals: u8) -> DispatchResult;
 }
 
@@ -249,19 +211,6 @@ impl<CurrencyId> CurrencyIdRegister<CurrencyId> for () {
 		Ok(())
 	}
 
-	fn register_vstoken_metadata(_token_symbol: TokenSymbol) -> DispatchResult {
-		Ok(())
-	}
-
-	fn register_vsbond_metadata(
-		_token_symbol: TokenSymbol,
-		_para_id: ParaId,
-		_first_slot: LeasePeriod,
-		_last_slot: LeasePeriod,
-	) -> DispatchResult {
-		Ok(())
-	}
-
 	fn check_token2_registered(_token_id: TokenId) -> bool {
 		false
 	}
@@ -270,33 +219,7 @@ impl<CurrencyId> CurrencyIdRegister<CurrencyId> for () {
 		false
 	}
 
-	fn check_vstoken2_registered(_token_id: TokenId) -> bool {
-		false
-	}
-
-	fn check_vsbond2_registered(
-		_token_id: TokenId,
-		_para_id: ParaId,
-		_first_slot: LeasePeriod,
-		_last_slot: LeasePeriod,
-	) -> bool {
-		false
-	}
-
 	fn register_vtoken2_metadata(_token_id: TokenId) -> DispatchResult {
-		Ok(())
-	}
-
-	fn register_vstoken2_metadata(_token_id: TokenId) -> DispatchResult {
-		Ok(())
-	}
-
-	fn register_vsbond2_metadata(
-		_token_id: TokenId,
-		_para_id: ParaId,
-		_first_slot: LeasePeriod,
-		_last_slot: LeasePeriod,
-	) -> DispatchResult {
 		Ok(())
 	}
 
@@ -330,18 +253,16 @@ pub trait VtokenMintingInterface<AccountId, CurrencyId, Balance> {
 		vtoken_amount: Balance,
 		redeem: RedeemType<AccountId>,
 	) -> DispatchResultWithPostInfo;
-	fn token_to_vtoken(
+	fn get_v_currency_amount_by_currency_amount(
 		token_id: CurrencyId,
 		vtoken_id: CurrencyId,
 		token_amount: Balance,
 	) -> Result<Balance, DispatchError>;
-	fn vtoken_to_token(
+	fn get_currency_amount_by_v_currency_amount(
 		token_id: CurrencyId,
 		vtoken_id: CurrencyId,
 		vtoken_amount: Balance,
 	) -> Result<Balance, DispatchError>;
-	fn vtoken_id(token_id: CurrencyId) -> Option<CurrencyId>;
-	fn token_id(vtoken_id: CurrencyId) -> Option<CurrencyId>;
 	fn get_token_pool(currency_id: CurrencyId) -> Balance;
 	fn get_minimums_redeem(vtoken_id: CurrencyId) -> Balance;
 	fn get_moonbeam_parachain_id() -> u32;
@@ -377,7 +298,7 @@ impl<AccountId, CurrencyId, Balance: Zero> VtokenMintingInterface<AccountId, Cur
 		Ok(().into())
 	}
 
-	fn token_to_vtoken(
+	fn get_v_currency_amount_by_currency_amount(
 		_token_id: CurrencyId,
 		_vtoken_id: CurrencyId,
 		_token_amount: Balance,
@@ -385,20 +306,12 @@ impl<AccountId, CurrencyId, Balance: Zero> VtokenMintingInterface<AccountId, Cur
 		Ok(Zero::zero())
 	}
 
-	fn vtoken_to_token(
+	fn get_currency_amount_by_v_currency_amount(
 		_token_id: CurrencyId,
 		_vtoken_id: CurrencyId,
 		_vtoken_amount: Balance,
 	) -> Result<Balance, DispatchError> {
 		Ok(Zero::zero())
-	}
-
-	fn vtoken_id(_token_id: CurrencyId) -> Option<CurrencyId> {
-		None
-	}
-
-	fn token_id(_vtoken_id: CurrencyId) -> Option<CurrencyId> {
-		None
 	}
 
 	fn get_token_pool(_currency_id: CurrencyId) -> Balance {
@@ -457,13 +370,15 @@ where
 	}
 }
 
-pub trait DerivativeAccountHandler<CurrencyId, Balance> {
+pub trait DerivativeAccountHandler<CurrencyId, Balance, AccountId> {
 	fn check_derivative_index_exists(token: CurrencyId, derivative_index: DerivativeIndex) -> bool;
 
 	fn get_multilocation(
 		token: CurrencyId,
 		derivative_index: DerivativeIndex,
 	) -> Option<xcm::v3::MultiLocation>;
+
+	fn get_account_id(token: CurrencyId, derivative_index: DerivativeIndex) -> Option<AccountId>;
 
 	fn get_stake_info(
 		token: CurrencyId,

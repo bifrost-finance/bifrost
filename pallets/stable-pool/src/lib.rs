@@ -66,23 +66,24 @@ pub mod pallet {
 	pub trait Config:
 		frame_system::Config + bifrost_stable_asset::Config<AssetId = AssetIdOf<Self>>
 	{
+		/// Weight information for the pallet's dispatchables.
 		type WeightInfo: WeightInfo;
-
+		/// Origin type that will be used to enforce permissions.
 		type ControlOrigin: EnsureOrigin<Self::RuntimeOrigin>;
-
+		/// MultiCurrency trait for handling various currencies associated with accounts.
 		type MultiCurrency: MultiCurrency<
 			AccountIdOf<Self>,
 			CurrencyId = AssetIdOf<Self>,
 			Balance = Self::Balance,
 		>;
-
+		/// Represents the currency identifier type, implementing necessary traits.
 		type CurrencyId: Parameter
 			+ Ord
 			+ Copy
 			+ CurrencyIdExt
 			+ From<CurrencyId>
 			+ Into<CurrencyId>;
-
+		/// The stable asset interface used for handling stable assets.
 		type StableAsset: bifrost_stable_asset::StableAsset<
 			AssetId = AssetIdOf<Self>,
 			Balance = Self::Balance,
@@ -91,30 +92,36 @@ pub mod pallet {
 			Config = Self,
 			BlockNumber = BlockNumberFor<Self>,
 		>;
-
+		/// Interface for minting tokens.
 		type VtokenMinting: VtokenMintingOperator<
 			AssetIdOf<Self>,
 			Self::Balance,
 			AccountIdOf<Self>,
 			TimeUnit,
 		>;
-
+		/// Type for converting between different currency IDs.
 		type CurrencyIdConversion: CurrencyIdConversion<AssetIdOf<Self>>;
-
+		/// Type for registering currency IDs.
 		type CurrencyIdRegister: CurrencyIdRegister<AssetIdOf<Self>>;
 	}
 
 	#[pallet::error]
 	pub enum Error<T> {
+		/// A swap occurred, but the result is below the minimum swap amount.
 		SwapUnderMin,
+		/// A minting operation occurred, but the minted amount is below the minimum mint amount.
 		MintUnderMin,
+		/// Cannot mint tokens, possibly due to invalid parameters or illegal state.
 		CantMint,
+		/// The redeemed amount exceeds the allowed maximum.
 		RedeemOverMax,
+		/// The token rate is not set, preventing related operations.
 		TokenRateNotSet,
 	}
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
+		/// Creates a new liquidity pool with the specified parameters.
 		#[pallet::call_index(0)]
 		#[pallet::weight(<T as pallet::Config>::WeightInfo::create_pool())]
 		pub fn create_pool(
@@ -129,8 +136,10 @@ pub mod pallet {
 			yield_recipient: AccountIdOf<T>,
 			precision: AtLeast64BitUnsignedOf<T>,
 		) -> DispatchResult {
+			// Ensure the caller has the necessary control origin
 			T::ControlOrigin::ensure_origin(origin)?;
 
+			// Register the metadata for the new pool
 			let pool_id = PoolCount::<T>::get();
 			T::CurrencyIdRegister::register_blp_metadata(
 				pool_id,
@@ -140,6 +149,8 @@ pub mod pallet {
 					.ok_or(bifrost_stable_asset::Error::<T>::ArgumentsMismatch)?
 					.saturated_into::<u8>(),
 			)?;
+
+			// Create the liquidity pool in the StableAsset module
 			T::StableAsset::create_pool(
 				CurrencyId::BLP(pool_id).into(),
 				assets,
@@ -154,6 +165,7 @@ pub mod pallet {
 			)
 		}
 
+		/// Adds liquidity to an existing pool.
 		#[pallet::call_index(1)]
 		#[pallet::weight(<T as pallet::Config>::WeightInfo::add_liquidity())]
 		pub fn add_liquidity(
@@ -163,9 +175,11 @@ pub mod pallet {
 			min_mint_amount: T::Balance,
 		) -> DispatchResult {
 			let who = ensure_signed(origin)?;
+			// Mint new liquidity tokens based on the provided amounts
 			Self::mint_inner(&who, pool_id, amounts, min_mint_amount)
 		}
 
+		/// Swaps one asset for another in a specified pool.
 		#[pallet::call_index(2)]
 		#[pallet::weight(<T as pallet::Config>::WeightInfo::swap())]
 		pub fn swap(
@@ -177,9 +191,11 @@ pub mod pallet {
 			min_dy: T::Balance,
 		) -> DispatchResult {
 			let who = ensure_signed(origin)?;
+			// Execute the swap operation
 			Self::on_swap(&who, pool_id, i, j, dx, min_dy)
 		}
 
+		/// Redeems a proportion of assets from a liquidity pool.
 		#[pallet::call_index(3)]
 		#[pallet::weight(<T as pallet::Config>::WeightInfo::redeem_proportion())]
 		pub fn redeem_proportion(
@@ -189,9 +205,11 @@ pub mod pallet {
 			min_redeem_amounts: Vec<T::Balance>,
 		) -> DispatchResult {
 			let who = ensure_signed(origin)?;
+			// Redeem a specified proportion of tokens
 			Self::redeem_proportion_inner(&who, pool_id, amount, min_redeem_amounts)
 		}
 
+		/// Redeems a single asset from a liquidity pool.
 		#[pallet::call_index(4)]
 		#[pallet::weight(<T as pallet::Config>::WeightInfo::redeem_single())]
 		pub fn redeem_single(
@@ -203,10 +221,12 @@ pub mod pallet {
 			asset_length: u32,
 		) -> DispatchResult {
 			let who = ensure_signed(origin)?;
+			// Redeem a single asset from the pool
 			Self::redeem_single_inner(&who, pool_id, amount, i, min_redeem_amount, asset_length)?;
 			Ok(())
 		}
 
+		/// Redeems multiple assets from a liquidity pool.
 		#[pallet::call_index(5)]
 		#[pallet::weight(<T as pallet::Config>::WeightInfo::redeem_multi())]
 		pub fn redeem_multi(
@@ -216,9 +236,11 @@ pub mod pallet {
 			max_redeem_amount: T::Balance,
 		) -> DispatchResult {
 			let who = ensure_signed(origin)?;
+			// Redeem multiple assets based on provided amounts
 			Self::redeem_multi_inner(&who, pool_id, amounts, max_redeem_amount)
 		}
 
+		/// Modifies the parameter 'a' of a pool at a future block.
 		#[pallet::call_index(6)]
 		#[pallet::weight(<T as pallet::Config>::WeightInfo::modify_a())]
 		pub fn modify_a(
@@ -227,10 +249,13 @@ pub mod pallet {
 			a: T::AtLeast64BitUnsigned,
 			future_a_block: BlockNumberFor<T>,
 		) -> DispatchResult {
+			// Ensure the caller has the necessary control origin
 			T::ControlOrigin::ensure_origin(origin)?;
+			// Modify the parameter 'a' in the StableAsset module
 			T::StableAsset::modify_a(pool_id, a, future_a_block)
 		}
 
+		/// Modifies the fees of a specified liquidity pool.
 		#[pallet::call_index(7)]
 		#[pallet::weight(<T as pallet::Config>::WeightInfo::modify_fees())]
 		pub fn modify_fees(
@@ -240,14 +265,19 @@ pub mod pallet {
 			swap_fee: Option<T::AtLeast64BitUnsigned>,
 			redeem_fee: Option<T::AtLeast64BitUnsigned>,
 		) -> DispatchResult {
+			// Ensure the caller has the necessary control origin
 			T::ControlOrigin::ensure_origin(origin)?;
 			let fee_denominator: T::AtLeast64BitUnsigned = T::FeePrecision::get();
+
+			// Ensure that the provided fees are within valid limits
 			ensure!(
 				mint_fee.map(|x| x < fee_denominator).unwrap_or(true) &&
 					swap_fee.map(|x| x < fee_denominator).unwrap_or(true) &&
 					redeem_fee.map(|x| x < fee_denominator).unwrap_or(true),
 				bifrost_stable_asset::Error::<T>::ArgumentsError
 			);
+
+			// Update the pool's fee information
 			Pools::<T>::try_mutate_exists(pool_id, |maybe_pool_info| -> DispatchResult {
 				let pool_info = maybe_pool_info
 					.as_mut()
@@ -261,6 +291,7 @@ pub mod pallet {
 				if let Some(fee) = redeem_fee {
 					pool_info.redeem_fee = fee;
 				}
+				// Emit an event indicating that the fees have been modified
 				bifrost_stable_asset::Pallet::<T>::deposit_event(
 					bifrost_stable_asset::Event::<T>::FeeModified {
 						pool_id,
@@ -273,6 +304,7 @@ pub mod pallet {
 			})
 		}
 
+		/// Modifies the fee and yield recipients of a liquidity pool.
 		#[pallet::call_index(8)]
 		#[pallet::weight(<T as pallet::Config>::WeightInfo::modify_recipients())]
 		pub fn modify_recipients(
@@ -281,6 +313,7 @@ pub mod pallet {
 			fee_recipient: Option<T::AccountId>,
 			yield_recipient: Option<T::AccountId>,
 		) -> DispatchResult {
+			// Ensure the caller has the necessary control origin
 			T::ControlOrigin::ensure_origin(origin)?;
 			Pools::<T>::try_mutate_exists(pool_id, |maybe_pool_info| -> DispatchResult {
 				let pool_info = maybe_pool_info
@@ -292,6 +325,7 @@ pub mod pallet {
 				if let Some(recipient) = yield_recipient {
 					pool_info.yield_recipient = recipient;
 				}
+				// Emit an event indicating that the recipients have been modified
 				bifrost_stable_asset::Pallet::<T>::deposit_event(
 					bifrost_stable_asset::Event::<T>::RecipientModified {
 						pool_id,
@@ -303,6 +337,7 @@ pub mod pallet {
 			})
 		}
 
+		/// Edits the token rates for the specified pool.
 		#[pallet::call_index(9)]
 		#[pallet::weight(<T as pallet::Config>::WeightInfo::edit_token_rate())]
 		pub fn edit_token_rate(
@@ -313,10 +348,16 @@ pub mod pallet {
 				(AtLeast64BitUnsignedOf<T>, AtLeast64BitUnsignedOf<T>),
 			)>,
 		) -> DispatchResult {
+			// Ensure the caller has the necessary control origin
 			T::ControlOrigin::ensure_origin(origin)?;
+			// Update the token rates in the StableAsset module
 			bifrost_stable_asset::Pallet::<T>::set_token_rate(pool_id, token_rate_info)
 		}
 
+		/// Configures the auto-refresh settings for a given vToken.
+		///
+		/// This method sets the hard cap for the specified vToken's token rate.
+		/// Only an authorized origin can call this function.
 		#[pallet::call_index(10)]
 		#[pallet::weight(<T as pallet::Config>::WeightInfo::config_vtoken_auto_refresh())]
 		pub fn config_vtoken_auto_refresh(
@@ -324,30 +365,42 @@ pub mod pallet {
 			vtoken: AssetIdOf<T>,
 			hardcap: Permill,
 		) -> DispatchResult {
+			// Ensure the caller has the necessary control origin
 			T::ControlOrigin::ensure_origin(origin)?;
 
+			// Ensure that the provided vtoken is valid
 			ensure!(
 				CurrencyId::is_vtoken(&vtoken.into()),
 				bifrost_stable_asset::Error::<T>::ArgumentsError
 			);
+			// Insert the hardcap for the specified vToken into storage
 			TokenRateHardcap::<T>::insert(vtoken, hardcap);
 
+			// Emit an event indicating that the vToken's hardcap has been configured
 			bifrost_stable_asset::Pallet::<T>::deposit_event(
 				bifrost_stable_asset::Event::<T>::TokenRateHardcapConfigured { vtoken, hardcap },
 			);
+
 			Ok(())
 		}
 
+		/// Removes the auto-refresh configuration for a given vToken.
+		///
+		/// This method deletes the hard cap setting for the specified vToken.
+		/// Only an authorized origin can call this function.
 		#[pallet::call_index(11)]
 		#[pallet::weight(<T as pallet::Config>::WeightInfo::remove_vtoken_auto_refresh())]
 		pub fn remove_vtoken_auto_refresh(
 			origin: OriginFor<T>,
 			vtoken: AssetIdOf<T>,
 		) -> DispatchResult {
+			// Ensure the caller has the necessary control origin
 			T::ControlOrigin::ensure_origin(origin)?;
 
+			// Remove the hardcap setting for the specified vToken from storage
 			TokenRateHardcap::<T>::remove(vtoken);
 
+			// Emit an event indicating that the vToken's hardcap has been removed
 			bifrost_stable_asset::Pallet::<T>::deposit_event(
 				bifrost_stable_asset::Event::<T>::TokenRateHardcapRemoved { vtoken },
 			);

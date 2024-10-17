@@ -17,7 +17,7 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 use crate::{Config, ExtraFeeByCall, Pallet};
-use bifrost_primitives::{Balance, CurrencyId, Price, PriceFeeder, BNC};
+use bifrost_primitives::{Balance, CurrencyId, OraclePriceProvider, Price, BNC};
 use orml_traits::MultiCurrency;
 use pallet_transaction_payment::OnChargeTransaction;
 use parity_scale_codec::Encode;
@@ -124,7 +124,7 @@ where
 				),
 				PaymentInfo::NonNative(paid_fee, fee_currency, bnc_price, fee_currency_price) => {
 					// calculate corrected_fee in the non-native currency
-					let converted_corrected_fee = T::PriceFeeder::get_amount_by_prices(
+					let converted_corrected_fee = T::OraclePriceProvider::get_amount_by_prices(
 						&BNC,
 						corrected_fee,
 						bnc_price,
@@ -133,7 +133,7 @@ where
 					)
 					.ok_or(TransactionValidityError::Invalid(InvalidTransaction::Payment))?;
 					let refund = paid_fee.saturating_sub(converted_corrected_fee);
-					let converted_tip = T::PriceFeeder::get_amount_by_prices(
+					let converted_tip = T::OraclePriceProvider::get_amount_by_prices(
 						&BNC,
 						tip,
 						bnc_price,

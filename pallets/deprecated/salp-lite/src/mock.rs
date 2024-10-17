@@ -161,7 +161,6 @@ impl bifrost_currencies::Config for Test {
 
 parameter_types! {
 	pub const MinContribution: Balance = 10;
-	pub const BifrostCrowdloanId: PalletId = PalletId(*b"bf/salp#");
 	pub const RemoveKeysLimit: u32 = 50;
 	pub const SlotLength: BlockNumber = 8u32 as BlockNumber;
 	pub const LeasePeriod: BlockNumber = 6 * WEEKS;

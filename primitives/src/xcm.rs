@@ -41,7 +41,16 @@ parameter_types! {
 	pub const MantaChainId: u32 = 2104;
 	pub const MoonbeamChainId: u32 = 2004;
 	pub const MoonriverChainId: u32 = 2023;
+	pub const PhalaChainId: u32 = 2035;
+	pub const KaruraChainId: u32 = 2000;
+}
+
+// Evm chain id
+parameter_types! {
 	pub const EthereumChainId: u64 = 1;
+	pub const MoonriverEvmChainId: u64 = 1285;
+	pub const MoonbeamEvmChainId: u64 = 1284;
+	pub const AstarEvmChainId: u64 = 592;
 }
 
 // Location

@@ -23,12 +23,20 @@ use sp_std::collections::btree_map::BTreeMap;
 
 #[derive(Clone, Encode, Decode, PartialEq, Eq, RuntimeDebug, TypeInfo)]
 pub struct IncentiveConfig<CurrencyId, Balance, BlockNumber, AccountId> {
+	/// Reward per block number per currency_id, which will change at notify_reward.
 	pub reward_rate: BTreeMap<CurrencyId, Balance>,
+	/// Each currency_id is rewarded against each TokenType and grows with user actions.
 	pub reward_per_token_stored: BTreeMap<CurrencyId, Balance>,
+	/// Round duration.
 	pub rewards_duration: BlockNumber,
+	/// The time when this round ends.
 	pub period_finish: BlockNumber,
+	/// Last time rewards were updated, any user action will update this field.
 	pub last_update_time: BlockNumber,
+	/// When a round is started, the corresponding value will be transferred from this account to
+	/// the system account.
 	pub incentive_controller: Option<AccountId>,
+	/// When a round is started, the value to be transferred will be obtained from this field.
 	pub last_reward: Vec<(CurrencyId, Balance)>,
 }
 
@@ -103,22 +111,22 @@ impl<T: Config> Pallet<T> {
 	/// Calculates the reward earned by an account from a specific reward pool
 	pub fn earned(
 		pool_id: PoolId,
-		addr: &AccountIdOf<T>,
+		who: &AccountIdOf<T>,
 		share_info: Option<(BalanceOf<T>, BalanceOf<T>)>,
 	) -> Result<BTreeMap<CurrencyIdOf<T>, BalanceOf<T>>, DispatchError> {
 		let reward_per_token = Self::reward_per_token(pool_id)?;
-		let vetoken_balance = Self::balance_of_current_block(addr)?;
-		let mut rewards = if let Some(rewards) = Rewards::<T>::get(addr) {
+		let bbbnc_balance = Self::balance_of_current_block(who)?;
+		let mut rewards = if let Some(rewards) = Rewards::<T>::get(who) {
 			rewards
 		} else {
 			BTreeMap::<CurrencyIdOf<T>, BalanceOf<T>>::default()
 		};
 		reward_per_token.iter().try_for_each(|(currency, reward)| -> DispatchResult {
-			let increment = U256::from(vetoken_balance.saturated_into::<u128>())
+			let increment = U256::from(bbbnc_balance.saturated_into::<u128>())
 				.checked_mul(U256::from(
 					reward
 						.saturating_sub(
-							*UserRewardPerTokenPaid::<T>::get(addr)
+							*UserRewardPerTokenPaid::<T>::get(who)
 								.get(currency)
 								.unwrap_or(&BalanceOf::<T>::zero()),
 						)
@@ -136,7 +144,7 @@ impl<T: Config> Pallet<T> {
 			// and total share.
 			match share_info {
 				Some((share, total_share)) => {
-					let mut pools = UserFarmingPool::<T>::get(addr);
+					let mut pools = UserFarmingPool::<T>::get(who);
 					if share.is_zero() {
 						if let Some(pos) = pools.iter().position(|&x| x == pool_id) {
 							pools.remove(pos);
@@ -144,7 +152,7 @@ impl<T: Config> Pallet<T> {
 					} else {
 						pools.try_push(pool_id).map_err(|_| Error::<T>::UserFarmingPoolOverflow)?;
 					}
-					UserFarmingPool::<T>::insert(addr, pools);
+					UserFarmingPool::<T>::insert(who, pools);
 					let reward = increment
 						.checked_mul(U256::from(share.saturated_into::<u128>()))
 						.ok_or(ArithmeticError::Overflow)?
@@ -182,7 +190,7 @@ impl<T: Config> Pallet<T> {
 	// create_lock/increase_amount/increase_unlock_time/withdraw/get_rewards
 	pub fn update_reward(
 		pool_id: PoolId,
-		addr: Option<&AccountIdOf<T>>,
+		who: Option<&AccountIdOf<T>>,
 		share_info: Option<(BalanceOf<T>, BalanceOf<T>)>,
 	) -> DispatchResult {
 		let reward_per_token_stored = Self::reward_per_token(pool_id)?;
@@ -191,51 +199,51 @@ impl<T: Config> Pallet<T> {
 			item.reward_per_token_stored = reward_per_token_stored.clone();
 			item.last_update_time = Self::last_time_reward_applicable(pool_id);
 		});
-		// If an account address is provided, update the rewards
-		if let Some(address) = addr {
-			let earned = Self::earned(pool_id, address, share_info)?;
+		// If an account is provided, update the rewards
+		if let Some(account) = who {
+			let earned = Self::earned(pool_id, account, share_info)?;
 			// If the account has earned rewards, update the rewards storage
 			if earned != BTreeMap::<CurrencyIdOf<T>, BalanceOf<T>>::default() {
-				Rewards::<T>::insert(address, earned);
+				Rewards::<T>::insert(account, earned);
 			}
-			UserRewardPerTokenPaid::<T>::insert(address, reward_per_token_stored.clone());
+			UserRewardPerTokenPaid::<T>::insert(account, reward_per_token_stored.clone());
 		}
 		Ok(())
 	}
 
 	/// Update reward for all pools
-	pub fn update_reward_all(addr: &AccountIdOf<T>) -> DispatchResult {
-		UserFarmingPool::<T>::get(addr)
+	pub fn update_reward_all(who: &AccountIdOf<T>) -> DispatchResult {
+		UserFarmingPool::<T>::get(who)
 			.iter()
 			.try_for_each(|&pool_id| -> DispatchResult {
-				Self::update_reward(pool_id, Some(addr), None)
+				Self::update_reward(pool_id, Some(who), None)
 			})?;
-		Self::update_reward(VE_MINTING_SYSTEM_POOL_ID, Some(addr), None)?;
+		Self::update_reward(BB_BNC_SYSTEM_POOL_ID, Some(who), None)?;
 		Ok(())
 	}
 
 	///Transfer rewards into an account
 	pub fn get_rewards_inner(
 		pool_id: PoolId,
-		addr: &AccountIdOf<T>,
+		who: &AccountIdOf<T>,
 		share_info: Option<(BalanceOf<T>, BalanceOf<T>)>,
 	) -> DispatchResult {
-		Self::update_reward(pool_id, Some(addr), share_info)?;
-		if Self::balance_of_current_block(addr)? == BalanceOf::<T>::zero() {
+		Self::update_reward(pool_id, Some(who), share_info)?;
+		if Self::balance_of_current_block(who)? == BalanceOf::<T>::zero() {
 			return Ok(());
 		} // Excit earlier if balance of token is zero
-		if let Some(rewards) = Rewards::<T>::get(addr) {
+		if let Some(rewards) = Rewards::<T>::get(who) {
 			rewards.iter().try_for_each(|(currency, &reward)| -> DispatchResult {
 				T::MultiCurrency::transfer(
 					*currency,
 					&T::IncentivePalletId::get().into_account_truncating(),
-					addr,
+					who,
 					reward,
 				)
 			})?;
-			Rewards::<T>::remove(addr);
+			Rewards::<T>::remove(who);
 			Self::deposit_event(Event::Rewarded {
-				addr: addr.to_owned(),
+				who: who.to_owned(),
 				rewards: rewards.into_iter().collect(),
 			});
 		}
@@ -245,11 +253,11 @@ impl<T: Config> Pallet<T> {
 	// Motion
 	pub fn notify_reward_amount(
 		pool_id: PoolId,
-		addr: &Option<AccountIdOf<T>>,
+		who: &Option<AccountIdOf<T>>,
 		rewards: Vec<(CurrencyIdOf<T>, BalanceOf<T>)>,
 	) -> DispatchResult {
-		let who = match addr {
-			Some(addr) => addr,
+		let account = match who {
+			Some(who) => who,
 			None => return Err(Error::<T>::NoController.into()),
 		};
 		Self::update_reward(pool_id, None, None)?;
@@ -257,17 +265,17 @@ impl<T: Config> Pallet<T> {
 		let current_block_number: BlockNumberFor<T> = frame_system::Pallet::<T>::block_number();
 
 		if current_block_number >= conf.period_finish {
-			Self::add_reward(who, &mut conf, &rewards, Zero::zero())?;
+			Self::add_reward(&account, &mut conf, &rewards, Zero::zero())?;
 		} else {
 			let remaining = T::BlockNumberToBalance::convert(
 				conf.period_finish.saturating_sub(current_block_number),
 			);
-			Self::add_reward(who, &mut conf, &rewards, remaining)?;
+			Self::add_reward(&account, &mut conf, &rewards, remaining)?;
 		};
 
 		conf.last_update_time = current_block_number;
 		conf.period_finish = current_block_number.saturating_add(conf.rewards_duration);
-		conf.incentive_controller = Some(who.clone());
+		conf.incentive_controller = Some(account.clone());
 		conf.last_reward = rewards.clone();
 		IncentiveConfigs::<T>::set(pool_id, conf);
 

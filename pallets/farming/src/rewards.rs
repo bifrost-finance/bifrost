@@ -228,7 +228,11 @@ impl<T: Config> Pallet<T> {
 			if let Some(mut share_info) = share_info_old.take() {
 				let remove_amount;
 				if let Some(remove_amount_input) = remove_amount_input {
-					remove_amount = remove_amount_input.min(share_info.share);
+					ensure!(
+						remove_amount_input <= share_info.share,
+						Error::<T>::InvalidRemoveAmount
+					);
+					remove_amount = remove_amount_input;
 				} else {
 					remove_amount = share_info.share;
 				}

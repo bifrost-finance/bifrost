@@ -54,9 +54,9 @@ impl<
 	}
 
 	/// Check exec_delay match
-	pub fn check_delay(&self, now: B, delay: u32) -> bool {
+	pub fn check_delay(&self, now: B, delay: B) -> bool {
 		//Current blockNumber -  BlockNumber of Round Start == delay blockNumber ===> true
-		now - self.first == delay.into() && delay != 0
+		now - self.first == delay && delay != 0.into()
 	}
 }
 impl<
@@ -69,7 +69,14 @@ impl<
 }
 
 #[derive(Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
-pub struct TokenInfo<Balance: Copy> {
+pub struct TokenInfo<
+	Balance: Copy,
+	BlockNumber: Copy
+		+ sp_std::ops::Add<Output = BlockNumber>
+		+ sp_std::ops::Sub<Output = BlockNumber>
+		+ From<u32>
+		+ PartialOrd,
+> {
 	/// The number of token staking in Farming
 	pub farming_staking_amount: Balance,
 	/// token_config.system_stakable_farming_rate(100%) * farming_staking_amount(0) +/-
@@ -80,25 +87,41 @@ pub struct TokenInfo<Balance: Copy> {
 	/// Number of pending redemptions
 	pub pending_redeem_amount: Balance,
 	/// Current TokenConfig
-	pub current_config: TokenConfig<Balance>,
+	pub current_config: TokenConfig<Balance, BlockNumber>,
 	/// New TokenConfig
-	pub new_config: TokenConfig<Balance>,
+	pub new_config: TokenConfig<Balance, BlockNumber>,
 }
 
-impl<Balance: Zero + Copy> Default for TokenInfo<Balance> {
-	fn default() -> TokenInfo<Balance> {
+impl<
+		Balance: Zero + Copy,
+		BlockNumber: Copy
+			+ sp_std::ops::Add<Output = BlockNumber>
+			+ sp_std::ops::Sub<Output = BlockNumber>
+			+ From<u32>
+			+ PartialOrd,
+	> Default for TokenInfo<Balance, BlockNumber>
+{
+	fn default() -> TokenInfo<Balance, BlockNumber> {
 		TokenInfo {
 			farming_staking_amount: Balance::zero(),
 			system_stakable_amount: Balance::zero(),
 			system_shadow_amount: Balance::zero(),
 			pending_redeem_amount: Balance::zero(),
-			current_config: TokenConfig::<Balance>::default(),
-			new_config: TokenConfig::<Balance>::default(),
+			current_config: TokenConfig::<Balance, BlockNumber>::default(),
+			new_config: TokenConfig::<Balance, BlockNumber>::default(),
 		}
 	}
 }
 
-impl<Balance: Copy + PartialEq> TokenInfo<Balance> {
+impl<
+		Balance: Copy + PartialEq,
+		BlockNumber: Copy
+			+ sp_std::ops::Add<Output = BlockNumber>
+			+ sp_std::ops::Sub<Output = BlockNumber>
+			+ From<u32>
+			+ PartialOrd,
+	> TokenInfo<Balance, BlockNumber>
+{
 	pub fn check_config_change(&self) -> bool {
 		self.current_config != self.new_config
 	}
@@ -109,30 +132,45 @@ impl<Balance: Copy + PartialEq> TokenInfo<Balance> {
 }
 
 #[derive(Clone, PartialEq, Eq, Encode, Decode, RuntimeDebug, TypeInfo)]
-pub struct TokenConfig<Balance> {
+pub struct TokenConfig<Balance, BlockNumber>
+where
+	BlockNumber: Copy
+		+ sp_std::ops::Add<Output = BlockNumber>
+		+ sp_std::ops::Sub<Output = BlockNumber>
+		+ From<u32>
+		+ PartialOrd,
+{
 	/// Number of blocks with delayed execution
-	pub exec_delay: u32,
+	pub exec_delay: BlockNumber,
 	/// 100 %
 	pub system_stakable_farming_rate: Permill,
 	///
-	pub lptoken_rates: Vec<Perbill>,
+	pub lptoken_rates: BoundedVec<Perbill, ConstU32<32>>,
 	/// true: add, false: sub , +/- token_config.system_stakable_base
 	pub add_or_sub: bool,
 	///
 	pub system_stakable_base: Balance,
 	/// Farming pool ids
-	pub farming_poolids: Vec<PoolId>,
+	pub farming_poolids: BoundedVec<PoolId, ConstU32<32>>,
 }
 
-impl<Balance: Zero> Default for TokenConfig<Balance> {
-	fn default() -> TokenConfig<Balance> {
+impl<
+		Balance: Zero,
+		BlockNumber: Copy
+			+ sp_std::ops::Add<Output = BlockNumber>
+			+ sp_std::ops::Sub<Output = BlockNumber>
+			+ From<u32>
+			+ PartialOrd,
+	> Default for TokenConfig<Balance, BlockNumber>
+{
+	fn default() -> TokenConfig<Balance, BlockNumber> {
 		TokenConfig {
-			exec_delay: 0u32,
+			exec_delay: 0u32.into(),
 			system_stakable_farming_rate: Permill::from_percent(0),
-			lptoken_rates: Vec::new(),
+			lptoken_rates: BoundedVec::default(),
 			system_stakable_base: Balance::zero(),
 			add_or_sub: true, // default add
-			farming_poolids: Vec::new(),
+			farming_poolids: BoundedVec::default(),
 		}
 	}
 }

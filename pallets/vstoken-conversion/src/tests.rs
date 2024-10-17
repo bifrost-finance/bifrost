@@ -20,6 +20,7 @@
 
 #![cfg(test)]
 
+use bifrost_primitives::currency::KSM;
 use frame_support::{assert_noop, assert_ok};
 pub use primitives::{VstokenConversionExchangeFee, VstokenConversionExchangeRate};
 use sp_arithmetic::per_things::Percent;

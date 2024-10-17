@@ -1,0 +1,18 @@
+[package]
+name = "bifrost-salp-rpc-runtime-api"
+version = "0.8.0"
+authors = ["Ron Yang<yrong1997@gmail.com>"]
+edition = "2021"
+
+[dependencies]
+parity-scale-codec = { workspace = true, features = ["derive"] }
+sp-api = { workspace = true }
+bifrost-primitives = { workspace = true }
+
+[features]
+default = ["std"]
+std = [
+	"parity-scale-codec/std",
+	"sp-api/std",
+	"bifrost-primitives/std",
+]

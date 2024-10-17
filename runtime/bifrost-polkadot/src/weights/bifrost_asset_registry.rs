@@ -54,36 +54,6 @@ use sp_std::marker::PhantomData;
 /// Weight functions for bifrost_asset_registry.
 pub struct BifrostWeight<T>(PhantomData<T>);
 impl<T: frame_system::Config> bifrost_asset_registry::WeightInfo for BifrostWeight<T> {
-	// Storage: AssetRegistry LocationToCurrencyIds (r:1 w:1)
-	// Proof Skipped: AssetRegistry LocationToCurrencyIds (max_values: None, max_size: None, mode: Measured)
-	// Storage: AssetRegistry CurrencyIdToLocations (r:1 w:1)
-	// Proof Skipped: AssetRegistry CurrencyIdToLocations (max_values: None, max_size: None, mode: Measured)
-	// Storage: AssetRegistry AssetMetadatas (r:1 w:1)
-	// Proof Skipped: AssetRegistry AssetMetadatas (max_values: None, max_size: None, mode: Measured)
-	fn register_native_asset() -> Weight {
-		// Proof Size summary in bytes:
-		//  Measured:  `118`
-		//  Estimated: `3583`
-		// Minimum execution time: 49_553 nanoseconds.
-		Weight::from_parts(50_599_000, 3583)
-			.saturating_add(T::DbWeight::get().reads(3))
-			.saturating_add(T::DbWeight::get().writes(3))
-	}
-	// Storage: AssetRegistry LocationToCurrencyIds (r:1 w:1)
-	// Proof Skipped: AssetRegistry LocationToCurrencyIds (max_values: None, max_size: None, mode: Measured)
-	// Storage: AssetRegistry CurrencyIdToLocations (r:1 w:1)
-	// Proof Skipped: AssetRegistry CurrencyIdToLocations (max_values: None, max_size: None, mode: Measured)
-	// Storage: AssetRegistry AssetMetadatas (r:1 w:1)
-	// Proof Skipped: AssetRegistry AssetMetadatas (max_values: None, max_size: None, mode: Measured)
-	fn update_native_asset() -> Weight {
-		// Proof Size summary in bytes:
-		//  Measured:  `250`
-		//  Estimated: `3715`
-		// Minimum execution time: 56_917 nanoseconds.
-		Weight::from_parts(57_419_000, 3715)
-			.saturating_add(T::DbWeight::get().reads(3))
-			.saturating_add(T::DbWeight::get().writes(3))
-	}
 	// Storage: AssetRegistry NextTokenId (r:1 w:1)
 	// Proof Skipped: AssetRegistry NextTokenId (max_values: Some(1), max_size: None, mode: Measured)
 	// Storage: AssetRegistry CurrencyMetadatas (r:1 w:1)
@@ -105,28 +75,6 @@ impl<T: frame_system::Config> bifrost_asset_registry::WeightInfo for BifrostWeig
 		//  Estimated: `6719`
 		// Minimum execution time: 51_173 nanoseconds.
 		Weight::from_parts(52_854_000, 6719)
-			.saturating_add(T::DbWeight::get().reads(2))
-			.saturating_add(T::DbWeight::get().writes(1))
-	}
-	// Storage: AssetRegistry CurrencyMetadatas (r:2 w:1)
-	// Proof Skipped: AssetRegistry CurrencyMetadatas (max_values: None, max_size: None, mode: Measured)
-	fn register_vstoken_metadata() -> Weight {
-		// Proof Size summary in bytes:
-		//  Measured:  `705`
-		//  Estimated: `6645`
-		// Minimum execution time: 49_492 nanoseconds.
-		Weight::from_parts(50_943_000, 6645)
-			.saturating_add(T::DbWeight::get().reads(2))
-			.saturating_add(T::DbWeight::get().writes(1))
-	}
-	// Storage: AssetRegistry CurrencyMetadatas (r:2 w:1)
-	// Proof Skipped: AssetRegistry CurrencyMetadatas (max_values: None, max_size: None, mode: Measured)
-	fn register_vsbond_metadata() -> Weight {
-		// Proof Size summary in bytes:
-		//  Measured:  `763`
-		//  Estimated: `6703`
-		// Minimum execution time: 52_709 nanoseconds.
-		Weight::from_parts(54_285_000, 6703)
 			.saturating_add(T::DbWeight::get().reads(2))
 			.saturating_add(T::DbWeight::get().writes(1))
 	}

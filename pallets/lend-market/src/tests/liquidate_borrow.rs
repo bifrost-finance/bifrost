@@ -1,6 +1,7 @@
 use crate::{
 	mock::{
-		new_test_ext, LendMarket, MockPriceFeeder, RuntimeOrigin, ALICE, BOB, DOT, DOT_U, KSM, *,
+		new_test_ext, LendMarket, MockOraclePriceProvider, RuntimeOrigin, ALICE, BOB, DOT, DOT_U,
+		KSM, *,
 	},
 	tests::unit,
 	Error, MarketState,
@@ -23,7 +24,7 @@ fn liquidate_borrow_allowed_works() {
 		initial_setup();
 		alice_borrows_100_ksm();
 		// Adjust KSM price to make shortfall
-		MockPriceFeeder::set_price(KSM, 2.into());
+		MockOraclePriceProvider::set_price(KSM, 2.into());
 		let ksm_market = LendMarket::market(KSM).unwrap();
 		// Here the balance sheet of Alice is:
 		// Collateral   LendMarket
@@ -82,8 +83,8 @@ fn lf_liquidate_borrow_allowed_works() {
 
 		// CDOT's price is highly relative to DOT's price in real runtime. Thus we must update them
 		// at the same time.
-		MockPriceFeeder::set_price(DOT, 2.into());
-		MockPriceFeeder::set_price(PHA, 2.into());
+		MockOraclePriceProvider::set_price(DOT, 2.into());
+		MockOraclePriceProvider::set_price(PHA, 2.into());
 		// ALICE
 		// Collateral                 Borrowed
 		// DOT_U  $100                 DOT $400
@@ -113,7 +114,7 @@ fn deposit_of_borrower_must_be_collateral() {
 		initial_setup();
 		alice_borrows_100_ksm();
 		// Adjust KSM price to make shortfall
-		MockPriceFeeder::set_price(KSM, 2.into());
+		MockOraclePriceProvider::set_price(KSM, 2.into());
 		let market = LendMarket::market(KSM).unwrap();
 		assert_noop!(
 			LendMarket::liquidate_borrow_allowed(&ALICE, KSM, unit(51), &market),
@@ -134,7 +135,7 @@ fn collateral_value_must_be_greater_than_liquidation_value() {
 		assert_ok!(LendMarket::add_market_bond(RuntimeOrigin::root(), BNC, vec![DOT, BNC, KSM]));
 		initial_setup();
 		alice_borrows_100_ksm();
-		MockPriceFeeder::set_price(KSM, Rate::from_float(2000.0));
+		MockOraclePriceProvider::set_price(KSM, Rate::from_float(2000.0));
 		LendMarket::mutate_market(KSM, |market| {
 			market.liquidate_incentive = Rate::from_float(200.0);
 			market.clone()
@@ -156,7 +157,7 @@ fn full_workflow_works_as_expected() {
 		initial_setup();
 		alice_borrows_100_ksm();
 		// adjust KSM price to make ALICE generate shortfall
-		MockPriceFeeder::set_price(KSM, 2.into());
+		MockOraclePriceProvider::set_price(KSM, 2.into());
 		// BOB repay the KSM borrow balance and get DOT from ALICE
 		assert_ok!(LendMarket::liquidate_borrow(
 			RuntimeOrigin::signed(BOB),
@@ -227,7 +228,7 @@ fn liquidator_cannot_take_inactive_market_currency() {
 		initial_setup();
 		alice_borrows_100_ksm();
 		// Adjust KSM price to make shortfall
-		MockPriceFeeder::set_price(KSM, 2.into());
+		MockOraclePriceProvider::set_price(KSM, 2.into());
 		assert_ok!(LendMarket::mutate_market(DOT, |stored_market| {
 			stored_market.state = MarketState::Supervision;
 			stored_market.clone()
@@ -247,7 +248,7 @@ fn liquidator_can_not_repay_more_than_the_close_factor_pct_multiplier() {
 		assert_ok!(LendMarket::add_market_bond(RuntimeOrigin::root(), BNC, vec![DOT, BNC, KSM]));
 		initial_setup();
 		alice_borrows_100_ksm();
-		MockPriceFeeder::set_price(KSM, 20.into());
+		MockOraclePriceProvider::set_price(KSM, 20.into());
 		assert_noop!(
 			LendMarket::liquidate_borrow(RuntimeOrigin::signed(BOB), ALICE, KSM, unit(51), DOT),
 			Error::<Test>::TooMuchRepay

@@ -1,6 +1,6 @@
 # Collator Staking
 
-[![Rust Check & Build](https://github.com/bifrost-finance/parachain-staking/actions/workflows/ci.yml/badge.svg)](https://github.com/bifrost-finance/parachain-staking/actions/workflows/ci.yml)
+[![Rust Check & Build](https://github.com/bifrost-io/parachain-staking/actions/workflows/ci.yml/badge.svg)](https://github.com/bifrost-io/parachain-staking/actions/workflows/ci.yml)
 
 ## check && build
 
@@ -114,7 +114,7 @@ mainly reference moonbeam implementation while decouple `nimbus` from staking, i
 
 ### Decomple with Nimbus
 
-<https://github.com/bifrost-finance/moonbeam/commit/2e3f7dddad6294b661e08d17b45f42e853b4ecff>
+<https://github.com/bifrost-io/moonbeam/commit/2e3f7dddad6294b661e08d17b45f42e853b4ecff>
 
 ## Benifit of Nimbus
 
@@ -122,7 +122,7 @@ mainly reference moonbeam implementation while decouple `nimbus` from staking, i
 
 actually we've prepared another branch with nimbus integration and we may try it later if required
 
-<https://github.com/bifrost-finance/bifrost/tree/collator-staking>
+<https://github.com/bifrost-io/bifrost/tree/collator-staking>
 
 ## api docs
 

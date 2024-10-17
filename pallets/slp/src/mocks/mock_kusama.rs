@@ -25,8 +25,10 @@ use crate::{Config, DispatchResult, QueryResponseManager};
 use bifrost_asset_registry::AssetIdMaps;
 use bifrost_primitives::{
 	currency::{BNC, KSM, MANTA},
-	Amount, Balance, CurrencyId, MockXcmExecutor, MockXcmRouter, MoonbeamChainId, SlpxOperator,
-	TokenSymbol, XcmDestWeightAndFeeHandler, XcmOperationType,
+	Amount, Balance, BifrostEntranceAccount, BifrostExitAccount, BifrostFeeAccount, CurrencyId,
+	IncentivePoolAccount, MockXcmExecutor, MockXcmRouter, MoonbeamChainId,
+	ParachainStakingPalletId, SlpxOperator, StableAssetPalletId, TokenSymbol,
+	XcmDestWeightAndFeeHandler, XcmOperationType,
 };
 pub use cumulus_primitives_core::ParaId;
 use frame_support::{
@@ -41,10 +43,9 @@ use hex_literal::hex;
 use orml_traits::{location::RelativeReserveProvider, parameter_type_with_key};
 use parity_scale_codec::{Decode, Encode};
 use sp_core::{bounded::BoundedVec, hashing::blake2_256};
-pub use sp_runtime::Perbill;
 use sp_runtime::{
 	traits::{AccountIdConversion, Convert, TrailingZeroInput},
-	AccountId32, BuildStorage, Percent,
+	AccountId32, BuildStorage,
 };
 use sp_std::{boxed::Box, vec::Vec};
 use xcm::v3::{prelude::*, Weight};
@@ -92,9 +93,6 @@ impl bifrost_stable_asset::traits::ValidateAssetId<CurrencyId> for EnsurePoolAss
 	fn validate(_: CurrencyId) -> bool {
 		true
 	}
-}
-parameter_types! {
-	pub const StableAssetPalletId: PalletId = PalletId(*b"nuts/sta");
 }
 
 impl bifrost_stable_asset::Config for Runtime {
@@ -236,10 +234,6 @@ impl orml_xtokens::Config for Runtime {
 parameter_types! {
 	pub const MaximumUnlockIdOfUser: u32 = 10;
 	pub const MaximumUnlockIdOfTimeUnit: u32 = 50;
-	pub BifrostEntranceAccount: PalletId = PalletId(*b"bf/vtkin");
-	pub BifrostExitAccount: PalletId = PalletId(*b"bf/vtout");
-	pub BifrostFeeAccount: AccountId = hex!["e4da05f08e89bf6c43260d96f26fffcfc7deae5b465da08669a9d008e64c2c63"].into();
-	pub IncentivePoolAccount: PalletId = PalletId(*b"bf/inpoo");
 }
 
 pub struct SlpxInterface;
@@ -260,9 +254,6 @@ impl bifrost_vtoken_minting::Config for Runtime {
 	type FeeAccount = BifrostFeeAccount;
 	type RedeemFeeAccount = BifrostFeeAccount;
 	type RelayChainToken = RelayCurrencyId;
-	type CurrencyIdConversion = AssetIdMaps<Runtime>;
-	type CurrencyIdRegister = AssetIdMaps<Runtime>;
-	type BifrostSlp = Slp;
 	type BifrostSlpx = SlpxInterface;
 	type WeightInfo = ();
 	type OnRedeemSuccess = ();
@@ -272,12 +263,10 @@ impl bifrost_vtoken_minting::Config for Runtime {
 	type MaxLockRecords = ConstU32<100>;
 	type IncentivePoolAccount = IncentivePoolAccount;
 	type BbBNC = ();
-	type AssetIdMaps = AssetIdMaps<Runtime>;
 }
 
 parameter_types! {
 	pub const MinBlocksPerRound: u32 = 3;
-	pub const DefaultBlocksPerRound: u32 = 5;
 	pub const LeaveCandidatesDelay: u32 = 2;
 	pub const CandidateBondLessDelay: u32 = 2;
 	pub const LeaveDelegatorsDelay: u32 = 2;
@@ -288,14 +277,11 @@ parameter_types! {
 	pub const MaxTopDelegationsPerCandidate: u32 = 4;
 	pub const MaxBottomDelegationsPerCandidate: u32 = 4;
 	pub const MaxDelegationsPerDelegator: u32 = 4;
-	pub const DefaultCollatorCommission: Perbill = Perbill::from_percent(20);
-	pub const DefaultParachainBondReservePercent: Percent = Percent::from_percent(30);
 	pub const MinCollatorStk: u128 = 10;
 	pub const MinDelegatorStk: u128 = 5;
 	pub const MinDelegation: u128 = 3;
 	pub AllowInflation: bool = true;
 	pub PaymentInRound: u128 = 10;
-	pub const ParachainStakingPalletId: PalletId = PalletId(*b"bf/stake");
 	pub ToMigrateInvulnables: Vec<AccountId> = vec![AccountId32::new([1u8; 32])];
 	pub InitSeedStk: u128 = 10;
 }
@@ -304,7 +290,6 @@ impl bifrost_parachain_staking::Config for Runtime {
 	type Currency = Balances;
 	type MonetaryGovernanceOrigin = frame_system::EnsureRoot<AccountId>;
 	type MinBlocksPerRound = MinBlocksPerRound;
-	type DefaultBlocksPerRound = DefaultBlocksPerRound;
 	type LeaveCandidatesDelay = LeaveCandidatesDelay;
 	type CandidateBondLessDelay = CandidateBondLessDelay;
 	type LeaveDelegatorsDelay = LeaveDelegatorsDelay;
@@ -315,8 +300,6 @@ impl bifrost_parachain_staking::Config for Runtime {
 	type MaxTopDelegationsPerCandidate = MaxTopDelegationsPerCandidate;
 	type MaxBottomDelegationsPerCandidate = MaxBottomDelegationsPerCandidate;
 	type MaxDelegationsPerDelegator = MaxDelegationsPerDelegator;
-	type DefaultCollatorCommission = DefaultCollatorCommission;
-	type DefaultParachainBondReservePercent = DefaultParachainBondReservePercent;
 	type MinCollatorStk = MinCollatorStk;
 	type MinCandidateStk = MinCollatorStk;
 	type MinDelegatorStk = MinDelegatorStk;

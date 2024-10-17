@@ -28,6 +28,7 @@ use crate::{
 use bifrost_primitives::currency::{PHA, VPHA};
 use frame_support::{assert_noop, assert_ok, PalletId};
 use polkadot_parachain_primitives::primitives::Sibling;
+use sp_core::crypto::Ss58Codec;
 use sp_runtime::traits::AccountIdConversion;
 
 // parents 0 means vault, parents 1 means stake_pool
@@ -1459,4 +1460,40 @@ fn phala_convert_asset_works() {
 			Error::<Runtime>::XcmFailure
 		);
 	});
+}
+
+#[test]
+fn generate_derivative_account() {
+	ExtBuilder::default().build().execute_with(|| {
+		// PublicKey: 0x70617261d1070000000000000000000000000000000000000000000000000000
+		// AccountId(42): 5Ec4AhPV91i9yNuiWuNunPf6AQCYDhFTTA4G5QCbtqYApH9E
+		let sovereign_account = <ParaId as AccountIdConversion<AccountId>>::into_account_truncating(
+			&ParaId::from(2001),
+		);
+		println!("sovereign_account: {:?}", sovereign_account);
+		// PublicKey: 0x5a53736d8e96f1c007cf0d630acf5209b20611617af23ce924c8e25328eb5d28
+		// AccountId(42): 5E78xTBiaN3nAGYtcNnqTJQJqYAkSDGggKqaDfpNsKyPpbcb
+		let sovereign_account_derivative_0 =
+			Utility::derivative_account_id(sovereign_account.clone(), 0);
+		assert_eq!(
+			sovereign_account_derivative_0,
+			AccountId::from_ss58check("5E78xTBiaN3nAGYtcNnqTJQJqYAkSDGggKqaDfpNsKyPpbcb").unwrap()
+		);
+		// PublicKey: 0xf1c5ca0368e7a567945a59aaea92b9be1e0794fe5e077d017462b7ce8fc1ed7c
+		// AccountId(42): 5HXi9pzWnTQzk7VKzY6VQn92KfWCcA5NbSm53uKHrYU1VsjP
+		let sovereign_account_derivative_1 =
+			Utility::derivative_account_id(sovereign_account.clone(), 1);
+		assert_eq!(
+			sovereign_account_derivative_1,
+			AccountId::from_ss58check("5HXi9pzWnTQzk7VKzY6VQn92KfWCcA5NbSm53uKHrYU1VsjP").unwrap()
+		);
+		// PublicKey: 0x1e365411cfd0b0f78466be433a2ec5f7d545c5e28cb2e9a31ce97d4a28447dfc
+		// AccountId(42): 5CkKS3YMx64TguUYrMERc5Bn6Mn2aKMUkcozUFREQDgHS3Tv
+		let sovereign_account_derivative_2 =
+			Utility::derivative_account_id(sovereign_account.clone(), 2);
+		assert_eq!(
+			sovereign_account_derivative_2,
+			AccountId::from_ss58check("5CkKS3YMx64TguUYrMERc5Bn6Mn2aKMUkcozUFREQDgHS3Tv").unwrap()
+		);
+	})
 }

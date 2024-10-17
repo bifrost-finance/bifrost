@@ -21,6 +21,7 @@
 #![cfg(test)]
 
 use crate::{mock::*, *};
+use bifrost_primitives::IncentivePalletId;
 use frame_support::{assert_noop, assert_ok};
 use sp_arithmetic::per_things::Permill;
 
@@ -107,7 +108,11 @@ fn buy_back_with_burn_should_work() {
 		assert_eq!(Currencies::free_balance(BNC, &zenlink_pair_account_id), 2000);
 		assert_eq!(Currencies::free_balance(BNC, &buyback_account), 0);
 		assert_eq!(Currencies::free_balance(BNC, &incentive_account), 0);
-		BbBNC::set_incentive(0, Some(7 * 86400 / 12), Some(buyback_account.clone()));
+		BbBNC::set_incentive(
+			BB_BNC_SYSTEM_POOL_ID,
+			Some(7 * 86400 / 12),
+			Some(buyback_account.clone()),
+		);
 		assert_ok!(BuyBack::charge(RuntimeOrigin::signed(ALICE), VKSM, 1000));
 		let infos = Infos::<Runtime>::get(VKSM).unwrap();
 		assert_ok!(BuyBack::buy_back(&buyback_account, VKSM, &infos, 0));
@@ -145,7 +150,11 @@ fn buy_back_no_burn_should_work() {
 		assert_eq!(Currencies::free_balance(BNC, &zenlink_pair_account_id), 2000);
 		assert_eq!(Currencies::free_balance(BNC, &buyback_account), 0);
 		assert_eq!(Currencies::free_balance(BNC, &incentive_account), 0);
-		BbBNC::set_incentive(0, Some(7 * 86400 / 12), Some(buyback_account.clone()));
+		BbBNC::set_incentive(
+			BB_BNC_SYSTEM_POOL_ID,
+			Some(7 * 86400 / 12),
+			Some(buyback_account.clone()),
+		);
 		assert_ok!(BuyBack::charge(RuntimeOrigin::signed(ALICE), VKSM, 1000));
 		let infos = Infos::<Runtime>::get(VKSM).unwrap();
 		assert_ok!(BuyBack::buy_back(&buyback_account, VKSM, &infos, 0));
@@ -183,7 +192,11 @@ fn on_initialize_no_burn_should_work() {
 		assert_eq!(Currencies::free_balance(BNC, &zenlink_pair_account_id), 2000);
 		assert_eq!(Currencies::free_balance(BNC, &buyback_account), 0);
 		assert_eq!(Currencies::free_balance(BNC, &incentive_account), 0);
-		BbBNC::set_incentive(0, Some(7 * 86400 / 12), Some(buyback_account.clone()));
+		BbBNC::set_incentive(
+			BB_BNC_SYSTEM_POOL_ID,
+			Some(7 * 86400 / 12),
+			Some(buyback_account.clone()),
+		);
 		assert_ok!(BuyBack::charge(RuntimeOrigin::signed(ALICE), VKSM, 1000));
 		BuyBack::on_initialize(1);
 		BuyBack::on_initialize(2);
@@ -221,7 +234,11 @@ fn on_initialize_with_burn_should_work() {
 		assert_eq!(Currencies::free_balance(BNC, &zenlink_pair_account_id), 2000);
 		assert_eq!(Currencies::free_balance(BNC, &buyback_account), 0);
 		assert_eq!(Currencies::free_balance(BNC, &incentive_account), 0);
-		BbBNC::set_incentive(0, Some(7 * 86400 / 12), Some(buyback_account.clone()));
+		BbBNC::set_incentive(
+			BB_BNC_SYSTEM_POOL_ID,
+			Some(7 * 86400 / 12),
+			Some(buyback_account.clone()),
+		);
 		assert_ok!(BuyBack::charge(RuntimeOrigin::signed(ALICE), VKSM, 1000));
 		BuyBack::on_initialize(<frame_system::Pallet<Runtime>>::block_number() + 1);
 		System::set_block_number(System::block_number() + 1);
@@ -260,7 +277,11 @@ fn on_initialize_with_bias_should_work() {
 		assert_eq!(Currencies::free_balance(BNC, &zenlink_pair_account_id), 2000);
 		assert_eq!(Currencies::free_balance(BNC, &buyback_account), 0);
 		assert_eq!(Currencies::free_balance(BNC, &incentive_account), 0);
-		BbBNC::set_incentive(0, Some(7 * 86400 / 12), Some(buyback_account.clone()));
+		BbBNC::set_incentive(
+			BB_BNC_SYSTEM_POOL_ID,
+			Some(7 * 86400 / 12),
+			Some(buyback_account.clone()),
+		);
 		assert_ok!(BuyBack::charge(RuntimeOrigin::signed(ALICE), VKSM, 1000));
 		BuyBack::on_initialize(1);
 		let path = vec![
@@ -310,7 +331,11 @@ fn on_initialize_with_bias_should_not_work() {
 		assert_eq!(Currencies::free_balance(BNC, &zenlink_pair_account_id), 2000);
 		assert_eq!(Currencies::free_balance(BNC, &buyback_account), 0);
 		assert_eq!(Currencies::free_balance(BNC, &incentive_account), 0);
-		BbBNC::set_incentive(0, Some(7 * 86400 / 12), Some(buyback_account.clone()));
+		BbBNC::set_incentive(
+			BB_BNC_SYSTEM_POOL_ID,
+			Some(7 * 86400 / 12),
+			Some(buyback_account.clone()),
+		);
 		assert_ok!(BuyBack::charge(RuntimeOrigin::signed(ALICE), VKSM, 1000));
 		BuyBack::on_initialize(1);
 		let path = vec![

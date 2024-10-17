@@ -53,14 +53,10 @@ use sp_std::marker::PhantomData;
 
 /// Weight functions needed for bifrost_cross_in_out.
 pub trait WeightInfo {
-	fn register_currency_for_cross_in_out() -> Weight;
 	fn deregister_currency_for_cross_in_out() -> Weight;
 	fn set_crossing_minimum_amount() -> Weight;
-	fn add_to_issue_whitelist() -> Weight;
-	fn remove_from_issue_whitelist() -> Weight;
 	fn add_to_register_whitelist() -> Weight;
 	fn remove_from_register_whitelist() -> Weight;
-	fn cross_in() -> Weight;
 	fn register_linked_account() -> Weight;
 	fn cross_out() -> Weight;
 	fn change_outer_linked_account() -> Weight;
@@ -68,17 +64,6 @@ pub trait WeightInfo {
 
 // For backwards compatibility and tests
 impl WeightInfo for () {
-	/// Storage: CrossInOut CrossCurrencyRegistry (r:1 w:1)
-	/// Proof Skipped: CrossInOut CrossCurrencyRegistry (max_values: None, max_size: None, mode: Measured)
-	fn register_currency_for_cross_in_out() -> Weight {
-		// Proof Size summary in bytes:
-		//  Measured:  `76`
-		//  Estimated: `3541`
-		// Minimum execution time: 29_633_000 picoseconds.
-		Weight::from_parts(30_578_000, 3541)
-			.saturating_add(RocksDbWeight::get().reads(1_u64))
-			.saturating_add(RocksDbWeight::get().writes(1_u64))
-	}
 	/// Storage: CrossInOut CrossCurrencyRegistry (r:1 w:1)
 	/// Proof Skipped: CrossInOut CrossCurrencyRegistry (max_values: None, max_size: None, mode: Measured)
 	fn deregister_currency_for_cross_in_out() -> Weight {
@@ -98,28 +83,6 @@ impl WeightInfo for () {
 		//  Estimated: `0`
 		// Minimum execution time: 23_847_000 picoseconds.
 		Weight::from_parts(24_439_000, 0)
-			.saturating_add(RocksDbWeight::get().writes(1_u64))
-	}
-	/// Storage: CrossInOut IssueWhiteList (r:1 w:1)
-	/// Proof Skipped: CrossInOut IssueWhiteList (max_values: None, max_size: None, mode: Measured)
-	fn add_to_issue_whitelist() -> Weight {
-		// Proof Size summary in bytes:
-		//  Measured:  `76`
-		//  Estimated: `3541`
-		// Minimum execution time: 34_191_000 picoseconds.
-		Weight::from_parts(35_236_000, 3541)
-			.saturating_add(RocksDbWeight::get().reads(1_u64))
-			.saturating_add(RocksDbWeight::get().writes(1_u64))
-	}
-	/// Storage: CrossInOut IssueWhiteList (r:1 w:1)
-	/// Proof Skipped: CrossInOut IssueWhiteList (max_values: None, max_size: None, mode: Measured)
-	fn remove_from_issue_whitelist() -> Weight {
-		// Proof Size summary in bytes:
-		//  Measured:  `154`
-		//  Estimated: `3619`
-		// Minimum execution time: 35_934_000 picoseconds.
-		Weight::from_parts(37_252_000, 3619)
-			.saturating_add(RocksDbWeight::get().reads(1_u64))
 			.saturating_add(RocksDbWeight::get().writes(1_u64))
 	}
 	/// Storage: CrossInOut RegisterWhiteList (r:1 w:1)
@@ -143,29 +106,6 @@ impl WeightInfo for () {
 		Weight::from_parts(36_505_000, 3619)
 			.saturating_add(RocksDbWeight::get().reads(1_u64))
 			.saturating_add(RocksDbWeight::get().writes(1_u64))
-	}
-	/// Storage: CrossInOut CrossCurrencyRegistry (r:1 w:0)
-	/// Proof Skipped: CrossInOut CrossCurrencyRegistry (max_values: None, max_size: None, mode: Measured)
-	/// Storage: CrossInOut CrossingMinimumAmount (r:1 w:0)
-	/// Proof Skipped: CrossInOut CrossingMinimumAmount (max_values: None, max_size: None, mode: Measured)
-	/// Storage: CrossInOut IssueWhiteList (r:1 w:0)
-	/// Proof Skipped: CrossInOut IssueWhiteList (max_values: None, max_size: None, mode: Measured)
-	/// Storage: Tokens Accounts (r:1 w:1)
-	/// Proof: Tokens Accounts (max_values: None, max_size: Some(118), added: 2593, mode: MaxEncodedLen)
-	/// Storage: AssetRegistry CurrencyMetadatas (r:1 w:0)
-	/// Proof Skipped: AssetRegistry CurrencyMetadatas (max_values: None, max_size: None, mode: Measured)
-	/// Storage: Tokens TotalIssuance (r:1 w:1)
-	/// Proof: Tokens TotalIssuance (max_values: None, max_size: Some(38), added: 2513, mode: MaxEncodedLen)
-	/// Storage: System Account (r:1 w:1)
-	/// Proof: System Account (max_values: None, max_size: Some(128), added: 2603, mode: MaxEncodedLen)
-	fn cross_in() -> Weight {
-		// Proof Size summary in bytes:
-		//  Measured:  `1758`
-		//  Estimated: `5223`
-		// Minimum execution time: 146_488_000 picoseconds.
-		Weight::from_parts(150_867_000, 5223)
-			.saturating_add(RocksDbWeight::get().reads(7_u64))
-			.saturating_add(RocksDbWeight::get().writes(3_u64))
 	}
 	/// Storage: CrossInOut RegisterWhiteList (r:1 w:0)
 	/// Proof Skipped: CrossInOut RegisterWhiteList (max_values: None, max_size: None, mode: Measured)

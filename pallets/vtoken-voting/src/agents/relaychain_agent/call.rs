@@ -19,23 +19,22 @@
 #![allow(ambiguous_glob_reexports)]
 #![allow(unused_imports)]
 
-use crate::{AccountVote, BalanceOf, Config, DerivativeIndex, PollClass, PollIndex};
+use crate::{traits::*, *};
 use parity_scale_codec::{Decode, Encode};
 use sp_runtime::{traits::StaticLookup, RuntimeDebug};
-use sp_std::prelude::*;
 
 #[cfg(feature = "kusama")]
-pub use kusama::*;
+pub(in crate::agents::relaychain_agent) use kusama::*;
 
 #[cfg(feature = "polkadot")]
-pub use polkadot::*;
+pub(in crate::agents::relaychain_agent) use polkadot::*;
 
 #[cfg(feature = "kusama")]
-mod kusama {
-	use crate::*;
+pub(in crate::agents::relaychain_agent) mod kusama {
+	use crate::agents::relaychain_agent::call::*;
 
 	#[derive(Encode, Decode, RuntimeDebug)]
-	pub enum RelayCall<T: Config> {
+	pub(in crate::agents::relaychain_agent) enum RelayCall<T: Config> {
 		#[codec(index = 20)]
 		ConvictionVoting(ConvictionVoting<T>),
 		#[codec(index = 24)]
@@ -44,11 +43,11 @@ mod kusama {
 }
 
 #[cfg(feature = "polkadot")]
-mod polkadot {
-	use crate::*;
+pub(in crate::agents::relaychain_agent) mod polkadot {
+	use crate::agents::relaychain_agent::call::*;
 
 	#[derive(Encode, Decode, RuntimeDebug)]
-	pub enum RelayCall<T: Config> {
+	pub(in crate::agents::relaychain_agent) enum RelayCall<T: Config> {
 		#[codec(index = 20)]
 		ConvictionVoting(ConvictionVoting<T>),
 		#[codec(index = 26)]
@@ -57,19 +56,13 @@ mod polkadot {
 }
 
 #[derive(Encode, Decode, RuntimeDebug, Clone)]
-pub enum ConvictionVoting<T: Config> {
+pub(in crate::agents::relaychain_agent) enum ConvictionVoting<T: Config> {
 	#[codec(index = 0)]
 	Vote(#[codec(compact)] PollIndex, AccountVote<BalanceOf<T>>),
 	#[codec(index = 3)]
 	Unlock(PollClass, <T::Lookup as StaticLookup>::Source),
 	#[codec(index = 4)]
 	RemoveVote(Option<PollClass>, PollIndex),
-}
-
-pub trait ConvictionVotingCall<T: Config> {
-	fn vote(poll_index: PollIndex, vote: AccountVote<BalanceOf<T>>) -> Self;
-
-	fn remove_vote(class: Option<PollClass>, poll_index: PollIndex) -> Self;
 }
 
 impl<T: Config> ConvictionVotingCall<T> for RelayCall<T> {
@@ -83,17 +76,11 @@ impl<T: Config> ConvictionVotingCall<T> for RelayCall<T> {
 }
 
 #[derive(Encode, Decode, RuntimeDebug, Clone)]
-pub enum Utility<Call> {
+pub(in crate::agents::relaychain_agent) enum Utility<Call> {
 	#[codec(index = 1)]
 	AsDerivative(DerivativeIndex, Box<Call>),
 	#[codec(index = 2)]
 	BatchAll(Vec<Call>),
-}
-
-pub trait UtilityCall<Call> {
-	fn as_derivative(derivative_index: DerivativeIndex, call: Call) -> Call;
-
-	fn batch_all(calls: Vec<Call>) -> Call;
 }
 
 impl<T: Config> UtilityCall<RelayCall<T>> for RelayCall<T> {

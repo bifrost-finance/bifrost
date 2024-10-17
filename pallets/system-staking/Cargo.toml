@@ -3,10 +3,10 @@ name = "bifrost-system-staking"
 version = "4.0.0-dev"
 description = "System staking pallet"
 authors = ["Akagi201 <akagi201@gmail.com>"]
-homepage = "https://github.com/bifrost-finance/bifrost"
+homepage = "https://github.com/bifrost-io/bifrost"
 edition = "2021"
 publish = false
-repository = "https://github.com/bifrost-finance/bifrost"
+repository = "https://github.com/bifrost-io/bifrost"
 readme = 'README.md'
 
 [package.metadata.docs.rs]

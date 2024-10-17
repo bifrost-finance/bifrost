@@ -21,8 +21,8 @@
 
 use crate::mock::sp_api_hidden_includes_construct_runtime::hidden_include::traits::OnInitialize;
 use bifrost_primitives::{
-	currency::{BNC, KSM},
-	CurrencyId, TokenSymbol,
+	currency::{ASG, BNC, KSM},
+	CommissionPalletId, CurrencyId,
 };
 use frame_support::{derive_impl, ord_parameter_types, parameter_types, traits::Nothing, PalletId};
 use frame_system::EnsureSignedBy;
@@ -66,7 +66,7 @@ impl frame_system::Config for Runtime {
 }
 
 parameter_types! {
-	pub const GetNativeCurrencyId: CurrencyId = CurrencyId::Native(TokenSymbol::ASG);
+	pub const GetNativeCurrencyId: CurrencyId = ASG;
 }
 
 pub type AdaptedBasicCurrency =
@@ -127,10 +127,8 @@ ord_parameter_types! {
 }
 
 parameter_types! {
-	pub const CommissionPalletId: PalletId = PalletId(*b"bf/comms");
 	pub const ClearingDuration: u32 = 100;
 	pub const NameLengthLimit: u32 = 20;
-	pub const FeeSharePalletId: PalletId = PalletId(*b"bf/feesh");
 	pub BifrostCommissionReceiver: AccountId = AccountId32::new([7u8; 32]);
 }
 

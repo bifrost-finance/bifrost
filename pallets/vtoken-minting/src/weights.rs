@@ -58,7 +58,7 @@ pub trait WeightInfo {
 	fn set_unlock_duration() -> Weight;
 	fn set_unlocking_total() -> Weight;
 	fn set_min_time_unit() -> Weight;
-	fn recreate_currency_ongoing_time_unit() -> Weight;
+	fn set_ongoing_time_unit() -> Weight;
 	fn add_support_rebond_token() -> Weight;
 	fn remove_support_rebond_token() -> Weight;
 	fn set_fees() -> Weight;
@@ -137,7 +137,7 @@ impl WeightInfo for () {
 	}
 	/// Storage: `VtokenMinting::OngoingTimeUnit` (r:1 w:1)
 	/// Proof: `VtokenMinting::OngoingTimeUnit` (`max_values`: None, `max_size`: Some(27), added: 2502, mode: `MaxEncodedLen`)
-	fn recreate_currency_ongoing_time_unit() -> Weight {
+	fn set_ongoing_time_unit() -> Weight {
 		// Proof Size summary in bytes:
 		//  Measured:  `180`
 		//  Estimated: `3492`

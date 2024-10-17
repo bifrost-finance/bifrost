@@ -656,7 +656,7 @@ fn get_account_liquidation_threshold_liquidity_works() {
 		assert_eq!(liquidity, FixedU128::from_inner(unit(20)));
 		assert_eq!(lf_liquidity, FixedU128::from_inner(unit(10)));
 
-		MockPriceFeeder::set_price(KSM, 2.into());
+		MockOraclePriceProvider::set_price(KSM, 2.into());
 		let (liquidity, shortfall, lf_liquidity, _) =
 			LendMarket::get_account_liquidation_threshold_liquidity(&ALICE).unwrap();
 
@@ -1259,10 +1259,10 @@ fn get_price_works() {
 			BNC,
 			vec![DOT, BNC, KSM, DOT_U, PHA]
 		));
-		MockPriceFeeder::set_price(DOT, 0.into());
+		MockOraclePriceProvider::set_price(DOT, 0.into());
 		assert_noop!(LendMarket::get_price(DOT), Error::<Test>::PriceIsZero);
 
-		MockPriceFeeder::set_price(DOT, 2.into());
+		MockOraclePriceProvider::set_price(DOT, 2.into());
 		assert_eq!(LendMarket::get_price(DOT).unwrap(), Price::saturating_from_integer(2));
 	})
 }
@@ -1813,7 +1813,7 @@ fn reward_calculation_after_liquidate_borrow_works() {
 		assert_eq!(almost_equal(RewardAccrued::<Test>::get(ALICE), unit(14)), true);
 		assert_eq!(almost_equal(RewardAccrued::<Test>::get(BOB), unit(16)), true);
 
-		MockPriceFeeder::set_price(KSM, 2.into());
+		MockOraclePriceProvider::set_price(KSM, 2.into());
 		// since we set liquidate_threshold more than collateral_factor,with KSM price as 2 alice
 		// not shortfall yet. so we can not liquidate_borrow here
 		assert_noop!(
@@ -1828,7 +1828,7 @@ fn reward_calculation_after_liquidate_borrow_works() {
 		// Bob KSM Deposit: 500
 		// Bob KSM Borrow: 75
 		// incentive_reward_account DOT Deposit: 75*0.03 = 2.25
-		MockPriceFeeder::set_price(KSM, 3.into());
+		MockOraclePriceProvider::set_price(KSM, 3.into());
 		assert_ok!(LendMarket::liquidate_borrow(
 			RuntimeOrigin::signed(BOB),
 			ALICE,

@@ -121,25 +121,6 @@ impl<T: frame_system::Config> bifrost_salp::WeightInfo for BifrostWeight<T> {
 			.saturating_add(T::DbWeight::get().reads(5))
 			.saturating_add(T::DbWeight::get().writes(2))
 	}
-	// Storage: Salp Funds (r:1 w:0)
-	// Proof Skipped: Salp Funds (max_values: None, max_size: None, mode: Measured)
-	// Storage: Tokens Accounts (r:2 w:2)
-	// Proof: Tokens Accounts (max_values: None, max_size: Some(118), added: 2593, mode: MaxEncodedLen)
-	// Storage: AssetRegistry CurrencyMetadatas (r:1 w:0)
-	// Proof Skipped: AssetRegistry CurrencyMetadatas (max_values: None, max_size: None, mode: Measured)
-	// Storage: unknown `0x` (r:1 w:0)
-	// Proof Skipped: unknown `0x` (r:1 w:0)
-	// Storage: unknown `0xd861ea1ebf4800d4b89f4ff787ad79ee96d9a708c85b57da7eb8f9ddeda61291` (r:1 w:0)
-	// Proof Skipped: unknown `0xd861ea1ebf4800d4b89f4ff787ad79ee96d9a708c85b57da7eb8f9ddeda61291` (r:1 w:0)
-	fn batch_unlock() -> Weight {
-		// Proof Size summary in bytes:
-		//  Measured:  `1995`
-		//  Estimated: `6176`
-		// Minimum execution time: 142_535 nanoseconds.
-		Weight::from_parts(144_730_000, 6176)
-			.saturating_add(T::DbWeight::get().reads(6))
-			.saturating_add(T::DbWeight::get().writes(2))
-	}
 	// Storage: Salp Funds (r:1 w:1)
 	// Proof Skipped: Salp Funds (max_values: None, max_size: None, mode: Measured)
 	// Storage: Salp RedeemPool (r:1 w:1)
@@ -363,71 +344,5 @@ impl<T: frame_system::Config> bifrost_salp::WeightInfo for BifrostWeight<T> {
 		Weight::from_parts(367_702_000, 11362)
 			.saturating_add(T::DbWeight::get().reads(10))
 			.saturating_add(T::DbWeight::get().writes(6))
-	}
-	/// Storage: Salp Funds (r:1 w:0)
-	/// Proof Skipped: Salp Funds (max_values: None, max_size: None, mode: Measured)
-	/// Storage: Tokens Accounts (r:2 w:2)
-	/// Proof: Tokens Accounts (max_values: None, max_size: Some(118), added: 2593, mode: MaxEncodedLen)
-	/// Storage: Salp ReserveInfos (r:1 w:1)
-	/// Proof Skipped: Salp ReserveInfos (max_values: None, max_size: None, mode: Measured)
-	/// Storage: Tokens Locks (r:2 w:2)
-	/// Proof: Tokens Locks (max_values: None, max_size: Some(1271), added: 3746, mode: MaxEncodedLen)
-	/// Storage: AssetRegistry CurrencyMetadatas (r:1 w:0)
-	/// Proof Skipped: AssetRegistry CurrencyMetadatas (max_values: None, max_size: None, mode: Measured)
-	fn reserve() -> Weight {
-		// Proof Size summary in bytes:
-		//  Measured:  `1737`
-		//  Estimated: `8482`
-		// Minimum execution time: 807_976_000 picoseconds.
-		Weight::from_parts(814_218_000, 0)
-			.saturating_add(Weight::from_parts(0, 8482))
-			.saturating_add(T::DbWeight::get().reads(7))
-			.saturating_add(T::DbWeight::get().writes(5))
-	}
-	/// Storage: Salp Funds (r:1 w:0)
-	/// Proof Skipped: Salp Funds (max_values: None, max_size: None, mode: Measured)
-	/// Storage: Tokens Locks (r:2 w:2)
-	/// Proof: Tokens Locks (max_values: None, max_size: Some(1271), added: 3746, mode: MaxEncodedLen)
-	/// Storage: Tokens Accounts (r:2 w:2)
-	/// Proof: Tokens Accounts (max_values: None, max_size: Some(118), added: 2593, mode: MaxEncodedLen)
-	/// Storage: AssetRegistry CurrencyMetadatas (r:1 w:0)
-	/// Proof Skipped: AssetRegistry CurrencyMetadatas (max_values: None, max_size: None, mode: Measured)
-	/// Storage: Salp ReserveInfos (r:0 w:1)
-	/// Proof Skipped: Salp ReserveInfos (max_values: None, max_size: None, mode: Measured)
-	fn cancel_reservation() -> Weight {
-		// Proof Size summary in bytes:
-		//  Measured:  `1935`
-		//  Estimated: `8482`
-		// Minimum execution time: 853_491_000 picoseconds.
-		Weight::from_parts(858_070_000, 0)
-			.saturating_add(Weight::from_parts(0, 8482))
-			.saturating_add(T::DbWeight::get().reads(6))
-			.saturating_add(T::DbWeight::get().writes(5))
-	}
-	/// Storage: Salp Funds (r:1 w:1)
-	/// Proof Skipped: Salp Funds (max_values: None, max_size: None, mode: Measured)
-	/// Storage: Salp ReserveInfos (r:2 w:1)
-	/// Proof Skipped: Salp ReserveInfos (max_values: None, max_size: None, mode: Measured)
-	/// Storage: Tokens Locks (r:2 w:2)
-	/// Proof: Tokens Locks (max_values: None, max_size: Some(1271), added: 3746, mode: MaxEncodedLen)
-	/// Storage: Tokens Accounts (r:4 w:4)
-	/// Proof: Tokens Accounts (max_values: None, max_size: Some(118), added: 2593, mode: MaxEncodedLen)
-	/// Storage: AssetRegistry CurrencyMetadatas (r:1 w:0)
-	/// Proof Skipped: AssetRegistry CurrencyMetadatas (max_values: None, max_size: None, mode: Measured)
-	/// Storage: Salp RedeemPool (r:1 w:1)
-	/// Proof Skipped: Salp RedeemPool (max_values: Some(1), max_size: None, mode: Measured)
-	/// Storage: Tokens TotalIssuance (r:2 w:2)
-	/// Proof: Tokens TotalIssuance (max_values: None, max_size: Some(38), added: 2513, mode: MaxEncodedLen)
-	/// Storage: System Account (r:1 w:1)
-	/// Proof: System Account (max_values: None, max_size: Some(128), added: 2603, mode: MaxEncodedLen)
-	fn batch_handle_reserve() -> Weight {
-		// Proof Size summary in bytes:
-		//  Measured:  `2540`
-		//  Estimated: `11362`
-		// Minimum execution time: 1_848_798_000 picoseconds.
-		Weight::from_parts(1_859_469_000, 0)
-			.saturating_add(Weight::from_parts(0, 11362))
-			.saturating_add(T::DbWeight::get().reads(14))
-			.saturating_add(T::DbWeight::get().writes(12))
 	}
 }

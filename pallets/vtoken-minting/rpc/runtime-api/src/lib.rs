@@ -20,12 +20,11 @@
 
 use parity_scale_codec::Codec;
 use sp_api::decl_runtime_apis;
-use sp_core::U256;
-use sp_std::vec::Vec;
 
 decl_runtime_apis! {
-	pub trait VtokenMintingRuntimeApi<CurrencyId> where CurrencyId: Codec
+	pub trait VtokenMintingRuntimeApi<CurrencyId, Balance> where CurrencyId: Codec, Balance: Codec
 	{
-		fn get_exchange_rate(token_id: Option<CurrencyId>) -> Vec<(CurrencyId, U256)>;
+		fn get_v_currency_amount_by_currency_amount(currency_id: CurrencyId, v_currency_id: CurrencyId, currency_amount: Balance) -> Balance;
+		fn get_currency_amount_by_v_currency_amount(currency_id: CurrencyId, v_currency_id: CurrencyId, v_currency_amount: Balance) -> Balance;
 	}
 }

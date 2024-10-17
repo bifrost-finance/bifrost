@@ -6,6 +6,7 @@ edition = "2021"
 version = "3.0.1"
 
 [dependencies]
+bifrost-primitives = { workspace = true }
 log = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
 
@@ -45,6 +46,7 @@ std = [
 	"pallet-authorship/std",
 	"pallet-session/std",
 	"log/std",
+	"bifrost-primitives/std",
 ]
 runtime-benchmarks = ["frame-benchmarking"]
 try-runtime = ["frame-support/try-runtime"]

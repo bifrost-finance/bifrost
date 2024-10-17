@@ -180,7 +180,6 @@ parameter_types! {
 	pub const MinimumDuration: BlockNumber = MINUTES;
 	pub const MaximumApproved: u32 = 4;
 	pub const MaximumOptionRewards: u32 = 7;
-	pub const LiquidityMiningPalletId: PalletId = PalletId(*b"mining##");
 }
 
 impl lm::Config for Test {

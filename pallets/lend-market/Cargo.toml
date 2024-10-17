@@ -23,6 +23,7 @@ pallet-traits = { workspace = true }
 parity-scale-codec = { workspace = true, features = ["derive"] }
 scale-info = { workspace = true, features = ["derive"] }
 serde = { workspace = true, features = ['derive'], optional = true }
+sp-core = { workspace = true }
 sp-io = { workspace = true }
 sp-runtime = { workspace = true }
 sp-std = { workspace = true }
@@ -49,6 +50,7 @@ std = [
 	'frame-benchmarking/std',
 	'orml-traits/std',
 	'bifrost-primitives/std',
+	'sp-core/std',
 	'sp-runtime/std',
 	'sp-std/std',
 	'sp-io/std',

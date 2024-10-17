@@ -25,7 +25,7 @@ use bifrost_primitives::{CurrencyId, TokenSymbol};
 use frame_benchmarking::v1::{account, benchmarks, whitelisted_caller, BenchmarkError};
 use frame_support::assert_ok;
 use frame_system::RawOrigin;
-use sp_runtime::traits::UniqueSaturatedFrom;
+use sp_runtime::traits::{AccountIdConversion, UniqueSaturatedFrom};
 use xcm::v2::prelude::*;
 
 use super::*;
@@ -33,10 +33,6 @@ use super::*;
 use crate::Pallet as CrossInOut;
 
 benchmarks! {
-	register_currency_for_cross_in_out {
-		let origin = T::ControlOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?;
-	}: _<T::RuntimeOrigin>(origin,CurrencyId::Token(TokenSymbol::DOT))
-
 	deregister_currency_for_cross_in_out {
 		let origin = T::ControlOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?;
 		assert_ok!(CrossInOut::<T>::register_currency_for_cross_in_out(
@@ -48,21 +44,6 @@ benchmarks! {
 	set_crossing_minimum_amount {
 		let origin = T::ControlOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?;
 	}: _<T::RuntimeOrigin>(origin,CurrencyId::Token(TokenSymbol::DOT),100u32.into(),100u32.into())
-
-	add_to_issue_whitelist {
-		let origin = T::ControlOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?;
-		let caller = whitelisted_caller();
-	}: _<T::RuntimeOrigin>(origin,CurrencyId::Token(TokenSymbol::DOT),caller)
-
-	remove_from_issue_whitelist {
-		let origin = T::ControlOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?;
-		let test_account: T::AccountId = account("seed",1,1);
-		assert_ok!(CrossInOut::<T>::add_to_issue_whitelist(
-			T::ControlOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?,
-			CurrencyId::Token(TokenSymbol::DOT),
-			test_account.clone()
-		));
-	}: _<T::RuntimeOrigin>(origin,CurrencyId::Token(TokenSymbol::DOT),test_account)
 
 	add_to_register_whitelist {
 		let origin = T::ControlOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?;
@@ -78,33 +59,6 @@ benchmarks! {
 			test_account.clone()
 		));
 	}: _<T::RuntimeOrigin>(origin,CurrencyId::Token(TokenSymbol::DOT),test_account)
-
-	cross_in {
-		let test_account: T::AccountId = account("seed",1,1);
-		assert_ok!(CrossInOut::<T>::register_currency_for_cross_in_out(
-			T::ControlOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?,
-			CurrencyId::Token(TokenSymbol::DOT)
-		));
-
-		assert_ok!(CrossInOut::<T>::set_crossing_minimum_amount(
-			T::ControlOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?,
-			CurrencyId::Token(TokenSymbol::DOT),100u32.into(),100u32.into()
-		));
-
-		assert_ok!(CrossInOut::<T>::add_to_issue_whitelist(
-			T::ControlOrigin::try_successful_origin().map_err(|_| BenchmarkError::Weightless)?,
-			CurrencyId::Token(TokenSymbol::DOT),
-			test_account.clone()
-		));
-
-		let location = Box::new(MultiLocation {
-				parents: 0,
-				interior: X1(AccountId32 {
-					network: Any,
-					id: T::EntrancePalletId::get().into_account_truncating(),
-				}),
-			});
-	}: _(RawOrigin::Signed(test_account),location,CurrencyId::Token(TokenSymbol::DOT),100u32.into(),None)
 
 	register_linked_account {
 		let test_account: T::AccountId = account("seed",1,1);

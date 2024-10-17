@@ -27,19 +27,29 @@ use jsonrpsee::{
 use parity_scale_codec::Codec;
 use sp_api::ProvideRuntimeApi;
 use sp_blockchain::HeaderBackend;
-use sp_core::U256;
-use sp_rpc::number::NumberOrHex;
 use sp_runtime::traits::Block as BlockT;
 
 #[rpc(client, server)]
-pub trait VtokenMintingRpcApi<CurrencyId, BlockHash> {
+pub trait VtokenMintingRpcApi<CurrencyId, Balance, BlockHash> {
 	/// rpc method for getting vtoken exchange rate
-	#[method(name = "vtoken_minting_getExchangeRate")]
-	fn get_exchange_rate(
+	#[method(name = "vtoken_minting_get_v_currency_amount_by_currency_amount")]
+	fn get_v_currency_amount_by_currency_amount(
 		&self,
-		asset_id: Option<CurrencyId>,
+		currency_id: CurrencyId,
+		v_currency_id: CurrencyId,
+		currency_amount: Balance,
 		at: Option<BlockHash>,
-	) -> RpcResult<Vec<(CurrencyId, NumberOrHex)>>;
+	) -> RpcResult<Balance>;
+
+	/// rpc method for getting vtoken exchange rate
+	#[method(name = "vtoken_minting_get_currency_amount_by_v_currency_amount")]
+	fn get_currency_amount_by_v_currency_amount(
+		&self,
+		currency_id: CurrencyId,
+		v_currency_id: CurrencyId,
+		v_currency_amount: Balance,
+		at: Option<BlockHash>,
+	) -> RpcResult<Balance>;
 }
 
 #[derive(Clone, Debug)]
@@ -55,29 +65,62 @@ impl<C, Block> VtokenMintingRpc<C, Block> {
 }
 
 #[async_trait]
-impl<C, Block, CurrencyId> VtokenMintingRpcApiServer<CurrencyId, <Block as BlockT>::Hash>
+impl<C, Block, CurrencyId, Balance>
+	VtokenMintingRpcApiServer<CurrencyId, Balance, <Block as BlockT>::Hash>
 	for VtokenMintingRpc<C, Block>
 where
 	Block: BlockT,
 	C: Send + Sync + 'static + ProvideRuntimeApi<Block> + HeaderBackend<Block>,
-	C::Api: VtokenMintingRuntimeApi<Block, CurrencyId>,
+	C::Api: VtokenMintingRuntimeApi<Block, CurrencyId, Balance>,
 	CurrencyId: Codec,
+	Balance: Codec,
 {
-	fn get_exchange_rate(
+	fn get_v_currency_amount_by_currency_amount(
 		&self,
-		token_id: Option<CurrencyId>,
+		currency_id: CurrencyId,
+		v_currency_id: CurrencyId,
+		currency_amount: Balance,
 		at: Option<<Block as BlockT>::Hash>,
-	) -> RpcResult<Vec<(CurrencyId, NumberOrHex)>> {
+	) -> RpcResult<Balance> {
 		let api = self.client.runtime_api();
 		let at = at.unwrap_or_else(|| self.client.info().best_hash);
 
-		let rs: Result<Vec<(CurrencyId, U256)>, _> = api.get_exchange_rate(at, token_id);
+		let rs: Result<Balance, _> = api.get_v_currency_amount_by_currency_amount(
+			at,
+			currency_id,
+			v_currency_id,
+			currency_amount,
+		);
 
 		match rs {
-			Ok(data) => Ok(data
-				.into_iter()
-				.map(|(token, rate)| (token, NumberOrHex::Hex(rate.into())))
-				.collect()),
+			Ok(data) => Ok(data),
+			Err(e) => Err(ErrorObject::owned(
+				ErrorCode::InternalError.code(),
+				"Failed to get find_block_epoch.",
+				Some(format!("{:?}", e)),
+			)),
+		}
+	}
+
+	fn get_currency_amount_by_v_currency_amount(
+		&self,
+		currency_id: CurrencyId,
+		v_currency_id: CurrencyId,
+		v_currency_amount: Balance,
+		at: Option<<Block as BlockT>::Hash>,
+	) -> RpcResult<Balance> {
+		let api = self.client.runtime_api();
+		let at = at.unwrap_or_else(|| self.client.info().best_hash);
+
+		let rs: Result<Balance, _> = api.get_currency_amount_by_v_currency_amount(
+			at,
+			currency_id,
+			v_currency_id,
+			v_currency_amount,
+		);
+
+		match rs {
+			Ok(data) => Ok(data),
 			Err(e) => Err(ErrorObject::owned(
 				ErrorCode::InternalError.code(),
 				"Failed to get find_block_epoch.",

@@ -357,8 +357,8 @@ where
 #[derive(Encode, Decode, Clone, Eq, PartialEq, RuntimeDebug, TypeInfo, MaxEncodedLen)]
 #[scale_info(skip_type_params(MaxVotes))]
 #[codec(mel_bound(
-Balance: MaxEncodedLen, AccountId: MaxEncodedLen, BlockNumber: MaxEncodedLen,
-PollIndex: MaxEncodedLen,
+	Balance: MaxEncodedLen, AccountId: MaxEncodedLen, BlockNumber: MaxEncodedLen,
+	PollIndex: MaxEncodedLen,
 ))]
 pub enum Voting<Balance, AccountId, BlockNumber, PollIndex, MaxVotes>
 where

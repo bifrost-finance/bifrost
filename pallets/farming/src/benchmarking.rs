@@ -65,7 +65,7 @@ benchmarks! {
 		));
 		let charge_rewards = vec![(default_currency_id,BalanceOf::<T>::unique_saturated_from(300000u128))];
 		assert_ok!(Farming::<T>::charge(RawOrigin::Signed(caller.clone()).into(), 0, charge_rewards, false));
-	}: _(RawOrigin::Signed(caller.clone()), 0, token_amount, None)
+	}: _(RawOrigin::Signed(caller.clone()), 0, token_amount)
 
 	withdraw {
 		let caller: T::AccountId = whitelisted_caller();
@@ -87,7 +87,7 @@ benchmarks! {
 		));
 		let charge_rewards = vec![(default_currency_id,BalanceOf::<T>::unique_saturated_from(300000u128))];
 		assert_ok!(Farming::<T>::charge(RawOrigin::Signed(caller.clone()).into(), 0, charge_rewards, false));
-		assert_ok!(Farming::<T>::deposit(RawOrigin::Signed(caller.clone()).into(), 0, token_amount, None));
+		assert_ok!(Farming::<T>::deposit(RawOrigin::Signed(caller.clone()).into(), 0, token_amount));
 	}: _(RawOrigin::Signed(caller.clone()), 0, None)
 
 	claim {
@@ -110,7 +110,7 @@ benchmarks! {
 		));
 		let charge_rewards = vec![(default_currency_id,BalanceOf::<T>::unique_saturated_from(300000u128))];
 		assert_ok!(Farming::<T>::charge(RawOrigin::Signed(caller.clone()).into(), 0, charge_rewards, false));
-		assert_ok!(Farming::<T>::deposit(RawOrigin::Signed(caller.clone()).into(), 0, token_amount, None));
+		assert_ok!(Farming::<T>::deposit(RawOrigin::Signed(caller.clone()).into(), 0, token_amount));
 		System::<T>::set_block_number(System::<T>::block_number() + BlockNumberFor::<T>::from(10u32));
 		Farming::<T>::on_initialize(BlockNumberFor::<T>::from(0u32));
 	}: _(RawOrigin::Signed(caller.clone()), 0)
@@ -135,7 +135,7 @@ benchmarks! {
 		));
 		let charge_rewards = vec![(default_currency_id,BalanceOf::<T>::unique_saturated_from(300000u128))];
 		assert_ok!(Farming::<T>::charge(RawOrigin::Signed(caller.clone()).into(), 0, charge_rewards, false));
-		assert_ok!(Farming::<T>::deposit(RawOrigin::Signed(caller.clone()).into(), 0, token_amount, Some((BalanceOf::<T>::unique_saturated_from(100u128), BlockNumberFor::<T>::from(100u32)))));
+		assert_ok!(Farming::<T>::deposit(RawOrigin::Signed(caller.clone()).into(), 0, token_amount));
 		// System::<T>::set_block_number(System::<T>::block_number() + BlockNumberFor::<T>::from(10u32));
 	}: _(RawOrigin::Signed(caller.clone()), 0)
 
@@ -159,7 +159,7 @@ benchmarks! {
 		));
 		let charge_rewards = vec![(default_currency_id,BalanceOf::<T>::unique_saturated_from(300000u128))];
 		assert_ok!(Farming::<T>::charge(RawOrigin::Signed(caller.clone()).into(), 0, charge_rewards, false));
-		assert_ok!(Farming::<T>::deposit(RawOrigin::Signed(caller.clone()).into(), 0, token_amount, None));
+		assert_ok!(Farming::<T>::deposit(RawOrigin::Signed(caller.clone()).into(), 0, token_amount));
 	}: _(RawOrigin::Signed(caller.clone()), 0)
 
 	reset_pool {
@@ -335,7 +335,7 @@ benchmarks! {
 		));
 		let charge_rewards = vec![(default_currency_id,BalanceOf::<T>::unique_saturated_from(300000u128))];
 		assert_ok!(Farming::<T>::charge(RawOrigin::Signed(caller.clone()).into(), 0, charge_rewards, false));
-		assert_ok!(Farming::<T>::deposit(RawOrigin::Signed(caller.clone()).into(), 0, token_amount, Some((BalanceOf::<T>::unique_saturated_from(100u128), BlockNumberFor::<T>::from(100u32)))));
+		assert_ok!(Farming::<T>::deposit(RawOrigin::Signed(caller.clone()).into(), 0, token_amount));
 		assert_ok!(Farming::<T>::set_retire_limit(RawOrigin::Root.into(), 10));
 	}: _(RawOrigin::Root, 0)
 
