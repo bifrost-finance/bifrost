@@ -29,7 +29,6 @@ use sp_runtime::traits::{AccountIdConversion, UniqueSaturatedFrom};
 use xcm::v2::prelude::*;
 
 use super::*;
-#[allow(unused_imports)]
 use crate::Pallet as CrossInOut;
 
 benchmarks! {
