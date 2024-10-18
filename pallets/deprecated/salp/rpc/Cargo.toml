@@ -1,0 +1,16 @@
+[package]
+name = "bifrost-salp-rpc"
+version = "0.8.0"
+authors = ["Ron Yang <yrong1997@gmail.com>"]
+edition = "2021"
+
+[dependencies]
+parity-scale-codec = { workspace = true, features = ["derive"] }
+jsonrpsee = { workspace = true, features = ["server", "macros"] }
+sp-api = { workspace = true }
+sp-runtime = { workspace = true }
+sp-blockchain = { workspace = true }
+sp-core = { workspace = true }
+sp-rpc = { workspace = true }
+bifrost-primitives = { workspace = true }
+bifrost-salp-rpc-runtime-api = { workspace = true }

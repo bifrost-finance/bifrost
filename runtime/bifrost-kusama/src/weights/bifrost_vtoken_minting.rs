@@ -115,7 +115,7 @@ impl<T: frame_system::Config> bifrost_vtoken_minting::WeightInfo for BifrostWeig
 	}
 	/// Storage: `VtokenMinting::OngoingTimeUnit` (r:1 w:1)
 	/// Proof: `VtokenMinting::OngoingTimeUnit` (`max_values`: None, `max_size`: Some(27), added: 2502, mode: `MaxEncodedLen`)
-	fn recreate_currency_ongoing_time_unit() -> Weight {
+	fn set_ongoing_time_unit() -> Weight {
 		// Proof Size summary in bytes:
 		//  Measured:  `180`
 		//  Estimated: `3492`

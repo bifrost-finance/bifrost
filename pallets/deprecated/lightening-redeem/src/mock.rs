@@ -129,10 +129,6 @@ impl pallet_collective::Config<CouncilCollective> for Runtime {
 	type WeightInfo = pallet_collective::weights::SubstrateWeight<Runtime>;
 }
 
-parameter_types! {
-	pub const LighteningRedeemPalletId: PalletId = PalletId(*b"lighten#");
-}
-
 impl bifrost_lightening_redeem::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type MultiCurrency = Tokens;

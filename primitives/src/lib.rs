@@ -20,6 +20,8 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
+use frame_support::{parameter_types, PalletId};
+use hex_literal::hex;
 use parity_scale_codec::MaxEncodedLen;
 use scale_info::TypeInfo;
 use sp_core::{Decode, Encode, RuntimeDebug, H160};
@@ -155,6 +157,51 @@ pub const SECONDS_PER_YEAR: Timestamp = 365 * 24 * 60 * 60;
 pub type DerivativeIndex = u16;
 
 pub type TimeStampedPrice = orml_oracle::TimestampedValue<Price, Moment>;
+
+// Pallet Id
+parameter_types! {
+	pub const BifrostCrowdloanId: PalletId = PalletId(*b"bf/salp#");
+	pub const BifrostEntranceAccount: PalletId = PalletId(*b"bf/vtkin");
+	pub const BifrostExitAccount: PalletId = PalletId(*b"bf/vtout");
+	pub const BifrostSalpLiteCrowdloanId: PalletId = PalletId(*b"bf/salpl");
+	pub const BifrostVsbondAccount: PalletId = PalletId(*b"bf/salpb");
+	pub const BuyBackAccount: PalletId = PalletId(*b"bf/bybck");
+	pub const BuybackPalletId: PalletId = PalletId(*b"bf/salpc");
+	pub const CloudsPalletId: PalletId = PalletId(*b"bf/cloud");
+	pub const CommissionPalletId: PalletId = PalletId(*b"bf/comms");
+	pub const FarmingBoostPalletId: PalletId = PalletId(*b"bf/fmbst");
+	pub const FarmingGaugeRewardIssuerPalletId: PalletId = PalletId(*b"bf/fmgar");
+	pub const FarmingKeeperPalletId: PalletId = PalletId(*b"bf/fmkpr");
+	pub const FarmingRewardIssuerPalletId: PalletId = PalletId(*b"bf/fmrir");
+	pub const FeeSharePalletId: PalletId = PalletId(*b"bf/feesh");
+	pub const FlexibleFeePalletId: PalletId = PalletId(*b"bf/flexi");
+	pub const IncentivePoolAccount: PalletId = PalletId(*b"bf/inpoo");
+	pub const IncentivePalletId: PalletId = PalletId(*b"bf/bbict");
+	pub const LendMarketPalletId: PalletId = PalletId(*b"bf/ldmkt");
+	pub const LighteningRedeemPalletId: PalletId = PalletId(*b"lighten#");
+	pub const LiquidityAccount: PalletId = PalletId(*b"bf/liqdt");
+	pub const LiquidityMiningDOTPalletId: PalletId = PalletId(*b"bf/lmdot");
+	pub const LiquidityMiningPalletId: PalletId = PalletId(*b"mining##");
+	pub const MerkleDirtributorPalletId: PalletId = PalletId(*b"bf/mklds");
+	pub const OraclePalletId: PalletId = PalletId(*b"bf/oracl");
+	pub const ParachainStakingPalletId: PalletId = PalletId(*b"bf/stake");
+	pub const SlpEntrancePalletId: PalletId = PalletId(*b"bf/vtkin");
+	pub const SlpExitPalletId: PalletId = PalletId(*b"bf/vtout");
+	pub const StableAssetPalletId: PalletId = PalletId(*b"nuts/sta");
+	pub const SystemMakerPalletId: PalletId = PalletId(*b"bf/sysmk");
+	pub const SystemStakingPalletId: PalletId = PalletId(*b"bf/sysst");
+	pub const TreasuryPalletId: PalletId = PalletId(*b"bf/trsry");
+	pub const VBNCConvertPalletId: PalletId = PalletId(*b"bf/vbncc");
+	pub const VeMintingPalletId: PalletId = PalletId(*b"bf/vemnt");
+	// unused after vsbond_auction pallet removed
+	pub const VsbondAuctionPalletId: PalletId = PalletId(*b"bf/vsbnd");
+	pub const ZenlinkPalletId: PalletId = PalletId(*b"/zenlink");
+}
+
+// Account Id
+parameter_types! {
+	pub BifrostFeeAccount: AccountId = hex!["e4da05f08e89bf6c43260d96f26fffcfc7deae5b465da08669a9d008e64c2c63"].into();
+}
 
 // For vtoken-minting
 #[derive(

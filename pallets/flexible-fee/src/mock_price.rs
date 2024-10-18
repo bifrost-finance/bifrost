@@ -19,8 +19,8 @@
 #![cfg(test)]
 
 use bifrost_primitives::{
-	Balance, CurrencyId, Price, PriceDetail, PriceFeeder, BNC, DOT, DOT_U, KSM, MANTA, VDOT, VKSM,
-	WETH,
+	Balance, CurrencyId, OraclePriceProvider, Price, PriceDetail, BNC, DOT, DOT_U, KSM, MANTA,
+	VDOT, VKSM, WETH,
 };
 use frame_support::parameter_types;
 use sp_runtime::FixedU128;
@@ -39,8 +39,8 @@ parameter_types! {
 	]);
 }
 
-pub struct MockPriceFeeder;
-impl MockPriceFeeder {
+pub struct MockOraclePriceProvider;
+impl MockOraclePriceProvider {
 	pub fn set_price(currency_id: CurrencyId, price: Price) {
 		let mut storage_price = StoragePrice::get();
 		match storage_price.get(&currency_id) {
@@ -55,16 +55,12 @@ impl MockPriceFeeder {
 	}
 }
 
-impl PriceFeeder for MockPriceFeeder {
+impl OraclePriceProvider for MockOraclePriceProvider {
 	fn get_price(currency_id: &CurrencyId) -> Option<PriceDetail> {
 		match StoragePrice::get().get(currency_id) {
 			Some((price, _)) => Some((*price, 0)),
 			None => None,
 		}
-	}
-
-	fn get_normal_price(_asset_id: &CurrencyId) -> Option<u128> {
-		todo!()
 	}
 
 	fn get_amount_by_prices(
@@ -119,14 +115,14 @@ mod test {
 	#[test]
 	fn set_price() {
 		assert_eq!(
-			MockPriceFeeder::get_price(&BNC),
+			MockOraclePriceProvider::get_price(&BNC),
 			Some((FixedU128::from_inner(200_000_000_000_000_000), 0))
 		);
-		MockPriceFeeder::set_price(BNC, FixedU128::from(100));
-		assert_eq!(MockPriceFeeder::get_price(&BNC), Some((FixedU128::from(100), 0)));
+		MockOraclePriceProvider::set_price(BNC, FixedU128::from(100));
+		assert_eq!(MockOraclePriceProvider::get_price(&BNC), Some((FixedU128::from(100), 0)));
 
-		MockPriceFeeder::set_price(DOT, FixedU128::from(100));
-		assert_eq!(MockPriceFeeder::get_price(&DOT), Some((FixedU128::from(100), 0)));
+		MockOraclePriceProvider::set_price(DOT, FixedU128::from(100));
+		assert_eq!(MockOraclePriceProvider::get_price(&DOT), Some((FixedU128::from(100), 0)));
 	}
 
 	#[test]
@@ -137,19 +133,27 @@ mod test {
 		let usdt_amount = 20 * 10u128.pow(6);
 		let manta_amount = 25 * 10u128.pow(18);
 		assert_eq!(
-			MockPriceFeeder::get_oracle_amount_by_currency_and_amount_in(&BNC, bnc_amount, &DOT),
+			MockOraclePriceProvider::get_oracle_amount_by_currency_and_amount_in(
+				&BNC, bnc_amount, &DOT
+			),
 			Some((dot_amount, FixedU128::from_inner(200_000_000_000_000_000), FixedU128::from(5)))
 		);
 		assert_eq!(
-			MockPriceFeeder::get_oracle_amount_by_currency_and_amount_in(&BNC, bnc_amount, &DOT_U),
+			MockOraclePriceProvider::get_oracle_amount_by_currency_and_amount_in(
+				&BNC, bnc_amount, &DOT_U
+			),
 			Some((usdt_amount, FixedU128::from_inner(200_000_000_000_000_000), FixedU128::from(1)))
 		);
 		assert_eq!(
-			MockPriceFeeder::get_oracle_amount_by_currency_and_amount_in(&BNC, bnc_amount, &KSM),
+			MockOraclePriceProvider::get_oracle_amount_by_currency_and_amount_in(
+				&BNC, bnc_amount, &KSM
+			),
 			Some((ksm_amount, FixedU128::from_inner(200_000_000_000_000_000), FixedU128::from(20)))
 		);
 		assert_eq!(
-			MockPriceFeeder::get_oracle_amount_by_currency_and_amount_in(&BNC, bnc_amount, &MANTA),
+			MockOraclePriceProvider::get_oracle_amount_by_currency_and_amount_in(
+				&BNC, bnc_amount, &MANTA
+			),
 			Some((
 				manta_amount,
 				FixedU128::from_inner(200_000_000_000_000_000),
@@ -157,11 +161,15 @@ mod test {
 			))
 		);
 		assert_eq!(
-			MockPriceFeeder::get_oracle_amount_by_currency_and_amount_in(&DOT, dot_amount, &DOT_U),
+			MockOraclePriceProvider::get_oracle_amount_by_currency_and_amount_in(
+				&DOT, dot_amount, &DOT_U
+			),
 			Some((usdt_amount, FixedU128::from(5), FixedU128::from(1)))
 		);
 		assert_eq!(
-			MockPriceFeeder::get_oracle_amount_by_currency_and_amount_in(&DOT, dot_amount, &KSM),
+			MockOraclePriceProvider::get_oracle_amount_by_currency_and_amount_in(
+				&DOT, dot_amount, &KSM
+			),
 			Some((ksm_amount, FixedU128::from(5), FixedU128::from(20)))
 		);
 	}

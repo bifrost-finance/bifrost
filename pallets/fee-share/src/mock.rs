@@ -23,8 +23,11 @@
 pub use super::*;
 
 use bifrost_asset_registry::AssetIdMaps;
-pub use bifrost_primitives::{currency::*, CurrencyId, Moment, SlpxOperator, TokenSymbol};
-use bifrost_primitives::{MoonbeamChainId, PriceDetail};
+pub use bifrost_primitives::{currency::*, CurrencyId, Moment, SlpxOperator};
+use bifrost_primitives::{
+	BifrostEntranceAccount, BifrostExitAccount, BifrostFeeAccount, FeeSharePalletId,
+	IncentivePoolAccount, MoonbeamChainId, PriceDetail, ZenlinkPalletId,
+};
 use bifrost_slp::{QueryId, QueryResponseManager};
 pub use cumulus_primitives_core::ParaId;
 use frame_support::{
@@ -33,10 +36,8 @@ use frame_support::{
 	parameter_types,
 	sp_runtime::{DispatchError, DispatchResult, FixedPointNumber},
 	traits::{Everything, Nothing},
-	PalletId,
 };
 use frame_system::{EnsureRoot, EnsureSignedBy};
-use hex_literal::hex;
 use orml_traits::{
 	location::RelativeReserveProvider, parameter_type_with_key, DataFeeder, DataProvider,
 	DataProviderExtended, MultiCurrency,
@@ -113,7 +114,7 @@ impl frame_system::Config for Runtime {
 }
 
 parameter_types! {
-	pub const GetNativeCurrencyId: CurrencyId = CurrencyId::Native(TokenSymbol::ASG);
+	pub const GetNativeCurrencyId: CurrencyId = ASG;
 }
 
 pub type AdaptedBasicCurrency =
@@ -167,13 +168,11 @@ impl orml_tokens::Config for Runtime {
 
 parameter_types! {
 	pub const TreasuryAccount: AccountId32 = TREASURY_ACCOUNT;
-	pub BifrostVsbondAccount: PalletId = PalletId(*b"bf/salpb");
-	pub const FeeSharePalletId: PalletId = PalletId(*b"bf/feesh");
 }
 
 ord_parameter_types! {
 	pub const One: AccountId = ALICE;
-	pub const RelayCurrencyId: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
+	pub const RelayCurrencyId: CurrencyId = KSM;
 }
 
 impl bifrost_fee_share::Config for Runtime {
@@ -182,7 +181,7 @@ impl bifrost_fee_share::Config for Runtime {
 	type ControlOrigin = EnsureSignedBy<One, AccountId>;
 	type WeightInfo = ();
 	type FeeSharePalletId = FeeSharePalletId;
-	type PriceFeeder = MockPriceFeeder;
+	type OraclePriceProvider = MockOraclePriceProvider;
 }
 
 impl pallet_prices::Config for Runtime {
@@ -224,7 +223,7 @@ impl DataFeeder<CurrencyId, TimeStampedPrice, AccountId> for MockDataProvider {
 		Ok(())
 	}
 }
-pub struct MockPriceFeeder;
+pub struct MockOraclePriceProvider;
 #[derive(Encode, Decode, Clone, Copy, RuntimeDebug)]
 pub struct CurrencyIdWrap(CurrencyId);
 
@@ -242,7 +241,7 @@ impl PartialEq for CurrencyIdWrap {
 
 impl Eq for CurrencyIdWrap {}
 
-impl MockPriceFeeder {
+impl MockOraclePriceProvider {
 	thread_local! {
 		pub static PRICES: RefCell<HashMap<CurrencyIdWrap, Option<PriceDetail>>> = {
 			RefCell::new(
@@ -269,13 +268,9 @@ impl MockPriceFeeder {
 	}
 }
 
-impl PriceFeeder for MockPriceFeeder {
+impl OraclePriceProvider for MockOraclePriceProvider {
 	fn get_price(asset_id: &CurrencyId) -> Option<PriceDetail> {
 		Self::PRICES.with(|prices| *prices.borrow().get(&CurrencyIdWrap(*asset_id)).unwrap())
-	}
-
-	fn get_normal_price(_asset_id: &CurrencyId) -> Option<u128> {
-		todo!()
 	}
 
 	fn get_amount_by_prices(
@@ -398,10 +393,6 @@ impl orml_xtokens::Config for Runtime {
 parameter_types! {
 	pub const MaximumUnlockIdOfUser: u32 = 10;
 	pub const MaximumUnlockIdOfTimeUnit: u32 = 50;
-	pub BifrostEntranceAccount: PalletId = PalletId(*b"bf/vtkin");
-	pub BifrostExitAccount: PalletId = PalletId(*b"bf/vtout");
-	pub BifrostFeeAccount: AccountId = hex!["e4da05f08e89bf6c43260d96f26fffcfc7deae5b465da08669a9d008e64c2c63"].into();
-	pub IncentivePoolAccount: PalletId = PalletId(*b"bf/inpoo");
 }
 
 impl bifrost_vtoken_minting::Config for Runtime {
@@ -414,11 +405,8 @@ impl bifrost_vtoken_minting::Config for Runtime {
 	type ExitAccount = BifrostExitAccount;
 	type FeeAccount = BifrostFeeAccount;
 	type RedeemFeeAccount = BifrostFeeAccount;
-	type BifrostSlp = Slp;
 	type BifrostSlpx = SlpxInterface;
 	type RelayChainToken = RelayCurrencyId;
-	type CurrencyIdConversion = AssetIdMaps<Runtime>;
-	type CurrencyIdRegister = AssetIdMaps<Runtime>;
 	type WeightInfo = ();
 	type OnRedeemSuccess = ();
 	type XcmTransfer = XTokens;
@@ -427,11 +415,9 @@ impl bifrost_vtoken_minting::Config for Runtime {
 	type MaxLockRecords = ConstU32<100>;
 	type IncentivePoolAccount = IncentivePoolAccount;
 	type BbBNC = ();
-	type AssetIdMaps = AssetIdMaps<Runtime>;
 }
 
 parameter_types! {
-	pub const ZenlinkPalletId: PalletId = PalletId(*b"/zenlink");
 	pub const GetExchangeFee: (u32, u32) = (3, 1000);   // 0.3%
 	pub const SelfParaId: u32 = 2001;
 }

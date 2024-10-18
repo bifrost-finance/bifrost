@@ -30,7 +30,7 @@ mod benchmarking;
 
 pub mod weights;
 
-use bb_bnc::BbBNCInterface;
+use bb_bnc::{BbBNCInterface, BB_BNC_SYSTEM_POOL_ID};
 use bifrost_primitives::{currency::BNC, CurrencyId, CurrencyIdRegister, TryConvertFrom};
 use cumulus_primitives_core::ParaId;
 use frame_support::{
@@ -270,6 +270,7 @@ pub mod pallet {
 							n.saturating_sub(info.last_buyback_cycle)
 								.saturated_into::<u32>()
 								.saturating_sub(One::one()) =>
+					{
 						if let Some(swap_out_min) = SwapOutMin::<T>::get(currency_id) {
 							if let Some(e) =
 								Self::buy_back(&buyback_address, currency_id, &info, swap_out_min)
@@ -295,7 +296,8 @@ pub mod pallet {
 							info.last_buyback = n;
 							Infos::<T>::insert(currency_id, info);
 							SwapOutMin::<T>::remove(currency_id);
-						},
+						}
+					},
 					_ => (),
 				}
 			}
@@ -412,9 +414,8 @@ pub mod pallet {
 				T::MultiCurrency::withdraw(BNC, &buyback_address, destruction_amount)?;
 			}
 			let bnc_balance = T::MultiCurrency::free_balance(BNC, &buyback_address);
-			let pool_id = 0;
 			T::BbBNC::notify_reward(
-				pool_id,
+				BB_BNC_SYSTEM_POOL_ID,
 				&Some(buyback_address.clone()),
 				vec![(BNC, bnc_balance)],
 			)

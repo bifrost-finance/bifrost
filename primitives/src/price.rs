@@ -18,9 +18,8 @@
 
 use crate::{Balance, CurrencyId, Price, PriceDetail};
 
-pub trait PriceFeeder {
+pub trait OraclePriceProvider {
 	fn get_price(asset_id: &CurrencyId) -> Option<PriceDetail>;
-	fn get_normal_price(asset_id: &CurrencyId) -> Option<u128>;
 	fn get_amount_by_prices(
 		currency_in: &CurrencyId,
 		amount_in: Balance,

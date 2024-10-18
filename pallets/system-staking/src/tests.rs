@@ -21,7 +21,7 @@ use bifrost_asset_registry::AssetMetadata;
 use bifrost_primitives::{TimeUnit, TokenInfo, VtokenMintingOperator};
 use bifrost_runtime_common::milli;
 use frame_support::{
-	assert_ok,
+	assert_noop, assert_ok,
 	sp_runtime::{Perbill, Permill},
 };
 use sp_std::{collections::btree_map::BTreeMap, prelude::*};
@@ -32,7 +32,7 @@ fn token_config_should_work() {
 		assert_ok!(SystemStaking::token_config(
 			RuntimeOrigin::root(),
 			KSM,
-			Some(1),
+			Some(BlockNumberFor::<Runtime>::from(1u32)),
 			Some(Permill::from_percent(80)),
 			Some(false),
 			Some(100),
@@ -152,6 +152,171 @@ fn refresh_token_info_should_work() {
 }
 
 #[test]
+fn payout_should_work() {
+	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
+		let (pid, _tokens) = init_farming_no_gauge();
+		asset_registry();
+
+		assert_ok!(VtokenMinting::set_minimum_mint(RuntimeOrigin::signed(ALICE), KSM, 0));
+		pub const FEE: Permill = Permill::from_percent(5);
+		assert_ok!(VtokenMinting::set_fees(RuntimeOrigin::root(), FEE, FEE));
+
+		assert_ok!(SystemStaking::token_config(
+			RuntimeOrigin::root(),
+			KSM,
+			Some(1),
+			Some(Permill::from_percent(80)),
+			Some(false),
+			Some(100),
+			Some(vec![pid]),
+			Some(vec![Perbill::from_percent(100)]),
+		));
+
+		assert_ok!(VtokenMinting::mint(
+			RuntimeOrigin::signed(ALICE),
+			KSM,
+			1000,
+			BoundedVec::default(),
+			Some(0u32),
+		));
+
+		let pallet_account = <Runtime as Config>::PalletId::get().into_account_truncating();
+
+		let pallet_vfree_balance = Currencies::free_balance(VKSM, &pallet_account);
+		assert_eq!(pallet_vfree_balance, 100);
+
+		assert_ok!(SystemStaking::payout(RuntimeOrigin::root(), KSM));
+
+		let pallet_vfree_balance = Currencies::free_balance(VKSM, &pallet_account);
+		assert_eq!(pallet_vfree_balance, 1);
+
+		let treasury_balance = Currencies::free_balance(VKSM, &TreasuryAccount::get());
+		assert_eq!(treasury_balance, 99);
+	});
+}
+
+#[test]
+fn payout_should_fail() {
+	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
+		asset_registry();
+
+		assert_ok!(VtokenMinting::set_minimum_mint(RuntimeOrigin::signed(ALICE), KSM, 0));
+		pub const FEE: Permill = Permill::from_percent(5);
+		assert_ok!(VtokenMinting::set_fees(RuntimeOrigin::root(), FEE, FEE));
+
+		assert_ok!(VtokenMinting::mint(
+			RuntimeOrigin::signed(ALICE),
+			KSM,
+			1000,
+			BoundedVec::default(),
+			Some(0u32),
+		));
+
+		assert_noop!(
+			SystemStaking::payout(RuntimeOrigin::root(), KSM),
+			Error::<Runtime>::TokenInfoNotFound
+		);
+	});
+}
+
+#[test]
+fn on_redeem_success_should_work() {
+	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
+		asset_registry();
+
+		let pallet_account = <Runtime as Config>::PalletId::get().into_account_truncating();
+
+		let pallet_vfree_balance = Currencies::free_balance(VKSM, &pallet_account);
+		assert_eq!(pallet_vfree_balance, 100);
+
+		SystemStaking::on_redeem_success(VKSM, pallet_account.clone(), 10);
+
+		let pallet_vfree_balance = Currencies::free_balance(VKSM, &pallet_account);
+		assert_eq!(pallet_vfree_balance, 90);
+		let mut token_info = <TokenStatus<Runtime>>::get(VKSM).unwrap();
+		assert_eq!(token_info.pending_redeem_amount, 0);
+		assert_eq!(token_info.system_shadow_amount, 0);
+
+		token_info.pending_redeem_amount = 100;
+		token_info.system_shadow_amount = 100;
+		<TokenStatus<Runtime>>::insert(&VKSM, token_info.clone());
+		assert_eq!(token_info.pending_redeem_amount, 100);
+		assert_eq!(token_info.system_shadow_amount, 100);
+
+		SystemStaking::on_redeem_success(VKSM, pallet_account.clone(), 90);
+
+		let pallet_vfree_balance = Currencies::free_balance(VKSM, &pallet_account);
+		assert_eq!(pallet_vfree_balance, 0);
+		let token_info = <TokenStatus<Runtime>>::get(VKSM).unwrap();
+		assert_eq!(token_info.pending_redeem_amount, 10);
+		assert_eq!(token_info.system_shadow_amount, 10);
+	});
+}
+
+#[test]
+fn on_refund_should_work() {
+	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
+		asset_registry();
+
+		let pallet_account = <Runtime as Config>::PalletId::get().into_account_truncating();
+
+		let pallet_vfree_balance = Currencies::free_balance(VKSM, &pallet_account);
+		assert_eq!(pallet_vfree_balance, 100);
+
+		SystemStaking::on_refund(VKSM, pallet_account.clone(), 10);
+
+		let pallet_vfree_balance = Currencies::free_balance(VKSM, &pallet_account);
+		assert_eq!(pallet_vfree_balance, 90);
+		let mut token_info = <TokenStatus<Runtime>>::get(VKSM).unwrap();
+		assert_eq!(token_info.pending_redeem_amount, 0);
+		assert_eq!(token_info.system_shadow_amount, 0);
+
+		token_info.pending_redeem_amount = 100;
+		token_info.system_shadow_amount = 100;
+		<TokenStatus<Runtime>>::insert(&VKSM, token_info.clone());
+		assert_eq!(token_info.pending_redeem_amount, 100);
+		assert_eq!(token_info.system_shadow_amount, 100);
+
+		SystemStaking::on_refund(VKSM, pallet_account.clone(), 90);
+
+		let pallet_vfree_balance = Currencies::free_balance(VKSM, &pallet_account);
+		assert_eq!(pallet_vfree_balance, 0);
+		let token_info = <TokenStatus<Runtime>>::get(VKSM).unwrap();
+		assert_eq!(token_info.pending_redeem_amount, 10);
+		assert_eq!(token_info.system_shadow_amount, 10);
+	});
+}
+
+#[test]
+fn on_redeemed_should_work() {
+	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
+		asset_registry();
+
+		let pallet_account = <Runtime as Config>::PalletId::get().into_account_truncating();
+		let pallet_vfree_balance = Currencies::free_balance(VKSM, &pallet_account);
+		assert_eq!(pallet_vfree_balance, 100);
+
+		SystemStaking::on_redeemed(pallet_account.clone(), VKSM, 10, 0, 0);
+
+		let pallet_vfree_balance = Currencies::free_balance(VKSM, &pallet_account);
+		assert_eq!(pallet_vfree_balance, 100);
+		let mut token_info = <TokenStatus<Runtime>>::get(VKSM).unwrap();
+		assert_eq!(token_info.pending_redeem_amount, 10);
+
+		token_info.pending_redeem_amount = 100;
+		<TokenStatus<Runtime>>::insert(&VKSM, token_info.clone());
+		assert_eq!(token_info.pending_redeem_amount, 100);
+
+		SystemStaking::on_redeemed(pallet_account.clone(), VKSM, 10, 0, 0);
+
+		let pallet_vfree_balance = Currencies::free_balance(VKSM, &pallet_account);
+		assert_eq!(pallet_vfree_balance, 100);
+		let token_info = <TokenStatus<Runtime>>::get(VKSM).unwrap();
+		assert_eq!(token_info.pending_redeem_amount, 110);
+	});
+}
+
+#[test]
 fn round_process_token() {
 	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
 		let (pid, _tokens) = init_farming_no_gauge();
@@ -246,7 +411,7 @@ fn init_farming_no_gauge() -> (PoolId, BalanceOf<Runtime>) {
 	let pid = 0;
 	let charge_rewards = vec![(KSM, 100000)];
 	assert_ok!(Farming::charge(RuntimeOrigin::signed(BOB), pid, charge_rewards, false));
-	assert_ok!(Farming::deposit(RuntimeOrigin::signed(ALICE), pid, tokens, None));
+	assert_ok!(Farming::deposit(RuntimeOrigin::signed(ALICE), pid, tokens));
 	(pid, tokens)
 }
 

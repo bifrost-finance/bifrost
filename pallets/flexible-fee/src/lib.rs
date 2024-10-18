@@ -22,10 +22,10 @@ pub use crate::pallet::*;
 use bifrost_primitives::{
 	currency::{VGLMR, VMANTA, WETH},
 	traits::XcmDestWeightAndFeeHandler,
-	Balance, BalanceCmp, CurrencyId, DerivativeIndex, Price, PriceFeeder, TryConvertFrom,
-	XcmOperationType, BNC, DOT, GLMR, MANTA, VBNC, VDOT,
+	AssetHubChainId, Balance, BalanceCmp, CurrencyId, DerivativeIndex, OraclePriceProvider, Price,
+	TryConvertFrom, XcmOperationType, BNC, DOT, GLMR, MANTA, VBNC, VDOT,
 };
-use bifrost_xcm_interface::{polkadot::RelaychainCall, traits::parachains, PolkadotXcmCall};
+use bifrost_xcm_interface::calls::{PolkadotXcmCall, RelaychainCall};
 use core::convert::Into;
 use cumulus_primitives_core::ParaId;
 use frame_support::{
@@ -74,7 +74,7 @@ pub enum TargetChain {
 #[frame_support::pallet]
 pub mod pallet {
 	use super::*;
-	use bifrost_primitives::{Balance, PriceFeeder};
+	use bifrost_primitives::{Balance, OraclePriceProvider};
 	use frame_support::traits::fungibles::Inspect;
 
 	#[pallet::config]
@@ -91,7 +91,7 @@ pub mod pallet {
 		/// Zenlink interface
 		type DexOperator: ExportZenlink<Self::AccountId, AssetId>;
 		/// The oracle price feeder
-		type PriceFeeder: PriceFeeder;
+		type OraclePriceProvider: OraclePriceProvider;
 		/// The only origin that can set universal fee currency order list
 		type ControlOrigin: EnsureOrigin<Self::RuntimeOrigin>;
 		/// Get the weight and fee for executing Xcm.
@@ -158,6 +158,9 @@ pub mod pallet {
 		},
 	}
 
+	/// The current storage version, we set to 2 our new version.
+	const STORAGE_VERSION: StorageVersion = StorageVersion::new(2);
+
 	/// Universal fee currency order list for all users
 	#[pallet::storage]
 	pub type UniversalFeeCurrencyOrderList<T: Config> =
@@ -180,6 +183,7 @@ pub mod pallet {
 	>;
 
 	#[pallet::pallet]
+	#[pallet::storage_version(STORAGE_VERSION)]
 	pub struct Pallet<T>(_);
 
 	#[pallet::error]
@@ -274,28 +278,24 @@ impl<T: Config> Pallet<T> {
 				)),
 			};
 
-			let remote_call =
-				RelaychainCall::<BalanceOf<T>, AccountIdOf<T>, BlockNumberFor<T>>::XcmPallet(
-					PolkadotXcmCall::LimitedTeleportAssets(
-						Box::new(Location::new(0, [Parachain(parachains::Statemine::ID)]).into()),
-						Box::new(
-							Location::new(
-								0,
-								[AccountId32 {
-									network: None,
-									id: Sibling::from(T::ParachainId::get())
-										.into_account_truncating(),
-								}],
-							)
-							.into(),
-						),
-						Box::new(asset.into()),
+			let remote_call = RelaychainCall::XcmPallet(PolkadotXcmCall::LimitedTeleportAssets(
+				Box::new(Location::new(0, [Parachain(AssetHubChainId::get())]).into()),
+				Box::new(
+					Location::new(
 						0,
-						Unlimited,
-					),
-				)
-				.encode()
-				.into();
+						[AccountId32 {
+							network: None,
+							id: Sibling::from(T::ParachainId::get()).into_account_truncating(),
+						}],
+					)
+					.into(),
+				),
+				Box::new(asset.into()),
+				0,
+				Unlimited,
+			))
+			.encode()
+			.into();
 
 			let (require_weight_at_most, xcm_fee) =
 				T::XcmWeightAndFeeHandler::get_operation_weight_and_fee(
@@ -389,7 +389,7 @@ impl<T: Config> Pallet<T> {
 				}
 			} else {
 				let (fee_amount, price_in, price_out) =
-					T::PriceFeeder::get_oracle_amount_by_currency_and_amount_in(
+					T::OraclePriceProvider::get_oracle_amount_by_currency_and_amount_in(
 						&BNC,
 						fee_amount,
 						&currency_id,

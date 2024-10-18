@@ -21,13 +21,13 @@ Bifrost is a Web3 derivatives protocol that provides decentralized cross-chain l
   <a href="https://bootcamp.web3.foundation/"><img src="docs/res/readme/web3-bootcamp.svg" width="200" alt="Web3 Bootcamp"></a>
 </p>
 
-[![master-build](https://img.shields.io/github/actions/workflow/status/bifrost-finance/bifrost/ci-build.yml?logo=Buddy)](https://github.com/bifrost-finance/bifrost/actions/workflows/ci-build.yml)
-[![Codacy Badge](https://app.codacy.com/project/badge/Grade/acec53276777415593c2b02b2200f62e)](https://www.codacy.com/gh/bifrost-finance/bifrost?utm_source=github.com&utm_medium=referral&utm_content=bifrost-finance/bifrost&utm_campaign=Badge_Grade)
+[![master-build](https://img.shields.io/github/actions/workflow/status/bifrost-io/bifrost/ci-build.yml?logo=Buddy)](https://github.com/bifrost-io/bifrost/actions/workflows/ci-build.yml)
+[![Codacy Badge](https://app.codacy.com/project/badge/Grade/acec53276777415593c2b02b2200f62e)](https://www.codacy.com/gh/bifrost-io/bifrost?utm_source=github.com&utm_medium=referral&utm_content=bifrost-io/bifrost&utm_campaign=Badge_Grade)
 [![Substrate Version](https://img.shields.io/badge/Substrate-latest-brightgreen?logo=Parity%20Substrate)](https://github.com/paritytech/substrate)
-[![License](https://img.shields.io/github/license/bifrost-finance/bifrost?color=blue)](https://github.com/bifrost-finance/bifrost/blob/master/LICENSE)
+[![License](https://img.shields.io/github/license/bifrost-io/bifrost?color=blue)](https://github.com/bifrost-io/bifrost/blob/master/LICENSE)
 [![Dapp](https://img.shields.io/badge/Dapp-5c5c5c?logo=Icinga)](https://app.bifrost.io)
 [![Analytics](https://img.shields.io/badge/-Analytics-5c5c5c?logo=Google%20Analytics)](https://stats.bifrost.io)
-[![Discord](https://img.shields.io/badge/-Discord-5c5c5c?logo=Discord)](https://discord.gg/bifrost-finance)
+[![Discord](https://img.shields.io/badge/-Discord-5c5c5c?logo=Discord)](https://discord.gg/bifrost-io)
 [![Twitter](https://img.shields.io/badge/-X-5c5c5c?logo=X&logoColor=white)](https://x.com/Bifrost)
 
 ## Get Build Help

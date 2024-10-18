@@ -26,7 +26,7 @@ use core::cmp::max;
 
 pub use crate::rate_model::*;
 use bifrost_primitives::{
-	Balance, CurrencyId, Liquidity, Price, PriceFeeder, Rate, Ratio, Shortfall, Timestamp,
+	Balance, CurrencyId, Liquidity, OraclePriceProvider, Price, Rate, Ratio, Shortfall, Timestamp,
 };
 use frame_support::{
 	pallet_prelude::*,
@@ -45,6 +45,7 @@ use pallet_traits::{
 	ConvertToBigUint, LendMarket as LendMarketTrait, LendMarketMarketDataProvider,
 	LendMarketPositionDataProvider, MarketInfo, MarketStatus,
 };
+use sp_core::bounded::BoundedVec;
 use sp_runtime::{
 	traits::{
 		AccountIdConversion, CheckedAdd, CheckedDiv, CheckedMul, CheckedSub, One,
@@ -62,6 +63,7 @@ pub use weights::WeightInfo;
 #[cfg(feature = "runtime-benchmarks")]
 mod benchmarking;
 
+pub mod migrations;
 #[cfg(test)]
 pub mod mock;
 #[cfg(test)]
@@ -75,9 +77,6 @@ mod types;
 
 pub mod weights;
 
-pub const MAX_INTEREST_CALCULATING_INTERVAL: u64 = 5 * 24 * 3600; // 5 days
-pub const MIN_INTEREST_CALCULATING_INTERVAL: u64 = 100; // 100 seconds
-
 pub const MAX_EXCHANGE_RATE: u128 = 1_000_000_000_000_000_000; // 1
 pub const MIN_EXCHANGE_RATE: u128 = 20_000_000_000_000_000; // 0.02
 
@@ -86,12 +85,6 @@ pub type AssetIdOf<T> =
 	<<T as Config>::Assets as Inspect<<T as frame_system::Config>::AccountId>>::AssetId;
 pub type BalanceOf<T> =
 	<<T as Config>::Assets as Inspect<<T as frame_system::Config>::AccountId>>::Balance;
-
-/// Utility type for managing upgrades/migrations.
-#[derive(Encode, Decode, Clone, Copy, PartialEq, Eq, RuntimeDebug, TypeInfo)]
-pub enum Versions {
-	V0,
-}
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -103,7 +96,7 @@ pub mod pallet {
 		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 
 		/// The oracle price feeder
-		type PriceFeeder: PriceFeeder;
+		type OraclePriceProvider: OraclePriceProvider;
 
 		/// The loan's module id, keep all collaterals of CDPs.
 		#[pallet::constant]
@@ -132,6 +125,9 @@ pub mod pallet {
 
 		#[pallet::constant]
 		type LiquidationFreeAssetId: Get<AssetIdOf<Self>>;
+
+		#[pallet::constant]
+		type MaxLengthLimit: Get<u32>;
 	}
 
 	#[pallet::error]
@@ -196,6 +192,8 @@ pub mod pallet {
 		CollateralReserved,
 		/// Market bond does not exist
 		MarketBondDoesNotExist,
+		/// Error converting Vec to BoundedVec.
+		ConversionError,
 	}
 
 	#[pallet::event]
@@ -275,7 +273,8 @@ pub mod pallet {
 
 	/// Liquidation free collateral.
 	#[pallet::storage]
-	pub type LiquidationFreeCollaterals<T: Config> = StorageValue<_, Vec<AssetIdOf<T>>, ValueQuery>;
+	pub type LiquidationFreeCollaterals<T: Config> =
+		StorageValue<_, BoundedVec<AssetIdOf<T>, T::MaxLengthLimit>, ValueQuery>;
 
 	/// Total number of collateral tokens in circulation
 	/// CollateralType -> Balance
@@ -434,21 +433,13 @@ pub mod pallet {
 
 	#[pallet::storage]
 	pub type MarketBond<T: Config> =
-		StorageMap<_, Blake2_128Concat, AssetIdOf<T>, Vec<AssetIdOf<T>>>;
+		StorageMap<_, Blake2_128Concat, AssetIdOf<T>, BoundedVec<AssetIdOf<T>, T::MaxLengthLimit>>;
 
-	/// DefaultVersion is using for initialize the StorageVersion
-	#[pallet::type_value]
-	pub(super) fn DefaultVersion() -> Versions {
-		Versions::V0
-	}
-
-	/// Storage version of the pallet.
-	#[pallet::storage]
-	pub(crate) type StorageVersion<T: Config> =
-		StorageValue<_, Versions, ValueQuery, DefaultVersion>;
+	const STORAGE_VERSION: StorageVersion = StorageVersion::new(1);
 
 	#[pallet::pallet]
 	#[pallet::without_storage_info]
+	#[pallet::storage_version(STORAGE_VERSION)]
 	pub struct Pallet<T>(PhantomData<T>);
 
 	#[pallet::call]
@@ -1110,9 +1101,16 @@ pub mod pallet {
 			collaterals: Vec<AssetIdOf<T>>,
 		) -> DispatchResultWithPostInfo {
 			T::UpdateOrigin::ensure_origin(origin)?;
-			LiquidationFreeCollaterals::<T>::mutate(|liquidation_free_collaterals| {
-				*liquidation_free_collaterals = collaterals.clone()
-			});
+			LiquidationFreeCollaterals::<T>::try_mutate(
+				|liquidation_free_collaterals| -> DispatchResultWithPostInfo {
+					// Attempt to convert `collaterals` into a `BoundedVec` and handle potential
+					// conversion error
+					*liquidation_free_collaterals = BoundedVec::try_from(collaterals.clone())
+						.map_err(|_| Error::<T>::ConversionError)?;
+					Ok(().into())
+				},
+			)?;
+
 			Self::deposit_event(Event::<T>::LiquidationFreeCollateralsUpdated(collaterals));
 			Ok(().into())
 		}
@@ -1126,7 +1124,11 @@ pub mod pallet {
 			market_bond: Vec<AssetIdOf<T>>,
 		) -> DispatchResultWithPostInfo {
 			T::UpdateOrigin::ensure_origin(origin)?;
-			MarketBond::<T>::insert(asset_id, market_bond.clone());
+			MarketBond::<T>::insert(
+				asset_id,
+				BoundedVec::try_from(market_bond.clone())
+					.map_err(|_| Error::<T>::ConversionError)?,
+			);
 
 			Self::deposit_event(Event::<T>::MarketBonded { asset_id, market_bond });
 			Ok(().into())
@@ -1959,7 +1961,7 @@ impl<T: Config> Pallet<T> {
 	// Returns `Err` if the oracle price not ready
 	pub fn get_price(asset_id: AssetIdOf<T>) -> Result<Price, DispatchError> {
 		let (price, _) =
-			T::PriceFeeder::get_price(&asset_id).ok_or(Error::<T>::PriceOracleNotReady)?;
+			T::OraclePriceProvider::get_price(&asset_id).ok_or(Error::<T>::PriceOracleNotReady)?;
 		if price.is_zero() {
 			return Err(Error::<T>::PriceIsZero.into());
 		}

@@ -30,7 +30,7 @@ mod benchmarking;
 
 pub mod weights;
 
-use bifrost_primitives::{CurrencyId, DistributionId, Price, PriceFeeder};
+use bifrost_primitives::{CurrencyId, DistributionId, OraclePriceProvider, Price};
 use frame_support::{
 	pallet_prelude::*,
 	sp_runtime::{
@@ -102,7 +102,7 @@ pub mod pallet {
 		type FeeSharePalletId: Get<PalletId>;
 
 		/// The oracle price feeder
-		type PriceFeeder: PriceFeeder;
+		type OraclePriceProvider: OraclePriceProvider;
 	}
 
 	#[pallet::event]
@@ -492,8 +492,8 @@ pub mod pallet {
 		}
 
 		pub fn get_price(currency_id: CurrencyIdOf<T>) -> Result<Price, DispatchError> {
-			let (price, _) =
-				T::PriceFeeder::get_price(&currency_id).ok_or(Error::<T>::PriceOracleNotReady)?;
+			let (price, _) = T::OraclePriceProvider::get_price(&currency_id)
+				.ok_or(Error::<T>::PriceOracleNotReady)?;
 			log::trace!(
 				target: "fee-share::get_price", "price: {:?}", price.into_inner()
 			);

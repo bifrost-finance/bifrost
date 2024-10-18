@@ -51,7 +51,7 @@ use xcm::{
 use xcm_builder::TakeRevenue;
 use xcm_executor::{traits::WeightTrader, AssetsInHolding};
 
-pub mod migration;
+pub mod migrations;
 mod mock;
 mod tests;
 pub mod weights;
@@ -65,6 +65,14 @@ pub use weights::WeightInfo;
 /// Type alias for currency balance.
 pub type BalanceOf<T> =
 	<<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
+
+#[derive(Clone, Eq, PartialEq, RuntimeDebug, Encode, Decode, TypeInfo)]
+pub struct AssetMetadata<Balance> {
+	pub name: Vec<u8>,
+	pub symbol: Vec<u8>,
+	pub decimals: u8,
+	pub minimal_balance: Balance,
+}
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -83,14 +91,6 @@ pub mod pallet {
 
 		/// Weight information for the extrinsics in this module.
 		type WeightInfo: WeightInfo;
-	}
-
-	#[derive(Clone, Eq, PartialEq, RuntimeDebug, Encode, Decode, TypeInfo)]
-	pub struct AssetMetadata<Balance> {
-		pub name: Vec<u8>,
-		pub symbol: Vec<u8>,
-		pub decimals: u8,
-		pub minimal_balance: Balance,
 	}
 
 	#[pallet::error]
@@ -142,14 +142,14 @@ pub mod pallet {
 	/// CurrencyIdToLocations: map CurrencyId => Option<Location>
 	#[pallet::storage]
 	pub type CurrencyIdToLocations<T: Config> =
-		StorageMap<_, Twox64Concat, CurrencyId, xcm::v3::Location, OptionQuery>;
+		StorageMap<_, Twox64Concat, CurrencyId, Location, OptionQuery>;
 
 	/// The storages for CurrencyIds.
 	///
 	/// LocationToCurrencyIds: map Location => Option<CurrencyId>
 	#[pallet::storage]
 	pub type LocationToCurrencyIds<T: Config> =
-		StorageMap<_, Twox64Concat, xcm::v3::Location, CurrencyId, OptionQuery>;
+		StorageMap<_, Twox64Concat, Location, CurrencyId, OptionQuery>;
 
 	#[pallet::storage]
 	pub type CurrencyIdToWeights<T: Config> =
@@ -213,30 +213,6 @@ pub mod pallet {
 				Pallet::<T>::do_register_metadata(*currency_id, &metadata).expect("Token register");
 			}
 
-			for (currency, para_id, first_slot, last_slot) in self.vsbond.iter() {
-				match currency {
-					Token(symbol) | Native(symbol) => {
-						AssetIdMaps::<T>::register_vsbond_metadata(
-							*symbol,
-							*para_id,
-							*first_slot,
-							*last_slot,
-						)
-						.expect("VSBond register");
-					},
-					Token2(token_id) => {
-						AssetIdMaps::<T>::register_vsbond2_metadata(
-							*token_id,
-							*para_id,
-							*first_slot,
-							*last_slot,
-						)
-						.expect("VToken register");
-					},
-					_ => (),
-				}
-			}
-
 			for &currency in self.vcurrency.iter() {
 				match currency {
 					CurrencyId::VToken(symbol) => {
@@ -247,68 +223,21 @@ pub mod pallet {
 						AssetIdMaps::<T>::register_vtoken2_metadata(token_id)
 							.expect("VToken register");
 					},
-					CurrencyId::VSToken(symbol) => {
-						AssetIdMaps::<T>::register_vstoken_metadata(symbol)
-							.expect("VSToken register");
-					},
-					CurrencyId::VSToken2(token_id) => {
-						AssetIdMaps::<T>::register_vstoken2_metadata(token_id)
-							.expect("VSToken register");
-					},
 					_ => (),
 				}
 			}
 		}
 	}
 
+	const STORAGE_VERSION: StorageVersion = StorageVersion::new(1);
+
 	#[pallet::pallet]
 	#[pallet::without_storage_info]
+	#[pallet::storage_version(STORAGE_VERSION)]
 	pub struct Pallet<T>(_);
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
-		#[pallet::call_index(0)]
-		#[pallet::weight(T::WeightInfo::register_native_asset())]
-		pub fn register_native_asset(
-			origin: OriginFor<T>,
-			currency_id: CurrencyId,
-			location: Box<VersionedLocation>,
-			metadata: Box<AssetMetadata<BalanceOf<T>>>,
-		) -> DispatchResult {
-			T::RegisterOrigin::ensure_origin(origin)?;
-
-			let location: Location =
-				(*location).try_into().map_err(|()| Error::<T>::BadLocation)?;
-			Self::do_register_native_asset(currency_id, &location, &metadata)?;
-
-			Self::deposit_event(Event::<T>::AssetRegistered {
-				asset_id: AssetIds::NativeAssetId(currency_id),
-				metadata: *metadata,
-			});
-			Ok(())
-		}
-
-		#[pallet::call_index(1)]
-		#[pallet::weight(T::WeightInfo::update_native_asset())]
-		pub fn update_native_asset(
-			origin: OriginFor<T>,
-			currency_id: CurrencyId,
-			location: Box<VersionedLocation>,
-			metadata: Box<AssetMetadata<BalanceOf<T>>>,
-		) -> DispatchResult {
-			T::RegisterOrigin::ensure_origin(origin)?;
-
-			let location: Location =
-				(*location).try_into().map_err(|()| Error::<T>::BadLocation)?;
-			Self::do_update_native_asset(currency_id, &location, &metadata)?;
-
-			Self::deposit_event(Event::<T>::AssetUpdated {
-				asset_id: AssetIds::NativeAssetId(currency_id),
-				metadata: *metadata,
-			});
-			Ok(())
-		}
-
 		#[pallet::call_index(2)]
 		#[pallet::weight(T::WeightInfo::register_token_metadata())]
 		pub fn register_token_metadata(
@@ -332,55 +261,6 @@ pub mod pallet {
 			if let Some(token_metadata) = CurrencyMetadatas::<T>::get(Token2(token_id)) {
 				let vtoken_metadata = Self::convert_to_vtoken_metadata(token_metadata);
 				Self::do_register_metadata(CurrencyId::VToken2(token_id), &vtoken_metadata)?;
-
-				return Ok(());
-			} else {
-				return Err(Error::<T>::CurrencyIdNotExists)?;
-			}
-		}
-
-		#[pallet::call_index(4)]
-		#[pallet::weight(T::WeightInfo::register_vstoken_metadata())]
-		pub fn register_vstoken_metadata(
-			origin: OriginFor<T>,
-			token_id: TokenId,
-		) -> DispatchResult {
-			T::RegisterOrigin::ensure_origin(origin)?;
-
-			if let Some(token_metadata) = CurrencyMetadatas::<T>::get(CurrencyId::Token2(token_id))
-			{
-				let vstoken_metadata = Self::convert_to_vstoken_metadata(token_metadata);
-				Self::do_register_metadata(CurrencyId::VSToken2(token_id), &vstoken_metadata)?;
-
-				return Ok(());
-			} else {
-				return Err(Error::<T>::CurrencyIdNotExists)?;
-			}
-		}
-
-		#[pallet::call_index(5)]
-		#[pallet::weight(T::WeightInfo::register_vsbond_metadata())]
-		pub fn register_vsbond_metadata(
-			origin: OriginFor<T>,
-			token_id: TokenId,
-			para_id: ParaId,
-			first_slot: LeasePeriod,
-			last_slot: LeasePeriod,
-		) -> DispatchResult {
-			T::RegisterOrigin::ensure_origin(origin)?;
-
-			if let Some(token_metadata) = CurrencyMetadatas::<T>::get(CurrencyId::Token2(token_id))
-			{
-				let vsbond_metadata = Self::convert_to_vsbond_metadata(
-					token_metadata,
-					para_id,
-					first_slot,
-					last_slot,
-				);
-				Self::do_register_metadata(
-					CurrencyId::VSBond2(token_id, para_id, first_slot, last_slot),
-					&vsbond_metadata,
-				)?;
 
 				return Ok(());
 			} else {
@@ -419,16 +299,16 @@ pub mod pallet {
 			let location: Location =
 				(*location).try_into().map_err(|()| Error::<T>::BadLocation)?;
 
-			let v3_location = xcm::v3::Location::try_from(location.clone())
-				.map_err(|()| Error::<T>::BadLocation)?;
+			let v4_location =
+				Location::try_from(location.clone()).map_err(|_| Error::<T>::BadLocation)?;
 
 			ensure!(
 				CurrencyMetadatas::<T>::get(currency_id).is_some(),
 				Error::<T>::CurrencyIdNotExists
 			);
 
-			LocationToCurrencyIds::<T>::insert(v3_location, currency_id);
-			CurrencyIdToLocations::<T>::insert(currency_id, v3_location);
+			LocationToCurrencyIds::<T>::insert(v4_location.clone(), currency_id);
+			CurrencyIdToLocations::<T>::insert(currency_id, v4_location);
 			CurrencyIdToWeights::<T>::insert(currency_id, weight);
 
 			Pallet::<T>::deposit_event(Event::<T>::LocationSet { currency_id, location, weight });
@@ -484,31 +364,6 @@ impl<T: Config> Pallet<T> {
 		})
 	}
 
-	pub fn do_register_native_asset(
-		currency_id: CurrencyId,
-		location: &Location,
-		metadata: &AssetMetadata<BalanceOf<T>>,
-	) -> DispatchResult {
-		let v3_location =
-			xcm::v3::Location::try_from(location.clone()).map_err(|()| Error::<T>::BadLocation)?;
-
-		ensure!(LocationToCurrencyIds::<T>::get(v3_location).is_none(), Error::<T>::AssetIdExisted);
-		ensure!(
-			CurrencyIdToLocations::<T>::get(currency_id).is_none(),
-			Error::<T>::LocationExisted
-		);
-		ensure!(
-			AssetMetadatas::<T>::get(AssetIds::NativeAssetId(currency_id)).is_none(),
-			Error::<T>::AssetIdExisted
-		);
-
-		LocationToCurrencyIds::<T>::insert(v3_location, currency_id);
-		CurrencyIdToLocations::<T>::insert(currency_id, v3_location);
-		AssetMetadatas::<T>::insert(AssetIds::NativeAssetId(currency_id), metadata);
-
-		Ok(())
-	}
-
 	pub fn convert_to_vtoken_metadata(
 		token_metadata: AssetMetadata<BalanceOf<T>>,
 	) -> AssetMetadata<BalanceOf<T>> {
@@ -517,34 +372,6 @@ impl<T: Config> Pallet<T> {
 		let mut symbol = "v".as_bytes().to_vec();
 		symbol.extend_from_slice(&token_metadata.symbol);
 		AssetMetadata { name, symbol, ..token_metadata }
-	}
-
-	pub fn convert_to_vstoken_metadata(
-		token_metadata: AssetMetadata<BalanceOf<T>>,
-	) -> AssetMetadata<BalanceOf<T>> {
-		let mut name = "Voucher Slot ".as_bytes().to_vec();
-		name.extend_from_slice(&token_metadata.symbol);
-		let mut symbol = "vs".as_bytes().to_vec();
-		symbol.extend_from_slice(&token_metadata.symbol);
-		AssetMetadata { name, symbol, ..token_metadata }
-	}
-
-	pub fn convert_to_vsbond_metadata(
-		token_metadata: AssetMetadata<BalanceOf<T>>,
-		para_id: ParaId,
-		first_slot: LeasePeriod,
-		last_slot: LeasePeriod,
-	) -> AssetMetadata<BalanceOf<T>> {
-		let name = scale_info::prelude::format!(
-			"vsBOND-{}-{}-{}-{}",
-			core::str::from_utf8(&token_metadata.symbol).unwrap_or(""),
-			para_id,
-			first_slot,
-			last_slot
-		)
-		.as_bytes()
-		.to_vec();
-		AssetMetadata { name: name.clone(), symbol: name, ..token_metadata }
 	}
 
 	pub fn do_register_metadata(
@@ -564,15 +391,15 @@ impl<T: Config> Pallet<T> {
 	}
 
 	pub fn do_register_location(currency_id: CurrencyId, location: &Location) -> DispatchResult {
-		let v3_location =
-			xcm::v3::Location::try_from(location.clone()).map_err(|()| Error::<T>::BadLocation)?;
+		let v4_location =
+			Location::try_from(location.clone()).map_err(|_| Error::<T>::BadLocation)?;
 
 		ensure!(
 			CurrencyMetadatas::<T>::get(currency_id).is_some(),
 			Error::<T>::CurrencyIdNotExists
 		);
 		ensure!(
-			LocationToCurrencyIds::<T>::get(v3_location).is_none(),
+			LocationToCurrencyIds::<T>::get(v4_location.clone()).is_none(),
 			Error::<T>::CurrencyIdExisted
 		);
 		ensure!(
@@ -580,8 +407,8 @@ impl<T: Config> Pallet<T> {
 			Error::<T>::LocationExisted
 		);
 
-		LocationToCurrencyIds::<T>::insert(v3_location, currency_id);
-		CurrencyIdToLocations::<T>::insert(currency_id, v3_location);
+		LocationToCurrencyIds::<T>::insert(v4_location.clone(), currency_id);
+		CurrencyIdToLocations::<T>::insert(currency_id, v4_location);
 
 		Ok(())
 	}
@@ -593,34 +420,6 @@ impl<T: Config> Pallet<T> {
 		);
 
 		CurrencyIdToWeights::<T>::insert(currency_id, weight);
-
-		Ok(())
-	}
-
-	fn do_update_native_asset(
-		currency_id: CurrencyId,
-		location: &Location,
-		metadata: &AssetMetadata<BalanceOf<T>>,
-	) -> DispatchResult {
-		let v3_location =
-			xcm::v3::Location::try_from(location.clone()).map_err(|()| Error::<T>::BadLocation)?;
-
-		ensure!(
-			LocationToCurrencyIds::<T>::get(v3_location).is_some(),
-			Error::<T>::AssetIdNotExists
-		);
-		ensure!(
-			CurrencyIdToLocations::<T>::get(currency_id).is_some(),
-			Error::<T>::LocationExisted
-		);
-		ensure!(
-			AssetMetadatas::<T>::get(AssetIds::NativeAssetId(currency_id)).is_some(),
-			Error::<T>::AssetIdNotExists
-		);
-
-		LocationToCurrencyIds::<T>::insert(v3_location, currency_id);
-		CurrencyIdToLocations::<T>::insert(currency_id, v3_location);
-		AssetMetadatas::<T>::insert(AssetIds::NativeAssetId(currency_id), metadata);
 
 		Ok(())
 	}
@@ -648,8 +447,8 @@ impl<T: Config> CurrencyIdMapping<CurrencyId, MultiLocation, AssetMetadata<Balan
 	}
 
 	fn get_currency_id(multi_location: Location) -> Option<CurrencyId> {
-		let v3_location = xcm::v3::Location::try_from(multi_location).ok()?;
-		LocationToCurrencyIds::<T>::get(v3_location)
+		let v4_location = Location::try_from(multi_location).ok()?;
+		LocationToCurrencyIds::<T>::get(v4_location)
 	}
 }
 
@@ -752,55 +551,6 @@ impl<T: Config> CurrencyIdRegister<CurrencyId> for AssetIdMaps<T> {
 		}
 	}
 
-	fn register_vstoken_metadata(token_symbol: TokenSymbol) -> sp_runtime::DispatchResult {
-		if let Some(token_metadata) = CurrencyMetadatas::<T>::get(CurrencyId::Token(token_symbol)) {
-			let vstoken_metadata = Pallet::<T>::convert_to_vstoken_metadata(token_metadata);
-			Pallet::<T>::do_register_metadata(
-				CurrencyId::VSToken(token_symbol),
-				&vstoken_metadata,
-			)?;
-
-			return Ok(());
-		} else {
-			return Err(Error::<T>::CurrencyIdNotExists.into());
-		}
-	}
-
-	fn register_vsbond_metadata(
-		token_symbol: TokenSymbol,
-		para_id: ParaId,
-		first_slot: LeasePeriod,
-		last_slot: LeasePeriod,
-	) -> sp_runtime::DispatchResult {
-		let option_token_metadata =
-			if CurrencyMetadatas::<T>::contains_key(CurrencyId::Token(token_symbol)) {
-				CurrencyMetadatas::<T>::get(CurrencyId::Token(token_symbol))
-			} else if token_symbol == TokenSymbol::BNC &&
-				CurrencyMetadatas::<T>::contains_key(CurrencyId::Native(token_symbol))
-			{
-				CurrencyMetadatas::<T>::get(CurrencyId::Native(token_symbol))
-			} else {
-				None
-			};
-
-		if let Some(token_metadata) = option_token_metadata {
-			let vsbond_metadata = Pallet::<T>::convert_to_vsbond_metadata(
-				token_metadata,
-				para_id,
-				first_slot,
-				last_slot,
-			);
-			Pallet::<T>::do_register_metadata(
-				CurrencyId::VSBond(token_symbol, para_id, first_slot, last_slot),
-				&vsbond_metadata,
-			)?;
-
-			return Ok(());
-		} else {
-			return Err(Error::<T>::CurrencyIdNotExists.into());
-		}
-	}
-
 	fn check_token2_registered(token_id: TokenId) -> bool {
 		CurrencyMetadatas::<T>::get(CurrencyId::Token2(token_id)).is_some()
 	}
@@ -809,59 +559,10 @@ impl<T: Config> CurrencyIdRegister<CurrencyId> for AssetIdMaps<T> {
 		CurrencyMetadatas::<T>::get(CurrencyId::VToken2(token_id)).is_some()
 	}
 
-	fn check_vstoken2_registered(token_id: TokenId) -> bool {
-		CurrencyMetadatas::<T>::get(CurrencyId::VSToken2(token_id)).is_some()
-	}
-
-	fn check_vsbond2_registered(
-		token_id: TokenId,
-		para_id: ParaId,
-		first_slot: LeasePeriod,
-		last_slot: LeasePeriod,
-	) -> bool {
-		CurrencyMetadatas::<T>::get(CurrencyId::VSBond2(token_id, para_id, first_slot, last_slot))
-			.is_some()
-	}
-
 	fn register_vtoken2_metadata(token_id: TokenId) -> DispatchResult {
 		if let Some(token_metadata) = CurrencyMetadatas::<T>::get(CurrencyId::Token2(token_id)) {
 			let vtoken_metadata = Pallet::<T>::convert_to_vtoken_metadata(token_metadata);
 			Pallet::<T>::do_register_metadata(CurrencyId::VToken2(token_id), &vtoken_metadata)?;
-
-			return Ok(());
-		} else {
-			return Err(Error::<T>::CurrencyIdNotExists.into());
-		}
-	}
-
-	fn register_vstoken2_metadata(token_id: TokenId) -> DispatchResult {
-		if let Some(token_metadata) = CurrencyMetadatas::<T>::get(CurrencyId::Token2(token_id)) {
-			let vstoken_metadata = Pallet::<T>::convert_to_vstoken_metadata(token_metadata);
-			Pallet::<T>::do_register_metadata(CurrencyId::VSToken2(token_id), &vstoken_metadata)?;
-
-			return Ok(());
-		} else {
-			return Err(Error::<T>::CurrencyIdNotExists.into());
-		}
-	}
-
-	fn register_vsbond2_metadata(
-		token_id: TokenId,
-		para_id: ParaId,
-		first_slot: LeasePeriod,
-		last_slot: LeasePeriod,
-	) -> DispatchResult {
-		if let Some(token_metadata) = CurrencyMetadatas::<T>::get(CurrencyId::Token2(token_id)) {
-			let vsbond_metadata = Pallet::<T>::convert_to_vsbond_metadata(
-				token_metadata,
-				para_id,
-				first_slot,
-				last_slot,
-			);
-			Pallet::<T>::do_register_metadata(
-				CurrencyId::VSBond2(token_id, para_id, first_slot, last_slot),
-				&vsbond_metadata,
-			)?;
 
 			return Ok(());
 		} else {
@@ -931,10 +632,10 @@ where
 		let AssetId(ref location) = asset_id.clone();
 		log::debug!(target: "asset-registry::weight", "buy_weight location: {:?}", location);
 
-		let v3_location =
-			xcm::v3::Location::try_from(location.clone()).map_err(|_| XcmError::InvalidLocation)?;
+		let v4_location =
+			Location::try_from(location.clone()).map_err(|_| XcmError::InvalidLocation)?;
 
-		if let Some(currency_id) = LocationToCurrencyIds::<T>::get(v3_location) {
+		if let Some(currency_id) = LocationToCurrencyIds::<T>::get(v4_location) {
 			if let Some(currency_metadatas) = CurrencyMetadatas::<T>::get(currency_id) {
 				// The integration tests can ensure the ed is non-zero.
 				let ed_ratio = FixedU128::saturating_from_rational(

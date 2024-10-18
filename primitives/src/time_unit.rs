@@ -51,7 +51,23 @@ impl TimeUnit {
 	pub fn add(self, other_time: Self) -> Option<Self> {
 		match (self, other_time) {
 			(TimeUnit::Era(a), TimeUnit::Era(b)) => Some(TimeUnit::Era(a.saturating_add(b))),
+			(TimeUnit::SlashingSpan(a), TimeUnit::SlashingSpan(b)) =>
+				Some(TimeUnit::SlashingSpan(a.saturating_add(b))),
+			(TimeUnit::Round(a), TimeUnit::Round(b)) => Some(TimeUnit::Round(a.saturating_add(b))),
+			(TimeUnit::Kblock(a), TimeUnit::Kblock(b)) =>
+				Some(TimeUnit::Kblock(a.saturating_add(b))),
+			(TimeUnit::Hour(a), TimeUnit::Hour(b)) => Some(TimeUnit::Hour(a.saturating_add(b))),
 			_ => None,
+		}
+	}
+
+	pub fn into_value(self) -> u32 {
+		match self {
+			TimeUnit::Era(a) => a,
+			TimeUnit::SlashingSpan(a) => a,
+			TimeUnit::Round(a) => a,
+			TimeUnit::Kblock(a) => a,
+			TimeUnit::Hour(a) => a,
 		}
 	}
 }

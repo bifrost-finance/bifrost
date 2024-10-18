@@ -53,12 +53,8 @@ use sp_std::marker::PhantomData;
 
 /// Weight functions needed for bifrost_asset_registry.
 pub trait WeightInfo {
-	fn register_native_asset() -> Weight;
-	fn update_native_asset() -> Weight;
 	fn register_token_metadata() -> Weight;
 	fn register_vtoken_metadata() -> Weight;
-	fn register_vstoken_metadata() -> Weight;
-	fn register_vsbond_metadata() -> Weight;
 	fn register_location() -> Weight;
 	fn force_set_location() -> Weight;
 	fn update_currency_metadata() -> Weight;
@@ -66,36 +62,6 @@ pub trait WeightInfo {
 
 // For backwards compatibility and tests
 impl WeightInfo for () {
-	/// Storage: AssetRegistry LocationToCurrencyIds (r:1 w:1)
-	/// Proof Skipped: AssetRegistry LocationToCurrencyIds (max_values: None, max_size: None, mode: Measured)
-	/// Storage: AssetRegistry CurrencyIdToLocations (r:1 w:1)
-	/// Proof Skipped: AssetRegistry CurrencyIdToLocations (max_values: None, max_size: None, mode: Measured)
-	/// Storage: AssetRegistry AssetMetadatas (r:1 w:1)
-	/// Proof Skipped: AssetRegistry AssetMetadatas (max_values: None, max_size: None, mode: Measured)
-	fn register_native_asset() -> Weight {
-		// Proof Size summary in bytes:
-		//  Measured:  `118`
-		//  Estimated: `3583`
-		// Minimum execution time: 52_056_000 picoseconds.
-		Weight::from_parts(53_012_000, 3583)
-			.saturating_add(RocksDbWeight::get().reads(3_u64))
-			.saturating_add(RocksDbWeight::get().writes(3_u64))
-	}
-	/// Storage: AssetRegistry LocationToCurrencyIds (r:1 w:1)
-	/// Proof Skipped: AssetRegistry LocationToCurrencyIds (max_values: None, max_size: None, mode: Measured)
-	/// Storage: AssetRegistry CurrencyIdToLocations (r:1 w:1)
-	/// Proof Skipped: AssetRegistry CurrencyIdToLocations (max_values: None, max_size: None, mode: Measured)
-	/// Storage: AssetRegistry AssetMetadatas (r:1 w:1)
-	/// Proof Skipped: AssetRegistry AssetMetadatas (max_values: None, max_size: None, mode: Measured)
-	fn update_native_asset() -> Weight {
-		// Proof Size summary in bytes:
-		//  Measured:  `250`
-		//  Estimated: `3715`
-		// Minimum execution time: 59_891_000 picoseconds.
-		Weight::from_parts(60_869_000, 3715)
-			.saturating_add(RocksDbWeight::get().reads(3_u64))
-			.saturating_add(RocksDbWeight::get().writes(3_u64))
-	}
 	/// Storage: AssetRegistry NextTokenId (r:1 w:1)
 	/// Proof Skipped: AssetRegistry NextTokenId (max_values: Some(1), max_size: None, mode: Measured)
 	/// Storage: AssetRegistry CurrencyMetadatas (r:1 w:1)
@@ -117,28 +83,6 @@ impl WeightInfo for () {
 		//  Estimated: `6719`
 		// Minimum execution time: 53_699_000 picoseconds.
 		Weight::from_parts(54_646_000, 6719)
-			.saturating_add(RocksDbWeight::get().reads(2_u64))
-			.saturating_add(RocksDbWeight::get().writes(1_u64))
-	}
-	/// Storage: AssetRegistry CurrencyMetadatas (r:2 w:1)
-	/// Proof Skipped: AssetRegistry CurrencyMetadatas (max_values: None, max_size: None, mode: Measured)
-	fn register_vstoken_metadata() -> Weight {
-		// Proof Size summary in bytes:
-		//  Measured:  `705`
-		//  Estimated: `6645`
-		// Minimum execution time: 52_491_000 picoseconds.
-		Weight::from_parts(53_682_000, 6645)
-			.saturating_add(RocksDbWeight::get().reads(2_u64))
-			.saturating_add(RocksDbWeight::get().writes(1_u64))
-	}
-	/// Storage: AssetRegistry CurrencyMetadatas (r:2 w:1)
-	/// Proof Skipped: AssetRegistry CurrencyMetadatas (max_values: None, max_size: None, mode: Measured)
-	fn register_vsbond_metadata() -> Weight {
-		// Proof Size summary in bytes:
-		//  Measured:  `763`
-		//  Estimated: `6703`
-		// Minimum execution time: 55_589_000 picoseconds.
-		Weight::from_parts(56_804_000, 6703)
 			.saturating_add(RocksDbWeight::get().reads(2_u64))
 			.saturating_add(RocksDbWeight::get().writes(1_u64))
 	}
