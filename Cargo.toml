@@ -338,7 +338,7 @@ smallvec              = { version = "1.13.1" }
 static_assertions     = { version = "1.1.0" }
 strum                 = { version = "0.26.3", default-features = false, features = ["derive"] }
 strum_macros          = { version = "0.26.2" }
-syn                   = { version = "1.0.98", features = ["full", "fold", "extra-traits", "visit"] }
+syn                   = { version = "2.0.71", features = ["full", "fold", "extra-traits", "visit"] }
 tiny-keccak           = { version = "2.0", features = ["fips202"] }
 
 [profile.dev]

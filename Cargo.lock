@@ -7757,7 +7757,7 @@ dependencies = [
  "module-evm-utility",
  "proc-macro2",
  "quote",
- "syn 1.0.109",
+ "syn 2.0.71",
 ]
 
 [[package]]
