@@ -312,7 +312,7 @@ bstringify            = { version = "0.1.2" }
 clap                  = { version = "4.5.18" }
 env_logger            = { version = "0.10.2" }
 ethabi                = { version = "18.0.0", default-features = false }
-ethereum              = { version = "0.14.0", default-features = false, features = ["with-codec"] }
+ethereum              = { version = "0.15.0", default-features = false, features = ["with-codec"] }
 evm                   = { version = "0.41.1", default-features = false }
 flume                 = { version = "0.11.0" }
 futures               = { version =  "0.3.30" }
