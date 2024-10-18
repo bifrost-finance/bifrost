@@ -1010,6 +1010,11 @@ pub mod pallet {
 			T::ControlOrigin::ensure_origin(origin)?;
 			whitelist.iter().for_each(|pid| {
 				BoostWhitelist::<T>::insert(pid, ());
+				BoostVotingPools::<T>::mutate_exists(pid, |maybe_total_votes| {
+					if maybe_total_votes.is_none() {
+						*maybe_total_votes = Some(Zero::zero());
+					}
+				})
 			});
 			Ok(())
 		}
